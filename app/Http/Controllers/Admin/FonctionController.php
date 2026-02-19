@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Fonction;
 use App\Models\User;
+use App\Helpers\PhotoHelper;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -102,8 +103,8 @@ class FonctionController extends Controller
                 'telephone' => $u->telephone ?? '-',
                 'telephone2' => $u->telephone2 ?? '-',
                 'profession' => $u->profession ?? '-',
-                'fonction' => $u->fonction ?? '-',
-                'classe' => $u->classe ?? '-',
+                'fonction' => $u->fonction?->nom ?? '-',
+                'classe' => $u->classe?->nom ?? '-',
                 'relation' => $u->relation ?? '-',
                 'famille_nom' => $u->family?->nom ?? '-',
                 'famille_id' => $u->family_id,
@@ -125,7 +126,7 @@ class FonctionController extends Controller
                 'date_mariage' => $u->date_mariage ?? null,
                 'lieu_mariage' => $u->lieu_mariage ?? null,
                 'is_active' => $u->is_active ?? true,
-                'photo' => $u->photo_path ?? null,
+                'photo' => PhotoHelper::getPhotoUrl($u->photo_path, $u->prenom, $u->nom),
                 'created_at' => $u->created_at ? $u->created_at->format('d/m/Y H:i') : '-',
                 'updated_at' => $u->updated_at ? $u->updated_at->format('d/m/Y H:i') : '-',
             ];

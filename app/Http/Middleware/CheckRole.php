@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Auth\Access\AuthorizationException;
 use Symfony\Component\HttpFoundation\Response;
 
 class CheckRole
@@ -18,13 +19,15 @@ class CheckRole
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
         if (!auth()->check()) {
-            return redirect('/login');
+            // Let the standard auth middleware handle unauthenticated requests
+            abort(401, 'Unauthenticated');
         }
 
         if (in_array(auth()->user()->role, $roles)) {
             return $next($request);
         }
 
-        abort(403, 'Accès non autorisé pour ce rôle.');
+        // Throw AuthorizationException for proper JSON handling in Handler
+        throw new AuthorizationException('Insufficient permissions - Rôle insufficient.');
     }
 }

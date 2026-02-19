@@ -316,18 +316,18 @@ class AdministrationController extends Controller
 
         $dataByType = [
             // Inscriptions groupées par statut
-            'inscrites' => $inscriptionsFormatted->where('statut', 'En attente')->values(),
-            'approuvees' => $inscriptionsFormatted->where('statut', 'Approuvé')->values(),
-            'rejetees' => $inscriptionsFormatted->where('statut', 'Rejeté')->values(),
+            'inscrites' => $inscriptionsFormatted->where('statut', 'En attente')->values()->toArray(),
+            'approuvees' => $inscriptionsFormatted->where('statut', 'Approuvé')->values()->toArray(),
+            'rejetees' => $inscriptionsFormatted->where('statut', 'Rejeté')->values()->toArray(),
             'attente' => [],
 
             // Classes et fonctions avec statistiques
-            'classes' => $classesFormatted,
-            'fonctions' => $fonctionsFormatted,
+            'classes' => $classesFormatted->toArray(),
+            'fonctions' => $fonctionsFormatted->toArray(),
 
             // Utilisateurs et groupements
-            'membres' => $membersFormatted,
-            'familles' => $famillesFormatted,
+            'membres' => $membersFormatted->toArray(),
+            'familles' => $famillesFormatted->toArray(),
             'usersByFonction' => $usersByFonction,
 
             // Totaux
@@ -338,9 +338,9 @@ class AdministrationController extends Controller
             'dataByType' => $dataByType,
             'membersByFamily' => $membersByFamily,
             'membersByResponsible' => $membersByResponsible,
-            'membres' => $membersFormatted,
-            'availableClasses' => $availableClasses,
-            'availableFonctions' => $availableFonctions,
+            'membres' => $membersFormatted->toArray(),
+            'availableClasses' => $availableClasses->toArray(),
+            'availableFonctions' => $availableFonctions->toArray(),
             'total_users_count' => $totalUsersCount,  // ✅ Total global des personnes
         ]);
     }

@@ -13,11 +13,16 @@ use App\Http\Controllers\AuthenticatedRegistrationController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\ExcelImportController;
 
+use App\Http\Controllers\Api\DiagnosticController;
+
 // Routes publiques (sans authentification)
 Route::get('/classes', [ClasseController::class, 'index']);
 Route::get('/familles', [FamilleController::class, 'index']);
 Route::get('/villes', [VilleController::class, 'index']);
 Route::get('/fonctions', [FonctionController::class, 'index']);
+
+// Route de diagnostic (sans authentification)
+Route::get('/diagnostic/auth-status', [DiagnosticController::class, 'checkAuth']);
 
 // Routes d'adresses avec rate limiting
 Route::middleware(['throttle:60,1'])->group(function () {

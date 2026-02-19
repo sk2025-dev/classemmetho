@@ -1,22 +1,16 @@
-# Task: Add Profession Column to TabUtilisateurs and TabClasse
+# TODO - Fix RegisterFamille Responsable Data Issue
 
-## Analysis:
-- The `profession` column already exists in the users table (database migration)
-- The User model already has `profession` in `$fillable`
-- Profession is displayed in MemberDetailsModal (both files)
-- Profession field exists in EditMemberModal (both files)
-- **Missing**: Profession column in main tables
+## Problem
+When registering a family from admin panel, the responsable de famille data is not saving to the database while member data saves correctly.
 
-## Changes Required:
+## Root Cause
+The `lienParente` field is missing from the responsable state and form in RegisterFamille.jsx, causing data inconsistency.
 
-### 1. TabUtilisateurs.jsx
-- [ ] Add "Profession" header to table
-- [ ] Add profession data cell to each row
+## Tasks
 
-### 2. TabClasse.jsx  
-- [ ] Add "Profession" header to ClasseDetailsModal table
-- [ ] Add profession data cell to each row in class members table
+- [ ] 1. Add `lienParente` field to responsable state in RegisterFamille.jsx
+- [ ] 2. Add `lienParente` input field in the responsable form section (step 2)
+- [ ] 3. Verify the data flow to backend
 
-## Implementation Status:
-- [ ] Pending: TabUtilisateurs.jsx edits
-- [ ] Pending: TabClasse.jsx edits
+## Files to Edit
+- `resources/js/Pages/Admin/Inscriptions/RegisterFamille.jsx`

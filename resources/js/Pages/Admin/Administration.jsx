@@ -47,7 +47,7 @@ export default function AdminPage({
             onSuccess: () => {
                 toast.success('Classe créée avec succès');
                 // Recharger les classes
-                fetch('/api/admin/classes', { headers: { 'Accept': 'application/json' } })
+                fetch('/api/admin/classes', { headers: { 'Accept': 'application/json' }, credentials: 'include' })
                     .then(r => r.json())
                     .then(data => {
                         if (data.success) setClasses(data.classes || []);
@@ -98,7 +98,8 @@ export default function AdminPage({
                     'Content-Type': 'application/json',
                     'X-CSRF-Token': csrfToken || '',
                     'Accept': 'application/json',
-                }
+                },
+                credentials: 'include'
             })
             .then(response => {
                 console.log("Response status:", response.status);
@@ -240,7 +241,7 @@ export default function AdminPage({
             onSuccess: () => {
                 toast.success('Fonction créée avec succès');
                 // Recharger les fonctions
-                fetch('/api/admin/fonctions', { headers: { 'Accept': 'application/json' } })
+                fetch('/api/admin/fonctions', { headers: { 'Accept': 'application/json' }, credentials: 'include' })
                     .then(r => r.json())
                     .then(data => {
                         if (data.success) setFonctions(data.fonctions || []);

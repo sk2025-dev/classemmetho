@@ -6,6 +6,8 @@ use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Throwable;
 use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class Handler extends ExceptionHandler
 {
@@ -35,6 +37,32 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Throwable $exception)
     {
+        // Gérer les exceptions d'authentification pour les API
+        if ($exception instanceof AuthenticationException) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized - Please login first',
+                    'type' => 'AuthenticationError',
+                    'errors' => ['auth' => 'You are not authenticated'],
+                    'timestamp' => now()->toIso8601String(),
+                ], 401);
+            }
+        }
+
+        // Gérer les exceptions d'autorisation pour les API
+        if ($exception instanceof AuthorizationException) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Forbidden - You do not have permission to access this resource',
+                    'type' => 'AuthorizationError',
+                    'errors' => ['auth' => 'Insufficient permissions'],
+                    'timestamp' => now()->toIso8601String(),
+                ], 403);
+            }
+        }
+
         // Gérer les exceptions de contrainte UNIQUE
         if ($exception instanceof UniqueConstraintViolationException) {
             return response()->json([

@@ -410,8 +410,23 @@ const TabFonctions = ({ rawData, onDelete, onUpdate }) => {
     // Pagination
     const itemsPerPage = 10;
 
-    const fonctionsData = rawData?.fonctions || [];
-    const usersByFonction = rawData?.usersByFonction || {};
+    // ✅ Validation des données
+    const fonctionsData = Array.isArray(rawData?.fonctions) ? rawData.fonctions : [];
+    const usersByFonction = typeof rawData?.usersByFonction === 'object' && rawData.usersByFonction ? rawData.usersByFonction : {};
+
+    // ✅ Debug: Log les données reçues
+    useEffect(() => {
+        if (!fonctionsData || fonctionsData.length === 0) {
+            console.warn("⚠️ TabFonctions: Pas de données de fonctions", { rawData, fonctionsData });
+        } else {
+            console.log("✅ TabFonctions: Données valides", { fonctionsCount: fonctionsData.length, fonctionsData });
+            // Afficher les clés du premier élément
+            if (fonctionsData[0]) {
+                console.log("Premier élément de fonctionsData:", fonctionsData[0]);
+                console.log("Clés du premier élément:", Object.keys(fonctionsData[0]));
+            }
+        }
+    }, [fonctionsData, rawData]);
 
     // ✅ Recharger les données si elles sont vides
     useEffect(() => {
@@ -421,11 +436,13 @@ const TabFonctions = ({ rawData, onDelete, onUpdate }) => {
         }
     }, [fonctionsData.length]);
 
-    // Enrichissement des données
-    const enrichedData = fonctionsData.map(fonc => {
-        const members = usersByFonction[fonc.nom] || [];
-        return { ...fonc, membres_count: members.length, members_list: members };
-    });
+    // Enrichissement des données - filter pour s'assurer qu'on a des objets simples
+    const enrichedData = fonctionsData
+        .filter(fonc => fonc && typeof fonc === 'object' && fonc.id && fonc.nom)
+        .map(fonc => {
+            const members = usersByFonction[fonc.nom] || [];
+            return { ...fonc, membres_count: members.length, members_list: members };
+        });
 
     // Filtrage
     const filteredData = enrichedData.filter(item => {
@@ -449,15 +466,31 @@ const TabFonctions = ({ rawData, onDelete, onUpdate }) => {
             const loadFonctionDetails = async () => {
                 try {
                     const response = await fetch(`/api/admin/fonctions/${selectedFonction.id}`, {
-                        headers: { 'Accept': 'application/json' }
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        credentials: 'include'
                     });
+
                     if (response.ok) {
                         const data = await response.json();
                         setFonctionDetails(data.fonction);
                         setFonctionMembers(data.membres || []);
+                    } else if (response.status === 401) {
+                        showToast.error('Session expirée. Veuillez vous reconnecter.');
+                        setSelectedFonction(null);
+                    } else if (response.status === 403) {
+                        showToast.error('Accès non autorisé à cette ressource.');
+                        setSelectedFonction(null);
+                    } else {
+                        showToast.error(`Erreur ${response.status} lors du chargement des détails`);
                     }
                 } catch (error) {
                     console.error('Erreur lors du chargement des détails:', error);
+                    showToast.error('Erreur réseau lors du chargement des détails');
                 }
             };
             loadFonctionDetails();

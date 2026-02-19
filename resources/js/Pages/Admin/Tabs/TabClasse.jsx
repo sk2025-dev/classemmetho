@@ -215,7 +215,7 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
         if (isOpen && member?.id) {
             const loadMemberData = async () => {
                 try {
-                    const response = await fetch(`/admin/membres/${member.id}`);
+                    const response = await fetch(`/admin/membres/${member.id}`, { credentials: 'include' });
                     if (response.ok) {
                         const freshData = await response.json();
                         setDisplayMember(freshData);
@@ -479,7 +479,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
         if (isOpen && memberData?.id) {
             const loadMemberData = async () => {
                 try {
-                    const response = await fetch(`/admin/membres/${memberData.id}`);
+                    const response = await fetch(`/admin/membres/${memberData.id}`, { credentials: 'include' });
                     if (response.ok) {
                         const freshData = await response.json();
                         // Mapper les données du serveur aux champs du formulaire

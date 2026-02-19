@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API Authentication</title>
+</head>
+<body>
+    <h1>API Authentication Test</h1>
+    <div id="results">Loading...</div>
+
+    <script>
+        async function testAuth() {
+            try {
+                // Test 1: Check auth status
+                const diagResponse = await fetch('http://127.0.0.1:8000/api/diagnostic/auth-status', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include'
+                });
+                const diagData = await diagResponse.json();
+
+                // Test 2: Try to fetch fonction details
+                const fontionResponse = await fetch('http://127.0.0.1:8000/api/admin/fonctions/2', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include'
+                });
+                const fonctionData = await fontionResponse.json();
+
+                document.getElementById('results').innerHTML = `
+                    <h2>Authentication Status:</h2>
+                    <pre>${JSON.stringify(diagData, null, 2)}</pre>
+                    <h2>Fonction API Response (Status: ${fontionResponse.status}):</h2>
+                    <pre>${JSON.stringify(fonctionData, null, 2)}</pre>
+                `;
+            } catch (error) {
+                document.getElementById('results').innerHTML = `Error: ${error.message}`;
+            }
+        }
+
+        testAuth();
+    </script>
+</body>
+</html>
