@@ -163,7 +163,7 @@ class InscriptionsController extends Controller
                             'telephone' => $insc->responsable_tel,
                             'telephone2' => $insc->responsable_telephone2,
                             'genre' => $insc->responsable_genre,
-                            'date_naissance' => $insc->responsable_date_naissance,
+                            'date_naissance' => $insc->responsable_date_naissance ? \Carbon\Carbon::parse($insc->responsable_date_naissance)->format('Y-m-d') : null,
                             'adresse' => $insc->data['responsable']['adresse'] ?? null,
                             'fonction_professionnelle' => $insc->responsable_profession,
                             'statut_marital' => $insc->responsable_statut_marital,
