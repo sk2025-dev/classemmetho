@@ -213,7 +213,7 @@ export default function RegisterFamille({
     const [step, setStep] = usePersistentState('registerFamille_step', 1);
     const { errors, setErrors, serverErrors, setServerErrors, getFieldError, handleServerErrors } = useFormErrors();
     const [loading, setLoading] = useState(false);
-    const { toasts, removeToast, success: showSuccess, handleApiError } = useToastWithErrorHandling();
+    const { toasts, removeToast, success: showSuccess, error: showError, warning: showWarning, handleApiError } = useToastWithErrorHandling();
 
     // Classe du conducteur
     const [conductorClassName, setConductorClassName] = useState('');

@@ -148,6 +148,19 @@ class RegisterMemberController extends Controller
                 $responsableData['dateNaissance'] ?? null
             );
             $motDePasse = '11111';
+
+            // Traiter la photo du responsable
+            $responsablePhotoPath = null;
+            if ($request->hasFile('responsable.photo')) {
+                $photoFile = $request->file('responsable.photo');
+                if ($photoFile && $photoFile->isValid()) {
+                    $mime = $photoFile->getMimeType();
+                    if (strpos($mime, 'image/') === 0) {
+                        $responsablePhotoPath = $photoFile->store('family_members/responsables', 'public');
+                    }
+                }
+            }
+
             $responsableUser = User::create([
                 'name' => trim($responsableData['prenom'] . ' ' . $responsableData['nom']),
                 'nom' => $responsableData['nom'],

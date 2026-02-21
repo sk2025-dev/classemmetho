@@ -553,6 +553,13 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
     // Init form data from memberData
     useEffect(() => {
         if (isOpen && memberData) {
+            // Fonction pour convertir les valeurs booléennes
+            const toBoolean = (val) => {
+                if (typeof val === 'boolean') return val;
+                if (typeof val === 'string') return val.toLowerCase() === 'oui' || val === '1' || val === 'true';
+                return !!val;
+            };
+
             setData({
                 nom: memberData?.nom || "",
                 prenom: memberData?.prenom || "",
@@ -569,13 +576,13 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                 relation: memberData?.relation || "",
                 photo: null,
                 photoPreview: memberData?.photo || null,
-                baptise: memberData?.baptise || false,
+                baptise: toBoolean(memberData?.baptise),
                 date_bapteme: memberData?.date_bapteme || "",
                 lieu_bapteme: memberData?.lieu_bapteme || "",
-                premiere_communion: memberData?.premiere_communion || false,
+                premiere_communion: toBoolean(memberData?.premiere_communion),
                 date_premiere_communion: memberData?.date_premiere_communion || "",
                 lieu_premiere_communion: memberData?.lieu_premiere_communion || "",
-                marie_religieusement: memberData?.marie_religieusement || false,
+                marie_religieusement: toBoolean(memberData?.marie_religieusement),
                 date_mariage_religieux: memberData?.date_mariage_religieux || "",
                 lieu_mariage_religieux: memberData?.lieu_mariage_religieux || "",
             });
@@ -590,6 +597,14 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                 try {
                     const response = await axios.get(`/admin/membres/${memberData.id}`);
                     const freshData = response.data;
+
+                    // Fonction pour convertir les valeurs booléennes
+                    const toBoolean = (val) => {
+                        if (typeof val === 'boolean') return val;
+                        if (typeof val === 'string') return val.toLowerCase() === 'oui' || val === '1' || val === 'true';
+                        return !!val;
+                    };
+
                     setData({
                         nom: freshData?.nom || "",
                         prenom: freshData?.prenom || "",
@@ -606,13 +621,13 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                         relation: freshData?.relation || "",
                         photo: null,
                         photoPreview: freshData?.photo_path || null,
-                        baptise: freshData?.baptise || false,
+                        baptise: toBoolean(freshData?.baptise),
                         date_bapteme: freshData?.date_bapteme || "",
                         lieu_bapteme: freshData?.lieu_bapteme || "",
-                        premiere_communion: freshData?.premiere_communion || false,
+                        premiere_communion: toBoolean(freshData?.premiere_communion),
                         date_premiere_communion: freshData?.date_premiere_communion || "",
                         lieu_premiere_communion: freshData?.lieu_premiere_communion || "",
-                        marie_religieusement: freshData?.marie_religieusement || false,
+                        marie_religieusement: toBoolean(freshData?.marie_religieusement),
                         date_mariage_religieux: freshData?.date_mariage_religieux || "",
                         lieu_mariage_religieux: freshData?.lieu_mariage_religieux || "",
                     });
@@ -811,7 +826,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
 
             alert("✅ Membre mis à jour avec succès !");
             onClose();
-            if (onUpdate) onUpdate();
+            if (onUpdate) onUpdate({ ...data, id: memberData.id });
             router.reload({ only: ["membres", "dataByType"] });
 
         } catch (err) {
