@@ -1,0 +1,189 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     * Ajoute les colonnes SoftDelete (deleted_at) et les colonnes de audit à toutes les tables
+     */
+    public function up(): void
+    {
+        // Users table - Ajouter soft delete
+        Schema::table('users', function (Blueprint $table) {
+            // D'abord, supprimer les contraintes de foreign key si elles existent
+            try {
+                $table->dropForeignKey('users_id_supp_foreign');
+            } catch (\Exception $e) {
+                // Constraint doesn't exist, continue
+            }
+
+            if (!Schema::hasColumn('users', 'deleted_at')) {
+                $table->softDeletes();
+            }
+            if (!Schema::hasColumn('users', 'deleted_by')) {
+                $table->foreignId('deleted_by')->nullable()->constrained('users')->nullOnDelete()->comment('ID de l\'utilisateur qui a supprimé');
+            }
+            if (!Schema::hasColumn('users', 'deleted_reason')) {
+                $table->text('deleted_reason')->nullable()->comment('Raison de la suppression');
+            }
+            // Supprimer les anciennes colonnes si elles existent
+            if (Schema::hasColumn('users', 'supp')) {
+                $table->dropColumn('supp');
+            }
+            if (Schema::hasColumn('users', 'id_supp')) {
+                $table->dropColumn('id_supp');
+            }
+            if (Schema::hasColumn('users', 'date_supp')) {
+                $table->dropColumn('date_supp');
+            }
+        });
+
+        // Classes table - Ajouter soft delete
+        Schema::table('classes', function (Blueprint $table) {
+            if (!Schema::hasColumn('classes', 'deleted_at')) {
+                $table->softDeletes();
+            }
+            if (!Schema::hasColumn('classes', 'deleted_by')) {
+                $table->foreignId('deleted_by')->nullable()->constrained('users')->nullOnDelete()->comment('ID de l\'utilisateur qui a supprimé');
+            }
+            if (!Schema::hasColumn('classes', 'deleted_reason')) {
+                $table->text('deleted_reason')->nullable()->comment('Raison de la suppression');
+            }
+            if (Schema::hasColumn('classes', 'supp')) {
+                $table->dropColumn('supp');
+            }
+            if (Schema::hasColumn('classes', 'id_supp')) {
+                $table->dropColumn('id_supp');
+            }
+            if (Schema::hasColumn('classes', 'date_supp')) {
+                $table->dropColumn('date_supp');
+            }
+        });
+
+        // Families table - Ajouter soft delete
+        Schema::table('families', function (Blueprint $table) {
+            if (!Schema::hasColumn('families', 'deleted_at')) {
+                $table->softDeletes();
+            }
+            if (!Schema::hasColumn('families', 'deleted_by')) {
+                $table->foreignId('deleted_by')->nullable()->constrained('users')->nullOnDelete()->comment('ID de l\'utilisateur qui a supprimé');
+            }
+            if (!Schema::hasColumn('families', 'deleted_reason')) {
+                $table->text('deleted_reason')->nullable()->comment('Raison de la suppression');
+            }
+            if (Schema::hasColumn('families', 'supp')) {
+                $table->dropColumn('supp');
+            }
+            if (Schema::hasColumn('families', 'id_supp')) {
+                $table->dropColumn('id_supp');
+            }
+            if (Schema::hasColumn('families', 'date_supp')) {
+                $table->dropColumn('date_supp');
+            }
+        });
+
+        // Family Members table - Ajouter soft delete
+        Schema::table('family_members', function (Blueprint $table) {
+            if (!Schema::hasColumn('family_members', 'deleted_at')) {
+                $table->softDeletes();
+            }
+            if (!Schema::hasColumn('family_members', 'deleted_by')) {
+                $table->foreignId('deleted_by')->nullable()->constrained('users')->nullOnDelete()->comment('ID de l\'utilisateur qui a supprimé');
+            }
+            if (!Schema::hasColumn('family_members', 'deleted_reason')) {
+                $table->text('deleted_reason')->nullable()->comment('Raison de la suppression');
+            }
+        });
+
+        // Inscriptions table - Ajouter soft delete
+        Schema::table('inscriptions', function (Blueprint $table) {
+            if (!Schema::hasColumn('inscriptions', 'deleted_at')) {
+                $table->softDeletes();
+            }
+            if (!Schema::hasColumn('inscriptions', 'deleted_by')) {
+                $table->foreignId('deleted_by')->nullable()->constrained('users')->nullOnDelete()->comment('ID de l\'utilisateur qui a supprimé');
+            }
+            if (!Schema::hasColumn('inscriptions', 'deleted_reason')) {
+                $table->text('deleted_reason')->nullable()->comment('Raison de la suppression');
+            }
+            if (Schema::hasColumn('inscriptions', 'supp')) {
+                $table->dropColumn('supp');
+            }
+            if (Schema::hasColumn('inscriptions', 'id_supp')) {
+                $table->dropColumn('id_supp');
+            }
+            if (Schema::hasColumn('inscriptions', 'date_supp')) {
+                $table->dropColumn('date_supp');
+            }
+        });
+
+        // Notifications table - Ajouter soft delete
+        Schema::table('notifications', function (Blueprint $table) {
+            if (!Schema::hasColumn('notifications', 'deleted_at')) {
+                $table->softDeletes();
+            }
+            if (!Schema::hasColumn('notifications', 'deleted_by')) {
+                $table->foreignId('deleted_by')->nullable()->constrained('users')->nullOnDelete()->comment('ID de l\'utilisateur qui a supprimé');
+            }
+            if (!Schema::hasColumn('notifications', 'deleted_reason')) {
+                $table->text('deleted_reason')->nullable()->comment('Raison de la suppression');
+            }
+        });
+
+        // Villes table - Ajouter soft delete
+        Schema::table('villes', function (Blueprint $table) {
+            if (!Schema::hasColumn('villes', 'deleted_at')) {
+                $table->softDeletes();
+            }
+            if (!Schema::hasColumn('villes', 'deleted_by')) {
+                $table->foreignId('deleted_by')->nullable()->constrained('users')->nullOnDelete()->comment('ID de l\'utilisateur qui a supprimé');
+            }
+            if (!Schema::hasColumn('villes', 'deleted_reason')) {
+                $table->text('deleted_reason')->nullable()->comment('Raison de la suppression');
+            }
+        });
+
+        // AuditLogs table - Ajouter soft delete
+        Schema::table('audit_logs', function (Blueprint $table) {
+            if (!Schema::hasColumn('audit_logs', 'deleted_at')) {
+                $table->softDeletes();
+            }
+        });
+
+        // LoginHistories table - Ajouter soft delete
+        Schema::table('login_histories', function (Blueprint $table) {
+            if (!Schema::hasColumn('login_histories', 'deleted_at')) {
+                $table->softDeletes();
+            }
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        $tables = ['users', 'classes', 'families', 'family_members', 'inscriptions', 'notifications', 'villes', 'audit_logs', 'login_histories'];
+
+        foreach ($tables as $table) {
+            if (Schema::hasTable($table)) {
+                Schema::table($table, function (Blueprint $table) {
+                    if (Schema::hasColumn($table->getTable(), 'deleted_at')) {
+                        $table->dropSoftDeletes();
+                    }
+                    if (Schema::hasColumn($table->getTable(), 'deleted_by')) {
+                        $table->dropForeignKey([$table->getTable() . '_deleted_by_foreign']);
+                        $table->dropColumn('deleted_by');
+                    }
+                    if (Schema::hasColumn($table->getTable(), 'deleted_reason')) {
+                        $table->dropColumn('deleted_reason');
+                    }
+                });
+            }
+        }
+    }
+};
