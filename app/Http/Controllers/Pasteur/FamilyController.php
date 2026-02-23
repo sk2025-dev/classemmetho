@@ -31,7 +31,7 @@ class FamilyController extends Controller
         $classes = Classe::all();
         $villes = Ville::all();
 
-        return Inertia::render('ResponsableFamille/EditFamily', [
+        return Inertia::render('Pasteur/EditFamily', [
             'family' => [
                 'id' => $family->id,
                 'nom' => $family->nom,
@@ -42,14 +42,11 @@ class FamilyController extends Controller
                 'quartier' => $family->quartier,
                 'classe_id' => $family->classe_id,
                 'ville_id' => $family->ville_id,
-                'contact_urgence' => $family->contact_urgence,
-                'contact_urgence_tel' => $family->contact_urgence_tel,
                 'created_at' => optional($family->created_at)->toISOString(),
                 'updated_at' => optional($family->updated_at)->toISOString(),
             ],
             'classes' => $classes,
             'villes' => $villes,
-            'routeBase' => '/pasteur',
         ]);
     }
 
@@ -77,8 +74,6 @@ class FamilyController extends Controller
             'quartier' => 'nullable|string|max:255',
             'classe_id' => 'nullable|exists:classes,id',
             'ville_id' => 'nullable|exists:villes,id',
-            'contact_urgence' => 'nullable|string|max:255',
-            'contact_urgence_tel' => 'nullable|string|max:20',
         ]);
 
         // Mettre à jour la famille

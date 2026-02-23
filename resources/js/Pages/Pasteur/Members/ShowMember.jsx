@@ -158,7 +158,7 @@ export default function ShowMember({ member, family, auth }) {
                 {/* Header avec bouton retour */}
                 <div className="mb-8 flex justify-between items-center">
                     <Link
-                        href={`/responsable-famille/inscriptions`}
+                        href={`/pasteur/inscriptions`}
                         className="inline-flex items-center gap-2 text-white/90 hover:text-white bg-white/10 hover:bg-white/20 backdrop-blur-md px-5 py-2.5 rounded-full transition-all text-sm font-semibold border border-white/10"
                     >
                         <ArrowLeft className="w-4 h-4" />
@@ -207,9 +207,9 @@ export default function ShowMember({ member, family, auth }) {
                                     <span className="px-4 py-1.5 rounded-full bg-slate-100 text-slate-700 text-sm font-bold border border-slate-200">
                                         {getGenreLabel(member.genre)}
                                     </span>
-                                    {member.is_responsable && (
+                                    {member.is_pasteur && (
                                         <span className="px-4 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm font-bold border border-amber-200 flex items-center gap-1">
-                                            <Award size={14} /> Responsable
+                                            <Award size={14} /> Pasteur
                                         </span>
                                     )}
                                     {member.classe && (
@@ -220,17 +220,10 @@ export default function ShowMember({ member, family, auth }) {
                                 </div>
 
                                 <div className="pt-4 flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-                                    <Link
-                                        href={`/responsable-famille/inscriptions?family_id=${family.id}`}
-                                        className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-white/20 hover:bg-white/30 text-white border border-white/30 font-bold rounded-xl transition-all backdrop-blur-sm"
-                                    >
-                                        <ArrowLeft className="w-4 h-4" />
-                                        Retour
-                                    </Link>
                                     <button
                                         onClick={() =>
                                             router.get(
-                                                `/responsable-famille/members/${member.id}/edit`,
+                                                `/pasteur/members/${member.id}/edit`,
                                             )
                                         }
                                         className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
@@ -767,8 +760,8 @@ export default function ShowMember({ member, family, auth }) {
                                     <InfoField
                                         label="Rôle"
                                         value={
-                                            member.is_responsable
-                                                ? "Responsable"
+                                            member.is_pasteur
+                                                ? "Pasteur"
                                                 : "Membre"
                                         }
                                         icon={Award}

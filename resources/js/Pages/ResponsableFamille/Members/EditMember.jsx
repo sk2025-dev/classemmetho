@@ -5,6 +5,7 @@ import Select2Fonction from "../../../Components/Select2Fonction";
 import Select2Relation from "../../../Components/Select2Relation";
 import ToastContainer from "../../../Components/ToastContainer";
 import useToast from "../../../Hooks/useToast";
+import { clearFormPersistedData } from "../../../Hooks/usePersistentState";
 import {
     ArrowLeft, User, Mail, Phone, Heart, Calendar, MapPin,
     Award, Gift, BookOpen, ChevronDown, ChevronUp, Check, X, Users, Briefcase
@@ -110,8 +111,8 @@ export default function EditMember({ member, family }) {
         genre: member.genre || "M",
         date_naissance: formatDateForInput(member.date_naissance),
         statut_marital: member.statut_marital || "",
-        date_mariage: formatDateForInput(member.date_mariage),
-        lieu_mariage: member.lieu_mariage || "",
+        date_mariage: formatDateForInput(sacrements.mariage_civil_date),
+        lieu_mariage: sacrements.mariage_civil_lieu || "",
         profession: member.profession || "",
         fonction_id: member.fonction_id || "",
         relation: member.relation || "",
@@ -142,8 +143,8 @@ export default function EditMember({ member, family }) {
             genre: member.genre || "M",
             date_naissance: formatDateForInput(member.date_naissance),
             statut_marital: member.statut_marital || "",
-            date_mariage: formatDateForInput(member.date_mariage),
-            lieu_mariage: member.lieu_mariage || "",
+            date_mariage: formatDateForInput(currentSacrements.mariage_civil_date),
+            lieu_mariage: currentSacrements.mariage_civil_lieu || "",
             profession: member.profession || "",
             fonction_id: member.fonction_id || "",
             relation: member.relation || "",
@@ -224,37 +225,72 @@ export default function EditMember({ member, family }) {
             return;
         }
 
-        // Préparer les données pour Inertia (en format objet simple, pas FormData)
+        const hasPhotoFile = data.photo instanceof File;
+
+        if (hasPhotoFile) {
+            const formData = new FormData();
+
+            Object.entries(data).forEach(([k, v]) => {
+                if (k === "photoPreview" || k === "originalPhotoPath") {
+                    return;
+                }
+
+                if (k === "baptise" || k === "premiere_communion" || k === "marie_religieusement") {
+                    formData.append(k, v ? "1" : "0");
+                    return;
+                }
+
+                formData.append(k, v ?? "");
+            });
+
+            router.post(`/responsable-famille/members/${member.id}?_method=PUT`, formData, {
+                onSuccess: () => {
+                    showSuccess("Modifications sauvegardées avec succès !");
+                    clearFormPersistedData('editMember_');
+                    window.localStorage.removeItem('editMember_memberId');
+
+                    setTimeout(() => {
+                        router.get(`/responsable-famille/members/${member.id}`);
+                    }, 1500);
+                },
+                onError: (errors) => {
+                    console.error("Erreurs de validation:", JSON.stringify(errors, null, 2));
+                    const errorMessages = Object.entries(errors).map(([field, message]) => {
+                        return `${field}: ${message}`;
+                    });
+                    showError(`Erreur de validation:\n${errorMessages.join('\n')}`);
+                },
+                onFinish: () => {
+                    setLoading(false);
+                },
+            });
+
+            return;
+        }
+
         const submitData = {};
 
         Object.entries(data).forEach(([k, v]) => {
-            // Exclure les champs internes
-            if (k === "photoPreview" || k === "originalPhotoPath") {
+            if (k === "photoPreview" || k === "originalPhotoPath" || k === "photo") {
                 return;
             }
 
-            // Gérer les booléens - envoyer comme '0' ou '1'
             if (k === 'baptise' || k === 'premiere_communion' || k === 'marie_religieusement') {
                 submitData[k] = v ? '1' : '0';
                 return;
             }
 
-            // Inclure tous les autres champs
             submitData[k] = v;
         });
 
         console.log("Données préparées pour envoi:", submitData);
 
-        // Utiliser Inertia router.put() qui gère correctement FormData et CSRF
         router.put(`/responsable-famille/members/${member.id}`, submitData, {
             onSuccess: () => {
-                // Afficher le toast de succès
                 showSuccess("Modifications sauvegardées avec succès !");
                 clearFormPersistedData('editMember_');
                 window.localStorage.removeItem('editMember_memberId');
 
-                // Rediriger vers la page de détails du membre pour afficher les nouvelles données
-                // On utilise un petit délai pour que le toast soit vu
                 setTimeout(() => {
                     router.get(`/responsable-famille/members/${member.id}`);
                 }, 1500);

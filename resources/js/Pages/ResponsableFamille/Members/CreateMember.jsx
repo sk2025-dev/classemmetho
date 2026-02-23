@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Link } from "@inertiajs/react";
+import { Link, router } from "@inertiajs/react";
 import { usePersistentState, clearFormPersistedData } from "../../../Hooks/usePersistentState";
 import useToast from "../../../Hooks/useToast";
 import ToastContainer from "../../../Components/ToastContainer";
@@ -162,14 +162,15 @@ export default function CreateMember({ family, errors }) {
                 if (!value) error = "Le prénom est obligatoire";
                 break;
             case "email":
-                if (!value) error = "L'email est obligatoire";
-                else if (!/^\S+@\S+\.\S+$/.test(value)) error = "Email invalide";
+                // Email est optionnel, mais s'il est fourni, doit être valide
+                if (value && !/^\S+@\S+\.\S+$/.test(value)) error = "Email invalide";
                 break;
             case "genre":
                 if (!value) error = "Le genre est obligatoire";
                 break;
             case "date_naissance":
-                if (!value) error = "La date de naissance est obligatoire";
+                // Optionnel
+                if (value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) error = "Format de date invalide";
                 break;
             case "statut_marital":
                 if (!value) error = "Le statut marital est obligatoire";
@@ -178,7 +179,7 @@ export default function CreateMember({ family, errors }) {
                 if (!value) error = "La profession est obligatoire";
                 break;
             case "fonction_id":
-                if (!value) error = "La fonction est obligatoire";
+                // Optionnel
                 break;
             case "date_mariage":
                 if ((data.statut_marital === "Marié(e)" || data.statut_marital === "Dote" || data.statut_marital === "Divorcé(e)" || data.statut_marital === "Veuf(ve)") && !value)
@@ -220,26 +221,28 @@ export default function CreateMember({ family, errors }) {
         const newErrors = {};
         if (!data.nom) newErrors.nom = "Le nom est obligatoire";
         if (!data.prenom) newErrors.prenom = "Le prénom est obligatoire";
-        if (!data.email) newErrors.email = "L'email est obligatoire";
-        else if (!/^\S+@\S+\.\S+$/.test(data.email)) newErrors.email = "Email invalide";
+        // Email est optionnel, mais s'il est fourni, doit être valide
+        if (data.email && !/^\S+@\S+\.\S+$/.test(data.email)) newErrors.email = "Email invalide";
         if (!data.genre) newErrors.genre = "Le genre est obligatoire";
-        if (!data.date_naissance) newErrors.date_naissance = "La date de naissance est obligatoire";
+        // date_naissance est optionnelle
         if (!data.statut_marital) newErrors.statut_marital = "Le statut marital est obligatoire";
         if (!data.profession) newErrors.profession = "La profession est obligatoire";
-        if (!data.fonction_id) newErrors.fonction_id = "La fonction est obligatoire";
+        // fonction_id n'est pas obligatoire
 
-        // Vérifier conditions statut marital
-        if (data.statut_marital === "Marié(e)" || data.statut_marital === "Dote") {
-            if (!data.date_mariage) newErrors.date_mariage = "Date requise";
-            if (!data.lieu_mariage) newErrors.lieu_mariage = "Lieu requis";
-        }
-        if (data.statut_marital === "Divorcé(e)") {
-            if (!data.date_mariage) newErrors.date_mariage = "Date requise";
-            if (!data.lieu_mariage) newErrors.lieu_mariage = "Lieu requis";
-        }
-        if (data.statut_marital === "Veuf(ve)") {
-            if (!data.date_mariage) newErrors.date_mariage = "Date requise";
-            if (!data.lieu_mariage) newErrors.lieu_mariage = "Lieu requis";
+        // Vérifier conditions statut marital si fourni
+        if (data.statut_marital) {
+            if (data.statut_marital === "Marié(e)" || data.statut_marital === "Dote") {
+                if (!data.date_mariage) newErrors.date_mariage = "Date requise";
+                if (!data.lieu_mariage) newErrors.lieu_mariage = "Lieu requis";
+            }
+            if (data.statut_marital === "Divorcé(e)") {
+                if (!data.date_mariage) newErrors.date_mariage = "Date requise";
+                if (!data.lieu_mariage) newErrors.lieu_mariage = "Lieu requis";
+            }
+            if (data.statut_marital === "Veuf(ve)") {
+                if (!data.date_mariage) newErrors.date_mariage = "Date requise";
+                if (!data.lieu_mariage) newErrors.lieu_mariage = "Lieu requis";
+            }
         }
 
         if (Object.keys(newErrors).length > 0) {
@@ -277,62 +280,38 @@ export default function CreateMember({ family, errors }) {
 
         try {
             const res = await axios.post(`/responsable-famille/members/store?family_id=${family.id}`, formData, {
-                headers: { "Content-Type": "multipart/form-data" },
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                    "X-Requested-With": "XMLHttpRequest"
+                },
             });
 
-            // Succès - Afficher toast avec bouton Modifier
-            const addedMemberData = res.data?.data || data; // Récupérer les données du membre depuis la réponse API
+            // Récupérer les données du membre depuis la réponse API
+            const addedMemberData = res.data?.data || data;
 
+            // Toast avec bouton Modifier - garder pendant 5 secondes avant redirection
+            const toastTimeout = setTimeout(() => {
+                // Rediriger automatiquement vers inscriptions après 5 secondes
+                router.get(`/responsable-famille/inscriptions?family_id=${family.id}`);
+            }, 5000);
+
+            // L'utilisateur peut cliquer sur Modifier dans le toast pour rester
             showSuccess(
                 "✅ Membre ajouté avec succès !",
-                0, // durée infinie (0) jusqu'à ce que l'utilisateur clique sur Modifier ou ferme
+                0,
                 {
                     label: "Modifier",
                     onClick: () => {
-                        // Remplir le formulaire avec les données du membre pour modification
+                        clearTimeout(toastTimeout);
                         setData(prev => ({
                             ...prev,
                             ...addedMemberData,
-                            photoPreview: prev.photoPreview, // Garder la preview photo
+                            photoPreview: prev.photoPreview,
                         }));
-                        // Focus sur le premier champ
                         setTimeout(() => nomRef.current?.focus(), 100);
                     }
                 }
             );
-
-            // Reset du formulaire après 2 secondes
-            setTimeout(() => {
-                setData({
-                    nom: "",
-                    prenom: "",
-                    email: "",
-                    telephone: "",
-                    telephone2: "",
-                    genre: "M",
-                    date_naissance: "",
-                    statut_marital: "",
-                    date_mariage: "",
-                    lieu_mariage: "",
-                    profession: "",
-                    fonction_id: "",
-                    relation: "",
-                    photo: null,
-                    photoPreview: null,
-                    baptise: false,
-                    date_bapteme: "",
-                    lieu_bapteme: "",
-                    premiere_communion: false,
-                    date_premiere_communion: "",
-                    lieu_premiere_communion: "",
-                    marie_religieusement: false,
-                    date_mariage_religieux: "",
-                    lieu_mariage_religieux: "",
-                });
-
-                // Effacer les données sauvegardées après soumission réussie
-                clearFormPersistedData('createMember_');
-            }, 2000);
 
         } catch (err) {
             console.error("Erreur:", err);
@@ -366,8 +345,6 @@ export default function CreateMember({ family, errors }) {
             });
         }
     };
-
-
 
     return (
         <div className="min-h-screen font-sans text-gray-800 selection:bg-purple-200"
@@ -489,7 +466,7 @@ export default function CreateMember({ family, errors }) {
                                             <p className="text-red-500 text-xs mt-1">{fieldErrors.genre}</p>
                                         )}
                                     </FormField>
-                                    <FormField label="Date de naissance" icon={Calendar} required>
+                                    <FormField label="Date de naissance" icon={Calendar}>
                                         <input
                                             type="date"
                                             className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
@@ -577,7 +554,7 @@ export default function CreateMember({ family, errors }) {
                                             </p>
                                         )}
                                     </FormField>
-                                    <FormField label="Fonction dans l'église" icon={Users} required>
+                                    <FormField label="Fonction dans l'église" icon={Users}>
                                         <Select2Fonction
                                             value={data.fonction_id ? [data.fonction_id] : []}
                                             onChange={(e) => {
@@ -650,7 +627,16 @@ export default function CreateMember({ family, errors }) {
                                     {/* Afficher Date et Lieu Mariage SEULEMENT si statut marital !== Célibataire */}
                                     {data.statut_marital && data.statut_marital !== "Célibataire" && (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 animate-fadeIn">
-                                            <FormField label={data.statut_marital === "Dote" ? "Date Dot" : "Date Mariage"} icon={Calendar} required>
+                                            <FormField
+                                                label={
+                                                    data.statut_marital === "Dote" ? "Date Dot" :
+                                                    data.statut_marital === "Divorcé(e)" ? "Date du divorce" :
+                                                    data.statut_marital === "Veuf(ve)" ? "Date du décès" :
+                                                    "Date Mariage"
+                                                }
+                                                icon={Calendar}
+                                                required
+                                            >
                                                 <input
                                                     type="date"
                                                     className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
@@ -668,7 +654,16 @@ export default function CreateMember({ family, errors }) {
                                                     </p>
                                                 )}
                                             </FormField>
-                                            <FormField label={data.statut_marital === "Dote" ? "Lieu Dot" : "Lieu Mariage"} icon={MapPin} required>
+                                            <FormField
+                                                label={
+                                                    data.statut_marital === "Dote" ? "Lieu Dot" :
+                                                    data.statut_marital === "Divorcé(e)" ? "Lieu du divorce" :
+                                                    data.statut_marital === "Veuf(ve)" ? "Lieu du décès" :
+                                                    "Lieu Mariage"
+                                                }
+                                                icon={MapPin}
+                                                required
+                                            >
                                                 <input
                                                     className="w-full h-10 border border-gray-300 rounded px-2 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                                     value={data.lieu_mariage}

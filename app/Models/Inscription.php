@@ -127,6 +127,18 @@ class Inscription extends Model
     }
 
     /**
+     * Accesseur pour l'URL de la photo de l'inscription
+     * Utilise PhotoHelper pour générer l'URL complète
+     */
+    public function getProfilePhotoUrlAttribute()
+    {
+        if (!isset($this->attributes['photo_path'])) {
+            return null;
+        }
+        return \App\Helpers\PhotoHelper::getPhotoUrl($this->attributes['photo_path'], $this->responsable_prenom, $this->responsable_nom);
+    }
+
+    /**
      * Mutateur pour auto-supprimer les fichiers avant suppression
      */
     protected static function booted()

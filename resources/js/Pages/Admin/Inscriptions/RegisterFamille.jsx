@@ -2,15 +2,15 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import { Link } from "@inertiajs/react";
 import AddressAutocomplete from "../../../Components/AddressAutocomplete";
-import Select2Classe from "../../../Components/Select2Classe";
-import Select2Fonction from "../../../Components/Select2Fonction";
-import Select2Relation from "../../../Components/Select2Relation";
-import CitySelect from "../../../Components/CitySelect";
 import { useDebounce } from "../../../Hooks/useDebounce";
-import { useFormErrors } from "../../../Hooks/useFormErrors";
 import { usePersistentState, clearFormPersistedData } from "../../../Hooks/usePersistentState";
+import { useFormErrors } from "../../../Hooks/useFormErrors";
 import { useToastWithErrorHandling } from "../../../Hooks/useToastWithErrorHandling";
 import ToastContainer from "../../../Components/ToastContainer";
+import Select2Classe from "../../../Components/Select2Classe";
+import CitySelect from "../../../Components/CitySelect";
+import Select2Relation from "../../../Components/Select2Relation";
+import Select2Fonction from "../../../Components/Select2Fonction";
 import {
     Home,
     User,
@@ -41,6 +41,7 @@ import {
     Check,
     ChevronDown,
     Gift,
+    AlertCircle,
 } from "lucide-react";
 
 // --- Style Constants ---
@@ -128,14 +129,13 @@ const FormStepper = ({ currentStep, totalSteps, labels, onStepClick }) => {
 };
 
 // --- Form Field Component ---
-const FormField = ({ label, children, icon: Icon, required, hint }) => (
+const FormField = ({ label, children, icon: Icon, required }) => (
     <div className="space-y-2">
         <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
             {Icon && <Icon className="w-4 h-4 text-blue-500" />}
             {label}
             {required && <span className="text-red-500">*</span>}
         </label>
-        {hint && <p className="text-xs text-gray-500">{hint}</p>}
         {children}
     </div>
 );
@@ -211,12 +211,12 @@ export default function RegisterFamille({
 }) {
     // --- États ---
     const [step, setStep] = usePersistentState('registerFamille_step', 1);
-    const { errors, setErrors, serverErrors, getFieldError, handleServerErrors } = useFormErrors();
+    const { errors, setErrors, serverErrors, setServerErrors, getFieldError, handleServerErrors } = useFormErrors();
     const { toasts, removeToast, success: showSuccess, error: showError, warning: showWarning, info: showInfo } = useToastWithErrorHandling();
     const [loading, setLoading] = useState(false);
     const [editingMemberIndex, setEditingMemberIndex] = useState(null);
 
-    // Base de données locales
+    // Base de donn?es locales
     const [classesDatabase, setClassesDatabase] = useState([]);
     const [villesDatabase, setVillesDatabase] = useState([]);
 
@@ -226,7 +226,7 @@ export default function RegisterFamille({
     const [villesSearchTerm, setVillesSearchTerm] = usePersistentState('registerFamille_villesSearchTerm', "");
     const [showVillesDropdown, setShowVillesDropdown] = useState(false);
 
-    // États pour l'adresse autocomplete
+    // ?tats pour l'adresse autocomplete
     const [adresseInputValue, setAdresseInputValue] = usePersistentState('registerFamille_adresseInputValue', "");
     const [adresseSuggestions, setAdresseSuggestions] = useState([]);
     const [showAdresseDropdown, setShowAdresseDropdown] = useState(false);
@@ -253,10 +253,8 @@ export default function RegisterFamille({
         telephone2: "",
         dateNaissance: "",
         genre: "",
-        relation: "",
         profession: "",
         fonction: "",
-        fonction_id: null,
         statutMarital: "",
         dateMariage: "",
         lieuMariage: "",
@@ -264,11 +262,11 @@ export default function RegisterFamille({
         lieuDivorce: "",
         dateDeces: "",
         lieuDeces: "",
-        // Champs religieux - baptême
+        // Champs religieux - bapt?me
         baptise: false,
         dateBapteme: "",
         lieuBapteme: "",
-        // Champs religieux - première communion
+        // Champs religieux - premi?re communion
         premiereCommunion: false,
         datePremiereCommunion: "",
         lieuPremiereCommunion: "",
@@ -299,11 +297,11 @@ export default function RegisterFamille({
         dote: "",
         lieuDote: "",
         lienParente: "",
-        // Champs religieux - baptême
+        // Champs religieux - bapt?me
         baptise: false,
         dateBapteme: "",
         lieuBapteme: "",
-        // Champs religieux - première communion
+        // Champs religieux - premi?re communion
         premiereCommunion: false,
         datePremiereCommunion: "",
         lieuPremiereCommunion: "",
@@ -312,7 +310,6 @@ export default function RegisterFamille({
         dateMariageReligieux: "",
         lieuMariageReligieux: "",
         fonction: "",
-        fonction_id: null,
         profession: "",
         photo: null,
         photoPreview: null,
@@ -333,23 +330,44 @@ export default function RegisterFamille({
     const classesDropdownRef = useRef(null);
     const villesDropdownRef = useRef(null);
 
+    // Cleanup blob URLs on unmount
+    useEffect(() => {
+        return () => {
+            // Revoke responsable photo blob URL
+            if (responsable.photoPreview && responsable.photoPreview.startsWith('blob:')) {
+                URL.revokeObjectURL(responsable.photoPreview);
+            }
+            // Revoke member photos blob URLs
+            membres.forEach(membre => {
+                if (membre.photoPreview && membre.photoPreview.startsWith('blob:')) {
+                    URL.revokeObjectURL(membre.photoPreview);
+                }
+            });
+            // Revoke temp member photo blob URL
+            if (membreTemp.photoPreview && membreTemp.photoPreview.startsWith('blob:')) {
+                URL.revokeObjectURL(membreTemp.photoPreview);
+            }
+        };
+    }, []);
+
     const totalSteps = labels.length;
 
     // --- Effets (Chargement des données) ---
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Charger les classes depuis la base de données
+                // Charger les classes depuis la base de donn?es
                 const classesRes = await fetch('/api/classes');
                 if (classesRes.ok) {
                     const classesData = await classesRes.json();
+                    console.log('Classes chargées:', classesData);
                     setClassesDatabase(classesData.data && Array.isArray(classesData.data) ? classesData.data : Array.isArray(classesData) ? classesData : []);
                 } else {
                     console.error("Erreur chargement classes:", classesRes.status);
                     setClassesDatabase([]);
                 }
 
-                // Charger les villes depuis la base de données
+                // Charger les villes depuis la base de donn?es
                 const villesRes = await fetch('/api/villes');
                 if (villesRes.ok) {
                     const villesData = await villesRes.json();
@@ -363,9 +381,7 @@ export default function RegisterFamille({
                 const rolesRes = await fetch('/api/fonctions');
                 if (rolesRes.ok) {
                     const rolesData = await rolesRes.json();
-                    // L'API retourne { success: true, fonctions: [...], count: ... }
-                    const fonctionsArray = rolesData.fonctions || rolesData.data || (Array.isArray(rolesData) ? rolesData : []);
-                    setChurchRoles(Array.isArray(fonctionsArray) ? fonctionsArray : []);
+                    setChurchRoles(rolesData.data && Array.isArray(rolesData.data) ? rolesData.data : Array.isArray(rolesData) ? rolesData : []);
                 } else {
                     setChurchRoles([]);
                 }
@@ -398,19 +414,12 @@ export default function RegisterFamille({
             document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Réinitialiser la question à chaque visite de l'étape 3
-    useEffect(() => {
-        if (step === 3) {
-            setHasMembersToAdd(null);
-        }
-    }, [step]);
-
     const formatName = (text) => text.toUpperCase().replace(/\s+/g, " ").trim();
 
     /**
-     * Valider le format téléphone
+     * Valider le format t?l?phone
      * UNIQUEMENT 10 chiffres exactement
-     * Pas de caractères spéciaux
+     * Pas de caract?res sp?ciaux
      */
     const isValidPhoneFormat = (phone) => {
         if (!phone) return false;
@@ -420,9 +429,9 @@ export default function RegisterFamille({
     };
 
     /**
-     * Formatter le numéro de téléphone
+     * Formatter le num?ro de t?l?phone
      * UNIQUEMENT les 10 premiers chiffres
-     * Enlève tous les caractères non-numériques
+     * Enl?ve tous les caract?res non-numériques
      */
     const formatPhoneNumber = (text) => {
         // Garder UNIQUEMENT les chiffres
@@ -436,14 +445,13 @@ export default function RegisterFamille({
         const newErrors = {};
 
         if (!membreTemp.nom) newErrors["membre.nom"] = "Nom requis";
-        if (!membreTemp.prenom) newErrors["membre.prenom"] = "Prénom requis";
-if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["membre.email"] = "Adresse email invalide";
+        if (!membreTemp.prenom) newErrors["membre.prenom"] = "Prnom requis";
+        if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["membre.email"] = "Email invalide";
         if (!membreTemp.relation) newErrors["membre.relation"] = "Relation requise";
         if (!membreTemp.dateNaissance) newErrors["membre.dateNaissance"] = "Date de naissance requise";
-        else if (new Date(membreTemp.dateNaissance) > new Date())
-            newErrors["membre.dateNaissance"] = "La date ne doit pas être dans le futur";
+        else if (new Date(membreTemp.dateNaissance) > new Date()) newErrors["membre.datenaissance"] = "La date ne doit pas être dans le futur";
 
-        // Si fourni, valider le format téléphone
+        // Si fourni, valider le format tlphone
         if (membreTemp.telephone && !isValidPhoneFormat(membreTemp.telephone)) {
             newErrors["membre.telephone"] = "Doit contenir exactement 10 chiffres";
         }
@@ -452,14 +460,14 @@ if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["mem
         if (!membreTemp.statutMarital) newErrors["membre.statutMarital"] = "Statut marital requis";
         if (!membreTemp.profession) newErrors["membre.profession"] = "Profession requise";
 
-        // Vérifier conditions statut marital
+        // V?rifier conditions statut marital
         if (membreTemp.statutMarital === "marie") {
             if (!membreTemp.dateMariage) newErrors["membre.dateMariage"] = "Date requise";
             if (!membreTemp.lieuMariage) newErrors["membre.lieuMariage"] = "Lieu requis";
         }
         if (membreTemp.statutMarital === "divorce") {
             if (!membreTemp.dateDivorce) newErrors["membre.dateDivorce"] = "Date requise";
-            if (!membreTemp.lieuDivorce) newErrors["membre.lieuDivorce"] = "Lieu requis";
+            if (!membreTemp.lieuDivorce) newErrors["membre.lieuDivorce"] = "Lieu requise";
         }
         if (membreTemp.statutMarital === "veuf") {
             if (!membreTemp.dateDeces) newErrors["membre.dateDeces"] = "Date requise";
@@ -468,6 +476,20 @@ if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["mem
         if (membreTemp.statutMarital === "dot") {
             if (!membreTemp.dote) newErrors["membre.dote"] = "Date requise";
             if (!membreTemp.lieuDote) newErrors["membre.lieuDote"] = "Lieu requis";
+        }
+
+        // Validation des champs religieux si cochés
+        if (membreTemp.baptise) {
+            if (!membreTemp.dateBapteme) newErrors["membre.dateBapteme"] = "Date de baptême requise";
+            if (!membreTemp.lieuBapteme) newErrors["membre.lieuBapteme"] = "Lieu de baptême requis";
+        }
+        if (membreTemp.premiereCommunion) {
+            if (!membreTemp.datePremiereCommunion) newErrors["membre.datePremiereCommunion"] = "Date de première communion requise";
+            if (!membreTemp.lieuPremiereCommunion) newErrors["membre.lieuPremiereCommunion"] = "Lieu de première communion requis";
+        }
+        if (membreTemp.marieReligieusement) {
+            if (!membreTemp.dateMariageReligieux) newErrors["membre.dateMariageReligieux"] = "Date du mariage religieux requise";
+            if (!membreTemp.lieuMariageReligieux) newErrors["membre.lieuMariageReligieux"] = "Lieu du mariage religieux requis";
         }
 
         if (Object.keys(newErrors).length > 0) {
@@ -503,7 +525,7 @@ if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["mem
             );
         }
 
-        // Reset formulaire
+        // Reset du formulaire
         setTimeout(() => {
             setMembreTemp({
                 nom: "",
@@ -532,7 +554,6 @@ if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["mem
                 dateMariageReligieux: "",
                 lieuMariageReligieux: "",
                 fonction: "",
-                fonction_id: null,
                 profession: "",
                 photo: null,
                 photoPreview: null,
@@ -542,8 +563,10 @@ if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["mem
     };
 
     const editerMembre = (index) => {
+        // Charger les données du membre dans le formulaire
         setMembreTemp(membres[index]);
         setEditingMemberIndex(index);
+        // Scroll vers le formulaire
         document.querySelector('[data-member-form]')?.scrollIntoView({ behavior: 'smooth' });
     };
 
@@ -576,12 +599,15 @@ if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["mem
             dateMariageReligieux: "",
             lieuMariageReligieux: "",
             fonction: "",
-            fonction_id: null,
             profession: "",
             photo: null,
             photoPreview: null,
         });
         setErrors({});
+    };
+
+    const supprimerMembre = (index) => {
+        setMembres(membres.filter((_, i) => i !== index));
     };
 
     const handlePhotoChange = (e, type) => {
@@ -630,6 +656,7 @@ if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["mem
             if (!famille.classe_id)
                 newErrors["famille.classe_id"] =
                     "Veuillez sélectionner une classe.";
+            console.log('Validation Step 1 - classe_id:', famille.classe_id, 'errors:', newErrors);
         }
         if (s === 2) {
             if (!responsable.nom) newErrors["responsable.nom"] = "Requis";
@@ -644,15 +671,15 @@ if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["mem
             }
             if (!responsable.dateNaissance)
                 newErrors["responsable.dateNaissance"] = "Requis";
-             else if (new Date(responsable.dateNaissance) > new Date())
+            else if (new Date(responsable.dateNaissance) > new Date())
                 newErrors["responsable.dateNaissance"] = "La date ne doit pas être dans le futur";
             if (!responsable.genre) newErrors["responsable.genre"] = "Requis";
             if (!responsable.profession)
                 newErrors["responsable.profession"] = "Requis";
             if (!responsable.statutMarital)
                 newErrors["responsable.statutMarital"] = "Requis";
-            if (!responsable.relation)
-                newErrors["responsable.relation"] = "Requis";
+            if (!responsable.lienParente)
+                newErrors["responsable.lienParente"] = "Requis";
 
             // Validation des champs religieux si cochés
             if (responsable.baptise) {
@@ -667,6 +694,9 @@ if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["mem
                 if (!responsable.dateMariageReligieux) newErrors["responsable.dateMariageReligieux"] = "Date du mariage religieux requise";
                 if (!responsable.lieuMariageReligieux) newErrors["responsable.lieuMariageReligieux"] = "Lieu du mariage religieux requis";
             }
+
+            // Lien de parenté is now optional
+            console.log('Validation Step 2 - errors:', newErrors);
         }
         if (s === 3) {
             // Si l'utilisateur a choisi d'ajouter des membres, les valider
@@ -678,7 +708,7 @@ if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["mem
                     membres.forEach((m, idx) => {
                         if (!m.dateNaissance) {
                             newErrors[`membres[${idx}].dateNaissance`] = "Date de naissance requise";
-                        } else if (new Date(m.dateNaissance) > new Date())
+                        } else if (new Date(m.datenaissance) > new Date())
                             newErrors[`membres[${idx}].dateNaissance`] = "La date ne doit pas être dans le futur";
                         if (!m.nom) {
                             newErrors[`membres[${idx}].nom`] = "Nom requis";
@@ -703,81 +733,11 @@ if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["mem
     const handleSubmit = async (e) => {
         if (e) e.preventDefault();
 
-        // Validation complète avant soumission
-        const validationErrors = {};
-
-        // Valider le responsable
-        if (!responsable.nom) validationErrors["responsable.nom"] = "Nom du responsable requis";
-        if (!responsable.prenom) validationErrors["responsable.prenom"] = "Prénom du responsable requis";
-        if (!responsable.email || !/^\S+@\S+\.\S+$/.test(responsable.email)) validationErrors["responsable.email"] = "Email valide requis";
-        if (!responsable.dateNaissance) validationErrors["responsable.dateNaissance"] = "Date de naissance requise";
-
-        // Valider les membres s'ils sont requis
-        if (hasMembersToAdd === true) {
-            if (membres.length === 0) {
-                validationErrors["membres"] = "Veuillez ajouter au moins un membre";
-            } else {
-                let memberErrors = [];
-                membres.forEach((m, idx) => {
-                    let memberHasErrors = false;
-                    if (!m.nom) {
-                        memberErrors.push(`Membre ${idx + 1}: Nom requis`);
-                        memberHasErrors = true;
-                    }
-                    if (!m.prenom) {
-                        memberErrors.push(`Membre ${idx + 1}: Prénom requis`);
-                        memberHasErrors = true;
-                    }
-                    if (!m.dateNaissance) {
-                        memberErrors.push(`Membre ${idx + 1}: Date de naissance requise`);
-                        memberHasErrors = true;
-                    } else if (new Date(m.dateNaissance) > new Date()) {
-                        memberErrors.push(`Membre ${idx + 1}: La date ne doit pas être dans le futur`);
-                        memberHasErrors = true;
-                    }
-                    if (!m.relation) {
-                        memberErrors.push(`Membre ${idx + 1}: Relation requise`);
-                        memberHasErrors = true;
-                    }
-                    if (!m.genre) {
-                        memberErrors.push(`Membre ${idx + 1}: Genre requis`);
-                        memberHasErrors = true;
-                    }
-                    if (!m.statutMarital) {
-                        memberErrors.push(`Membre ${idx + 1}: Statut marital requis`);
-                        memberHasErrors = true;
-                    }
-                    if (!m.profession) {
-                        memberErrors.push(`Membre ${idx + 1}: Profession requise`);
-                        memberHasErrors = true;
-                    }
-                });
-                if (memberErrors.length > 0) {
-                    validationErrors["membres_detailed"] = memberErrors.join("\n");
-                }
-            }
-        }
-
-        // Afficher les erreurs s'il y en a
-        if (Object.keys(validationErrors).length > 0) {
-            let errorMessage = "❌ Veuillez corriger les erreurs suivantes:\n\n";
-            Object.values(validationErrors).forEach(err => {
-                if (typeof err === 'string' && err.includes('\n')) {
-                    errorMessage += err.split('\n').map(e => "• " + e).join("\n") + "\n";
-                } else {
-                    errorMessage += "• " + err + "\n";
-                }
-            });
-            alert(errorMessage);
-            setErrors(validationErrors);
-            return;
-        }
-
-        setErrors({});
-
         // Valider toutes les étapes
         for (let s = 1; s <= totalSteps; s++) {
             if (!validateStep(s)) {
+                console.error(`❌ Validation échouée au step ${s}`);
+                console.log(`État step ${s}:`, { famille, responsable, membres });
                 setStep(s);
                 return;
             }
@@ -788,9 +748,10 @@ if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["mem
             return;
         }
 
+        console.log('✓ Tous les validations passées');
         setLoading(true);
 
-        const formData = new FormData();
+        const formData = new FormData();/*  */
 
         // --- 1. Famille (avec nettoyage téléphone) ---
         Object.entries(famille).forEach(([k, v]) => {
@@ -800,6 +761,11 @@ if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["mem
                 (!v || v === "" || v === null)
             )
                 return;
+
+            // Ne pas envoyer les valeurs null/undefined/vides
+            if (v === null || v === undefined || v === "") {
+                return;
+            }
 
             let valueToSend = v;
 
@@ -813,10 +779,7 @@ if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["mem
                 valueToSend = valueToSend ? '1' : '0';
             }
 
-            // Ne pas envoyer les valeurs null/undefined pour la famille
-            if (valueToSend !== null && valueToSend !== undefined) {
-                formData.append(`famille[${k}]`, valueToSend);
-            }
+            formData.append(`famille[${k}]`, valueToSend);
         });
 
         // --- 2. Responsable (avec nettoyage téléphone) ---
@@ -849,7 +812,6 @@ if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["mem
 
         // --- 3. Membres ---
         if (membres.length > 0) {
-            console.log('Membres avant envoi:', JSON.stringify(membres, null, 2));
             membres.forEach((m, i) => {
                 Object.entries(m).forEach(([k, v]) => {
                     if (k === "photoPreview") {
@@ -880,10 +842,10 @@ if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["mem
             });
         }
 
-        formData.append("type", "famille");
+        formData.append("type", "family");
         formData.append("consentement", consentement ? "1" : "0");
 
-        // 🔐 Récupérer et ajouter le token CSRF au FormData
+        // ?? R?cup?rer et ajouter le token CSRF au FormData
         let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
         // Fallback si la meta n'existe pas - chercher dans window.axios
@@ -891,13 +853,13 @@ if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["mem
             csrfToken = window.axios.defaults.headers.common['X-CSRF-TOKEN'];
         }
 
-        // ✅ Ajouter le token CSRF au FormData
+        // ? Ajouter le token CSRF au FormData
         if (csrfToken) {
             formData.append('_token', csrfToken);
         }
 
         try {
-            // ✅ Ne pas définir Content-Type - axios le fera automatiquement
+            // ? Ne pas d?finir Content-Type - axios le fera automatiquement
             const headers = {};
 
             // Ajouter le token CSRF au header aussi (double sécurité)

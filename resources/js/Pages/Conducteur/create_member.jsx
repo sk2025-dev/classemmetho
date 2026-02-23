@@ -695,6 +695,11 @@ export default function RegisterFamille({
             }
         });
 
+        // --- Ajouter la fonction du responsable (première sélectionnée) ---
+        if (selectedRolesResponsable && selectedRolesResponsable.length > 0) {
+            formData.append(`responsable[fonction]`, selectedRolesResponsable[0]);
+        }
+
         // --- 3. Membres ---
         if (membres.length > 0) {
             membres.forEach((m, i) => {

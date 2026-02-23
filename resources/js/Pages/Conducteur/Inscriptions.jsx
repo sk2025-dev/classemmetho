@@ -6,7 +6,7 @@ import Select2Family from "../../Components/Select2Family";
 import Select2Fonction from "../../Components/Select2Fonction";
 import Select2Relation from "../../Components/Select2Relation";
 import { Eye, Edit, Pencil, Power, Trash2, User, Users, Plus, Check, X, Clock, UserCheck, UserX, CheckCircle, Mail, Phone, Heart, Calendar, MapPin, Award, Gift, BookOpen, ChevronDown, ChevronUp, Briefcase, ArrowLeft, FileText, Ban, ToggleLeft, ToggleRight } from "lucide-react";
-import DeleteConfirmationModal from "../../Components/DeleteConfirmationModal";
+import ConfirmationModal from "../../Components/ConfirmationModal";
 
 // Mapping des icônes Lucide pour usage dans les composants
 const lucideIcons = {
@@ -175,6 +175,12 @@ export default function Inscriptions({
     const [showFamilyModal, setShowFamilyModal] = useState(false);
     const [selectedFamily, setSelectedFamily] = useState(null);
     const [showMemberModal, setShowMemberModal] = useState(false);
+
+    // Confirmation modal states
+    const [showConfirmation, setShowConfirmation] = useState(false);
+    const [confirmationType, setConfirmationType] = useState(null); // delete
+    const [confirmationData, setConfirmationData] = useState(null); // {id, kind, name}
+    const [isProcessingConfirmation, setIsProcessingConfirmation] = useState(false);
 
     // États pour les données persistantes
     const [fonctions, setFonctions] = useState([]);
@@ -406,16 +412,17 @@ export default function Inscriptions({
     // --- ACTIONS ---
 
     // Suppression unifiée
-    const handleDelete = (id, kind) => {
-        const itemText =
-            kind === "inscription"
-                ? "cette demande d'inscription"
-                : "ce membre";
-        if (
-            !window.confirm(`Êtes-vous sûr de vouloir supprimer ${itemText} ?`)
-        ) {
-            return;
-        }
+    const handleDelete = (id, kind, name = "") => {
+        setConfirmationType("delete");
+        setConfirmationData({ id, kind, name });
+        setShowConfirmation(true);
+    };
+
+    const handleConfirmationAction = () => {
+        if (!confirmationData) return;
+
+        setIsProcessingConfirmation(true);
+        const { id, kind } = confirmationData;
 
         const url =
             kind === "inscription"
@@ -424,10 +431,12 @@ export default function Inscriptions({
 
         router.delete(url, {
             onSuccess: () => {
-                // Gestion succès
+                setShowConfirmation(false);
+                setIsProcessingConfirmation(false);
             },
             onError: (errors) => {
-                alert("Erreur lors de la suppression.");
+                console.error("Erreur lors de la suppression:", errors);
+                setIsProcessingConfirmation(false);
             },
         });
     };
@@ -1242,7 +1251,7 @@ export default function Inscriptions({
                                                                     type="button"
                                                                     title="Supprimer"
                                                                     className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition transform hover:scale-105"
-                                                                    onClick={() => handleDelete(member.id, "member")}
+                                                                    onClick={() => handleDelete(member.id, "member", `${member.prenom} ${member.nom}`)}
                                                                 >
                                                                     <Trash2 size={18} />
                                                                 </button>
@@ -2855,6 +2864,26 @@ export default function Inscriptions({
                         </div>
                     </div>
                 )}
+
+            <ConfirmationModal
+                isOpen={showConfirmation}
+                type="delete"
+                title="Supprimer"
+                message={
+                    confirmationData?.kind === "inscription"
+                        ? "Êtes-vous sûr de vouloir supprimer cette demande d'inscription ?"
+                        : "Êtes-vous sûr de vouloir supprimer ce membre ?"
+                }
+                confirmText="Supprimer"
+                itemName={confirmationData?.name || ""}
+                loading={isProcessingConfirmation}
+                onConfirm={handleConfirmationAction}
+                onCancel={() => {
+                    setShowConfirmation(false);
+                    setConfirmationData(null);
+                    setConfirmationType(null);
+                }}
+            />
             </div>
         </>
     );

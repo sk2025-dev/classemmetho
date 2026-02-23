@@ -66,7 +66,7 @@ class InscriptionsController extends Controller
                         'telephone' => $member->telephone,
                         'genre' => $member->genre,
                         'date_naissance' => $member->date_naissance,
-                        'fonction_name' => $member->fonction?->nom ?? '—',
+                        'fonction_name' => $member->fonction?->nom ?? ($member->role === 'responsable_famille' ? 'Responsable Famille' : '—'),
                         'profession' => $member->profession ?? '—',
                         'ville_name' => $member->ville?->nom ?? '—',
                         'classe_name' => $member->classe?->nom ?? 'N/A',

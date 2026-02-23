@@ -141,8 +141,8 @@ export default function EditMember({ member, family }) {
         genre: member.genre || "M",
         date_naissance: formatDateForInput(member.date_naissance),
         statut_marital: member.statut_marital || "",
-        date_mariage: formatDateForInput(member.date_mariage),
-        lieu_mariage: member.lieu_mariage || "",
+        date_mariage: formatDateForInput(sacrements.mariage_civil_date),
+        lieu_mariage: sacrements.mariage_civil_lieu || "",
         profession: member.profession || "",
         fonction_id: member.fonction_id || "",
         relation: member.relation || "",
@@ -179,8 +179,8 @@ export default function EditMember({ member, family }) {
             genre: member.genre || "M",
             date_naissance: formatDateForInput(member.date_naissance),
             statut_marital: member.statut_marital || "",
-            date_mariage: formatDateForInput(member.date_mariage),
-            lieu_mariage: member.lieu_mariage || "",
+            date_mariage: formatDateForInput(currentSacrements.mariage_civil_date),
+            lieu_mariage: currentSacrements.mariage_civil_lieu || "",
             profession: member.profession || "",
             fonction_id: member.fonction_id || "",
             relation: member.relation || "",
@@ -305,7 +305,7 @@ export default function EditMember({ member, family }) {
 
             // Envoyer via router avec FormData
             router.post(
-                `/responsable-famille/members/${member.id}?_method=PUT`,
+                `/pasteur/members/${member.id}?_method=PUT`,
                 formData,
                 {
                     onSuccess: () => {
@@ -364,7 +364,7 @@ export default function EditMember({ member, family }) {
 
             // Utiliser Inertia router.put() pour les données JSON
             router.put(
-                `/responsable-famille/members/${member.id}`,
+                `/pasteur/members/${member.id}`,
                 submitData,
                 {
                     onSuccess: () => {
@@ -406,7 +406,7 @@ export default function EditMember({ member, family }) {
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-6">
                     <Link
-                        href={`/responsable-famille/members/${member.id}`}
+                        href={`/pasteur/members/${member.id}`}
                         className="p-2 bg-white/90 backdrop-blur-xl rounded-full border border-white/50 shadow-lg hover:shadow-xl hover:bg-white transition-all"
                     >
                         <ArrowLeft className="w-5 h-5 text-gray-700" />
@@ -868,7 +868,7 @@ export default function EditMember({ member, family }) {
                     {/* Footer Actions */}
                     <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end gap-3 bg-gray-50/50 -mx-6 -mb-6 p-6 rounded-b-2xl">
                         <Link
-                            href={`/responsable-famille/members/${member.id}`}
+                            href={`/pasteur/members/${member.id}`}
                             className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2"
                         >
                             <X className="w-4 h-4" /> Annuler

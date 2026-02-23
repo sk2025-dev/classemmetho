@@ -76,12 +76,13 @@ class InscriptionsController extends Controller
                     'updated_at' => optional($m->updated_at ?? $m->created_at)->format('d/m/Y H:i'),
                     'genre' => $m->genre,
                     'ville_name' => $m->ville?->nom ?? 'N/A',
-                    'fonction_name' => $m->fonction?->nom ?? 'N/A',
+                    'fonction_name' => $m->fonction?->nom ?? ($m->id === $user->id ? 'Pasteur' : 'N/A'),
                     'profession' => $m->profession ?? 'N/A',
                     'relation' => $m->relation ?? 'N/A',
                     'classe_name' => $m->classe?->nom ?? 'N/A',
                     'role' => $m->id === $user->id ? 'pasteur' : 'membre',
                     'is_responsable' => $m->id === $user->id,
+                    'profile_photo_url' => $m->profile_photo_url,
                 ];
             })->values();
         }

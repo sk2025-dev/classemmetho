@@ -30,6 +30,7 @@ import {
     GraduationCap,
     UserPlus,
     Trash2,
+    Edit,
     ShieldCheck,
     ArrowLeft,
     ArrowRight,
@@ -317,6 +318,7 @@ export default function RegisterFamille({
 
     const [consentement, setConsentement] = usePersistentState('registerPasteur_consentement', false);
     const [hasMembersToAdd, setHasMembersToAdd] = usePersistentState('registerPasteur_hasMembersToAdd', null);
+    const [editingMemberIndex, setEditingMemberIndex] = useState(null);
     const [churchRoles, setChurchRoles] = useState([]);
     const [selectedRolesResponsable, setSelectedRolesResponsable] = usePersistentState('registerPasteur_selectedRolesResponsable', []);
     const [selectedMembresRoles, setSelectedMembresRoles] = usePersistentState('registerPasteur_selectedMembresRoles', new Set());
@@ -516,24 +518,23 @@ export default function RegisterFamille({
             return;
         }
 
-        // Ajouter le membre à la liste
-        setMembres([...membres, { ...membreTemp }]);
+        // Vérifier si on édite un membre ou on en ajoute un nouveau
+        if (editingMemberIndex !== null) {
+            // Mettre à jour le membre existant
+            const updatedMembres = [...membres];
+            updatedMembres[editingMemberIndex] = { ...membreTemp };
+            setMembres(updatedMembres);
+            showSuccess("✅ Membre modifié avec succès !");
 
-        // Afficher toast avec bouton Modifier
-        const memberToEdit = { ...membreTemp };
-        showSuccess(
-            "✅ Membre ajouté avec succès !",
-            0,
-            {
-                label: "Modifier",
-                onClick: () => {
-                    setMembreTemp(memberToEdit);
-                    document.querySelector('[data-member-form]')?.scrollIntoView({ behavior: 'smooth' });
-                }
-            }
-        );
+            // Réinitialiser le mode édition
+            setEditingMemberIndex(null);
+        } else {
+            // Ajouter le nouveau membre
+            setMembres([...membres, { ...membreTemp }]);
+            showSuccess("✅ Membre ajouté avec succès !");
+        }
 
-        // Reset après 1.5s
+        // Reset du formulaire
         setTimeout(() => {
             setMembreTemp({
                 nom: "",
@@ -552,6 +553,7 @@ export default function RegisterFamille({
                 lieuDeces: "",
                 dateDote: "",
                 lieuDote: "",
+                lienParente: "",
                 baptise: false,
                 dateBapteme: "",
                 lieuBapteme: "",
@@ -568,11 +570,57 @@ export default function RegisterFamille({
                 photoPreview: null,
             });
             setErrors({});
-        }, 1500);
+        }, 500);
     };
 
     const supprimerMembre = (index) => {
         setMembres(membres.filter((_, i) => i !== index));
+    };
+
+    const editMembre = (index) => {
+        const membre = membres[index];
+        setMembreTemp(membre);
+        setEditingMemberIndex(index);
+        showSuccess(`✏️ Édition du membre: ${membre.prenom} ${membre.nom}`);
+    };
+
+    const annulerEdition = () => {
+        setEditingMemberIndex(null);
+        setMembreTemp({
+            nom: "",
+            prenom: "",
+            email: "",
+            telephone: "",
+            relation: "",
+            genre: "",
+            dateNaissance: "",
+            statutMarital: "",
+            dateMariage: "",
+            lieuMariage: "",
+            dateDivorce: "",
+            lieuDivorce: "",
+            dateDeces: "",
+            lieuDeces: "",
+            dateDote: "",
+            lieuDote: "",
+            lienParente: "",
+            baptise: false,
+            dateBapteme: "",
+            lieuBapteme: "",
+            premiereCommunion: false,
+            datePremiereCommunion: "",
+            lieuPremiereCommunion: "",
+            marieReligieusement: false,
+            dateMariageReligieux: "",
+            lieuMariageReligieux: "",
+            fonction: "",
+            fonction_id: null,
+            profession: "",
+            photo: null,
+            photoPreview: null,
+        });
+        setErrors({});
+        showWarning("❌ Édition annulée");
     };
 
     const handlePhotoChange = (e, type) => {
@@ -781,19 +829,14 @@ export default function RegisterFamille({
 
         // --- 1. Famille (avec nettoyage téléphone) ---
         Object.entries(famille).forEach(([k, v]) => {
-            // On n'envoie pas les ID vides
+            // On n'envoie pas les ID vides, mais on envoie tous les autres champs (même s'ils sont vides)
             if (
                 (k === "classe_id" || k === "ville") &&
                 (!v || v === "" || v === null)
             )
                 return;
 
-            // Ne pas envoyer les valeurs null/undefined/vides
-            if (v === null || v === undefined || v === "") {
-                return;
-            }
-
-            let valueToSend = v;
+            let valueToSend = v === null || v === undefined ? "" : v;
 
             // CORRECTION : On enlève le préfixe "225" si présent pour le téléphone
             if ((k === "telephone" || k === "telephone2") && valueToSend) {
@@ -809,32 +852,37 @@ export default function RegisterFamille({
         });
 
         // --- 2. Responsable (avec nettoyage téléphone) ---
-        Object.entries(responsable).forEach(([k, v]) => {
-            if (k === "photoPreview") {
-                return;
+        // Définir explicitement les champs du responsable pour s'assurer qu'ils sont tous envoyés
+        const responsableFields = [
+            'nom', 'prenom', 'email', 'tel', 'telephone2', 'dateNaissance', 'genre',
+            'relation', 'profession', 'fonction', 'statutMarital', 'dateMariage', 'lieuMariage',
+            'dateDivorce', 'lieuDivorce', 'dateDeces', 'lieuDeces',
+            'baptise', 'dateBapteme', 'lieuBapteme',
+            'premiereCommunion', 'datePremiereCommunion', 'lieuPremiereCommunion',
+            'marieReligieusement', 'dateMariageReligieux', 'lieuMariageReligieux'
+        ];
+
+        responsableFields.forEach((k) => {
+            let valueToSend = (responsable[k] ?? "");
+
+            // CORRECTION : On enlève le préfixe "225" pour le téléphone du responsable
+            if (k === "tel" && valueToSend) {
+                valueToSend = valueToSend.toString().replace(/^225/, "");
             }
 
-            if (k === "photo") {
-                // Ne pas envoyer les photos vides, mais vérifier que c'est un File
-                if (v instanceof File) {
-                    formData.append(`responsable[photo]`, v);
-                }
-            } else {
-                let valueToSend = v ?? "";
-
-                // CORRECTION : On enlève le préfixe "225" pour le téléphone du responsable
-                if (k === "tel" && valueToSend) {
-                    valueToSend = valueToSend.toString().replace(/^225/, "");
-                }
-
-                // Convertir les booléens en 1/0 pour FormData
-                if (typeof valueToSend === 'boolean') {
-                    valueToSend = valueToSend ? '1' : '0';
-                }
-
-                formData.append(`responsable[${k}]`, valueToSend);
+            // Convertir les booléens en 1/0 pour FormData
+            if (typeof valueToSend === 'boolean') {
+                valueToSend = valueToSend ? '1' : '0';
             }
+
+            console.log(`Envoi responsable[${k}] = "${valueToSend}"`);
+            formData.append(`responsable[${k}]`, valueToSend);
         });
+
+        // Envoyer la photo si elle existe
+        if (responsable.photo instanceof File) {
+            formData.append(`responsable[photo]`, responsable.photo);
+        }
 
         // --- 3. Membres - Valider et envoyer ---
         if (membres.length > 0) {
@@ -877,37 +925,46 @@ export default function RegisterFamille({
                 return;
             }
 
+            // Champs requis pour les membres (dans le même ordre que la migration)
+            const membreFields = [
+                'nom', 'prenom', 'email', 'telephone', 'relation', 'genre', 'dateNaissance',
+                'statutMarital', 'dateMariage', 'lieuMariage', 'dateDivorce', 'lieuDivorce',
+                'dateDeces', 'lieuDeces', 'dote', 'lieuDote', 'lienParente',
+                'baptise', 'dateBapteme', 'lieuBapteme',
+                'premiereCommunion', 'datePremiereCommunion', 'lieuPremiereCommunion',
+                'marieReligieusement', 'dateMariageReligieux', 'lieuMariageReligieux',
+                'fonction_id', 'profession'
+            ];
+
             membres.forEach((m, i) => {
-                Object.entries(m).forEach(([k, v]) => {
-                    // Ne pas envoyer les champs vides, surtout pas les photos vides
-                    if (v === null || v === undefined || v === "") {
-                        return;
+                // Envoyer tous les champs explicitement pour éviter "Undefined array key"
+                membreFields.forEach((k) => {
+                    let valueToSend = (m[k] ?? "");
+
+                    // Nettoyer le téléphone si présent
+                    if (k === "telephone" && valueToSend) {
+                        valueToSend = valueToSend.toString().replace(/^225/, "");
                     }
 
-                    if (k === "photo") {
-                        // Vérifier que c'est vraiment un File
-                        if (v instanceof File) {
-                            formData.append(`membres[${i}][photo]`, v);
-                        }
-                    } else if (k !== "photoPreview") {
-                        // Nettoyer le téléphone si présent
-                        let valueToSend = v;
-                        if (k === "telephone" && valueToSend) {
-                            valueToSend = valueToSend.toString().replace(/^225/, "");
-                        }
-
-                        // Convertir les booléens en 1/0 pour FormData
-                        if (typeof valueToSend === 'boolean') {
-                            valueToSend = valueToSend ? '1' : '0';
-                        }
-
-                        // Envoyer la valeur trimée si string, sinon la valeur
-                        if (typeof valueToSend === "string") {
-                            valueToSend = valueToSend.trim();
-                        }
-                        formData.append(`membres[${i}][${k}]`, valueToSend);
+                    // Convertir les booléens en 1/0 pour FormData
+                    if (typeof valueToSend === 'boolean') {
+                        valueToSend = valueToSend ? '1' : '0';
                     }
+
+                    // Envoyer la valeur trimée si string
+                    if (typeof valueToSend === "string") {
+                        valueToSend = valueToSend.trim();
+                    }
+
+                    console.log(`Envoi membres[${i}][${k}] = "${valueToSend}"`);
+                    formData.append(`membres[${i}][${k}]`, valueToSend);
                 });
+
+                // Gérer la photo séparément (elle peut être un File ou vide)
+                if (m.photo && m.photo instanceof File) {
+                    formData.append(`membres[${i}][photo]`, m.photo);
+                    console.log(`Envoi membres[${i}][photo] = File(${m.photo.name})`);
+                }
             });
         }
 
@@ -2590,15 +2647,24 @@ export default function RegisterFamille({
                             </div>
                             </div>
 
-                            {/* Add button */}
+                            {/* Add/Update button */}
                             <div className="flex gap-3">
                                 <button
                                     type="button"
                                     onClick={ajouterMembre}
                                     className={`flex-1 ${STYLES.button.primary}`}
                                 >
-                                    Ajouter ce membre
+                                    {editingMemberIndex !== null ? "Enregistrer les modifications" : "Ajouter ce membre"}
                                 </button>
+                                {editingMemberIndex !== null && (
+                                    <button
+                                        type="button"
+                                        onClick={annulerEdition}
+                                        className={STYLES.button.secondary}
+                                    >
+                                        Annuler
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -2735,17 +2801,29 @@ export default function RegisterFamille({
                                                     </div>
                                                 </div>
 
-                                                {/* Delete button */}
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        supprimerMembre(idx)
-                                                    }
-                                                    className={STYLES.button.danger}
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                    Supprimer
-                                                </button>
+                                                {/* Edit and Delete buttons */}
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            editMembre(idx)
+                                                        }
+                                                        className="px-3 py-2 text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-all duration-300 flex items-center gap-2 font-medium"
+                                                    >
+                                                        <Edit className="w-4 h-4" />
+                                                        Modifier
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            supprimerMembre(idx)
+                                                        }
+                                                        className={STYLES.button.danger}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                        Supprimer
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -3062,8 +3140,8 @@ export default function RegisterFamille({
                                     <button
                                         type="button"
                                         onClick={() => setStep(4)}
-                                        disabled={hasMembersToAdd === null || hasMembersToAdd === false || (hasMembersToAdd === true && membres.length === 0)}
-                                        className={hasMembersToAdd === null || hasMembersToAdd === false || (hasMembersToAdd === true && membres.length === 0) ? `${STYLES.button.primary} ml-auto flex items-center gap-2 opacity-40 cursor-not-allowed` : `${STYLES.button.primary} ml-auto flex items-center gap-2 shadow-lg scale-105 transition-transform`}
+                                        disabled={hasMembersToAdd === null || (hasMembersToAdd === true && membres.length === 0)}
+                                        className={hasMembersToAdd === null || (hasMembersToAdd === true && membres.length === 0) ? `${STYLES.button.primary} ml-auto flex items-center gap-2 opacity-40 cursor-not-allowed` : `${STYLES.button.primary} ml-auto flex items-center gap-2 shadow-lg scale-105 transition-transform`}
                                     >
                                         <span>Continuer</span>
                                         <ArrowRight className="w-4 h-4" />

@@ -2264,7 +2264,7 @@ export default function RegisterFamille({
                                         htmlFor="premiereCommunion"
                                         className="text-sm font-medium text-gray-700"
                                     >
-                                        Cette personne a fait sa premi?re communion
+                                        Cette personne a fait sa première communion
                                     </label>
                                 </div>
 

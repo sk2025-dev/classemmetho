@@ -61,6 +61,13 @@ class MemberController extends Controller
             return abort(403, 'Pas de famille associée');
         }
 
+        // Convertir les strings vides en null pour les champs optionnels
+        $input = $request->all();
+        if (isset($input['fonction_id']) && $input['fonction_id'] === '') {
+            $input['fonction_id'] = null;
+        }
+        $request->merge($input);
+
         // Validation avec messages personnalisés
         $validated = $request->validate(
             [
@@ -121,6 +128,12 @@ class MemberController extends Controller
         // Ensure identifier is generated
         $identifier = User::generateIdentifier($validated['nom'], $validated['prenom'], $validated['date_naissance'] ?? null);
 
+        \Log::info('Pasteur MemberController store - données validées', [
+            'fonction_id' => $validated['fonction_id'],
+            'nom' => $validated['nom'],
+            'prenom' => $validated['prenom'],
+        ]);
+
         $user = User::create([
             'identifier' => $identifier,
             'nom' => $validated['nom'],
@@ -171,6 +184,26 @@ class MemberController extends Controller
             logger()->warning('Send email SendCredentials failed for user id ' . $user->id . ': ' . $e->getMessage());
         }
 
+        // Si c'est une requête AJAX/axios, retourner JSON
+        if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json([
+                'success' => true,
+                'message' => 'Membre ajouté avec succès',
+                'data' => [
+                    'id' => $user->id,
+                    'nom' => $user->nom,
+                    'prenom' => $user->prenom,
+                    'email' => $user->email,
+                    'telephone' => $user->telephone,
+                    'genre' => $user->genre,
+                    'date_naissance' => $user->date_naissance,
+                    'profession' => $user->profession,
+                    'relation' => $user->relation,
+                    'fonction_id' => $user->fonction_id,
+                ]
+            ], 201);
+        }
+
         return redirect()
             ->route('pasteur.inscriptions')
             ->with('success', 'Membre ajouté avec succès');
@@ -195,8 +228,17 @@ class MemberController extends Controller
             ->orderBy('nom')
             ->get();
 
+        $memberData = $member->toArray();
+        $memberData['statut_marital'] = $member->sacrements 
+            ? ($member->sacrements->est_marie ? 'Marié(e)' : ($member->sacrements->est_divorce ? 'Divorcé(e)' : ($member->sacrements->est_veuf ? 'Veuf(ve)' : ($member->sacrements->dot_effectue ? 'Dote' : 'Célibataire'))))
+            : 'Célibataire';
+        
+        if ($member->sacrements) {
+            $memberData['sacrements'] = $member->sacrements->toArray();
+        }
+
         return Inertia::render('Pasteur/Members/EditMember', [
-            'member' => $member,
+            'member' => $memberData,
             'family' => $member->family,
             'fonctions' => $fonctions,
         ]);
@@ -256,6 +298,7 @@ class MemberController extends Controller
             'profession' => $validated['profession'] ?? $member->profession,
             'fonction_id' => $validated['fonction_id'] ?? $member->fonction_id,
             'relation' => $validated['relation'] ?? $member->relation,
+            'photo_path' => $validated['photo_path'] ?? $member->photo_path,
         ]);
 
         // Mettre à jour les sacrements

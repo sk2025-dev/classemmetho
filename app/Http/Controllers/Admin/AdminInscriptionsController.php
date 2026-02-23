@@ -442,6 +442,12 @@ class AdminInscriptionsController extends Controller
                 'consentement' => 'required|accepted',
             ]);
 
+            // ⚠️ IMPORTANT: Initialiser membres à un array vide si absent
+            // Cela empêche les erreurs lors de l'accès à $validated['membres']
+            if (!isset($validated['membres'])) {
+                $validated['membres'] = [];
+            }
+
             // 1. Créer la famille
             $family = Family::create([
                 'nom' => $validated['famille']['nom'],
@@ -542,7 +548,7 @@ class AdminInscriptionsController extends Controller
                 Log::info('Emails d\'identifiants envoyés pour le conducteur', [
                     'family_id' => $family->id,
                     'conductor_email' => $conductor->email,
-                    'membres_count' => count($validated['membres']),
+                    'membres_count' => count($validated['membres'] ?? []),
                 ]);
             } catch (\Exception $e) {
                 Log::warning('Erreur envoi emails pour conducteur ' . $conductor->id, [
@@ -553,7 +559,7 @@ class AdminInscriptionsController extends Controller
             Log::info('Conducteur créé directement par Admin', [
                 'family_id' => $family->id,
                 'conductor_id' => $conductor->id,
-                'membres_count' => count($validated['membres']),
+                'membres_count' => count($validated['membres'] ?? []),
             ]);
 
             return response()->json([

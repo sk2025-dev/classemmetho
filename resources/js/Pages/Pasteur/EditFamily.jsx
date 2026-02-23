@@ -19,11 +19,11 @@ export default function EditFamily({ family, classes, villes }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        post("/responsable-famille/family/update");
+        post("/pasteur/family/update");
     };
 
     const handleCancel = () => {
-        router.get("/responsable-famille/inscriptions");
+        router.get("/pasteur/inscriptions");
     };
 
     return (
@@ -34,7 +34,7 @@ export default function EditFamily({ family, classes, villes }) {
                 {/* Header */}
                 <div className="mb-8">
                     <Link
-                        href="/responsable-famille/inscriptions"
+                        href="/pasteur/inscriptions"
                         className="inline-flex items-center gap-2 text-white hover:text-yellow-300 transition-colors mb-4 font-semibold"
                     >
                         <ArrowLeft className="w-5 h-5" />
@@ -98,7 +98,7 @@ export default function EditFamily({ family, classes, villes }) {
                                         value={data.telephone}
                                         onChange={(e) => setData("telephone", e.target.value)}
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
-                                        placeholder="+33 6 12 34 56 78"
+                                        placeholder="0102030405"
                                     />
                                     {errors.telephone && <p className="text-red-600 text-sm mt-1">{errors.telephone}</p>}
                                 </div>
@@ -113,7 +113,7 @@ export default function EditFamily({ family, classes, villes }) {
                                         value={data.telephone2}
                                         onChange={(e) => setData("telephone2", e.target.value)}
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
-                                        placeholder="+33 6 98 76 54 32"
+                                        placeholder="0102030405"
                                     />
                                     {errors.telephone2 && <p className="text-red-600 text-sm mt-1">{errors.telephone2}</p>}
                                 </div>

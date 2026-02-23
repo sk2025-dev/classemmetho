@@ -197,11 +197,24 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/responsable-famille/members/{id}', [ResponsableFamilleMemberController::class, 'show'])->name('responsable_famille.members.show');
         Route::get('/responsable-famille/members/{id}/edit', [ResponsableFamilleMemberController::class, 'edit'])->name('responsable_famille.members.edit');
         Route::put('/responsable-famille/members/{id}', [ResponsableFamilleMemberController::class, 'update'])->name('responsable_famille.members.update');
+        Route::put('/responsable-famille/members/{memberId}/toggle-status', [ResponsableFamilleInscriptionsController::class, 'toggleMemberStatus'])->name('responsable_famille.members.toggle_status');
     });
 
     // Tableau de bord Pasteur
     Route::middleware('role:pasteur')->group(function () {
         Route::get('/pasteur/dashboard', [PasteurDashboardController::class, 'index'])->name('pasteur.dashboard');
+        Route::get('/pasteur/inscriptions', [\App\Http\Controllers\Pasteur\InscriptionsController::class, 'index'])->name('pasteur.inscriptions');
+
+        // Gestion de la famille
+        Route::get('/pasteur/family/edit', [\App\Http\Controllers\Pasteur\FamilyController::class, 'edit'])->name('pasteur.family.edit');
+        Route::post('/pasteur/family/update', [\App\Http\Controllers\Pasteur\FamilyController::class, 'update'])->name('pasteur.family.update');
+
+        // Gestion des membres
+        Route::get('/pasteur/members/create', [\App\Http\Controllers\Pasteur\MemberController::class, 'create'])->name('pasteur.members.create');
+        Route::post('/pasteur/members/store', [\App\Http\Controllers\Pasteur\MemberController::class, 'store'])->name('pasteur.members.store');
+        Route::get('/pasteur/members/{id}', [\App\Http\Controllers\Pasteur\MemberController::class, 'show'])->name('pasteur.members.show');
+        Route::get('/pasteur/members/{id}/edit', [\App\Http\Controllers\Pasteur\MemberController::class, 'edit'])->name('pasteur.members.edit');
+        Route::put('/pasteur/members/{id}', [\App\Http\Controllers\Pasteur\MemberController::class, 'update'])->name('pasteur.members.update');
     });
 
     // Tableau de bord Membre de Famille

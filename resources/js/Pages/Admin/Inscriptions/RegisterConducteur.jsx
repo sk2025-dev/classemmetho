@@ -659,8 +659,12 @@ export default function RegisterConducteur({
             }
         }
         if (s === 3) {
+            // L'utilisateur DOIT répondre à la question
+            if (hasMembersToAdd === null) {
+                newErrors["hasMembersToAdd"] = "Veuillez répondre à la question";
+            }
             // Si l'utilisateur a choisi d'ajouter des membres, les valider
-            if (hasMembersToAdd === true) {
+            else if (hasMembersToAdd === true) {
                 if (membres.length === 0) {
                     newErrors["membres"] = "Veuillez ajouter au moins un membre de la famille";
                 } else {
@@ -676,7 +680,7 @@ export default function RegisterConducteur({
                     });
                 }
             }
-            // Si l'utilisateur a dit "Non", pas besoin de valider les membres
+            // Si hasMembersToAdd === false, aucune validation supplémentaire requise
         }
 
         setErrors(newErrors);
@@ -802,64 +806,83 @@ export default function RegisterConducteur({
         });
 
         // --- 2. Responsable (avec nettoyage téléphone) ---
-        Object.entries(responsable).forEach(([k, v]) => {
-            if (k === "photoPreview") {
-                return;
+        const responsableFields = [
+            'nom', 'prenom', 'email', 'tel', 'telephone2', 'dateNaissance', 'genre',
+            'relation', 'profession', 'fonction_professionnelle', 'adresse', 'ville_id',
+            'statutMarital', 'dateMariage', 'lieuMariage', 'dateDivorce', 'lieuDivorce',
+            'dateDeces', 'lieuDeces', 'baptise', 'dateBapteme', 'lieuBapteme',
+            'premiereCommunion', 'datePremiereCommunion', 'lieuPremiereCommunion',
+            'marieReligieusement', 'dateMariageReligieux', 'lieuMariageReligieux'
+        ];
+
+        responsableFields.forEach((k) => {
+            let valueToSend = (responsable[k] ?? "");
+
+            // CORRECTION : On enlève le préfixe "225" pour le téléphone du responsable
+            if (k === "tel" && valueToSend) {
+                valueToSend = valueToSend.toString().replace(/^225/, "");
             }
 
-            if (k === "photo") {
-                // Ne pas envoyer les photos vides, mais vérifier que c'est un File
-                if (v instanceof File) {
-                    formData.append(`responsable[photo]`, v);
-                }
-            } else {
-                let valueToSend = v ?? "";
-
-                // CORRECTION : On enlève le préfixe "225" pour le téléphone du responsable
-                if (k === "tel" && valueToSend) {
-                    valueToSend = valueToSend.toString().replace(/^225/, "");
-                }
-
-                // Convertir les booléens en 1/0 pour FormData
-                if (typeof valueToSend === 'boolean') {
-                    valueToSend = valueToSend ? '1' : '0';
-                }
-
-                formData.append(`responsable[${k}]`, valueToSend);
+            // Convertir les booléens en 1/0 pour FormData
+            if (typeof valueToSend === 'boolean') {
+                valueToSend = valueToSend ? '1' : '0';
             }
+
+            console.log(`Envoi responsable[${k}] = "${valueToSend}"`);
+            formData.append(`responsable[${k}]`, valueToSend);
         });
+
+        // Gérer la photo du responsable séparément
+        if (responsable.photo && responsable.photo instanceof File) {
+            formData.append(`responsable[photo]`, responsable.photo);
+            console.log(`Envoi responsable[photo] = File(${responsable.photo.name})`);
+        }
 
         // --- 3. Membres ---
         if (membres.length > 0) {
+            // Champs requis pour les membres (dans le même ordre que la migration)
+            const membreFields = [
+                'nom', 'prenom', 'email', 'telephone', 'relation', 'genre', 'dateNaissance',
+                'statutMarital', 'dateMariage', 'lieuMariage', 'dateDivorce', 'lieuDivorce',
+                'dateDeces', 'lieuDeces', 'dote', 'lieuDote', 'lienParente',
+                'baptise', 'dateBapteme', 'lieuBapteme',
+                'premiereCommunion', 'datePremiereCommunion', 'lieuPremiereCommunion',
+                'marieReligieusement', 'dateMariageReligieux', 'lieuMariageReligieux',
+                'fonction_id', 'profession'
+            ];
+
             membres.forEach((m, i) => {
-                Object.entries(m).forEach(([k, v]) => {
-                    if (k === "photoPreview") {
-                        return;
+                // Envoyer tous les champs explicitement pour éviter "Undefined array key"
+                membreFields.forEach((k) => {
+                    let valueToSend = (m[k] ?? "");
+
+                    // Nettoyer le téléphone si présent
+                    if (k === "telephone" && valueToSend) {
+                        valueToSend = valueToSend.toString().replace(/^225/, "");
                     }
 
-                    if (k === "photo") {
-                        // Ne pas envoyer les photos vides, mais vérifier que c'est un File
-                        if (v instanceof File) {
-                            formData.append(`membres[${i}][photo]`, v);
-                        }
-                    } else {
-                        let valueToSend = v ?? "";
-
-                        // Nettoyer le téléphone si présent
-                        if (k === "telephone" && valueToSend) {
-                            valueToSend = valueToSend.toString().replace(/^225/, "");
-                        }
-
-                        // Convertir les booléens en 1/0 pour FormData
-                        if (typeof valueToSend === 'boolean') {
-                            valueToSend = valueToSend ? '1' : '0';
-                        }
-
-                        formData.append(`membres[${i}][${k}]`, valueToSend);
+                    // Convertir les booléens en 1/0 pour FormData
+                    if (typeof valueToSend === 'boolean') {
+                        valueToSend = valueToSend ? '1' : '0';
                     }
+
+                    console.log(`Envoi membres[${i}][${k}] = "${valueToSend}"`);
+                    formData.append(`membres[${i}][${k}]`, valueToSend);
                 });
+
+                // Gérer la photo séparément (elle peut être un File ou vide)
+                if (m.photo && m.photo instanceof File) {
+                    formData.append(`membres[${i}][photo]`, m.photo);
+                    console.log(`Envoi membres[${i}][photo] = File(${m.photo.name})`);
+                }
             });
         }
+
+        // Envoyer le nombre de membres pour que le backend sache qu'on l'envoie
+        formData.append("membres_count", membres.length);
+        formData.append("has_members", hasMembersToAdd ? "1" : "0");
+        console.log(`Nombre de membres envoyés: ${membres.length}`);
+        console.log(`has_members: ${hasMembersToAdd ? "1" : "0"}`);
 
         formData.append("type", "conducteur");
         formData.append("consentement", consentement ? "1" : "0");
@@ -968,6 +991,8 @@ export default function RegisterConducteur({
                 photo: null,
                 photoPreview: null,
             });
+            setHasMembersToAdd(null);
+            setEditingMemberIndex(null);
             setConsentement(false);
             setSelectedCity(null);
             setClassesSearchTerm("");
@@ -1709,18 +1734,51 @@ export default function RegisterConducteur({
             case 3:
                 return (
                     <div className="space-y-6 animate-fadeIn">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                            Ajouter les conducteurs
-                        </h3>
-
-                        {getFieldError("membres") && (
-                            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                                {getFieldError("membres")}
+                        {/* Section 1: Question - Do you want to add family members? */}
+                        <div className="text-center space-y-6">
+                            <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-100 rounded-full">
+                                <Users className="w-10 h-10 text-blue-600" />
                             </div>
-                        )}
+                            <h3 className="text-2xl font-bold text-gray-800">
+                                Voulez-vous ajouter des membres?
+                            </h3>
+                            <p className="text-gray-600">
+                                Vous pouvez ajouter d'autres membres qui s'ajouteront à la famille.
+                            </p>
 
-                        {/* Form to add new member */}
-                        <div className="p-6 bg-white rounded-xl border border-gray-200 shadow-sm space-y-6" data-member-form>
+                            <div className="flex gap-4 justify-center pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setHasMembersToAdd(false)}
+                                    className={hasMembersToAdd === false ? "px-8 py-3 rounded-lg bg-red-500 text-white font-semibold shadow-lg ring-2 ring-red-300 transition-all" : "px-8 py-3 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition-all"}
+                                >
+                                    Non, pas pour le moment
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setHasMembersToAdd(true)}
+                                    className={hasMembersToAdd === true ? `${STYLES.button.primary} shadow-lg ring-2 ring-blue-300` : STYLES.button.primary}
+                                >
+                                    Oui, ajouter des membres
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Section 2: Form - ONLY shown if hasMembersToAdd === true */}
+                        {hasMembersToAdd === true && (
+                            <>
+                                <h3 className="text-lg font-semibold text-gray-800 mb-4 pt-6 border-t">
+                                    Ajouter les membres
+                                </h3>
+
+                                {getFieldError("membres") && (
+                                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                                        {getFieldError("membres")}
+                                    </div>
+                                )}
+
+                                {/* Form to add new member */}
+                                <div className="p-6 bg-white rounded-xl border border-gray-200 shadow-sm space-y-6" data-member-form>
                             {/* Photo Upload avec background complet - LARGEUR COMPLÈTE */}
                             <div className="w-full p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-md">
                                 <div className="flex flex-col items-center gap-3">
@@ -2518,6 +2576,8 @@ export default function RegisterConducteur({
                                 </div>
                             )}
                         </div>
+                            </>
+                        )}
                     </div>
                 );
 

@@ -15,6 +15,7 @@ import {
     CheckCircle,
     Trash2,
 } from "lucide-react";
+import ConfirmationModal from "../../Components/ConfirmationModal";
 
 // Composant Badge pour le Rôle avec style moderne (adapté pour Pasteur)
 const StatusBadge = ({ role }) => {
@@ -56,6 +57,11 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
     const [expandedMember, setExpandedMember] = useState(null);
     const [searchTerm, setSearchTerm] = useState("");
 
+    // Confirmation modal states
+    const [showConfirmation, setShowConfirmation] = useState(false);
+    const [confirmationData, setConfirmationData] = useState(null); // {id, name}
+    const [isProcessingConfirmation, setIsProcessingConfirmation] = useState(false);
+
     const filteredMembers = members.filter(
         (member) =>
             member.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -63,6 +69,27 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
             (member.email &&
                 member.email.toLowerCase().includes(searchTerm.toLowerCase())),
     );
+
+    const handleDeleteMember = (memberId, memberName) => {
+        setConfirmationData({ id: memberId, name: memberName });
+        setShowConfirmation(true);
+    };
+
+    const handleConfirmationAction = () => {
+        if (!confirmationData) return;
+
+        setIsProcessingConfirmation(true);
+        router.delete(`/members/${confirmationData.id}`, {
+            onSuccess: () => {
+                setShowConfirmation(false);
+                setIsProcessingConfirmation(false);
+            },
+            onError: (errors) => {
+                console.error("Erreur lors de la suppression:", errors);
+                setIsProcessingConfirmation(false);
+            },
+        });
+    };
 
     const exportToCSV = () => {
         const headers = [
@@ -401,7 +428,7 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                                                     >
                                                         <Edit className="w-4 h-4" />
                                                     </button>
-                                                    {!member.is_responsable && (
+                                                    {!member.is_pastur && (
                                                         <button
                                                             onClick={() => {
                                                                 if (
@@ -438,7 +465,7 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                                 enregistrés.
                             </p>
                             <Link
-                                href="/responsable-famille/members/store?family_id=${family.id}`, formData,"
+                                href={`/pasteur/members/store?family_id=${family.id}`}
                                 className="inline-block px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                             >
                                 Inscrire un Membre

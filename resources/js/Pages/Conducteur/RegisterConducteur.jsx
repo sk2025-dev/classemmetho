@@ -216,6 +216,7 @@ export default function RegisterConducteur({
     const [fieldErrors, setFieldErrors] = useState({});
     const [loading, setLoading] = useState(false);
     const [editingMemberIndex, setEditingMemberIndex] = useState(null);
+    const [hasMembersToAdd, setHasMembersToAdd] = usePersistentState('registerConducteur_hasMembersToAdd', null);
 
     // Base de données locales
     const [classesDatabase, setClassesDatabase] = useState([]);
@@ -520,6 +521,51 @@ export default function RegisterConducteur({
         setMembres(membres.filter((_, i) => i !== index));
     };
 
+    const editMembre = (index) => {
+        const membre = membres[index];
+        setMembreTemp(membre);
+        setEditingMemberIndex(index);
+        showSuccess(`✏️ Édition du membre: ${membre.prenom} ${membre.nom}`);
+    };
+
+    const annulerEdition = () => {
+        setEditingMemberIndex(null);
+        setMembreTemp({
+            nom: "",
+            prenom: "",
+            email: "",
+            telephone: "",
+            relation: "",
+            genre: "",
+            dateNaissance: "",
+            statutMarital: "",
+            dateMariage: "",
+            lieuMariage: "",
+            dateDivorce: "",
+            lieuDivorce: "",
+            dateDeces: "",
+            lieuDeces: "",
+            dateDote: "",
+            lieuDote: "",
+            lienParente: "",
+            baptise: false,
+            dateBapteme: "",
+            lieuBapteme: "",
+            premiereCommunion: false,
+            datePremiereCommunion: "",
+            lieuPremiereCommunion: "",
+            marieReligieusement: false,
+            dateMariageReligieux: "",
+            lieuMariageReligieux: "",
+            fonction: "",
+            profession: "",
+            photo: null,
+            photoPreview: null,
+        });
+        setErrors({});
+        showWarning("❌ Édition annulée");
+    };
+
     const handlePhotoChange = (e, type) => {
         const file = e.target.files && e.target.files[0];
         if (file) {
@@ -591,8 +637,10 @@ export default function RegisterConducteur({
                 newErrors["responsable.lienParente"] = "Requis";
         }
         if (s === 3) {
-            if (membres.length === 0) {
-                newErrors["membres"] = "Veuillez ajouter au least un membre de la famille";
+            if (hasMembersToAdd === null) {
+                newErrors["hasMembersToAdd"] = "Veuillez répondre à la question";
+            } else if (hasMembersToAdd === true && membres.length === 0) {
+                newErrors["membres"] = "Veuillez ajouter au moins un membre de la famille";
             }
         }
 
@@ -1621,18 +1669,51 @@ export default function RegisterConducteur({
             case 3:
                 return (
                     <div className="space-y-6 animate-fadeIn">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                            Ajouter les membres de la famille
-                        </h3>
-
-                        {getFieldError("membres") && (
-                            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                                {getFieldError("membres")}
+                        {/* Section 1: Question - Do you want to add family members? */}
+                        <div className="text-center space-y-6">
+                            <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-100 rounded-full">
+                                <Users className="w-10 h-10 text-blue-600" />
                             </div>
-                        )}
+                            <h3 className="text-2xl font-bold text-gray-800">
+                                Voulez-vous ajouter des membres à la famille?
+                            </h3>
+                            <p className="text-gray-600">
+                                Vous pouvez ajouter des enfants, conjoints, parents ou autres membres de la famille.
+                            </p>
 
-                        {/* Form to add new member */}
-                        <div className="p-6 bg-white rounded-xl border border-gray-200 shadow-sm space-y-6" data-member-form>
+                            <div className="flex gap-4 justify-center pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setHasMembersToAdd(false)}
+                                    className={hasMembersToAdd === false ? "px-8 py-3 rounded-lg bg-red-500 text-white font-semibold shadow-lg ring-2 ring-red-300 transition-all" : "px-8 py-3 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition-all"}
+                                >
+                                    Non, pas pour le moment
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setHasMembersToAdd(true)}
+                                    className={hasMembersToAdd === true ? `${STYLES.button.primary} shadow-lg ring-2 ring-blue-300` : STYLES.button.primary}
+                                >
+                                    Oui, ajouter des membres
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Section 2: Form - ONLY shown if hasMembersToAdd === true */}
+                        {hasMembersToAdd === true && (
+                            <>
+                                <h3 className="text-lg font-semibold text-gray-800 mb-4 pt-6 border-t">
+                                    Ajouter les membres de la famille
+                                </h3>
+
+                                {getFieldError("membres") && (
+                                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                                        {getFieldError("membres")}
+                                    </div>
+                                )}
+
+                                {/* Form to add new member */}
+                                <div className="p-6 bg-white rounded-xl border border-gray-200 shadow-sm space-y-6" data-member-form>
                             {/* Photo Upload avec background complet - LARGEUR COMPLÈTE */}
                             <div className="w-full p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-md">
                                 <div className="flex flex-col items-center gap-3">
@@ -2375,23 +2456,37 @@ export default function RegisterConducteur({
                                                     </div>
                                                 </div>
 
-                                                {/* Delete button */}
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        supprimerMembre(idx)
-                                                    }
-                                                    className={STYLES.button.danger}
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                    Supprimer
-                                                </button>
+                                                {/* Edit and Delete buttons */}
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            editMembre(idx)
+                                                        }
+                                                        className="px-3 py-2 text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-all duration-300 flex items-center gap-2 font-medium"
+                                                    >
+                                                        <Edit className="w-4 h-4" />
+                                                        Modifier
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            supprimerMembre(idx)
+                                                        }
+                                                        className={STYLES.button.danger}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                        Supprimer
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             )}
                         </div>
+                            </>
+                        )}
                     </div>
                 );
 

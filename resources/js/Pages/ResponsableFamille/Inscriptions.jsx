@@ -14,8 +14,10 @@ import {
     X,
     CheckCircle,
     Trash2,
+    Lock,
+    LockOpen,
 } from "lucide-react";
-import DeleteConfirmationModal from "../../Components/DeleteConfirmationModal";
+import ConfirmationModal from "../../Components/ConfirmationModal";
 
 // Composant Badge pour le Rôle avec style moderne
 const StatusBadge = ({ role }) => {
@@ -52,13 +54,79 @@ const GenreBadge = ({ genre }) => {
 export default function Inscriptions({ family, members, familyStats, auth }) {
     const [expandedMember, setExpandedMember] = useState(null);
     const [searchTerm, setSearchTerm] = useState("");
+    const [memberList, setMemberList] = useState(members);
 
-    // State for delete modal
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [memberToDelete, setMemberToDelete] = useState(null);
-    const [isDeleting, setIsDeleting] = useState(false);
+    // Debug: Log les données reçues du serveur
+    React.useEffect(() => {
+        console.log("Members data received from server:", members);
+        if (members && members.length > 0) {
+            console.log("First member:", members[0]);
+            console.log("Identifier of first member:", members[0].identifier);
+        }
+    }, [members]);
 
-    const filteredMembers = members.filter(
+    // State for confirmation modal
+    const [showConfirmation, setShowConfirmation] = useState(false);
+    const [confirmationType, setConfirmationType] = useState(null); // delete, deactivate, activate
+    const [selectedMember, setSelectedMember] = useState(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const handleToggleMemberClick = (member) => {
+        setSelectedMember(member);
+        setConfirmationType(member.is_active ? "deactivate" : "activate");
+        setShowConfirmation(true);
+    };
+
+    const handleDeleteMemberClick = (member) => {
+        setSelectedMember(member);
+        setConfirmationType("delete");
+        setShowConfirmation(true);
+    };
+
+    const handleConfirmationAction = () => {
+        if (!selectedMember) return;
+
+        setIsProcessing(true);
+
+        if (confirmationType === "delete") {
+            router.delete(
+                `/responsable-famille/members/${selectedMember.id}`,
+                {
+                    onSuccess: () => {
+                        const updatedMembers = memberList.filter(m => m.id !== selectedMember.id);
+                        setMemberList(updatedMembers);
+                        setShowConfirmation(false);
+                        setIsProcessing(false);
+                    },
+                    onError: (errors) => {
+                        console.error('Erreur lors de la suppression:', errors);
+                        setIsProcessing(false);
+                    }
+                }
+            );
+        } else if (confirmationType === "deactivate" || confirmationType === "activate") {
+            router.put(
+                `/responsable-famille/members/${selectedMember.id}/toggle-status`,
+                {},
+                {
+                    onSuccess: () => {
+                        const updatedMembers = memberList.map(m =>
+                            m.id === selectedMember.id ? { ...m, is_active: !m.is_active } : m
+                        );
+                        setMemberList(updatedMembers);
+                        setShowConfirmation(false);
+                        setIsProcessing(false);
+                    },
+                    onError: (errors) => {
+                        console.error('Erreur lors de la mise à jour du statut:', errors);
+                        setIsProcessing(false);
+                    }
+                }
+            );
+        }
+    };
+
+    const filteredMembers = memberList.filter(
         (member) =>
             member.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
             member.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -67,7 +135,7 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
 
     const exportToCSV = () => {
         const headers = ["Nom", "Prénom", "Email", "Téléphone", "Genre", "Date de Naissance", "Rôle", "Ville"];
-        const rows = members.map((member) => [
+        const rows = memberList.map((member) => [
             member.nom,
             member.prenom,
             member.email || "",
@@ -107,7 +175,7 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                         Retour au Tableau de Bord
                     </Link>
                     <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2 drop-shadow-md">
-                        Membres de la Famille
+                        Ma famille et les membres de ma famille
                     </h1>
                     <p className="text-blue-100 text-lg font-medium flex items-center gap-2">
                         <span className="bg-white/20 px-3 py-1 rounded-full text-sm backdrop-blur-md">
@@ -191,91 +259,126 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
 
                 {/* Members Table */}
                 <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
-                    {members.length > 0 ? (
+                    {memberList.length > 0 ? (
                         <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead style={{ backgroundColor: "#B6C01A" }} className="text-white font-semibold">
+                            <table className="w-full text-sm">
+                                <thead style={{ backgroundColor: "#B6C01A" }} className="text-white font-semibold sticky top-0">
                                     <tr>
-                                        <th className="px-6 py-4 text-left">ID</th>
-                                        <th className="px-6 py-4 text-left">Nom & Photo</th>
-                                        <th className="px-6 py-4 text-left">Genre</th>
-                                        <th className="px-6 py-4 text-left">Email</th>
-                                        <th className="px-6 py-4 text-left">Téléphone</th>
-                                        <th className="px-6 py-4 text-left">Ville</th>
-                                        <th className="px-6 py-4 text-left">Profession</th>
-                                        <th className="px-6 py-4 text-left">Fonction Église</th>
-                                        <th className="px-6 py-4 text-left">Rôle</th>
-                                        <th className="px-6 py-4 text-center">Détails</th>
+                                        <th className="px-3 py-6 text-left font-bold">N°</th>
+                                        <th className="px-3 py-6 text-center font-bold">Photo</th>
+                                        <th className="px-4 py-6 text-left font-bold">Nom</th>
+                                        <th className="px-4 py-6 text-left font-bold">Prénoms</th>
+                                        <th className="px-4 py-6 text-left font-bold">Identifiant</th>
+                                        <th className="px-3 py-6 text-left font-bold">Genre</th>
+                                        <th className="px-4 py-6 text-left font-bold">Email</th>
+                                        <th className="px-4 py-6 text-left font-bold">Téléphone</th>
+                                        <th className="px-4 py-6 text-left font-bold">Ville</th>
+                                        <th className="px-4 py-6 text-left font-bold">Profession</th>
+                                        <th className="px-4 py-6 text-left font-bold">Fonction Église</th>
+                                        <th className="px-4 py-6 text-left font-bold">Rôle</th>
+                                        <th className="px-3 py-6 text-left font-bold">Statut</th>
+                                        <th className="px-3 py-6 text-center font-bold">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {filteredMembers.map((member, index) => (
-                                        <tr key={member.id} className={`border-b border-gray-200 hover:bg-gray-50 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
-                                            <td className="px-6 py-4 text-left text-sm font-medium text-gray-600">
-                                                #{member.id}
+                                        <tr key={member.id} className={`border-b border-gray-300 hover:bg-blue-50 transition-colors ${index % 2 === 0 ? "bg-white" : "bg-gray-100"}`}>
+                                            <td className="px-3 py-6 text-left font-bold text-gray-800">
+                                                {index + 1}
                                             </td>
-                                            <td className="px-6 py-4 text-left text-sm font-medium text-gray-900 flex items-center gap-3">
+                                            <td className="px-3 py-6 text-center">
                                                 {member.profile_photo_url ? (
                                                     <img
                                                         src={member.profile_photo_url}
                                                         alt={`${member.prenom} ${member.nom}`}
-                                                        className="w-8 h-8 rounded-full object-cover border border-gray-200"
+                                                        className="w-10 h-10 rounded-full object-cover border border-gray-300 mx-auto"
                                                         onError={(e) => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'flex'; }}
                                                     />
                                                 ) : null}
-                                                <span style={{ display: !member.profile_photo_url ? 'flex' : 'none', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', backgroundColor: '#FCD34D', borderRadius: '50%', fontWeight: 'bold', fontSize: '12px', color: '#0B4E82', flexShrink: 0 }}>
+                                                <span style={{ display: !member.profile_photo_url ? 'flex' : 'none', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', backgroundColor: '#FCD34D', borderRadius: '50%', fontWeight: 'bold', fontSize: '14px', color: '#0B4E82', flexShrink: 0, margin: '0 auto' }}>
                                                     {member.prenom?.[0]?.toUpperCase()}{member.nom?.[0]?.toUpperCase()}
                                                 </span>
-                                                <span>{member.prenom} {member.nom}</span>
                                             </td>
-                                            <td className="px-6 py-4 text-left text-sm">
+                                            <td className="px-4 py-6 text-left font-bold text-gray-900">
+                                                {member.nom}
+                                            </td>
+                                            <td className="px-4 py-6 text-left text-gray-700">
+                                                {member.prenom}
+                                            </td>
+                                            <td className="px-4 py-6 text-left text-sm font-bold text-blue-700 bg-blue-50 rounded">
+                                                {member.identifier || "—"}
+                                            </td>
+                                            <td className="px-3 py-6 text-left text-xs">
                                                 <GenreBadge genre={member.genre} />
                                             </td>
-                                            <td className="px-6 py-4 text-left text-sm text-gray-600">
+                                            <td className="px-4 py-6 text-left text-sm text-gray-700">
                                                 {member.email || "—"}
                                             </td>
-                                            <td className="px-6 py-4 text-left text-sm text-gray-600">
+                                            <td className="px-4 py-6 text-left text-sm text-gray-700">
                                                 {member.telephone || "—"}
                                             </td>
-                                            <td className="px-6 py-4 text-left text-sm text-gray-600">
+                                            <td className="px-4 py-6 text-left text-sm text-gray-700">
                                                 {member.ville_name || "—"}
                                             </td>
-                                            <td className="px-6 py-4 text-left text-sm text-gray-600">
+                                            <td className="px-4 py-6 text-left text-sm text-gray-700">
                                                 {member.profession || "—"}
                                             </td>
-                                            <td className="px-6 py-4 text-left text-sm text-gray-600">
+                                            <td className="px-4 py-6 text-left text-sm text-gray-700">
                                                 {member.fonction_name || "—"}
                                             </td>
-                                            <td className="px-6 py-4 text-left text-sm">
+                                            <td className="px-4 py-6 text-left text-xs">
                                                 <StatusBadge role={member.is_responsable ? "responsable" : "membre"} />
                                             </td>
-                                            <td className="px-6 py-4 text-center">
+                                            <td className="px-3 py-6 text-left text-xs">
+                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                                                    member.is_active
+                                                        ? "bg-green-100 text-green-800"
+                                                        : "bg-red-100 text-red-800"
+                                                }`}>
+                                                    {member.is_active ? "Actif" : "Inactif"}
+                                                </span>
+                                            </td>
+                                            <td className="px-3 py-6 text-center">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <button
                                                         onClick={() => router.get(`/responsable-famille/members/${member.id}`)}
-                                                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-1.5 rounded transition-colors"
+                                                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 p-2 rounded-lg transition-colors"
                                                         title="Voir détails"
                                                     >
                                                         <Eye className="w-4 h-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => router.get(`/responsable-famille/members/${member.id}/edit`)}
-                                                        className="text-green-600 hover:text-green-800 hover:bg-green-50 p-1.5 rounded transition-colors"
+                                                        className="text-green-600 hover:text-green-800 hover:bg-green-100 p-2 rounded-lg transition-colors"
                                                         title="Modifier"
                                                     >
                                                         <Edit className="w-4 h-4" />
                                                     </button>
                                                     {!member.is_responsable && (
-                                                        <button
-                                                            onClick={() => {
-                                                                setMemberToDelete(member);
-                                                                setShowDeleteModal(true);
-                                                            }}
-                                                            className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1.5 rounded transition-colors"
-                                                            title="Supprimer"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
+                                                        <>
+                                                            <button
+                                                                onClick={() => handleToggleMemberClick(member)}
+                                                                className={`p-2 rounded-lg transition-colors ${
+                                                                    member.is_active
+                                                                        ? "text-yellow-600 hover:text-yellow-800 hover:bg-yellow-100"
+                                                                        : "text-gray-600 hover:text-gray-800 hover:bg-gray-200"
+                                                                }`}
+                                                                title={member.is_active ? "Désactiver le membre" : "Activer le membre"}
+                                                            >
+                                                                {member.is_active ? (
+                                                                    <LockOpen className="w-4 h-4" />
+                                                                ) : (
+                                                                    <Lock className="w-4 h-4" />
+                                                                )}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteMemberClick(member)}
+                                                                className="text-red-600 hover:text-red-800 hover:bg-red-100 p-2 rounded-lg transition-colors"
+                                                                title="Supprimer"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </>
                                                     )}
                                                 </div>
 
@@ -300,6 +403,39 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                             </Link>
                         </div>
                     )}
+            <ConfirmationModal
+                isOpen={showConfirmation}
+                type={confirmationType}
+                title={
+                    confirmationType === "delete"
+                        ? "Supprimer le membre"
+                        : confirmationType === "deactivate"
+                        ? "Désactiver le membre"
+                        : "Activer le membre"
+                }
+                message={
+                    confirmationType === "delete"
+                        ? "Êtes-vous sûr de vouloir supprimer définitivement ce membre ? Cette action est irréversible."
+                        : confirmationType === "deactivate"
+                        ? "Le membre sera désactivé et ne pourra plus accéder au système. Voulez-vous continuer ?"
+                        : "Le membre sera activé et pourra accéder au système. Voulez-vous continuer ?"
+                }
+                confirmText={
+                    confirmationType === "delete"
+                        ? "Supprimer"
+                        : confirmationType === "deactivate"
+                        ? "Désactiver"
+                        : "Activer"
+                }
+                itemName={selectedMember ? `${selectedMember.prenom} ${selectedMember.nom}` : ""}
+                loading={isProcessing}
+                onConfirm={handleConfirmationAction}
+                onCancel={() => {
+                    setShowConfirmation(false);
+                    setSelectedMember(null);
+                    setConfirmationType(null);
+                }}
+            />
                 </div>
             </div>
         </div>

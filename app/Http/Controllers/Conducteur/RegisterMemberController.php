@@ -66,6 +66,7 @@ class RegisterMemberController extends Controller
                 'responsable.dateNaissance' => 'nullable|date',
                 'responsable.genre' => 'nullable|in:M,F,Masculin,Féminin',
                 'responsable.profession' => 'nullable|string|max:255',
+                'responsable.fonction' => 'nullable|exists:fonctions,id',
                 'responsable.fonction_professionnelle' => 'nullable|string|max:255',
                 'responsable.adresse' => 'nullable|string|max:1000',
                 'responsable.ville_id' => 'nullable|exists:villes,id',
@@ -96,6 +97,7 @@ class RegisterMemberController extends Controller
                 'membres.*.relation' => 'nullable|string|max:255',
                 'membres.*.genre' => 'nullable|in:M,F,Masculin,Féminin',
                 'membres.*.dateNaissance' => 'nullable|date',
+                'membres.*.fonction' => 'nullable|exists:fonctions,id',
                 'membres.*.statutMarital' => 'nullable|string|max:255',
                 'membres.*.dateMariage' => 'nullable|date',
                 'membres.*.lieuMariage' => 'nullable|string|max:255',
@@ -127,6 +129,20 @@ class RegisterMemberController extends Controller
                     'success' => false,
                     'message' => 'Accès non autorisé. Seuls les conducteurs peuvent enregistrer des membres.'
                 ], 403);
+            }
+
+            // Convertir les strings vides en null pour les champs optionnels (fonction)
+            foreach ($validated['responsable'] as &$val) {
+                if (isset($val) && $val === '') {
+                    $val = null;
+                }
+            }
+            if (isset($validated['membres']) && is_array($validated['membres'])) {
+                foreach ($validated['membres'] as &$membre) {
+                    if (isset($membre['fonction']) && $membre['fonction'] === '') {
+                        $membre['fonction'] = null;
+                    }
+                }
             }
 
             // 3. RÉCUPÉRER LA CLASSE ID DU CONDUCTEUR (toujours utiliser la classe du conducteur)
@@ -176,6 +192,7 @@ class RegisterMemberController extends Controller
                 'genre' => $responsableData['genre'] ?? null,
                 'date_naissance' => $responsableData['dateNaissance'] ?? null,
                 'profession' => $responsableData['profession'] ?? $responsableData['fonction_professionnelle'] ?? null,
+                'fonction_id' => $responsableData['fonction'] ?? null,
                 'statut' => 'actif',
                 'ville_id' => $responsableData['ville_id'] ?? null,
                 'must_change_password' => true,
@@ -262,6 +279,7 @@ class RegisterMemberController extends Controller
                         'date_naissance' => $membreData['dateNaissance'] ?? null,
                         'profession' => $membreData['profession'] ?? null,
                         'relation' => $membreData['relation'] ?? null,
+                        'fonction_id' => $membreData['fonction'] ?? null,
                         'family_id' => $family->id,
                         'statut' => 'actif',
                         'must_change_password' => !empty($membreData['email']),
@@ -330,6 +348,19 @@ class RegisterMemberController extends Controller
                 'membres_count' => count($validated['membres'] ?? []),
                 'conducteur_id' => $conducteur->id,
             ]);
+
+            // Si c'est une requête AJAX/axios, retourner JSON
+            if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Famille et membres enregistrés avec succès',
+                    'data' => [
+                        'family_id' => $family->id,
+                        'responsable_id' => $responsableUser->id,
+                        'membres_count' => count($validated['membres'] ?? []),
+                    ]
+                ], 201);
+            }
 
             return redirect()
                 ->route('conducteur.inscriptions')

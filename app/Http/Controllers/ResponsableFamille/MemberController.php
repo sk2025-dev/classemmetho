@@ -47,8 +47,24 @@ class MemberController extends Controller
 
     public function store(Request $request)
     {
-        $familyId = $request->query('family_id');
-        $family = Family::findOrFail($familyId);
+        try {
+            \Log::info('Store member - request data received:', $request->all());
+
+            $familyId = $request->query('family_id');
+            $family = Family::findOrFail($familyId);
+
+            // Vérifier que l'utilisateur authentifié est le responsable de cette famille
+            $auth = Auth::user();
+            if ($family->responsable_id !== $auth->id) {
+                abort(403, 'Vous n\'êtes pas autorisé à créer des membres pour cette famille');
+            }
+
+            // Convertir les strings vides en null pour les champs optionnels
+            $input = $request->all();
+            if (isset($input['fonction_id']) && $input['fonction_id'] === '') {
+                $input['fonction_id'] = null;
+            }
+            $request->merge($input);
 
         // Validation avec messages personnalisés
         $validated = $request->validate(
@@ -122,7 +138,15 @@ class MemberController extends Controller
             $photoPath = $request->file('photo')->store('members/photos', 'public');
         }
 
+        // Générer l'identifiant
+        $identifier = User::generateIdentifier(
+            $validated['nom'],
+            $validated['prenom'],
+            $validated['date_naissance'] ?? null
+        );
+
         $user = User::create([
+            'identifier' => $identifier,
             'nom' => $validated['nom'],
             'prenom' => $validated['prenom'],
             'email' => $validated['email'],
@@ -141,17 +165,22 @@ class MemberController extends Controller
             'photo_path' => $photoPath,
         ]);
 
-        // Create sacrament record for this user
+        // Helper function to properly convert "0"/"1" strings to boolean using filter_var
+        $toBool = function($value) {
+            return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+        };
+
+        // Create sacrament record for this user with proper boolean conversion from strings "0"/"1"
         \App\Models\UserSacrement::create([
             'user_id' => $user->id,
-            // Sacrements religieux
-            'baptise' => (bool)($validated['baptise'] ?? false),
+            // Sacrements religieux - use filter_var to properly convert "0"/"1" strings
+            'baptise' => isset($validated['baptise']) ? $toBool($validated['baptise']) : false,
             'bapteme_date' => !empty($validated['date_bapteme']) ? $validated['date_bapteme'] : null,
             'bapteme_lieu' => !empty($validated['lieu_bapteme']) ? $validated['lieu_bapteme'] : null,
-            'premiere_communion' => (bool)($validated['premiere_communion'] ?? false),
+            'premiere_communion' => isset($validated['premiere_communion']) ? $toBool($validated['premiere_communion']) : false,
             'premiere_communion_date' => !empty($validated['date_premiere_communion']) ? $validated['date_premiere_communion'] : null,
             'premiere_communion_lieu' => !empty($validated['lieu_premiere_communion']) ? $validated['lieu_premiere_communion'] : null,
-            'marie_religieusement' => (bool)($validated['mariage_religieux'] ?? false),
+            'marie_religieusement' => isset($validated['marie_religieusement']) ? $toBool($validated['marie_religieusement']) : false,
             'mariage_religieux_date' => !empty($validated['date_mariage_religieux']) ? $validated['date_mariage_religieux'] : null,
             'mariage_religieux_lieu' => !empty($validated['lieu_mariage_religieux']) ? $validated['lieu_mariage_religieux'] : null,
             // Statut matrimonial civil (mappé depuis les champs du formulaire)
@@ -163,9 +192,57 @@ class MemberController extends Controller
             'dot_effectue' => $validated['statut_marital'] === 'Dote',
         ]);
 
+        // Si c'est une requête AJAX/axios, retourner JSON
+        if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json([
+                'success' => true,
+                'message' => 'Membre ajouté avec succès',
+                'data' => [
+                    'id' => $user->id,
+                    'nom' => $user->nom,
+                    'prenom' => $user->prenom,
+                    'email' => $user->email,
+                    'telephone' => $user->telephone,
+                    'genre' => $user->genre,
+                    'date_naissance' => $user->date_naissance,
+                    'profession' => $user->profession,
+                    'relation' => $user->relation,
+                    'fonction_id' => $user->fonction_id,
+                ]
+            ], 201);
+        }
+
         return redirect()
             ->route('responsable-famille.inscriptions', ['family_id' => $familyId])
             ->with('success', 'Membre ajouté avec succès');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Erreur de validation
+            \Log::warning('Validation error in store:', $e->errors());
+            if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erreur de validation',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+            throw $e;
+        } catch (\Exception $e) {
+            // Autres erreurs
+            \Log::error('Error in store:', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erreur lors de l\'ajout du membre',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+            return redirect()->back()->with('error', 'Erreur lors de l\'ajout du membre: ' . $e->getMessage());
+        }
     }
 
     public function edit($id)
@@ -187,8 +264,17 @@ class MemberController extends Controller
             ->orderBy('nom')
             ->get();
 
+        $memberData = $member->toArray();
+        $memberData['statut_marital'] = $member->sacrements
+            ? ($member->sacrements->est_marie ? 'Marié(e)' : ($member->sacrements->est_divorce ? 'Divorcé(e)' : ($member->sacrements->est_veuf ? 'Veuf(ve)' : ($member->sacrements->dot_effectue ? 'Dote' : 'Célibataire'))))
+            : 'Célibataire';
+
+        if ($member->sacrements) {
+            $memberData['sacrements'] = $member->sacrements->toArray();
+        }
+
         return Inertia::render('ResponsableFamille/Members/EditMember', [
-            'member' => $member,
+            'member' => $memberData,
             'family' => $member->family,
             'fonctions' => $fonctions,
         ]);
@@ -227,9 +313,9 @@ class MemberController extends Controller
                 'premiere_communion' => 'nullable|in:0,1',
                 'date_premiere_communion' => 'nullable|date|required_if:premiere_communion,1',
                 'lieu_premiere_communion' => 'nullable|string|max:255|required_if:premiere_communion,1',
-                'mariage_religieux' => 'nullable|in:0,1',
-                'date_mariage_religieux' => 'nullable|date|required_if:mariage_religieux,1',
-                'lieu_mariage_religieux' => 'nullable|string|max:255|required_if:mariage_religieux,1',
+                'marie_religieusement' => 'nullable|in:0,1',
+                'date_mariage_religieux' => 'nullable|date|required_if:marie_religieusement,1',
+                'lieu_mariage_religieux' => 'nullable|string|max:255|required_if:marie_religieusement,1',
             ]
         );
 
@@ -257,6 +343,7 @@ class MemberController extends Controller
             'profession' => $validated['profession'] ?? $member->profession,
             'fonction_id' => $validated['fonction_id'] ?? $member->fonction_id,
             'relation' => $validated['relation'] ?? $member->relation,
+            'photo_path' => $validated['photo_path'] ?? $member->photo_path,
         ]);
 
         // Enregistrer les modifications dans l'audit
@@ -286,7 +373,7 @@ class MemberController extends Controller
                 'premiere_communion' => (bool)($validated['premiere_communion'] ?? false),
                 'premiere_communion_date' => !empty($validated['date_premiere_communion']) ? $validated['date_premiere_communion'] : null,
                 'premiere_communion_lieu' => !empty($validated['lieu_premiere_communion']) ? $validated['lieu_premiere_communion'] : null,
-                'marie_religieusement' => (bool)($validated['mariage_religieux'] ?? false),
+                'marie_religieusement' => (bool)($validated['marie_religieusement'] ?? false),
                 'mariage_religieux_date' => !empty($validated['date_mariage_religieux']) ? $validated['date_mariage_religieux'] : null,
                 'mariage_religieux_lieu' => !empty($validated['lieu_mariage_religieux']) ? $validated['lieu_mariage_religieux'] : null,
                 // Statut matrimonial civil (mappé depuis les champs du formulaire)
