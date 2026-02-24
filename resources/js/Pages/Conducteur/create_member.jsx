@@ -552,24 +552,26 @@ export default function RegisterFamille({
                 alert("Le fichier est trop volumineux (max 5MB).");
                 return;
             }
-            const preview = URL.createObjectURL(file);
-            if (type === "responsable") {
-                if (responsable.photoPreview)
-                    URL.revokeObjectURL(responsable.photoPreview);
-                setResponsable({
-                    ...responsable,
-                    photo: file,
-                    photoPreview: preview,
-                });
-            } else {
-                if (membreTemp.photoPreview)
-                    URL.revokeObjectURL(membreTemp.photoPreview);
-                setMembreTemp({
-                    ...membreTemp,
-                    photo: file,
-                    photoPreview: preview,
-                });
-            }
+
+            // Convertir en base64 pour une preview permanente
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const preview = event.target.result; // base64 string
+                if (type === "responsable") {
+                    setResponsable({
+                        ...responsable,
+                        photo: file,
+                        photoPreview: preview,
+                    });
+                } else {
+                    setMembreTemp({
+                        ...membreTemp,
+                        photo: file,
+                        photoPreview: preview,
+                    });
+                }
+            };
+            reader.readAsDataURL(file);
         }
     };
 
@@ -2189,9 +2191,10 @@ export default function RegisterFamille({
                                                     }, 1500);
                                                 }
                                             }}
-                                            className={`flex-1 ${STYLES.button.primary}`}
+                                            className={`flex-1 ${STYLES.button.primary} flex items-center justify-center gap-2`}
                                         >
-                                            Enregistrer les modifications
+                                            <Check className="w-4 h-4" />
+                                            <span>Enregistrer les modifications</span>
                                         </button>
                                         <button
                                             type="button"
@@ -2240,9 +2243,10 @@ export default function RegisterFamille({
                                     <button
                                         type="button"
                                         onClick={ajouterMembre}
-                                        className={`flex-1 ${STYLES.button.primary}`}
+                                        className={`flex-1 ${STYLES.button.primary} flex items-center justify-center gap-2`}
                                     >
-                                        Ajouter ce membre
+                                        <UserPlus className="w-4 h-4" />
+                                        <span>Ajouter ce membre</span>
                                     </button>
                                 )}
                             </div>
@@ -2387,6 +2391,7 @@ export default function RegisterFamille({
                                                         type="button"
                                                         onClick={() => {
                                                             setMembreTemp(m);
+                                                            setEditingMemberIndex(idx);
                                                             document.querySelector('[data-member-form]')?.scrollIntoView({ behavior: 'smooth' });
                                                         }}
                                                         className="px-3 py-2 text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-all duration-300 flex items-center gap-2 font-medium"

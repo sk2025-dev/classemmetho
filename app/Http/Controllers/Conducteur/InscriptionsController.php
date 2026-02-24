@@ -227,9 +227,11 @@ class InscriptionsController extends Controller
                 $allInscriptions = [];
             }
 
-            // Récupérer les membres (users) déjà créés de sa classe
+            // Récupérer les membres (users) déjà créés de sa classe (y compris les supprimés)
             $members = User::whereIn('classe_id', $classIds)
                 ->where('role', '!=', 'admin')
+                ->withTrashed()
+                ->with(['sacrements'])
                 ->get()
                 ->map(function ($member) {
                     return [
@@ -240,12 +242,26 @@ class InscriptionsController extends Controller
                         'phone' => $member->telephone,
                         'role' => $member->role,
                         'status' => $member->statut,
+                        'genre' => $member->genre,
+                        'identifier' => $member->identifier,
                         'famille_id' => $member->family_id,
+                        'is_family_responsible' => $member->is_family_responsible,
                         'profile_photo_url' => $member->photo_path ? asset('storage/' . $member->photo_path) : null,
                         'date_naissance' => $member->date_naissance,
                         'profession' => $member->profession,
+                        'relation' => $member->relation,
                         'created_at' => $member->created_at,
                         'updated_at' => $member->updated_at,
+                        // === SACREMENTS ===
+                        'baptise' => $member->sacrements?->baptise ?? false,
+                        'premiere_communion' => $member->sacrements?->premiere_communion ?? false,
+                        'est_marie' => $member->sacrements?->est_marie ?? false,
+                        'marie_religieusement' => $member->sacrements?->marie_religieusement ?? false,
+                        'dot_effectue' => $member->sacrements?->dot_effectue ?? false,
+                        'est_veuf' => $member->sacrements?->est_veuf ?? false,
+                        'statut_marital' => $member->sacrements?->est_veuf ? 'veuf' : ($member->sacrements?->dot_effectue ? 'dote' : ($member->sacrements?->est_marie ? 'marie' : null)),
+                        'deleted_at' => $member->deleted_at,
+                        'is_deleted' => $member->deleted_at !== null,
                         'raw' => $member,
                     ];
                 });
@@ -257,16 +273,19 @@ class InscriptionsController extends Controller
 
             // Compter les vrais membres (users) déjà créés dans la classe du conducteur
             // Ces utilisateurs ont une famille et une classe assignée
+            // Exclure les supprimés (soft delete)
             $membersCount = User::whereIn('classe_id', $classIds)
                 ->whereNotNull('family_id')
                 ->where('role', '!=', 'admin')
+                ->whereNull('deleted_at')
                 ->count();
 
             // Récupérer les familles avec leurs membres
             $families = [];
             try {
                 $families = \App\Models\Family::whereIn('classe_id', $classIds)
-                    ->with(['responsable', 'users'])
+                    ->withTrashed()
+                    ->with(['responsable', 'users', 'responsable.sacrements', 'users.sacrements'])
                     ->get()
                     ->map(function ($family) {
                         // Vérifier que le responsable existe
@@ -278,12 +297,31 @@ class InscriptionsController extends Controller
                             'id' => $family->id,
                             'nom' => $family->nom,
                             'responsable_id' => $family->responsable_id,
+                            'deleted_at' => $family->deleted_at,
+                            'is_deleted' => $family->deleted_at !== null,
                             'responsable' => [
                                 'id' => $family->responsable->id,
                                 'nom' => $family->responsable->nom ?? '',
                                 'prenom' => $family->responsable->prenom ?? '',
                                 'email' => $family->responsable->email ?? '',
                                 'phone' => $family->responsable->telephone ?? '',
+                                'identifier' => $family->responsable->identifier ?? '',
+                                'genre' => $family->responsable->genre ?? '',
+                                'profession' => $family->responsable->profession ?? '',
+                                'relation' => $family->responsable->relation ?? '',
+                                'profile_photo_url' => $family->responsable->photo_path ? asset('storage/' . $family->responsable->photo_path) : null,
+                                'baptise' => $family->responsable->sacrements?->baptise ?? false,
+                                'premiere_communion' => $family->responsable->sacrements?->premiere_communion ?? false,
+                                'est_marie' => $family->responsable->sacrements?->est_marie ?? false,
+                                'marie_religieusement' => $family->responsable->sacrements?->marie_religieusement ?? false,
+                                'dot_effectue' => $family->responsable->sacrements?->dot_effectue ?? false,
+                                'est_veuf' => $family->responsable->sacrements?->est_veuf ?? false,
+                                'statut_marital' => $family->responsable->sacrements?->est_veuf ? 'veuf' : ($family->responsable->sacrements?->dot_effectue ? 'dote' : ($family->responsable->sacrements?->est_marie ? 'marie' : null)),
+                                'created_at' => $family->responsable->created_at,
+                                'updated_at' => $family->responsable->updated_at,
+                                'is_family_responsible' => true,
+                                'deleted_at' => $family->responsable->deleted_at,
+                                'is_deleted' => $family->responsable->deleted_at !== null,
                             ],
                             'members' => $family->users->map(function ($user) use ($family) {
                                 return [
@@ -294,9 +332,24 @@ class InscriptionsController extends Controller
                                     'phone' => $user->telephone ?? '',
                                     'role' => $user->role ?? 'membre',
                                     'genre' => $user->genre ?? '',
+                                    'identifier' => $user->identifier ?? '',
+                                    'profession' => $user->profession ?? '',
+                                    'relation' => $user->relation ?? '',
+                                    'profile_photo_url' => $user->photo_path ? asset('storage/' . $user->photo_path) : null,
                                     'date_naissance' => $user->date_naissance ?? '',
                                     'family_id' => $user->family_id,
                                     'is_family_responsible' => $family->responsable_id == $user->id,
+                                    'baptise' => $user->sacrements?->baptise ?? false,
+                                    'premiere_communion' => $user->sacrements?->premiere_communion ?? false,
+                                    'est_marie' => $user->sacrements?->est_marie ?? false,
+                                    'marie_religieusement' => $user->sacrements?->marie_religieusement ?? false,
+                                    'dot_effectue' => $user->sacrements?->dot_effectue ?? false,
+                                    'est_veuf' => $user->sacrements?->est_veuf ?? false,
+                                    'statut_marital' => $user->sacrements?->est_veuf ? 'veuf' : ($user->sacrements?->dot_effectue ? 'dote' : ($user->sacrements?->est_marie ? 'marie' : null)),
+                                    'created_at' => $user->created_at,
+                                    'updated_at' => $user->updated_at,
+                                    'deleted_at' => $user->deleted_at,
+                                    'is_deleted' => $user->deleted_at !== null,
                                 ];
                             })->toArray(),
                             'member_count' => $family->users->count(),
@@ -705,8 +758,69 @@ class InscriptionsController extends Controller
 
         try {
             $member->delete();
+
+            if (request()->wantsJson()) {
+                // Récupérer le nouveau count de membres (sans les supprimés)
+                $conductorClasses = $user->getManagedClasses();
+                $classIds = $conductorClasses->pluck('id')->toArray();
+
+                $newMembersCount = User::whereIn('classe_id', $classIds)
+                    ->whereNotNull('family_id')
+                    ->where('role', '!=', 'admin')
+                    ->whereNull('deleted_at')
+                    ->count();
+
+                // Récupérer la liste des membres mis à jour (avec les supprimés)
+                $members = User::whereIn('classe_id', $classIds)
+                    ->where('role', '!=', 'admin')
+                    ->withTrashed()
+                    ->with(['sacrements'])
+                    ->get()
+                    ->map(function ($member) {
+                        return [
+                            'id' => $member->id,
+                            'last_name' => $member->nom,
+                            'first_name' => $member->prenom,
+                            'email' => $member->email,
+                            'phone' => $member->telephone,
+                            'role' => $member->role,
+                            'status' => $member->statut,
+                            'genre' => $member->genre,
+                            'identifier' => $member->identifier,
+                            'famille_id' => $member->family_id,
+                            'is_family_responsible' => $member->is_family_responsible,
+                            'profile_photo_url' => $member->photo_path ? asset('storage/' . $member->photo_path) : null,
+                            'date_naissance' => $member->date_naissance,
+                            'profession' => $member->profession,
+                            'relation' => $member->relation,
+                            'created_at' => $member->created_at,
+                            'updated_at' => $member->updated_at,
+                            'baptise' => $member->sacrements?->baptise ?? false,
+                            'premiere_communion' => $member->sacrements?->premiere_communion ?? false,
+                            'est_marie' => $member->sacrements?->est_marie ?? false,
+                            'marie_religieusement' => $member->sacrements?->marie_religieusement ?? false,
+                            'dot_effectue' => $member->sacrements?->dot_effectue ?? false,
+                            'est_veuf' => $member->sacrements?->est_veuf ?? false,
+                            'statut_marital' => $member->sacrements?->est_veuf ? 'veuf' : ($member->sacrements?->dot_effectue ? 'dote' : ($member->sacrements?->est_marie ? 'marie' : null)),
+                            'deleted_at' => $member->deleted_at,
+                            'is_deleted' => $member->deleted_at !== null,
+                        ];
+                    });
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Membre supprimé avec succès',
+                    'newMembersCount' => $newMembersCount,
+                    'updatedMembers' => $members
+                ]);
+            }
+
             return back()->with('success', 'Membre supprimé avec succès');
         } catch (\Exception $e) {
+            if (request()->wantsJson()) {
+                return response()->json(['success' => false, 'error' => 'Erreur lors de la suppression'], 500);
+            }
+
             return back()->with('error', 'Erreur lors de la suppression');
         }
     }
@@ -1182,6 +1296,60 @@ class InscriptionsController extends Controller
     private function generateTempPassword(): string
     {
         return Str::random(8);
+    }
+
+
+    /**
+     * Changer le statut d'un membre (actif/inactif)
+     */
+    public function updateStatus(Request $request, $memberId)
+    {
+        $user = Auth::user();
+
+        if ($user->role !== 'conducteur') {
+            return response()->json(['error' => 'Accès non autorisé'], 403);
+        }
+
+        try {
+            $member = User::findOrFail($memberId);
+
+            // Vérifier que le membre est de la classe du conducteur
+            $conductorClasses = $user->getManagedClasses()->pluck('id')->toArray();
+            if (!in_array($member->classe_id, $conductorClasses)) {
+                return response()->json(['error' => 'Membre ne appartient pas à votre classe'], 403);
+            }
+
+            $status = $request->input('status');
+            if (!in_array($status, ['actif', 'inactif'])) {
+                return response()->json(['error' => 'Statut invalide'], 400);
+            }
+
+            $member->update([
+                'statut' => $status,
+            ]);
+
+            Log::info('Statut du membre mis à jour', [
+                'member_id' => $member->id,
+                'new_status' => $status,
+                'conducteur_id' => $user->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Le statut du membre a été mis à jour à: $status",
+                'member' => $member,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Erreur lors du changement de statut du membre', [
+                'member_id' => $memberId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'error' => 'Impossible de changer le statut du membre',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

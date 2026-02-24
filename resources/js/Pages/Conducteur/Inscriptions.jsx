@@ -137,8 +137,21 @@ export default function Inscriptions({
         total: 0,
     });
 
-    // === DEBUG: Affichage des inscriptions reçues ===
+    // === DEBUG: Affichage des inscriptions, members et families reçues ===
     useEffect(() => {
+        console.log('🔍 DEBUG - Données reçues du backend:', {
+            nombre_inscriptions: (inscriptions || []).length,
+            nombre_members: (members || []).length,
+            nombre_families: (families || []).length,
+        });
+
+        // DEBUG détaillé pour members
+        if (members && members.length > 0) {
+            console.log('📋 DEBUG - Premier MEMBER complet:', members[0]);
+            console.log('📋 DEBUG - Noms de clés du premier member:', Object.keys(members[0] || {}));
+        }
+
+        // DEBUG pour inscriptions
         console.log('🔍 DEBUG - Inscriptions reçues du backend:', {
             nombre_inscriptions: (inscriptions || []).length,
             inscriptions: inscriptions || [],
@@ -151,7 +164,7 @@ export default function Inscriptions({
                 email: insc.email,
             }))
         });
-    }, [inscriptions]);
+    }, [inscriptions, members, families]);
 
     const tableHeaderClass =
         activeTab === "pending"
@@ -171,10 +184,22 @@ export default function Inscriptions({
     const [approvingId, setApprovingId] = useState(null);
     const [rejectingId, setRejectingId] = useState(null);
 
+    // Modal membre
+    const [showMemberModal, setShowMemberModal] = useState(false);
+
     // Modal famille
     const [showFamilyModal, setShowFamilyModal] = useState(false);
     const [selectedFamily, setSelectedFamily] = useState(null);
-    const [showMemberModal, setShowMemberModal] = useState(false);
+
+    // Modal changement de statut
+    const [showStatusModal, setShowStatusModal] = useState(false);
+    const [selectedMemberForStatus, setSelectedMemberForStatus] = useState(null);
+    const [newStatus, setNewStatus] = useState(null);
+    const [isChangingStatus, setIsChangingStatus] = useState(false);
+
+    // State for updated members list after deletion
+    const [updatedMembers, setUpdatedMembers] = useState(members);
+    const [currentMembersCount, setCurrentMembersCount] = useState(membersCount);
 
     // Confirmation modal states
     const [showConfirmation, setShowConfirmation] = useState(false);
@@ -185,6 +210,16 @@ export default function Inscriptions({
     // États pour les données persistantes
     const [fonctions, setFonctions] = useState([]);
     const [fieldErrors, setFieldErrors] = useState({});
+
+    // États de pagination
+    const [currentPage, setCurrentPage] = useState({
+        families: 1,
+        members: 1,
+        pending: 1,
+        approved: 1,
+        rejected: 1,
+    });
+    const itemsPerPage = 10;
 
     // --- FORMULAIRE (Add / Edit) ---
     const { data, setData, post, put, processing, reset, errors } = useForm({
@@ -279,35 +314,76 @@ export default function Inscriptions({
         return mapped;
     });
 
-    const membersOnly = (members || []).map((member) => ({
-        id: member.id,
-        kind: "member",
-        inscriptionType: null,
-        nom: member.last_name,
-        prenom: member.first_name,
-        email: member.email,
-        phone: member.phone,
-        role: member.role || "membre",
-        status: member.status || "actif", // status réel du member (actif/inactif)
-        famille_id: member.famille_id || member.family_id || null,
-        responsable_famille: member.responsable_famille || false,
-        profile_photo_url: member.profile_photo_url || null,
-        fonction_professionnelle: member.fonction_professionnelle || null,
-        created_at: member.created_at || null,
-        raw: member,
-    }));
+    const membersOnly = (updatedMembers || members || []).map((member, idx) => {
+        // Debug: afficher la structure complète du member
+        if (idx === 0) {
+            console.log('🎯 DEBUG - Mapping membersOnly - Données brutes du 1er member:', member);
+            console.log('🎯 DEBUG - Sacrements du 1er member:', {
+                baptise: member.baptise,
+                premiere_communion: member.premiere_communion,
+                est_marie: member.est_marie,
+                marie_religieusement: member.marie_religieusement,
+                dot_effectue: member.dot_effectue,
+                est_veuf: member.est_veuf,
+                statut_marital: member.statut_marital,
+            });
+        }
+
+        const mapped = {
+            id: member.id,
+            kind: "member",
+            inscriptionType: null,
+            nom: member.last_name || member.nom || member.lastName || "-",
+            prenom: member.first_name || member.prenom || member.firstName || "-",
+            email: member.email || "-",
+            phone: member.phone || member.telephone || member.tel || "-",
+            role: member.role || member.type || "membre",
+            status: member.statut || member.status || "actif",
+            famille_id: member.family_id || member.famille_id || member.familyId || null,
+            responsable_famille: member.is_family_responsible || member.responsable_famille || member.is_responsable || false,
+            profile_photo_url: member.profile_photo_url || member.photo_url || member.photo || null,
+            fonction_professionnelle: member.profession || member.fonction_professionnelle || member.professional_function || null,
+            fonction: member.profession || member.fonction || member.function || member.role_description || null,
+            created_at: member.created_at || member.createdAt || null,
+            updated_at: member.updated_at || member.updatedAt || null,
+            classe: member.classe || member.class || null,
+            genre: member.genre || member.gender || member.sex || null,
+            identifiant: member.identifier || member.identifiant || member.matricule || member.member_id || null,
+            relation: member.relation || member.relationship || member.family_relation || null,
+            // === SACREMENTS - Backend envoie les champs directement ===
+            baptise: member.baptise || false,
+            premiere_communion: member.premiere_communion || false,
+            statut_marital: member.statut_marital || (member.est_veuf ? 'veuf' : (member.dot_effectue ? 'dote' : (member.est_marie ? 'marie' : null))),
+            marie_religieusement: member.marie_religieusement || false,
+            dote: member.dot_effectue || member.dote || false,
+            est_veuf: member.est_veuf || false,
+            est_marie: member.est_marie || false,
+            // === SOFT DELETE ===
+            deleted_at: member.deleted_at || null,
+            is_deleted: member.is_deleted || false,
+            raw: member,
+        };
+
+        if (idx === 0) {
+            console.log('🎯 DEBUG - Mapping membersOnly - Données mappées du 1er member:', mapped);
+        }
+
+        return mapped;
+    });
 
     // Utiliser les familles envoyées par le backend
     const familiesList = (families || []).map((family) => ({
         familyId: family.id,
         nom: family.nom,
-        responsable: {
-            id: family.responsable?.id,
-            nom: family.responsable?.nom || "N/A",
-            prenom: family.responsable?.prenom || "N/A",
-            email: family.responsable?.email,
-            phone: family.responsable?.phone,
-        },
+        responsable: family.responsable ? {
+            // Tous les champs du responsable pour l'affichage dans le tableau
+            ...family.responsable,
+            id: family.responsable.id,
+            last_name: family.responsable.nom,
+            first_name: family.responsable.prenom,
+            email: family.responsable.email,
+            phone: family.responsable.phone,
+        } : null,
         members: family.members || [],
         memberCount: family.member_count || family.members?.length || 0,
     }));
@@ -405,8 +481,78 @@ export default function Inscriptions({
             active_tab: activeTab,
         });
     }, [inscriptionsOnly, membersOnly, filteredItems, activeTab]);
+
+    // Synchroniser les données initiales du backend
+    useEffect(() => {
+        setUpdatedMembers(members);
+        setCurrentMembersCount(membersCount);
+    }, [members, membersCount]);
+
     const resetFilters = () => {
         setFilters({ search: "", status: "all", role: "all", viewMode: "all", familyFilter: "", displayMode: "list" });
+    };
+
+    // Fonction pour gérer le changement de page
+    const handlePageChange = (pageNumber, tabName) => {
+        setCurrentPage(prev => ({
+            ...prev,
+            [tabName]: pageNumber
+        }));
+    };
+
+    // Fonction pour paginer les données
+    const paginateData = (data, pageKey) => {
+        const page = currentPage[pageKey] || 1;
+        const startIdx = (page - 1) * itemsPerPage;
+        const endIdx = startIdx + itemsPerPage;
+        return {
+            paginatedData: data.slice(startIdx, endIdx),
+            totalPages: Math.ceil(data.length / itemsPerPage),
+            totalItems: data.length,
+            currentPage: page,
+        };
+    };
+
+    // Composant de pagination
+    const PaginationControls = ({ totalPages, currentPage, onPageChange, tabName }) => {
+        if (totalPages <= 1) return null;
+
+        return (
+            <div className="flex items-center justify-center gap-2 p-4 border-t border-slate-200 bg-slate-50">
+                <button
+                    disabled={currentPage === 1}
+                    onClick={() => onPageChange(currentPage - 1, tabName)}
+                    className="px-3 py-2 rounded-lg border border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
+                >
+                    Précédente
+                </button>
+                <div className="flex items-center gap-2">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                        <button
+                            key={page}
+                            onClick={() => onPageChange(page, tabName)}
+                            className={`px-3 py-2 rounded-lg transition ${
+                                currentPage === page
+                                    ? "bg-blue-600 text-white"
+                                    : "border border-slate-300 hover:bg-slate-100"
+                            }`}
+                        >
+                            {page}
+                        </button>
+                    ))}
+                </div>
+                <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => onPageChange(currentPage + 1, tabName)}
+                    className="px-3 py-2 rounded-lg border border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100"
+                >
+                    Suivante
+                </button>
+                <div className="ml-auto text-sm text-slate-600">
+                    Page {currentPage} sur {totalPages} ({totalPages * itemsPerPage >= 10 ? `${(currentPage - 1) * itemsPerPage + 1}-${Math.min(currentPage * itemsPerPage, totalPages * itemsPerPage)}` : '...'} éléments)
+                </div>
+            </div>
+        );
     };
 
     // --- ACTIONS ---
@@ -430,13 +576,37 @@ export default function Inscriptions({
                 : `/conducteur/members/${id}`;
 
         router.delete(url, {
-            onSuccess: () => {
+            onSuccess: (response) => {
                 setShowConfirmation(false);
                 setIsProcessingConfirmation(false);
+
+                // Si on a les données mises à jour du backend
+                if (response && response.newMembersCount !== undefined) {
+                    setUpdatedMembers(response.updatedMembers || updatedMembers);
+                    setCurrentMembersCount(response.newMembersCount);
+
+                    triggerSuccessNotification(
+                        "Suppression réussie",
+                        "Le membre a été supprimé avec succès."
+                    );
+                } else {
+                    triggerSuccessNotification(
+                        "Suppression réussie",
+                        "Le membre a été supprimé avec succès."
+                    );
+                    // Recharger la page si pas de données dans la réponse
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                }
             },
             onError: (errors) => {
                 console.error("Erreur lors de la suppression:", errors);
                 setIsProcessingConfirmation(false);
+                triggerSuccessNotification(
+                    "Erreur",
+                    "Erreur lors de la suppression du membre."
+                );
             },
         });
     };
@@ -645,6 +815,51 @@ export default function Inscriptions({
         );
     };
 
+    // Fonction pour changer le statut d'un membre
+    const handleChangeStatus = async () => {
+        if (!selectedMemberForStatus || !newStatus) return;
+
+        setIsChangingStatus(true);
+        try {
+            const response = await axios.patch(
+                `/conducteur/members/${selectedMemberForStatus.id}/status`,
+                { status: newStatus },
+                {
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                    },
+                }
+            );
+
+            if (response.data.success) {
+                // Update local state
+                setSelectedMemberForStatus(prev => ({
+                    ...prev,
+                    status: newStatus,
+                }));
+
+                triggerSuccessNotification(
+                    "Statut mis à jour",
+                    `Le membre est maintenant ${newStatus === 'actif' ? 'actif' : 'inactif'}.`
+                );
+
+                // Rafraîchir la page après un court délai
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            }
+        } catch (error) {
+            console.error('Erreur lors du changement de statut:', error);
+            triggerSuccessNotification(
+                "Erreur",
+                "Impossible de changer le statut du membre."
+            );
+        } finally {
+            setIsChangingStatus(false);
+            setShowStatusModal(false);
+        }
+    };
+
     return (
         <>
             <Head title={`Gestion Membres - ${className}`} />
@@ -772,7 +987,7 @@ export default function Inscriptions({
                                     Membres Créés
                                 </div>
                                 <div className="text-2xl font-bold text-blue-300">
-                                    {membersCount}
+                                    {currentMembersCount}
                                 </div>
                             </div>
                         </div>
@@ -926,30 +1141,28 @@ export default function Inscriptions({
                                 <table className="w-full text-left">
                                     <thead className="bg-blue-600 text-white border-b border-slate-200">
                                         <tr>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                #
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                Nom complet
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                Famille
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                Rôle
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                Email
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                Téléphone
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                Statut
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider text-right">
-                                                Actions
-                                            </th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">N°</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Photo</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Nom</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Prénom</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Email</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Identifiant</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Téléphone</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Genre</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Rôle</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Fonction</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Baptisé</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">1ère Communion</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Marié Civil</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Marié Religieux</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Doté</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Veuf</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Date création</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Date modification</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Famille</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Relation</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Statut</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
@@ -964,6 +1177,10 @@ export default function Inscriptions({
                                                         ...family.responsable,
                                                         famille_nom: family.nom || family.responsable.nom,
                                                         is_responsable: true,
+                                                        identifiant: family.responsable.identifier || family.responsable.identifiant || family.responsable.id,
+                                                        relation: family.responsable.relation || family.responsable.relation || '-',
+                                                        profession: family.responsable.profession || '-',
+                                                        fonction: family.responsable.profession || '-',
                                                     });
                                                 }
                                                 // Ajouter les autres membres
@@ -974,6 +1191,10 @@ export default function Inscriptions({
                                                             allMembers.push({
                                                                 ...member,
                                                                 famille_nom: family.nom || family.responsable?.nom || "Famille",
+                                                                identifiant: member.identifier || member.identifiant || member.id,
+                                                                relation: member.relation || '-',
+                                                                profession: member.profession || '-',
+                                                                fonction: member.profession || '-',
                                                             });
                                                         }
                                                     });
@@ -983,7 +1204,7 @@ export default function Inscriptions({
                                             if (allMembers.length === 0) {
                                                 return (
                                                     <tr>
-                                                        <td colSpan="8" className="p-12 text-center text-slate-500">
+                                                        <td colSpan="23" className="p-12 text-center text-slate-500">
                                                             <Users className="w-16 h-16 mx-auto mb-4 text-slate-300" />
                                                             <p className="text-lg font-semibold">
                                                                 Aucun membre de famille trouvé
@@ -996,40 +1217,46 @@ export default function Inscriptions({
                                                 );
                                             }
 
-                                            return allMembers.map((member, idx) => (
-                                                <tr key={member.id || idx} className="hover:bg-slate-50 transition">
-                                                    <td className="p-5 text-slate-500 font-mono text-xs">
-                                                        {idx + 1}
-                                                    </td>
-                                                    <td className="p-5">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 overflow-hidden">
-                                                                {member.profile_photo_url ? (
-                                                                    <img
-                                                                        src={member.profile_photo_url}
-                                                                        alt={`${member.prenom} ${member.nom}`}
-                                                                        className="w-full h-full object-cover"
-                                                                    />
-                                                                ) : (
-                                                                    <>
-                                                                        {(member.prenom || member.first_name || member.firstName || "")?.[0]}{(member.nom || member.last_name || member.lastName || "")?.[0]}
-                                                                    </>
-                                                                )}
+                                            const { paginatedData, totalPages } = paginateData(allMembers, 'families');
+
+                                            return paginatedData.map((member, idx) => (
+                                                <tr key={member.id || idx} className={`transition ${member.is_deleted ? "bg-gray-100 opacity-60" : "hover:bg-slate-50"}`}>
+                                                    {/* N° */}
+                                                    <td className="p-3 text-sm font-semibold text-slate-900 text-center whitespace-nowrap">{(currentPage.families - 1) * itemsPerPage + idx + 1}</td>
+
+                                                    {/* Photo */}
+                                                    <td className="p-3 text-center whitespace-nowrap">
+                                                        {member.profile_photo_url ? (
+                                                            <img src={member.profile_photo_url} className="w-10 h-10 rounded-full mx-auto object-cover border-2 border-white shadow-sm" alt="p" />
+                                                        ) : (
+                                                            <div className="w-10 h-10 rounded-full bg-gray-200 mx-auto flex items-center justify-center text-xs text-gray-500 font-bold">
+                                                                {(member.prenom || member.first_name || member.firstName || "")?.[0]}{(member.nom || member.last_name || member.lastName || "")?.[0]}
                                                             </div>
-                                                            <div>
-                                                                <div className="font-semibold text-slate-900">
-                                                                    {member.prenom || member.first_name || member.firstName} {member.nom || member.last_name || member.lastName}
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                                        )}
                                                     </td>
-                                                    <td className="p-5 text-slate-600">
-                                                        <div className="flex items-center gap-2">
-                                                            <Users className="w-4 h-4 text-blue-500" />
-                                                            <span>{member.famille_nom || "Famille"}</span>
-                                                        </div>
+
+                                                    {/* Nom */}
+                                                    <td className="p-3 text-sm font-semibold text-slate-900 text-center whitespace-nowrap">{member.nom || member.last_name || member.lastName}</td>
+
+                                                    {/* Prénom */}
+                                                    <td className="p-3 text-sm text-slate-700 text-center whitespace-nowrap">{member.prenom || member.first_name || member.firstName}</td>
+
+                                                    {/* Email */}
+                                                    <td className="p-3 text-sm text-slate-600 text-center whitespace-nowrap">{member.email || "-"}</td>
+
+                                                    {/* Identifiant */}
+                                                    <td className="p-3 text-sm text-slate-600 text-center whitespace-nowrap">{member.identifiant || "-"}</td>
+
+                                                    {/* Téléphone */}
+                                                    <td className="p-3 text-sm text-slate-600 text-center whitespace-nowrap">{member.phone || member.telephone || "-"}</td>
+
+                                                    {/* Genre */}
+                                                    <td className="p-3 text-sm text-slate-700 text-center whitespace-nowrap">
+                                                        {member.genre === "M" ? "Masculin" : member.genre === "F" ? "Féminin" : "-"}
                                                     </td>
-                                                    <td className="p-5">
+
+                                                    {/* Rôle */}
+                                                    <td className="p-3 text-sm font-semibold text-slate-900 text-center whitespace-nowrap">
                                                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                                                             member.is_responsable || member.responsable_famille || member.is_family_responsible
                                                                 ? "bg-blue-100 text-blue-700"
@@ -1044,13 +1271,59 @@ export default function Inscriptions({
                                                                 : member.role || "Membre"}
                                                         </span>
                                                     </td>
-                                                    <td className="p-5 text-slate-600">
-                                                        {member.email || "N/A"}
+
+                                                    {/* Fonction */}
+                                                    <td className="p-3 text-sm text-slate-700 text-center whitespace-nowrap">{member.fonction || "-"}</td>
+
+                                                    {/* Baptisé */}
+                                                    <td className="p-3 text-sm text-center whitespace-nowrap">
+                                                        {member.baptise ? <span className="text-green-600 font-bold">Oui</span> : <span className="text-gray-400">Non</span>}
                                                     </td>
-                                                    <td className="p-5 text-slate-600">
-                                                        {member.phone || member.telephone || "N/A"}
+
+                                                    {/* 1ère Communion */}
+                                                    <td className="p-3 text-sm text-center whitespace-nowrap">
+                                                        {member.premiere_communion ? <span className="text-green-600 font-bold">Oui</span> : <span className="text-gray-400">Non</span>}
                                                     </td>
-                                                    <td className="p-5">
+
+                                                    {/* Marié Civil */}
+                                                    <td className="p-3 text-sm text-center whitespace-nowrap">
+                                                        {member.statut_marital === "marie" || member.statut_marital === "Marié(e)" ? <span className="text-green-600 font-bold">Oui</span> : <span className="text-gray-400">Non</span>}
+                                                    </td>
+
+                                                    {/* Marié Religieux */}
+                                                    <td className="p-3 text-sm text-center whitespace-nowrap">
+                                                        {member.marie_religieusement ? <span className="text-green-600 font-bold">Oui</span> : <span className="text-gray-400">Non</span>}
+                                                    </td>
+
+                                                    {/* Doté */}
+                                                    <td className="p-3 text-sm text-center whitespace-nowrap">
+                                                        {member.statut_marital === "dote" || member.dote ? <span className="text-green-600 font-bold">Oui</span> : <span className="text-gray-400">Non</span>}
+                                                    </td>
+
+                                                    {/* Veuf */}
+                                                    <td className="p-3 text-sm text-center whitespace-nowrap">
+                                                        {member.statut_marital === "veuf" || member.statut_marital === "Veuf(ve)" ? <span className="text-green-600 font-bold">Oui</span> : <span className="text-gray-400">Non</span>}
+                                                    </td>
+
+                                                    {/* Date création */}
+                                                    <td className="p-3 text-sm text-slate-600 text-center whitespace-nowrap">{member.created_at ? new Date(member.created_at).toLocaleDateString("fr-FR") : "-"}</td>
+
+                                                    {/* Date modification */}
+                                                    <td className="p-3 text-sm text-slate-600 text-center whitespace-nowrap">{member.updated_at ? new Date(member.updated_at).toLocaleDateString("fr-FR") : "-"}</td>
+
+                                                    {/* Famille */}
+                                                    <td className="p-3 text-sm text-slate-700 text-center whitespace-nowrap">
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <Users className="w-4 h-4 text-blue-500" />
+                                                            <span>{member.famille_nom || "Famille"}</span>
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Relation */}
+                                                    <td className="p-3 text-sm text-slate-700 text-center whitespace-nowrap">{member.relation || "-"}</td>
+
+                                                    {/* Statut */}
+                                                    <td className="p-3 text-sm text-center whitespace-nowrap">
                                                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                                                             member.status === "actif"
                                                                 ? "bg-green-100 text-green-800"
@@ -1062,28 +1335,56 @@ export default function Inscriptions({
                                                              member.status === "inactif" ? "Inactif" : "Actif"}
                                                         </span>
                                                     </td>
-                                                    <td className="p-5 text-right">
-                                                        <div className="flex items-center justify-end gap-2">
+
+                                                    {/* Actions */}
+                                                    <td className="p-3 text-center whitespace-nowrap">
+                                                        <div className="flex items-center justify-center gap-2">
                                                             <button
                                                                 type="button"
                                                                 title="Voir les détails"
-                                                                className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition transform hover:scale-105"
+                                                                className="p-2 rounded-lg transition-all"
+                                                                style={{ backgroundColor: "rgba(37, 99, 235, 0.1)", border: "2px solid rgba(37, 99, 235, 0.2)" }}
                                                                 onClick={() => {
                                                                     setSelectedMember(member);
                                                                     setShowMemberModal(true);
                                                                 }}
                                                             >
-                                                                <Eye size={18} />
+                                                                <Eye size={16} className="text-blue-600" />
                                                             </button>
                                                             <button
                                                                 type="button"
                                                                 title="Modifier"
-                                                                className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition transform hover:scale-105"
+                                                                className="p-2 rounded-lg transition-all"
+                                                                style={{ backgroundColor: "rgba(37, 99, 235, 0.1)", border: "2px solid rgba(37, 99, 235, 0.2)" }}
                                                                 onClick={() => {
                                                                     openEditModal(member);
                                                                 }}
                                                             >
-                                                                <Edit size={18} />
+                                                                <Edit size={16} className="text-blue-600" />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                title={member.status === "actif" ? "Désactiver" : "Activer"}
+                                                                className={`p-2 rounded-lg transition-all ${
+                                                                    member.status === "actif"
+                                                                        ? "hover:bg-red-100"
+                                                                        : "hover:bg-green-100"
+                                                                }`}
+                                                                style={{
+                                                                    backgroundColor: member.status === "actif"
+                                                                        ? "rgba(220, 38, 38, 0.1)"
+                                                                        : "rgba(34, 197, 94, 0.1)",
+                                                                    border: member.status === "actif"
+                                                                        ? "2px solid rgba(220, 38, 38, 0.2)"
+                                                                        : "2px solid rgba(34, 197, 94, 0.2)"
+                                                                }}
+                                                                onClick={() => {
+                                                                    setSelectedMemberForStatus(member);
+                                                                    setNewStatus(member.status === "actif" ? "inactif" : "actif");
+                                                                    setShowStatusModal(true);
+                                                                }}
+                                                            >
+                                                                <Power size={16} className={member.status === "actif" ? "text-red-600" : "text-green-600"} />
                                                             </button>
                                                         </div>
                                                     </td>
@@ -1104,6 +1405,34 @@ export default function Inscriptions({
                                     })()} membre(s) au total
                                 </span>
                             </div>
+                            <PaginationControls
+                                totalPages={paginateData((() => {
+                                    let allMembers = [];
+                                    filteredFamiliesList.forEach(family => {
+                                        if (family.responsable) {
+                                            allMembers.push({
+                                                ...family.responsable,
+                                                famille_nom: family.nom || family.responsable.nom,
+                                                is_responsable: true,
+                                            });
+                                        }
+                                        if (family.members && family.members.length > 0) {
+                                            family.members.forEach(member => {
+                                                if (member.id !== family.responsable?.id) {
+                                                    allMembers.push({
+                                                        ...member,
+                                                        famille_nom: family.nom || family.responsable?.nom || "Famille",
+                                                    });
+                                                }
+                                            });
+                                        }
+                                    });
+                                    return allMembers;
+                                })(), 'families').totalPages}
+                                currentPage={currentPage.families}
+                                onPageChange={handlePageChange}
+                                tabName="families"
+                            />
                         </div>
                             );
                         })()
@@ -1114,156 +1443,222 @@ export default function Inscriptions({
                                 <table className="w-full text-left">
                                     <thead className="bg-blue-600 text-white border-b border-slate-200">
                                         <tr>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                Nom
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                Famille
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                Email
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                Téléphone
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                Rôle
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                Statut
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                Date Naissance
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider text-right">
-                                                Actions
-                                            </th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">N°</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Photo</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Nom</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Prénom</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Email</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Identifiant</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Téléphone</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Genre</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Rôle</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Fonction</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Baptisé</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">1ère Communion</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Marié Civil</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Marié Religieux</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Doté</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Veuf</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Date création</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Date modification</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Famille</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Relation</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Statut</th>
+                                            <th className="p-3 text-xs font-bold uppercase tracking-wider text-center">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {filteredItems.length === 0 ? (
                                             <tr>
-                                                <td colSpan="8" className="p-12 text-center text-slate-500">
+                                                <td colSpan="23" className="p-12 text-center text-slate-500">
                                                     Aucun membre créé.
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredItems.map((member) => {
-                                                // Trouver la famille du membre
-                                                const memberFamily = familiesList.find(f =>
-                                                    f.members && f.members.some(m => m.id === member.id)
-                                                );
+                                            (() => {
+                                                const { paginatedData, totalPages } = paginateData(filteredItems, 'members');
+                                                return paginatedData.map((member, idx) => {
+                                                    // Trouver la famille du membre
+                                                    const memberFamily = familiesList.find(f =>
+                                                        f.members && f.members.some(m => m.id === member.id)
+                                                    );
 
-                                                return (
-                                                    <tr key={member.id} className="hover:bg-slate-50 transition">
-                                                        <td className="p-5">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 overflow-hidden">
-                                                                    {member.profile_photo_url ? (
-                                                                        <img
-                                                                            src={member.profile_photo_url}
-                                                                            alt={`${member.prenom} ${member.nom}`}
-                                                                            className="w-full h-full object-cover"
-                                                                            onError={(e) => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'flex'; }}
-                                                                        />
-                                                                    ) : null}
-                                                                    <span style={{ display: !member.profile_photo_url ? 'flex' : 'none', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
-                                                                        {member.prenom?.[0] || ""}{member.nom?.[0] || ""}
-                                                                    </span>
-                                                                </div>
-                                                                <div>
-                                                                    <div className="font-semibold text-slate-900">
-                                                                        {member.prenom} {member.nom}
+                                                    return (
+                                                        <tr key={member.id} className={`transition ${member.is_deleted ? "bg-gray-100 opacity-60" : "hover:bg-slate-50"}`}>
+                                                            {/* N° */}
+                                                            <td className="p-3 text-sm font-semibold text-slate-900 text-center whitespace-nowrap">{(currentPage.members - 1) * itemsPerPage + idx + 1}</td>
+
+                                                            {/* Photo */}
+                                                            <td className="p-3 text-center whitespace-nowrap">
+                                                                {member.profile_photo_url ? (
+                                                                    <img src={member.profile_photo_url} className="w-10 h-10 rounded-full mx-auto object-cover border-2 border-white shadow-sm" alt="p" />
+                                                                ) : (
+                                                                    <div className="w-10 h-10 rounded-full bg-gray-200 mx-auto flex items-center justify-center text-xs text-gray-500 font-bold">
+                                                                        {member.prenom?.[0]}{member.nom?.[0]}
                                                                     </div>
-                                                                </div>
-                                                            </div>
+                                                                )}
+                                                            </td>
+
+                                                            {/* Nom */}
+                                                            <td className="p-3 text-sm font-semibold text-slate-900 text-center whitespace-nowrap">{member.nom}</td>
+
+                                                        {/* Prénom */}
+                                                        <td className="p-3 text-sm text-slate-700 text-center whitespace-nowrap">{member.prenom}</td>
+
+                                                        {/* Email */}
+                                                        <td className="p-3 text-sm text-slate-600 text-center whitespace-nowrap">{member.email || "-"}</td>
+
+                                                        {/* Identifiant */}
+                                                        <td className="p-3 text-sm text-slate-600 text-center whitespace-nowrap">{member.identifiant || "-"}</td>
+
+                                                        {/* Téléphone */}
+                                                        <td className="p-3 text-sm text-slate-600 text-center whitespace-nowrap">{member.phone || "-"}</td>
+
+                                                        {/* Genre */}
+                                                        <td className="p-3 text-sm text-slate-700 text-center whitespace-nowrap">
+                                                            {member.genre === "M" ? "Masculin" : member.genre === "F" ? "Féminin" : "-"}
                                                         </td>
-                                                        <td className="p-5 text-slate-600">
-                                                            {memberFamily ? memberFamily.nom : (member.famille_id ? `Famille #${member.famille_id}` : "Aucune famille")}
+
+                                                        {/* Rôle */}
+                                                        <td className="p-3 text-sm font-semibold text-slate-900 text-center whitespace-nowrap">
+                                                            {member.role === "responsable_famille" ? "Responsable" :
+                                                             member.role === "membre_famille" ? "Membre" :
+                                                             member.role || "Membre"}
                                                         </td>
-                                                        <td className="p-5 text-slate-600">
-                                                            {member.email}
+
+                                                        {/* Fonction */}
+                                                        <td className="p-3 text-sm text-slate-700 text-center whitespace-nowrap">{member.fonction || "-"}</td>
+
+                                                        {/* Baptisé */}
+                                                        <td className="p-3 text-sm text-center whitespace-nowrap">
+                                                            {member.baptise ? <span className="text-green-600 font-bold">Oui</span> : <span className="text-gray-400">Non</span>}
                                                         </td>
-                                                        <td className="p-5 text-slate-600">
-                                                            {member.phone || "N/A"}
+
+                                                        {/* 1ère Communion */}
+                                                        <td className="p-3 text-sm text-center whitespace-nowrap">
+                                                            {member.premiere_communion ? <span className="text-green-600 font-bold">Oui</span> : <span className="text-gray-400">Non</span>}
                                                         </td>
-                                                        <td className="p-5">
-                                                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                                                member.role === "responsable_famille"
-                                                                    ? "bg-blue-100 text-blue-700"
-                                                                    : member.role === "membre_famille"
-                                                                    ? "bg-green-100 text-green-700"
-                                                                    : "bg-gray-100 text-gray-700"
-                                                            }`}>
-                                                                {member.role === "responsable_famille" ? "Responsable" :
-                                                                 member.role === "membre_famille" ? "Membre" :
-                                                                 member.role || "Membre"}
-                                                            </span>
+
+                                                        {/* Marié Civil */}
+                                                        <td className="p-3 text-sm text-center whitespace-nowrap">
+                                                            {member.statut_marital === "marie" || member.statut_marital === "Marié(e)" ? <span className="text-green-600 font-bold">Oui</span> : <span className="text-gray-400">Non</span>}
                                                         </td>
-                                                        <td className="p-5">
-                                                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+
+                                                        {/* Marié Religieux */}
+                                                        <td className="p-3 text-sm text-center whitespace-nowrap">
+                                                            {member.marie_religieusement ? <span className="text-green-600 font-bold">Oui</span> : <span className="text-gray-400">Non</span>}
+                                                        </td>
+
+                                                        {/* Doté */}
+                                                        <td className="p-3 text-sm text-center whitespace-nowrap">
+                                                            {member.statut_marital === "dote" || member.dote ? <span className="text-green-600 font-bold">Oui</span> : <span className="text-gray-400">Non</span>}
+                                                        </td>
+
+                                                        {/* Veuf */}
+                                                        <td className="p-3 text-sm text-center whitespace-nowrap">
+                                                            {member.statut_marital === "veuf" || member.statut_marital === "Veuf(ve)" ? <span className="text-green-600 font-bold">Oui</span> : <span className="text-gray-400">Non</span>}
+                                                        </td>
+
+                                                        {/* Date création */}
+                                                        <td className="p-3 text-sm text-slate-600 text-center whitespace-nowrap">{member.created_at ? new Date(member.created_at).toLocaleDateString("fr-FR") : "-"}</td>
+
+                                                        {/* Date modification */}
+                                                        <td className="p-3 text-sm text-slate-600 text-center whitespace-nowrap">{member.updated_at ? new Date(member.updated_at).toLocaleDateString("fr-FR") : "-"}</td>
+
+                                                        {/* Famille */}
+                                                        <td className="p-3 text-sm text-slate-700 text-center whitespace-nowrap">
+                                                            {memberFamily ? memberFamily.nom : (member.famille_id ? `Famille #${member.famille_id}` : "-")}
+                                                        </td>
+
+                                                        {/* Relation */}
+                                                        <td className="p-3 text-sm text-slate-700 text-center whitespace-nowrap">{member.relation || "-"}</td>
+
+                                                        {/* Statut */}
+                                                        <td className="p-3 text-sm text-center whitespace-nowrap">
+                                                            <span className={`px-3 py-1 inline-flex text-xs leading-4 font-bold rounded-full shadow-sm border ${
                                                                 member.status === "actif"
-                                                                    ? "bg-green-100 text-green-800"
-                                                                    : member.status === "inactif"
-                                                                    ? "bg-red-100 text-red-800"
-                                                                    : "bg-gray-100 text-gray-700"
+                                                                    ? "bg-green-100 text-green-700 border-green-200"
+                                                                    : "bg-red-100 text-red-700 border-red-200"
                                                             }`}>
-                                                                {member.status === "actif" ? "Actif" :
-                                                                 member.status === "inactif" ? "Inactif" :
-                                                                 member.status || "Actif"}
+                                                                {member.status === "actif" ? "Actif" : "Inactif"}
                                                             </span>
                                                         </td>
-                                                        <td className="p-5 text-slate-600 text-sm">
-                                                            {member.date_naissance ? new Date(member.date_naissance).toLocaleDateString("fr-FR") : "N/A"}
-                                                        </td>
-                                                        <td className="p-5">
-                                                            <div className="flex items-center justify-end gap-2">
+
+                                                        {/* Actions */}
+                                                        <td className="p-3 text-center whitespace-nowrap">
+                                                            <div className="flex items-center justify-center gap-2">
                                                                 <button
                                                                     type="button"
                                                                     title="Voir les détails"
-                                                                    className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition transform hover:scale-105"
+                                                                    className="p-2 rounded-lg transition-all"
+                                                                    style={{ backgroundColor: "rgba(37, 99, 235, 0.1)", border: "2px solid rgba(37, 99, 235, 0.2)" }}
                                                                     onClick={() => {
                                                                         setSelectedMember(member);
                                                                         setShowMemberModal(true);
                                                                     }}
                                                                 >
-                                                                    <Eye size={18} />
+                                                                    <Eye size={16} className="text-blue-600" />
                                                                 </button>
                                                                 <button
                                                                     type="button"
                                                                     title="Modifier"
-                                                                    className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition transform hover:scale-105"
+                                                                    className="p-2 rounded-lg transition-all"
+                                                                    style={{ backgroundColor: "rgba(37, 99, 235, 0.1)", border: "2px solid rgba(37, 99, 235, 0.2)" }}
                                                                     onClick={() => {
-                                                                        console.log('Modifier clicked for member:', member);
                                                                         openEditModal(member);
                                                                     }}
                                                                 >
-                                                                    <Edit size={18} />
+                                                                    <Edit size={16} className="text-blue-600" />
                                                                 </button>
                                                                 <button
                                                                     type="button"
-                                                                    title="Désactiver/Activer"
-                                                                    className="px-3 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-semibold transition transform hover:scale-105"
+                                                                    title={member.status === "actif" ? "Désactiver" : "Activer"}
+                                                                    className={`p-2 rounded-lg transition-all ${
+                                                                        member.status === "actif"
+                                                                            ? "hover:bg-red-100"
+                                                                            : "hover:bg-green-100"
+                                                                    }`}
+                                                                    style={{
+                                                                        backgroundColor: member.status === "actif"
+                                                                            ? "rgba(220, 38, 38, 0.1)"
+                                                                            : "rgba(34, 197, 94, 0.1)",
+                                                                        border: member.status === "actif"
+                                                                            ? "2px solid rgba(220, 38, 38, 0.2)"
+                                                                            : "2px solid rgba(34, 197, 94, 0.2)"
+                                                                    }}
+                                                                    onClick={() => {
+                                                                        setSelectedMemberForStatus(member);
+                                                                        setNewStatus(member.status === "actif" ? "inactif" : "actif");
+                                                                        setShowStatusModal(true);
+                                                                    }}
                                                                 >
-                                                                    <Power size={18} />
+                                                                    <Power size={16} className={member.status === "actif" ? "text-red-600" : "text-green-600"} />
                                                                 </button>
                                                                 <button
                                                                     type="button"
                                                                     title="Supprimer"
-                                                                    className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition transform hover:scale-105"
+                                                                    className="p-2 rounded-lg transition-all"
+                                                                    style={{ backgroundColor: "rgba(220, 38, 38, 0.1)", border: "2px solid rgba(220, 38, 38, 0.2)" }}
                                                                     onClick={() => handleDelete(member.id, "member", `${member.prenom} ${member.nom}`)}
                                                                 >
-                                                                    <Trash2 size={18} />
+                                                                    <Trash2 size={16} className="text-red-600" />
                                                                 </button>
                                                             </div>
                                                         </td>
                                                     </tr>
                                                 );
-                                            })
+                                                });
+                                            })()
                                         )}
                                     </tbody>
                                 </table>
                             </div>
+                            <PaginationControls
+                                totalPages={paginateData(filteredItems, 'members').totalPages}
+                                currentPage={currentPage.members}
+                                onPageChange={handlePageChange}
+                                tabName="members"
+                            />
                         </div>
                     ) : (
                         // TABLEAU DES INSCRIPTIONS (pending, approved, rejected)
@@ -1314,7 +1709,9 @@ export default function Inscriptions({
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredItems.map((item) => (
+                                            (() => {
+                                                const { paginatedData, totalPages } = paginateData(filteredItems, activeTab);
+                                                return paginatedData.map((item) => (
                                                 <tr
                                                     key={`${item.kind}-${item.id}`}
                                                     className="hover:bg-slate-50 transition"
@@ -1454,7 +1851,8 @@ export default function Inscriptions({
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            ))
+                                            ));
+                                            })()
                                         )}
                                     </tbody>
                                 </table>
@@ -1470,6 +1868,12 @@ export default function Inscriptions({
                                     {activeTab === "rejected" && "Inscriptions rejetées"}
                                 </span>
                             </div>
+                            <PaginationControls
+                                totalPages={paginateData(filteredItems, activeTab).totalPages}
+                                currentPage={currentPage[activeTab]}
+                                onPageChange={handlePageChange}
+                                tabName={activeTab}
+                            />
                         </div>
                     )}
                 </div>
@@ -2663,6 +3067,77 @@ export default function Inscriptions({
                                 >
                                     ✏️ Modifier
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* MODAL CHANGEMENT DE STATUT */}
+                {showStatusModal && selectedMemberForStatus && (
+                    <div className="fixed inset-0 z-[50] overflow-y-auto" role="dialog" aria-modal="true">
+                        <div className="flex items-center justify-center min-h-screen px-4">
+                            <div
+                                className="fixed inset-0 bg-slate-900/40 transition-opacity"
+                                onClick={() => setShowStatusModal(false)}
+                            ></div>
+
+                            <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full">
+                                <div className="px-8 py-6">
+                                    <h3 className="text-xl font-bold text-slate-900 mb-2">
+                                        {newStatus === "actif" ? "Activer" : "Désactiver"} le membre
+                                    </h3>
+                                    <p className="text-slate-600 text-sm mb-6">
+                                        Êtes-vous sûr de vouloir {newStatus === "actif" ? "activer" : "désactiver"} <strong>{selectedMemberForStatus.nom} {selectedMemberForStatus.prenom}</strong> ?
+                                    </p>
+
+                                    <div className={`p-4 rounded-lg mb-6 ${
+                                        newStatus === "actif"
+                                            ? "bg-green-50 border border-green-200"
+                                            : "bg-red-50 border border-red-200"
+                                    }`}>
+                                        <p className={`text-sm font-semibold ${
+                                            newStatus === "actif"
+                                                ? "text-green-800"
+                                                : "text-red-800"
+                                        }`}>
+                                            {newStatus === "actif"
+                                                ? "Ce membre aura un accès à la plateforme"
+                                                : "Ce membre perdra l'accès à la plateforme"
+                                            }
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                                    <button
+                                        onClick={() => setShowStatusModal(false)}
+                                        disabled={isChangingStatus}
+                                        className="px-6 py-2.5 rounded-xl text-slate-600 font-semibold hover:bg-slate-200 transition disabled:opacity-50"
+                                    >
+                                        Annuler
+                                    </button>
+                                    <button
+                                        onClick={handleChangeStatus}
+                                        disabled={isChangingStatus}
+                                        className={`px-6 py-2.5 rounded-xl text-white font-semibold transition shadow-md disabled:opacity-50 ${
+                                            newStatus === "actif"
+                                                ? "bg-green-600 hover:bg-green-700"
+                                                : "bg-red-600 hover:bg-red-700"
+                                        }`}
+                                    >
+                                        {isChangingStatus ? (
+                                            <span className="flex items-center gap-2">
+                                                <span className="inline-block w-4 h-4 border-2 border-white border-r-transparent rounded-full animate-spin"></span>
+                                                Traitement...
+                                            </span>
+                                        ) : (
+                                            <>
+                                                <Power size={16} className="inline mr-1" />
+                                                {newStatus === "actif" ? "Activer" : "Désactiver"}
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

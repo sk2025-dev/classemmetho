@@ -180,6 +180,8 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/conducteur/members/{memberId}', [ConducteurInscriptionsController::class, 'update'])->name('conducteur.members.update');
         Route::put('/conducteur/members/{memberId}/validate', [ConducteurInscriptionsController::class, 'validateMember'])->name('conducteur.members.validate');
         Route::put('/conducteur/members/{memberId}/reject', [ConducteurInscriptionsController::class, 'rejectMember'])->name('conducteur.members.reject');
+        Route::patch('/conducteur/members/{memberId}/status', [ConducteurInscriptionsController::class, 'updateStatus'])->name('conducteur.members.status');
+        Route::delete('/conducteur/members/{memberId}', [ConducteurInscriptionsController::class, 'destroy'])->name('conducteur.members.destroy');
         Route::post('/conducteur/inscriptions', [ConducteurInscriptionsController::class, 'store'])->name('conducteur.inscriptions.store');
         Route::post('/conducteur/inscriptions/famille/store', [ConducteurInscriptionsController::class, 'storeFamily'])->name('conducteur.inscriptions.famille.store');
         Route::put('/conducteur/inscriptions/{inscriptionId}', [ConducteurInscriptionsController::class, 'updateInscription'])->name('conducteur.inscriptions.update');
