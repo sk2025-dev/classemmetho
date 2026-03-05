@@ -35,6 +35,14 @@ class Classe extends Model
     }
 
     /**
+     * Actes liturgiques liés à cette classe.
+     */
+    public function actesLiturgiques()
+    {
+        return $this->hasMany(ActeLiturgique::class, 'classe_id');
+    }
+
+    /**
      * Relations pour l'audit
      */
     public function deletedBy()

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, router } from "@inertiajs/react";
+import { Link, router, usePage } from "@inertiajs/react";
 import GoodbyeLoader from "../Components/GoodbyeLoader";
 import { getPhotoUrl } from "../Helpers/PhotoHelper";
 
@@ -333,6 +333,45 @@ function AppHeader({ auth, onLogout }) {
 // Layout principal
 export default function MainLayout({ children, auth }) {
     const [showGoodbyeLoader, setShowGoodbyeLoader] = useState(false);
+    const { flashAnnouncements = [] } = usePage().props;
+
+    const announcements = Array.isArray(flashAnnouncements)
+        ? flashAnnouncements
+        : [];
+
+    const formatTypeLabel = (type) => {
+        const labels = {
+            priere: "Demande de priere",
+            grace: "Action de grace",
+            deces: "Avis de deces",
+            felicitations: "Felicitations",
+            generale: "Annonce generale",
+            annonce: "Annonce",
+            annonce_liturgique: "Annonce liturgique",
+        };
+        return labels[type] || "Annonce";
+    };
+
+    const getAnnonceTitle = (annonce) => {
+        const details = annonce?.details;
+        if (typeof details === "string") {
+            return details;
+        }
+        return (
+            details?.titre ||
+            details?.contenu ||
+            details?.message ||
+            "Annonce"
+        );
+    };
+
+    const getAnnonceContent = (annonce) => {
+        const details = annonce?.details;
+        if (typeof details === "string") {
+            return "";
+        }
+        return details?.contenu || details?.message || "";
+    };
 
     const handleLogout = () => {
         // Afficher le loader d'au revoir
@@ -356,6 +395,64 @@ export default function MainLayout({ children, auth }) {
             }}
         >
             <AppHeader auth={auth} onLogout={handleLogout} />
+
+            {announcements.length > 0 && (
+                <section className="w-full">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-3">
+                        <div className="rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 shadow-sm">
+                            <div className="flex items-start gap-3">
+                                <div className="mt-0.5 text-amber-600">
+                                    <svg
+                                        className="w-5 h-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M13 16h-1v-4h-1m1-4h.01M12 6a9 9 0 110 18 9 9 0 010-18z"
+                                        />
+                                    </svg>
+                                </div>
+                                <div className="flex-1">
+                                    <div className="text-sm font-semibold text-amber-900">
+                                        Annonces
+                                    </div>
+                                    <div className="mt-2 space-y-2">
+                                        {announcements.slice(0, 3).map((annonce) => {
+                                            const title = getAnnonceTitle(annonce);
+                                            const content = getAnnonceContent(annonce);
+
+                                            return (
+                                                <div
+                                                    key={annonce.id}
+                                                    className="text-sm text-amber-900"
+                                                >
+                                                    <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 mr-2">
+                                                        {formatTypeLabel(
+                                                            annonce.type_acte,
+                                                        )}
+                                                    </span>
+                                                    <span className="font-medium">
+                                                        {title}
+                                                    </span>
+                                                    {content && content !== title ? (
+                                                        <div className="text-amber-800/90">
+                                                            {content}
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            )}
 
             {/* Loader de déconnexion */}
             {showGoodbyeLoader && (

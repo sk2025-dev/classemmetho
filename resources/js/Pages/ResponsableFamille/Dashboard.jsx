@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, router } from "@inertiajs/react";
+import VerticalTicker from "@/Components/VerticalTicker";
 
 // --- COMPOSANT ICÔNE ---
 const Icon = ({ name, className }) => {
@@ -82,7 +83,7 @@ const Icon = ({ name, className }) => {
     );
 };
 
-export default function Dashboard({ role, pendingInscriptions, auth, familyStats, familyData }) {
+export default function Dashboard({ role, pendingInscriptions, auth, familyStats, familyData, validatedActesCount = 0, flashAnnouncements = [] }) {
     const menuItems = [
         {
             title: "Inscriptions",
@@ -112,7 +113,7 @@ export default function Dashboard({ role, pendingInscriptions, auth, familyStats
             title: "Actes Liturgiques",
             desc: "Mariage, Baptême, etc.",
             icon: "liturgique",
-            href: "/admin/liturgie",
+            href: "/responsable-famille/liturgie",
             color: "text-purple-600",
             bg: "bg-purple-100",
         },
@@ -155,6 +156,15 @@ export default function Dashboard({ role, pendingInscriptions, auth, familyStats
         router.post("/logout");
     };
 
+    // Messages pour le ticker
+    const flashMessages = [
+        { id: 1, text: "✝️ Messe dominicale tous les dimanches à 10h30" },
+        { id: 2, text: "📢 Inscription baptême : délai limite 15 mars 2026" },
+        { id: 3, text: "🎉 Bienvenue aux nouveaux membres de la paroisse" },
+        { id: 4, text: "🙏 Prière communautaire chaque vendredi à 19h" },
+        { id: 5, text: "👨‍👩‍👧‍👦 Réunion parents confirmands le 12 mars à 18h30" },
+    ];
+
     // Utilise uniquement le layout MainLayout qui fournit déjà le header
     return (
         <div
@@ -167,6 +177,8 @@ export default function Dashboard({ role, pendingInscriptions, auth, familyStats
                 overflowX: "hidden",
             }}
         >
+            {/* Barre d'infos Flash */}
+            <VerticalTicker messages={flashMessages} interval={4000} label="Flash Infos" />
             {/* MAIN CONTENT */}
             <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
                 <div className="mb-10">
@@ -228,6 +240,11 @@ export default function Dashboard({ role, pendingInscriptions, auth, familyStats
                                             <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
                                         </span>
                                     )}
+                                {item.icon === "liturgique" && validatedActesCount > 0 && (
+                                    <span className="absolute top-4 right-4 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                                        {validatedActesCount}
+                                    </span>
+                                )}
                             </div>
                         </Link>
                     ))}

@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Conducteur;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActeLiturgique;
 use App\Models\Inscription;
 use App\Models\User;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
@@ -31,6 +32,7 @@ class DashboardController extends Controller
                 'inscriptions' => [],
                 'users' => [],
                 'className' => 'Aucune classe assignée',
+                'flashAnnouncements' => [],
             ]);
         }
 
@@ -38,6 +40,8 @@ class DashboardController extends Controller
         // NOTE: classe_id dans le JSON est une chaîne, donc on le convertit pour la comparaison
         $classIdsStr = array_map('strval', $classIds);
         $className = $conductorClasses->first()->nom ?? 'Classes multiples';
+
+        $flashAnnouncements = [];
 
         // 1. Récupérer TOUTES les inscriptions en attente de sa classe
         $placeholders = implode(',', array_fill(0, count($classIdsStr), '?'));
@@ -173,3 +177,5 @@ class DashboardController extends Controller
         return back()->with('success', 'Inscription rejetée avec succès');
     }
 }
+
+

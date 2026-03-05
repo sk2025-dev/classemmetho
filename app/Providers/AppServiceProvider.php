@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\ActeLiturgique;
 use App\Models\Classe;
 use App\Models\Family;
 
@@ -64,6 +65,46 @@ class AppServiceProvider extends ServiceProvider
                     'just_logged_in' => session('just_logged_in'),
                     'user_welcome_name' => session('user_welcome_name'),
                 ];
+            },
+            'flashAnnouncements' => function () {
+                $user = Auth::user();
+
+                if (!$user) {
+                    return [];
+                }
+
+                $query = ActeLiturgique::annonces()
+                    ->publiees()
+                    ->where(function ($q) {
+                        $q->whereNull('date_publication')
+                            ->orWhere('date_publication', '<=', now());
+                    })
+                    ->where(function ($q) {
+                        $q->whereNull('date_expiration')
+                            ->orWhere('date_expiration', '>=', now());
+                    })
+                    ->orderBy('est_principale', 'desc')
+                    ->orderBy('date_publication', 'desc');
+
+                if ($user->family_id) {
+                    $query->where(function ($q) use ($user) {
+                        $q->where('family_id', $user->family_id)
+                            ->orWhereNull('family_id');
+                    });
+                } else {
+                    $query->whereNull('family_id');
+                }
+
+                return $query
+                    ->limit(5)
+                    ->get([
+                        'id',
+                        'type_acte',
+                        'details',
+                        'date_publication',
+                        'family_id',
+                        'est_principale',
+                    ]);
             },
         ]);
     }

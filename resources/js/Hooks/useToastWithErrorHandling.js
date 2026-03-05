@@ -12,7 +12,7 @@ export const useToastWithErrorHandling = () => {
             scrollToFirst = true
         } = options;
 
-        const { showError, showWarning, showInfo } = toast;
+        const { error, warning, info } = toast;
 
         if (!result || result.success) {
             return; // Pas d'erreur
@@ -31,33 +31,33 @@ export const useToastWithErrorHandling = () => {
         // Afficher le toast selon le type d'erreur
         switch (result.type) {
             case 'UniqueConstraintViolation':
-                showError(
+                error(
                     `🔐 ${result.message}`,
-                    { duration: 5000 }
+                    5000
                 );
                 break;
 
             case 'ValidationError':
                 const errorMessages = Object.values(result.errors || {}).flat();
-                showError(
+                error(
                     `❌ Erreurs de validation:\n${errorMessages.join('\n')}\n\nMerci de corriger les champs marqués en rouge`,
-                    { duration: 6000 }
+                    6000
                 );
                 break;
 
             case 'DatabaseConstraintViolation':
-                showWarning(
+                warning(
                     `⚠️ ${result.message}`,
-                    { duration: 5000 }
+                    5000
                 );
                 break;
 
             default:
                 const errorMessage = result.message || 'Une erreur s\'est produite';
                 const fullError = result.error ? `${errorMessage}\n\nDétails: ${result.error}` : errorMessage;
-                showError(
+                error(
                     fullError,
-                    { duration: 5000 }
+                    5000
                 );
         }
     };

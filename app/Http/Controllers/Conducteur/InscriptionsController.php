@@ -104,6 +104,9 @@ class InscriptionsController extends Controller
 
             // Récupérer les inscriptions filtrées par statut et approbateur
             $allInscriptions = [];
+            $pendingInscriptions = collect();
+            $approvedInscriptions = collect();
+            $rejectedInscriptions = collect();
             try {
                 $placeholders = implode(',', array_fill(0, count($classIds), '?'));
 
@@ -299,6 +302,9 @@ class InscriptionsController extends Controller
                     'error' => $e->getMessage()
                 ]);
                 $allInscriptions = [];
+                $pendingInscriptions = collect();
+                $approvedInscriptions = collect();
+                $rejectedInscriptions = collect();
             }
 
             // Récupérer les membres (users) déjà créés de sa classe

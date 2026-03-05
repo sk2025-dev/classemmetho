@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, router } from "@inertiajs/react";
+import VerticalTicker from "@/Components/VerticalTicker";
 
 // --- COMPOSANT ICÔNE ---
 const Icon = ({ name, className }) => {
@@ -184,6 +185,15 @@ export default function Dashboard({ role, pendingInscriptions, auth }) {
         router.post("/logout");
     };
 
+    // Messages pour le ticker
+    const flashMessages = [
+        { id: 1, text: "🛠️ Système de gestion paroissiale opérationnel" },
+        { id: 2, text: "📊 Statistiques générales disponibles dans le tableau de bord" },
+        { id: 3, text: "👥 Gestion des utilisateurs et permissions" },
+        { id: 4, text: "💾 Sauvegarde automatique quotidienne activée" },
+        { id: 5, text: "⚙️ Configuration du système accessible dans Administration" },
+    ];
+
     // Utilise uniquement le layout MainLayout qui fournit déjà le header
     return (
         <div
@@ -196,6 +206,8 @@ export default function Dashboard({ role, pendingInscriptions, auth }) {
                 overflowX: "hidden",
             }}
         >
+            {/* Barre d'infos Flash */}
+            <VerticalTicker messages={flashMessages} interval={4000} label="Info Admin" />
             {/* MAIN CONTENT */}
             <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
                 <div className="mb-10">

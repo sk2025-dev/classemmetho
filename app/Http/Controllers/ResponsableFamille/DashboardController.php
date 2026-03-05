@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\ResponsableFamille;
 
 use App\Http\Controllers\Controller;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\Auth;
+use App\Models\ActeLiturgique;
 use App\Models\Family;
+use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
@@ -22,8 +23,16 @@ class DashboardController extends Controller
         $familyStats = [];
         $familyData = null;
 
+        $validatedActesCount = 0;
         if ($family) {
             $members = $family->users()->get();
+            $memberIds = $members->pluck('id');
+            $validatedActesCount = ActeLiturgique::where(function ($query) use ($user, $memberIds) {
+                $query->where('created_by', $user->id)
+                    ->orWhereIn('membre_id', $memberIds);
+            })
+                ->whereIn('statut', ['VALIDEE', 'PUBLIEE', 'ARCHIVEE'])
+                ->count();
 
             $familyStats = [
                 'totalMembers' => $members->count(),
@@ -55,6 +64,7 @@ class DashboardController extends Controller
             'role' => $user->role,
             'familyStats' => $familyStats,
             'familyData' => $familyData,
+            'validatedActesCount' => $validatedActesCount,
         ]);
     }
 }

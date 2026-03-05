@@ -53,6 +53,7 @@ class User extends Authenticatable
         // === GESTION DU COMPTE ===
         'must_change_password',
         'last_login_at',
+        'signature_path',
     ];
 
     /**
@@ -230,6 +231,54 @@ class User extends Authenticatable
     public function sacrements()
     {
         return $this->hasOne(UserSacrement::class);
+    }
+
+    /**
+     * Actes liturgiques où cet utilisateur est le membre concerné.
+     */
+    public function actesLiturgiquesCommeMembre()
+    {
+        return $this->hasMany(ActeLiturgique::class, 'membre_id');
+    }
+
+    /**
+     * Actes liturgiques traités en tant que conducteur.
+     */
+    public function actesLiturgiquesCommeConducteur()
+    {
+        return $this->hasMany(ActeLiturgique::class, 'conducteur_id');
+    }
+
+    /**
+     * Actes liturgiques traités en tant que pasteur.
+     */
+    public function actesLiturgiquesCommePasteur()
+    {
+        return $this->hasMany(ActeLiturgique::class, 'pasteur_id');
+    }
+
+    /**
+     * Actes liturgiques créés par cet utilisateur.
+     */
+    public function actesLiturgiquesCrees()
+    {
+        return $this->hasMany(ActeLiturgique::class, 'created_by');
+    }
+
+    /**
+     * Historique des changements de statut effectués par cet utilisateur.
+     */
+    public function actesLiturgiquesHistoriques()
+    {
+        return $this->hasMany(ActeLiturgiqueHistorique::class, 'acteur_id');
+    }
+
+    /**
+     * Pièces jointes d'actes liturgiques importées par cet utilisateur.
+     */
+    public function actesLiturgiquesPiecesJointes()
+    {
+        return $this->hasMany(ActeLiturgiquePieceJointe::class, 'uploaded_by');
     }
 
     /**
