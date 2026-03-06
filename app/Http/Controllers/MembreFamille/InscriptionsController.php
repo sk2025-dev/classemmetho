@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\MembreFamille;
 
+use App\Helpers\PhotoHelper;
 use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -72,7 +73,7 @@ class InscriptionsController extends Controller
                         'classe_name' => $member->classe?->nom ?? 'N/A',
                         'relation' => $member->relation,
                         'is_responsable' => $member->role === 'responsable_famille',
-                        'profile_photo_url' => $member->photo_path ? url('storage/' . $member->photo_path) : null,
+                        'profile_photo_url' => PhotoHelper::getPhotoUrl($member->photo_path, $member->prenom, $member->nom),
                     ];
                 })->toArray();
 

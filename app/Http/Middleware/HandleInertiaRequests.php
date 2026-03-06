@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Helpers\PhotoHelper;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -46,6 +47,11 @@ class HandleInertiaRequests extends Middleware
                     'email' => $request->user()->email,
                     'telephone' => $request->user()->telephone,
                     'photo' => $request->user()->photo ?? null,
+                    'profile_photo_url' => PhotoHelper::getPhotoUrl(
+                        $request->user()->photo_path, 
+                        $request->user()->prenom, 
+                        $request->user()->nom
+                    ),
                     'role' => $request->user()->role,
                     'identifier' => $request->user()->identifier,
                     'classe' => $request->user()->classe ? [

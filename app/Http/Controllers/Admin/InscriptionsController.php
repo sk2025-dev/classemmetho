@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\PhotoHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Inscription;
 use Inertia\Inertia;
@@ -82,7 +83,11 @@ class InscriptionsController extends Controller
                 'classe' => $classe,
                 'ville' => $villeName,
                 'created_at' => $inscription->created_at->format('d/m/Y H:i'),
-                'profile_photo_url' => $fullInscription->profile_photo_url, // ✅ Ajouter la photo URL
+                'profile_photo_url' => PhotoHelper::getPhotoUrl(
+                    $fullInscription->photo_path ?? null,
+                    $displayPrenom,
+                    $displayNom
+                ),
                 'photo_data' => $fullInscription->photo_data, // Garder pour compatibilité
                 'data' => $data,
             ];
