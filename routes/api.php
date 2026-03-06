@@ -19,6 +19,9 @@ Route::get('/familles', [FamilleController::class, 'index']);
 Route::get('/villes', [VilleController::class, 'index']);
 Route::get('/fonctions', [FonctionController::class, 'index']);
 
+// Route publique pour uploader des photos lors de l'inscription (avant authentification)
+Route::post('/photo/upload-inscription', [PhotoUploadController::class, 'uploadInscriptionPhoto']);
+
 // Routes d'adresses avec rate limiting
 Route::middleware(['throttle:60,1'])->group(function () {
     Route::post('/address/autocomplete', [AddressController::class, 'autocomplete']);

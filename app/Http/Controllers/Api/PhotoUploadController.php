@@ -10,7 +10,43 @@ use Illuminate\Support\Str;
 class PhotoUploadController extends Controller
 {
     /**
-     * Upload une photo de profil
+     * Upload une photo pour l'inscription (sans authentification requise)
+     * Utilisé pendant le formulaire d'inscription
+     */
+    public function uploadInscriptionPhoto(Request $request)
+    {
+        try {
+            $request->validate([
+                'photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
+            ]);
+
+            $file = $request->file('photo');
+
+            // Générer un nom unique SANS auth()->id() car l'utilisateur n'existe pas encore
+            $filename = 'profile_' . Str::random(16) . '.' . $file->getClientOriginalExtension();
+
+            // Stocker l'image dans storage/app/public/profiles
+            $path = $file->storeAs('profiles', $filename, 'public');
+
+            // Retourner l'URL publique et le chemin relatif
+            $photoUrl = asset('storage/' . $path);
+
+            return response()->json([
+                'success' => true,
+                'photo_url' => $photoUrl,
+                'path' => $path,
+            ], 200);
+        } catch (\Exception $e) {
+            \Log::error('Erreur upload photo inscription: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Erreur lors de l\'upload de la photo',
+            ], 500);
+        }
+    }
+
+    /**
+     * Upload une photo de profil (authentifié)
      */
     public function uploadProfilePhoto(Request $request)
     {

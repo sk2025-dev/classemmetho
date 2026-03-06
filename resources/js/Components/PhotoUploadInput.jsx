@@ -52,12 +52,13 @@ export default function PhotoUploadInput({ onPhotoSelected, initialPhotoUrl = nu
         formData.append('photo', file);
 
         try {
-            const response = await fetch('/api/profile/photo/upload', {
+            // Essayer d'abord la route publique pour l'inscription
+            // Si l'utilisateur est authentifié, ce sera quand même accepté
+            const response = await fetch('/api/photo/upload-inscription', {
                 method: 'POST',
                 body: formData,
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
-                    // CSRF token sera ajouté automatiquement par Inertia
                 },
             });
 
