@@ -14,32 +14,42 @@
             font-family: 'Georgia', 'Times New Roman', serif;
             color: #1a1e2e;
             font-size: 12px;
-            background: #f8f9fa;
+            margin: 0;
+            padding: 0;
+            background: #ffffff;
+            height: 100%;
         }
 
         /* Certificat professionnel moderne */
         .certificate {
-            background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+            background: #ffffff;
             width: 100%;
-            max-width: 850px;
+            height: 100%;
             position: relative;
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
             text-align: center;
             padding: 0;
-            margin: 0 auto;
+            margin: 0;
         }
 
         .border-frame {
             border: 8px solid #1A365D;
             padding: 8px;
             position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
         }
 
         .border-inner {
             border: 3px solid #D4AF37;
-            padding: 35px 45px;
+            padding: 60px 80px;
             position: relative;
-            background: #fff;
+            background: #ffffff;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
 
         /* Décorations d'angle */
@@ -150,8 +160,8 @@
             font-size: 1.05rem;
             color: #444;
             line-height: 1.9;
-            margin-bottom: 35px;
-            min-height: 55px;
+            margin-bottom: 30px;
+            min-height: 40px;
             font-style: italic;
             padding: 0 25px;
         }
@@ -229,10 +239,19 @@
             line-height: 1.6;
         }
         
-        .reference-display {
-            font-size: 0.75rem;
-            color: #666;
-            margin-top: 5px;
+        .attestation-text {
+            font-size: 1rem;
+            color: #2C5282;
+            line-height: 1.8;
+            margin: 20px 0 15px 0;
+            font-weight: 600;
+            padding: 0 20px;
+        }
+        
+        .recipient-name-highlight {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1A365D;
             font-style: italic;
         }
     </style>
@@ -256,6 +275,15 @@
     'remerciement' => 'Pour exprimer notre profonde gratitude envers le généreux soutien et les prières offerts pour la vie de notre paroisse.',
     ];
     $bodyText = $typeTexts[$acte->type_acte ?? ''] ?? '';
+
+    // Phrases d'attestation personnalisées selon le type d'acte
+    $attestationPhrases = [
+        'bapteme' => 's\'est reçu le sacrement saint du baptême',
+        'mariage' => 'ont uni leurs liens par le sacrement du mariage',
+        'funerailles' => 'a été conduit vers la maison du Père',
+        'remerciement' => 'a généreusement soutenu notre communauté',
+    ];
+    $attestationPhrase = $attestationPhrases[$acte->type_acte ?? ''] ?? 'a reçu cet acte liturgique';
 
     $fullName = trim(($acte->membre->prenom ?? '') . ' ' . ($acte->membre->nom ?? '')) ?: 'Nom et Prénom';
     $dateActe = optional($acte->date_souhaitee)->format('d/m/Y') ?? '-';
@@ -295,6 +323,12 @@
 
                 <div class="subtitle">Ce certificat est fièrement décerné à</div>
                 <div class="recipient-name">{{ $fullName }}</div>
+                
+                <div class="attestation-text">
+                    L'Église Méthodiste Jubilé de Cocody atteste que <span class="recipient-name-highlight">{{ $fullName }}</span><br>
+                    {{ $attestationPhrase }} au sein de notre communauté religieuse le {{ $dateActe }}.
+                </div>
+                
                 <div class="body-text">{{ $bodyText }}</div>
 
                 @if(!empty($signaturePath))

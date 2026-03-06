@@ -16,6 +16,11 @@ $lieuSepulture = $details['lieu_deces'] ?? $details['lieu_sepulture'] ?? $detail
 $corps = trim($details['contenu'] ?? $acte->message ?? '') ?: 'Pas de corps de demande renseigné.';
 $reference = $acte->reference ?? '—';
 $dateEmission = optional($acte->updated_at)->format('d/m/Y') ?? Carbon::now()->format('d/m/Y');
+
+// Helper pour afficher valeur vide ou réelle
+$empty = fn($v, $label = 'Non renseigné') =>
+    $v !== '—' ? '<span style="font-size:12.5px;font-weight:700;color:#1a1e2e;">' . e($v) . '</span>'
+               : '<span style="font-size:11px;font-weight:400;color:#bbb;font-style:italic;">' . $label . '</span>';
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
@@ -23,455 +28,315 @@ $dateEmission = optional($acte->updated_at)->format('d/m/Y') ?? Carbon::now()->f
     <meta charset="UTF-8">
     <title>Fiche {{ $typeActe }} — {{ $reference }}</title>
     <style>
-        @page { size: A4; margin: 0; }
+        @page { size: A4 portrait; margin: 0; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            background: #fff; color: #1a1e2e;
+            font-family: DejaVu Sans, Arial, sans-serif;
+            font-size: 11px;
+            color: #1a1e2e;
+            background: #fff;
             -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
         }
 
-        /* ── Palette ──
-           C1 = #2C5282 (bleu professionnel)
-           C2 = #1A365D (bleu foncé)
-           C3 = #D4AF37 (or élégant)
-        ─────────────── */
+        .page { width: 210mm; min-height: 297mm; background: #fff; }
 
-        .page {
-            width: 210mm; min-height: 297mm;
-            background: #fff; position: relative;
-            display: flex; flex-direction: column; overflow: hidden;
-        }
-
-        /* ══ FOND DÉCORATIF ══ */
-        .bg-arc {
-            position: absolute; top: -120px; right: -120px;
-            width: 340px; height: 340px; border-radius: 50%;
-            border: 55px solid #2C528209; z-index: 0;
-        }
-        .bg-arc-2 {
-            position: absolute; top: -60px; right: -60px;
-            width: 200px; height: 200px; border-radius: 50%;
-            border: 30px solid #1A365D07; z-index: 0;
-        }
-        .bg-corner {
-            position: absolute; bottom: 0; left: 0;
-            width: 140px; height: 140px;
-            background: #D4AF370b;
-            clip-path: polygon(0 100%, 0 0, 100% 100%);
-            z-index: 0;
-        }
-
-        /* ══ BANDE LATÉRALE ══ */
-        .stripe {
-            position: absolute; top: 0; left: 0;
-            width: 7px; height: 100%;
-            background: linear-gradient(180deg, #2C5282 0%, #1A365D 55%, #D4AF37 100%);
-            z-index: 3;
-        }
-
-        /* ══ FILIGRANE ══ */
-        .watermark {
-            position: absolute; bottom: 68px; right: 38px;
-            opacity: 0.025; z-index: 1; pointer-events: none;
-        }
-
-        /* ══ HEADER ══ */
-        .header { position: relative; z-index: 2; padding: 26px 40px 0 50px; }
-        .header-inner {
-            display: flex; align-items: center;
-            justify-content: space-between;
-            padding-bottom: 20px; gap: 20px;
-        }
-        .header-left { display: flex; align-items: center; gap: 15px; }
-
-        .logo-wrap {
-            width: 64px; height: 64px; border-radius: 14px;
-            background: linear-gradient(135deg, #2C52821a, #1A365D1a, #D4AF371a);
-            border: 2px solid #2C528228;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0; overflow: hidden;
-            box-shadow: 0 4px 16px #2C528218;
-        }
-        .logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
-        .logo-text {
-            font-size: 8px; font-weight: 800;
-            letter-spacing: 1.5px; text-transform: uppercase;
-            color: #2C5282; text-align: center; line-height: 1.5;
-        }
-
-        .church-name {
-            font-size: 14.5px; font-weight: 800;
-            text-transform: uppercase; letter-spacing: 0.6px;
-            color: #1A365D; line-height: 1.2; margin-bottom: 4px;
-        }
-        .church-name span { color: #2C5282; }
-        .church-contact { font-size: 9.5px; color: #9098b4; font-style: italic; }
-
-        .header-right { text-align: right; flex-shrink: 0; }
-        .ref-pill {
-            display: inline-block;
-            background: linear-gradient(135deg, #2C528212, #1A365D12);
-            border: 1.5px solid #2C52822e;
-            border-radius: 7px; padding: 5px 13px;
-            font-size: 9.5px; font-weight: 700; color: #2C5282;
-            letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 5px;
-        }
-        .emit-date { font-size: 10.5px; color: #9098b4; }
-
-        .header-rule { height: 1px; background: #eaebf5; margin: 0 -40px 0 -50px; position: relative; }
-        .header-rule::after {
-            content: ''; position: absolute;
-            top: 2px; left: 0; right: 0; height: 3px;
-            background: linear-gradient(90deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%);
-            opacity: 0.9;
-        }
-
-        /* ══ BANDEAU TITRE ══ */
-        .title-band {
-            position: relative; z-index: 2;
-            background: linear-gradient(135deg, #2C5282f0 0%, #1A365Df5 60%, #D4AF37ee 100%);
-            padding: 22px 50px;
-            display: flex; align-items: center;
-            justify-content: space-between;
-            overflow: hidden; min-height: 88px;
-        }
-        .title-band::before {
-            content: ''; position: absolute; inset: 0;
-            background:
-                radial-gradient(circle at 20% 50%, rgba(255,255,255,0.06) 0%, transparent 50%),
-                radial-gradient(circle at 80% 50%, rgba(255,255,255,0.04) 0%, transparent 40%);
-        }
-        .title-band::after {
-            content: ''; position: absolute;
-            right: -40px; top: -40px;
-            width: 160px; height: 160px; border-radius: 50%;
-            border: 28px solid rgba(255,255,255,0.06);
-        }
-        .title-left { position: relative; z-index: 1; }
-        .title-sup {
-            font-size: 8px; font-weight: 600;
-            letter-spacing: 3.5px; text-transform: uppercase;
-            color: rgba(255,255,255,0.55); margin-bottom: 6px;
-            display: flex; align-items: center; gap: 8px;
-        }
-        .title-sup::before {
-            content: ''; width: 18px; height: 1.5px;
-            background: #D4AF37; display: inline-block; opacity: 0.7;
-        }
-        .title-main {
-            font-size: 22px; font-weight: 800; color: #fff;
-            letter-spacing: 1.5px; text-transform: uppercase; line-height: 1.1;
-        }
-        .title-main .thin { font-weight: 300; opacity: 0.85; }
-
-        .title-right { position: relative; z-index: 1; text-align: right; }
-        .type-label {
-            font-size: 8px; font-weight: 600;
-            letter-spacing: 2.5px; text-transform: uppercase;
-            color: rgba(255,255,255,0.5); margin-bottom: 6px;
-        }
-        .type-chip {
-            display: inline-block;
-            background: rgba(255,255,255,0.14);
-            border: 1.5px solid rgba(255,255,255,0.28);
-            border-radius: 25px; padding: 7px 20px;
-            font-size: 11px; font-weight: 800; color: #fff;
-            letter-spacing: 3px; text-transform: uppercase;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
-        }
-
-        /* ══ BODY ══ */
-        .body { position: relative; z-index: 2; padding: 22px 40px 22px 50px; flex: 1; }
-
-        .s-head { display: flex; align-items: center; gap: 10px; margin-bottom: 11px; }
-        .s-bar {
-            width: 3px; height: 14px; border-radius: 2px; flex-shrink: 0;
-            background: linear-gradient(180deg, #2C5282 0%, #D4AF37 100%);
-        }
-        .s-title {
-            font-size: 8.5px; font-weight: 700;
-            letter-spacing: 2.5px; text-transform: uppercase;
-            color: #2C5282; white-space: nowrap;
-        }
-        .s-rule { flex: 1; height: 1px; background: linear-gradient(90deg, #2C528225, transparent); }
-
-        /* Cards */
-        .cards-row {
-            display: table; width: 100%;
-            border-collapse: separate; border-spacing: 13px 0;
-            margin: 0 -13px 20px;
-        }
-        .card {
-            display: table-cell; width: 50%;
-            background: #f9f8ff; border-radius: 12px;
-            border: 1px solid #2C52821c; vertical-align: top;
-            overflow: hidden; box-shadow: 0 2px 10px #2C52820d;
-        }
-        .card-cap { padding: 10px 16px; display: flex; align-items: center; gap: 8px; }
-        .card.c-violet .card-cap { background: linear-gradient(135deg, #2C5282 0%, #1A365D 100%); }
-        .card.c-blue   .card-cap { background: linear-gradient(135deg, #1A365D 0%, #0D2545 100%); }
-
-        .cap-icon {
-            width: 20px; height: 20px; border-radius: 5px;
-            background: rgba(255,255,255,0.16);
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0; font-size: 9px; font-weight: 800;
-            color: rgba(255,255,255,0.9);
-        }
-        .cap-title {
-            font-size: 8.5px; font-weight: 700;
-            letter-spacing: 2px; text-transform: uppercase;
-            color: rgba(255,255,255,0.88);
-        }
-        .card-rows { padding: 2px 16px 4px; }
-        .field { padding: 8px 0; border-bottom: 1px solid #2C52820f; }
-        .field:last-child { border-bottom: none; padding-bottom: 0; }
-        .f-label {
+        .f-lbl {
+            display: block;
             font-size: 8px; font-weight: 700;
-            letter-spacing: 1.2px; text-transform: uppercase;
-            color: #2C528270; margin-bottom: 2px;
+            letter-spacing: 1px; text-transform: uppercase;
+            color: #6B46C188; margin-bottom: 2px;
         }
         .f-val { font-size: 12.5px; font-weight: 700; color: #1a1e2e; line-height: 1.3; }
-        .f-empty { font-size: 11px; font-weight: 400; color: #c0c4d8; font-style: italic; }
-
-        /* Corps */
-        .corps-wrap { margin: 2px 0 20px; }
-        .corps-box {
-            position: relative; background: #f9f8ff;
-            border: 1px solid #2C52821c;
-            border-left: 5px solid #2C5282;
-            border-radius: 0 10px 10px 0;
-            padding: 16px 20px;
-            box-shadow: 0 2px 8px #2C52820a;
-        }
-        .corps-p {
-            font-size: 12.5px; line-height: 1.95;
-            color: #2a2e42; text-align: justify; font-style: italic;
-        }
-
-        /* Signatures */
-        .sig-row { display: table; width: 100%; border-collapse: collapse; margin-top: 13px; }
-        .sig-col { display: table-cell; width: 50%; text-align: center; padding: 0 16px; }
-        .sig-col:first-child { padding-left: 0; border-right: 1px dashed #2C528228; }
-        .sig-col:last-child  { padding-right: 0; }
-        .sig-lbl {
-            display: block; font-size: 8px; font-weight: 700;
-            letter-spacing: 2px; text-transform: uppercase;
-            color: #2C528270; margin-bottom: 28px;
-        }
-        .sig-area { height: 36px; }
-        .sig-line {
-            height: 1px; margin-bottom: 7px;
-            background: linear-gradient(90deg, transparent 0%, #2C528245 50%, transparent 100%);
-        }
-        .sig-name { font-size: 9.5px; font-weight: 600; color: #6b7280; }
-
-        /* ══ FOOTER ══ */
-        .footer { position: relative; z-index: 2; }
-        .footer-accent {
-            height: 4px;
-            background: linear-gradient(90deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%);
-        }
-        .footer-body {
-            background: linear-gradient(135deg, #2C52820a 0%, #1A365D08 50%, #D4AF3708 100%);
-            border-top: 1px solid #2C528214;
-            padding: 12px 40px 12px 50px;
-            display: flex; align-items: center;
-            justify-content: space-between; gap: 16px;
-        }
-        .footer-txt { font-size: 8.5px; color: #9098b4; line-height: 1.75; }
-        .footer-stamp {
-            display: flex; align-items: center; gap: 7px;
-            background: linear-gradient(135deg, #2C528215, #D4AF3715);
-            border: 1.5px solid #2C528230;
-            border-radius: 25px; padding: 5px 15px; flex-shrink: 0;
-        }
-        .stamp-dot {
-            width: 7px; height: 7px; border-radius: 50%;
-            background: linear-gradient(135deg, #2C5282, #D4AF37);
-        }
-        .stamp-txt {
-            font-size: 8.5px; font-weight: 800;
-            letter-spacing: 2px; text-transform: uppercase; color: #2C5282;
-        }
-
-        @media print { body { background: #fff; } .page { margin: 0; } }
+        .f-empty { font-size: 11px; font-weight: 400; color: #bbb; font-style: italic; }
     </style>
 </head>
 <body>
 <div class="page">
 
-    <div class="bg-arc"></div>
-    <div class="bg-arc-2"></div>
-    <div class="bg-corner"></div>
-    <div class="stripe"></div>
+<table width="100%" cellpadding="0" cellspacing="0" style="min-height:297mm;">
+<tr>
 
-    {{-- Filigrane --}}
-    <div class="watermark">
-        <svg width="150" height="150" viewBox="0 0 100 100" fill="none">
-            <circle cx="50" cy="50" r="47" stroke="#2C5282" stroke-width="1.5"/>
-            <circle cx="50" cy="50" r="37" stroke="#1A365D" stroke-width="1"/>
-            <circle cx="50" cy="50" r="27" stroke="#2C5282" stroke-width="0.7"/>
-            <circle cx="50" cy="50" r="17" stroke="#D4AF37" stroke-width="0.6"/>
-            <line x1="50" y1="3" x2="50" y2="97" stroke="#2C5282" stroke-width="0.5"/>
-            <line x1="3" y1="50" x2="97" y2="50" stroke="#2C5282" stroke-width="0.5"/>
-            <line x1="17" y1="17" x2="83" y2="83" stroke="#1A365D" stroke-width="0.4"/>
-            <line x1="83" y1="17" x2="17" y2="83" stroke="#1A365D" stroke-width="0.4"/>
-            <text x="50" y="47" text-anchor="middle" font-size="7" fill="#2C5282" font-family="Arial" font-weight="bold">EMJC</text>
-            <text x="50" y="57" text-anchor="middle" font-size="5" fill="#1A365D" font-family="Arial">COCODY</text>
-        </svg>
-    </div>
+  {{-- ══ BANDE LATÉRALE (3 segments de couleur) ══ --}}
+  <td width="7" style="padding:0;vertical-align:top;">
+    <div style="height:99mm;background:#6B46C1;font-size:0;"></div>
+    <div style="height:99mm;background:#1E40AF;font-size:0;"></div>
+    <div style="height:99mm;background:#B6C01A;font-size:0;"></div>
+  </td>
 
-    {{-- HEADER --}}
-    <div class="header">
-        <div class="header-inner">
-            <div class="header-left">
-                <div class="logo-wrap">
-                    @if(isset($logoPath) && file_exists(public_path($logoPath)))
-                        <img src="{{ public_path($logoPath) }}" alt="Logo EMJC">
-                    @else
-                        <span class="logo-text">LOGO<br>EMJC</span>
-                    @endif
-                </div>
-                <div>
-                    <div class="church-name"><span>Église Méthodiste</span><br>Jubilé de Cocody</div>
-                    <div class="church-contact">Quartier Cocody, Abidjan &middot; Côte d'Ivoire &middot; +225 07 48 30 01 11</div>
-                </div>
-            </div>
-            <div class="header-right">
-                <div class="ref-pill">{{ $reference }}</div>
-                <div class="emit-date">Émis le {{ $dateEmission }}</div>
-            </div>
-        </div>
-        <div class="header-rule"></div>
-    </div>
+  {{-- ══ CONTENU ══ --}}
+  <td style="padding:0;vertical-align:top;">
 
-    {{-- BANDEAU TITRE --}}
-    <div class="title-band">
-        <div class="title-left">
-            <div class="title-sup">Document officiel &middot; GesParoisse</div>
-            <div class="title-main">Fiche <span class="thin">de</span> Demande<br>Liturgique</div>
-        </div>
-        <div class="title-right">
-            <div class="type-label">Type d'acte</div>
-            <div class="type-chip">{{ strtoupper($typeActe) }}</div>
-        </div>
-    </div>
+    {{-- ▓▓ HEADER ▓▓ --}}
+    <table width="100%" cellpadding="0" cellspacing="0"
+           style="padding:24px 38px 0 40px;border-bottom:1px solid #e8e9f5;">
+      <tr>
+        {{-- Logo --}}
+        <td width="70" style="vertical-align:middle;padding-right:14px;padding-bottom:18px;">
+          <div style="width:64px;height:64px;border:2px solid #6B46C135;border-radius:12px;background:#f3f0ff;text-align:center;padding-top:14px;overflow:hidden;">
+            @if(isset($logoPath) && file_exists(public_path($logoPath)))
+              <img src="{{ public_path($logoPath) }}" width="60" height="60"
+                   style="object-fit:contain;border-radius:10px;">
+            @else
+              <span style="font-size:8px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#6B46C1;line-height:1.5;">LOGO<br>EMJC</span>
+            @endif
+          </div>
+        </td>
+        {{-- Nom église --}}
+        <td style="vertical-align:middle;padding-bottom:18px;">
+          <div style="font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:#6B46C1;line-height:1.2;margin-bottom:2px;">
+            Église Méthodiste
+          </div>
+          <div style="font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:#1E40AF;line-height:1.2;margin-bottom:5px;">
+            Jubilé de Cocody
+          </div>
+          <div style="font-size:9px;color:#9098b4;font-style:italic;">
+            Quartier Cocody, Abidjan &middot; Côte d'Ivoire &middot; +225 07 48 30 01 11
+          </div>
+        </td>
+        {{-- Réf + date --}}
+        <td style="vertical-align:middle;text-align:right;padding-bottom:18px;white-space:nowrap;">
+          <div style="display:inline-block;background:#f3f0ff;border:1.5px solid #d6ccf0;border-radius:7px;padding:5px 12px;font-size:9px;font-weight:700;color:#6B46C1;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:6px;">
+            {{ $reference }}
+          </div>
+          <br>
+          <span style="font-size:10px;color:#9098b4;">Émis le {{ $dateEmission }}</span>
+        </td>
+      </tr>
+    </table>
 
-    {{-- BODY --}}
-    <div class="body">
+    {{-- Ligne tricolore --}}
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td width="33%" height="3" style="background:#6B46C1;font-size:0;line-height:0;">&nbsp;</td>
+        <td width="33%" height="3" style="background:#1E40AF;font-size:0;line-height:0;">&nbsp;</td>
+        <td width="34%" height="3" style="background:#B6C01A;font-size:0;line-height:0;">&nbsp;</td>
+      </tr>
+    </table>
 
-        <table class="cards-row">
-            <tr>
-                <td class="card c-violet">
-                    <div class="card-cap">
-                        <div class="cap-icon">ID</div>
-                        <div class="cap-title">Demandeur</div>
-                    </div>
-                    <div class="card-rows">
-                        <div class="field">
-                            <div class="f-label">Nom &amp; Prénom</div>
-                            <div class="{{ $nomComplet !== '—' ? 'f-val' : 'f-empty' }}">{{ $nomComplet }}</div>
-                        </div>
-                        <div class="field">
-                            <div class="f-label">Téléphone</div>
-                            <div class="{{ $telephone !== '—' ? 'f-val' : 'f-empty' }}">{{ $telephone }}</div>
-                        </div>
-                        <div class="field">
-                            <div class="f-label">Classe</div>
-                            <div class="{{ $classe !== '—' ? 'f-val' : 'f-empty' }}">{{ $classe }}</div>
-                        </div>
-                        <div class="field">
-                            <div class="f-label">Famille</div>
-                            <div class="{{ $famille !== '—' ? 'f-val' : 'f-empty' }}">{{ $famille }}</div>
-                        </div>
-                    </div>
-                </td>
-                <td class="card c-blue">
-                    <div class="card-cap">
-                        <div class="cap-icon">AC</div>
-                        <div class="cap-title">Détails de la demande</div>
-                    </div>
-                    <div class="card-rows">
-                        <div class="field">
-                            <div class="f-label">Type d'acte</div>
-                            <div class="f-val">{{ strtoupper($typeActe) }}</div>
-                        </div>
-                        <div class="field">
-                            <div class="f-label">Nom du défunt / Concerné</div>
-                            <div class="{{ $nomConcerne !== '—' ? 'f-val' : 'f-empty' }}">
-                                {{ $nomConcerne !== '—' ? $nomConcerne : 'Non renseigné' }}
-                            </div>
-                        </div>
-                        <div class="field">
-                            <div class="f-label">Date du décès</div>
-                            <div class="{{ $dateDecesFormatted !== '—' ? 'f-val' : 'f-empty' }}">
-                                {{ $dateDecesFormatted !== '—' ? $dateDecesFormatted : 'Non renseignée' }}
-                            </div>
-                        </div>
-                        <div class="field">
-                            <div class="f-label">Lieu de sépulture</div>
-                            <div class="{{ $lieuSepulture !== '—' ? 'f-val' : 'f-empty' }}">
-                                {{ $lieuSepulture !== '—' ? $lieuSepulture : 'Non renseigné' }}
-                            </div>
-                        </div>
-                    </div>
-                </td>
-            </tr>
+    {{-- ▓▓ BANDEAU TITRE ▓▓ --}}
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="background:#6B46C1;padding:20px 0 20px 40px;vertical-align:middle;">
+          <div style="font-size:8px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.55);margin-bottom:6px;">
+            &#8212; Document officiel &middot; GesParoisse
+          </div>
+          <div style="font-size:20px;font-weight:800;color:#fff;letter-spacing:1.5px;text-transform:uppercase;line-height:1.1;">
+            Fiche de Demande Liturgique
+          </div>
+        </td>
+        <td style="background:#1E40AF;padding:20px 38px 20px 24px;vertical-align:middle;text-align:right;white-space:nowrap;width:185px;">
+          <div style="font-size:8px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.55);margin-bottom:8px;">
+            Type d'acte
+          </div>
+          <div style="display:inline-block;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.3);border-radius:20px;padding:6px 16px;font-size:11px;font-weight:800;color:#fff;letter-spacing:2px;text-transform:uppercase;">
+            {{ strtoupper($typeActe) }}
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    {{-- ▓▓ BODY ▓▓ --}}
+    <table width="100%" cellpadding="0" cellspacing="0" style="padding:20px 38px 20px 40px;">
+      <tr><td>
+
+        {{-- Label section Informations --}}
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:10px;">
+          <tr>
+            <td width="4" height="16" style="background:#6B46C1;border-radius:2px;font-size:0;">&nbsp;</td>
+            <td width="9">&nbsp;</td>
+            <td style="font-size:8.5px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#6B46C1;white-space:nowrap;vertical-align:middle;">
+              Informations
+            </td>
+            <td style="border-bottom:1px solid #6B46C128;">&nbsp;</td>
+          </tr>
         </table>
 
-        <div class="corps-wrap">
-            <div class="s-head">
-                <span class="s-bar"></span>
-                <span class="s-title">Corps de la demande</span>
-                <span class="s-rule"></span>
-            </div>
-            <div class="corps-box">
-                <p class="corps-p">{{ $corps }}</p>
-            </div>
-        </div>
+        {{-- ── Deux cartes ── --}}
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
+          <tr valign="top">
 
-        <div class="s-head">
-            <span class="s-bar"></span>
-            <span class="s-title">Signatures &amp; Visas</span>
-            <span class="s-rule"></span>
-        </div>
-        <table class="sig-row">
-            <tr>
-                <td class="sig-col">
-                    <span class="sig-lbl">Signature du demandeur</span>
-                    <div class="sig-area"></div>
-                    <div class="sig-line"></div>
-                    <div class="sig-name">{{ $nomComplet }}</div>
-                </td>
-                <td class="sig-col">
-                    <span class="sig-lbl">Visa &amp; Cachet du Pasteur</span>
-                    <div class="sig-area"></div>
-                    <div class="sig-line"></div>
-                    <div class="sig-name">Pasteur responsable</div>
-                </td>
-            </tr>
+            {{-- Carte Demandeur --}}
+            <td width="49%" style="border:1px solid #d6ccf0;border-radius:10px;overflow:hidden;vertical-align:top;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background:#6B46C1;padding:10px 15px;border-radius:9px 9px 0 0;">
+                    <table cellpadding="0" cellspacing="0"><tr>
+                      <td width="24" style="vertical-align:middle;">
+                        <div style="width:20px;height:20px;background:rgba(255,255,255,0.18);border-radius:5px;text-align:center;padding-top:3px;font-size:9px;font-weight:800;color:rgba(255,255,255,0.9);">ID</div>
+                      </td>
+                      <td style="padding-left:8px;font-size:8.5px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.9);vertical-align:middle;">
+                        Demandeur
+                      </td>
+                    </tr></table>
+                  </td>
+                </tr>
+              </table>
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f0ff;padding:2px 15px 6px;">
+                <tr><td style="padding:8px 0;border-bottom:1px solid #6B46C115;">
+                  <span class="f-lbl">Nom &amp; Prénom</span>
+                  <span class="f-val">{{ $nomComplet !== '—' ? $nomComplet : '' }}</span>
+                  @if($nomComplet === '—')<span class="f-empty">Non renseigné</span>@endif
+                </td></tr>
+                <tr><td style="padding:8px 0;border-bottom:1px solid #6B46C115;">
+                  <span class="f-lbl">Téléphone</span>
+                  <span class="f-val">{{ $telephone !== '—' ? $telephone : '' }}</span>
+                  @if($telephone === '—')<span class="f-empty">Non renseigné</span>@endif
+                </td></tr>
+                <tr><td style="padding:8px 0;border-bottom:1px solid #6B46C115;">
+                  <span class="f-lbl">Classe</span>
+                  <span class="f-val">{{ $classe !== '—' ? $classe : '' }}</span>
+                  @if($classe === '—')<span class="f-empty">Non renseignée</span>@endif
+                </td></tr>
+                <tr><td style="padding:8px 0;">
+                  <span class="f-lbl">Famille</span>
+                  <span class="f-val">{{ $famille !== '—' ? $famille : '' }}</span>
+                  @if($famille === '—')<span class="f-empty">Non renseignée</span>@endif
+                </td></tr>
+              </table>
+            </td>
+
+            <td width="2%">&nbsp;</td>
+
+            {{-- Carte Détails --}}
+            <td width="49%" style="border:1px solid #c7d5f5;border-radius:10px;overflow:hidden;vertical-align:top;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background:#1E40AF;padding:10px 15px;border-radius:9px 9px 0 0;">
+                    <table cellpadding="0" cellspacing="0"><tr>
+                      <td width="24" style="vertical-align:middle;">
+                        <div style="width:20px;height:20px;background:rgba(255,255,255,0.18);border-radius:5px;text-align:center;padding-top:3px;font-size:9px;font-weight:800;color:rgba(255,255,255,0.9);">AC</div>
+                      </td>
+                      <td style="padding-left:8px;font-size:8.5px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.9);vertical-align:middle;">
+                        Détails de la demande
+                      </td>
+                    </tr></table>
+                  </td>
+                </tr>
+              </table>
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#eff4ff;padding:2px 15px 6px;">
+                <tr><td style="padding:8px 0;border-bottom:1px solid #1E40AF18;">
+                  <span style="display:block;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1E40AF88;margin-bottom:2px;">Type d'acte</span>
+                  <span class="f-val">{{ strtoupper($typeActe) }}</span>
+                </td></tr>
+                <tr><td style="padding:8px 0;border-bottom:1px solid #1E40AF18;">
+                  <span style="display:block;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1E40AF88;margin-bottom:2px;">Nom du défunt / Concerné</span>
+                  @if($nomConcerne !== '—')
+                    <span class="f-val">{{ $nomConcerne }}</span>
+                  @else
+                    <span class="f-empty">Non renseigné</span>
+                  @endif
+                </td></tr>
+                <tr><td style="padding:8px 0;border-bottom:1px solid #1E40AF18;">
+                  <span style="display:block;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1E40AF88;margin-bottom:2px;">Date du décès</span>
+                  @if($dateDecesFormatted !== '—')
+                    <span class="f-val">{{ $dateDecesFormatted }}</span>
+                  @else
+                    <span class="f-empty">Non renseignée</span>
+                  @endif
+                </td></tr>
+                <tr><td style="padding:8px 0;">
+                  <span style="display:block;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1E40AF88;margin-bottom:2px;">Lieu de sépulture</span>
+                  @if($lieuSepulture !== '—')
+                    <span class="f-val">{{ $lieuSepulture }}</span>
+                  @else
+                    <span class="f-empty">Non renseigné</span>
+                  @endif
+                </td></tr>
+              </table>
+            </td>
+
+          </tr>
         </table>
 
-    </div>
+        {{-- Label Corps --}}
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:9px;">
+          <tr>
+            <td width="4" height="16" style="background:#6B46C1;border-radius:2px;font-size:0;">&nbsp;</td>
+            <td width="9">&nbsp;</td>
+            <td style="font-size:8.5px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#6B46C1;white-space:nowrap;vertical-align:middle;">
+              Corps de la demande
+            </td>
+            <td style="border-bottom:1px solid #6B46C128;">&nbsp;</td>
+          </tr>
+        </table>
 
-    {{-- FOOTER --}}
-    <div class="footer">
-        <div class="footer-accent"></div>
-        <div class="footer-body">
-            <div class="footer-txt">
-                Fiche générée automatiquement &middot; Système GesParoisse<br>
-                Église Méthodiste Jubilé de Cocody &middot; Tél : +225 07 48 30 01 11
-            </div>
-            <div class="footer-stamp">
-                <span class="stamp-dot"></span>
-                <span class="stamp-txt">Acte validé</span>
-            </div>
-        </div>
-    </div>
+        {{-- Corps box --}}
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+          <tr>
+            <td width="5" style="background:#6B46C1;border-radius:3px 0 0 3px;font-size:0;">&nbsp;</td>
+            <td style="background:#f3f0ff;border:1px solid #d6ccf0;border-left:none;border-radius:0 9px 9px 0;padding:16px 20px;">
+              <span style="font-size:12.5px;line-height:1.9;color:#2a2e42;font-style:italic;display:block;text-align:justify;">
+                {{ $corps }}
+              </span>
+            </td>
+          </tr>
+        </table>
+
+        {{-- Label Signatures --}}
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:9px;">
+          <tr>
+            <td width="4" height="16" style="background:#6B46C1;border-radius:2px;font-size:0;">&nbsp;</td>
+            <td width="9">&nbsp;</td>
+            <td style="font-size:8.5px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#6B46C1;white-space:nowrap;vertical-align:middle;">
+              Signatures &amp; Visas
+            </td>
+            <td style="border-bottom:1px solid #6B46C128;">&nbsp;</td>
+          </tr>
+        </table>
+
+        {{-- Zone signatures --}}
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td width="48%" style="text-align:center;padding:10px 14px 0 0;border-right:1px dashed #6B46C135;">
+              <div style="font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#6B46C180;margin-bottom:28px;">
+                Signature du demandeur
+              </div>
+              <div style="height:1px;background:#6B46C150;margin-bottom:7px;"></div>
+              <div style="font-size:9.5px;font-weight:600;color:#6b7280;">{{ $nomComplet }}</div>
+            </td>
+            <td width="4%">&nbsp;</td>
+            <td width="48%" style="text-align:center;padding:10px 0 0 14px;">
+              <div style="font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#6B46C180;margin-bottom:28px;">
+                Visa &amp; Cachet du Pasteur
+              </div>
+              <div style="height:1px;background:#6B46C150;margin-bottom:7px;"></div>
+              <div style="font-size:9.5px;font-weight:600;color:#6b7280;">Pasteur responsable</div>
+            </td>
+          </tr>
+        </table>
+
+      </td></tr>
+    </table>
+
+    {{-- ▓▓ FOOTER ▓▓ --}}
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td width="33%" height="4" style="background:#6B46C1;font-size:0;line-height:0;">&nbsp;</td>
+        <td width="33%" height="4" style="background:#1E40AF;font-size:0;line-height:0;">&nbsp;</td>
+        <td width="34%" height="4" style="background:#B6C01A;font-size:0;line-height:0;">&nbsp;</td>
+      </tr>
+    </table>
+    <table width="100%" cellpadding="0" cellspacing="0"
+           style="background:#f3f0ff;border-top:1px solid #d6ccf0;padding:12px 38px 12px 40px;">
+      <tr>
+        <td style="vertical-align:middle;">
+          <div style="font-size:8.5px;color:#9098b4;line-height:1.75;">
+            Fiche générée automatiquement &middot; Système GesParoisse<br>
+            Église Méthodiste Jubilé de Cocody &middot; Tél : +225 07 48 30 01 11
+          </div>
+        </td>
+        <td style="vertical-align:middle;text-align:right;white-space:nowrap;">
+          <span style="display:inline-block;background:#fff;border:1.5px solid #6B46C140;border-radius:20px;padding:5px 15px;font-size:8.5px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#6B46C1;">
+            &#x25cf;&nbsp; Acte validé
+          </span>
+        </td>
+      </tr>
+    </table>
+
+  </td>
+</tr>
+</table>
 
 </div>
 </body>
