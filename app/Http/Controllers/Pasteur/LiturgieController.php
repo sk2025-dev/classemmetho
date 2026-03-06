@@ -62,7 +62,7 @@ class LiturgieController extends Controller
 
         $familyMembers = User::query()
             ->where('family_id', $user->family_id)
-            ->with('classe')
+            ->with('classe', 'sacrements')
             ->select($columns)
             ->orderBy('prenom')
             ->orderBy('nom')

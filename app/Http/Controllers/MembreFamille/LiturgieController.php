@@ -23,6 +23,7 @@ class LiturgieController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+        $user->load('classe', 'sacrements');
         $familyMemberIds = User::where('family_id', $user->family_id)->pluck('id');
 
         $actes = ActeLiturgique::with(['membre', 'classe', 'historiques.acteur'])
@@ -61,10 +62,13 @@ class LiturgieController extends Controller
                 'nom' => $user->nom,
                 'prenom' => $user->prenom,
                 'classe_id' => $user->classe_id,
+                'classe' => $user->classe,
+                'genre' => $user->genre,
                 'date_naissance' => $user->date_naissance?->format('Y-m-d'),
                 'lieu_naissance' => $user->lieu_naissance ?? null,
                 'pere' => $user->pere ?? null,
                 'mere' => $user->mere ?? null,
+                'sacrements' => $user->sacrements,
             ]],
         ]);
     }
