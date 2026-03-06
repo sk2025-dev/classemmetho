@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import { Link } from "@inertiajs/react";
 import AddressAutocomplete from "../../Components/AddressAutocomplete";
+import PhotoUploadInput from "../../Components/PhotoUploadInput";
 import { useDebounce } from "../../Hooks/useDebounce";
 import {
     usePersistentState,
@@ -635,34 +636,6 @@ export default function RegisterConducteur({
         setMembres(membres.filter((_, i) => i !== index));
     };
 
-    const handlePhotoChange = (e, type) => {
-        const file = e.target.files && e.target.files[0];
-        if (file) {
-            if (file.size > 5 * 1024 * 1024) {
-                showWarning("Le fichier est trop volumineux (max 5MB).");
-                return;
-            }
-            const preview = URL.createObjectURL(file);
-            if (type === "responsable") {
-                if (responsable.photoPreview)
-                    URL.revokeObjectURL(responsable.photoPreview);
-                setResponsable({
-                    ...responsable,
-                    photo: file,
-                    photoPreview: preview,
-                });
-            } else {
-                if (membreTemp.photoPreview)
-                    URL.revokeObjectURL(membreTemp.photoPreview);
-                setMembreTemp({
-                    ...membreTemp,
-                    photo: file,
-                    photoPreview: preview,
-                });
-            }
-        }
-    };
-
     // Validation stricte
     const validateStep = (s) => {
         const newErrors = {};
@@ -1238,17 +1211,17 @@ export default function RegisterConducteur({
                                         )}
                                     </div>
                                 </div>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) =>
-                                        handlePhotoChange(e, "responsable")
-                                    }
-                                    className="file:py-1 file:px-3 file:rounded file:bg-blue-600 file:text-white file:cursor-pointer file:font-semibold file:border-0 file:hover:bg-blue-700 file:transition-colors file:text-xs"
+                                <PhotoUploadInput
+                                    size="md"
+                                    initialPhotoUrl={responsable.photoPreview}
+                                    onPhotoSelected={(photoUrl) => {
+                                        setResponsable({
+                                            ...responsable,
+                                            photo: photoUrl,
+                                            photoPreview: photoUrl,
+                                        });
+                                    }}
                                 />
-                                <p className="text-xs text-gray-600 text-center">
-                                    JPG, PNG (max 5MB)
-                                </p>
                             </div>
                         </div>
 
@@ -1976,20 +1949,17 @@ export default function RegisterConducteur({
                                                     )}
                                                 </div>
                                             </div>
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={(e) =>
-                                                    handlePhotoChange(
-                                                        e,
-                                                        "membre",
-                                                    )
-                                                }
-                                                className="file:py-1 file:px-3 file:rounded file:bg-blue-600 file:text-white file:cursor-pointer file:font-semibold file:border-0 file:hover:bg-blue-700 file:transition-colors file:text-xs"
+                                            <PhotoUploadInput
+                                                size="md"
+                                                initialPhotoUrl={membreTemp.photoPreview}
+                                                onPhotoSelected={(photoUrl) => {
+                                                    setMembreTemp({
+                                                        ...membreTemp,
+                                                        photo: photoUrl,
+                                                        photoPreview: photoUrl,
+                                                    });
+                                                }}
                                             />
-                                            <p className="text-xs text-gray-600 text-center">
-                                                JPG, PNG (max 5MB)
-                                            </p>
                                         </div>
                                     </div>
 

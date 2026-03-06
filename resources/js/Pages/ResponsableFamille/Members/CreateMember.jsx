@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "@inertiajs/react";
+import PhotoUploadInput from "../../../Components/PhotoUploadInput";
 import {
     usePersistentState,
     clearFormPersistedData,
@@ -418,25 +419,6 @@ export default function CreateMember({ family, errors }) {
         }
     };
 
-    const handlePhotoChange = (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (file) {
-            if (file.size > 5 * 1024 * 1024) {
-                alert("Le fichier est trop volumineux (max 5MB).");
-                return;
-            }
-            const preview = URL.createObjectURL(file);
-            if (data.photoPreview) {
-                URL.revokeObjectURL(data.photoPreview);
-            }
-            setData({
-                ...data,
-                photo: file,
-                photoPreview: preview,
-            });
-        }
-    };
-
     return (
         <div
             className="min-h-screen font-sans text-gray-800 selection:bg-purple-200"
@@ -506,11 +488,13 @@ export default function CreateMember({ family, errors }) {
                                                 </div>
                                             )}
                                         </div>
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={handlePhotoChange}
-                                            className="file:py-0.5 file:px-2 file:rounded file:bg-blue-600 file:text-white file:cursor-pointer file:font-semibold file:border-0 file:hover:bg-blue-700 file:transition-colors file:text-xs"
+                                        <PhotoUploadInput
+                                            size="md"
+                                            initialPhotoUrl={data.photoPreview}
+                                            onPhotoSelected={(photoUrl) => {
+                                                handleFieldChange("photo", photoUrl);
+                                                handleFieldChange("photoPreview", photoUrl);
+                                            }}
                                         />
                                     </div>
                                 </div>
