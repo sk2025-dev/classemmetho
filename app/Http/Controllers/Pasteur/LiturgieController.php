@@ -52,7 +52,7 @@ class LiturgieController extends Controller
             })
             ->values();
 
-        $columns = ['id', 'nom', 'prenom', 'classe_id', 'sexe'];
+        $columns = ['id', 'nom', 'prenom', 'classe_id', 'genre'];
         $optionalColumns = ['date_naissance', 'lieu_naissance', 'pere', 'mere'];
         foreach ($optionalColumns as $col) {
             if (Schema::hasColumn('users', $col)) {

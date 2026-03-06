@@ -49,7 +49,7 @@ class LiturgieController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $columns = ['id', 'nom', 'prenom', 'classe_id', 'sexe'];
+        $columns = ['id', 'nom', 'prenom', 'classe_id', 'genre'];
         $optionalColumns = ['date_naissance', 'lieu_naissance', 'pere', 'mere'];
         foreach ($optionalColumns as $col) {
             if (Schema::hasColumn('users', $col)) {

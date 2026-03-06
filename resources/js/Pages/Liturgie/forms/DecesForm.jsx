@@ -40,7 +40,7 @@ export default function DecesForm({
             date_naissance_defunt: "",
             date_deces: "",
             lieu_deces: "",
-            sexe_defunt: "",
+            genre_defunt: "",
             def_membre: "",
             def_classe: "",
             def_baptise: "",
@@ -66,7 +66,7 @@ export default function DecesForm({
                         nom_defunt: selectedMember.nom || "",
                         prenom_defunt: selectedMember.prenom || "",
                         date_naissance_defunt: selectedMember.date_naissance || "",
-                        sexe_defunt: selectedMember.sexe || "",
+                        genre_defunt: selectedMember.genre || "",
                         def_classe: selectedMember.classe?.nom || "",
                         def_baptise: selectedMember.baptise ? "oui" : "",
                         def_membre: selectedMember.membre_eglise ? "membre_actif" : "",
@@ -84,7 +84,7 @@ export default function DecesForm({
                     nom_defunt: "",
                     prenom_defunt: "",
                     date_naissance_defunt: "",
-                    sexe_defunt: "",
+                    genre_defunt: "",
                     def_classe: "",
                     def_baptise: "",
                     def_membre: "",
@@ -171,7 +171,7 @@ export default function DecesForm({
             form.details.lien_familial || form.details.dec_lien || "lui-meme",
         );
         payload.append("details[lieu_deces]", form.details.lieu_deces || "");
-        payload.append("details[sexe_defunt]", form.details.sexe_defunt || "");
+        payload.append("details[sexe_defunt]", form.details.genre_defunt || "");
         payload.append(
             "details[date_naissance_defunt]",
             form.details.date_naissance_defunt || "",
@@ -230,7 +230,7 @@ export default function DecesForm({
                 date_naissance_defunt: "",
                 date_deces: "",
                 lieu_deces: "",
-                sexe_defunt: "",
+                genre_defunt: "",
                 def_membre: "",
                 def_classe: "",
                 def_baptise: "",
@@ -375,11 +375,11 @@ export default function DecesForm({
                                                     </p>
                                                 </div>
                                             )}
-                                            {form.details.sexe_defunt && (
+                                            {form.details.genre_defunt && (
                                                 <div className="space-y-2">
                                                     <p className="text-xs font-semibold text-slate-500 uppercase">Sexe</p>
                                                     <p className="text-sm text-slate-800">
-                                                        {form.details.sexe_defunt}
+                                                        {form.details.genre_defunt}
                                                     </p>
                                                 </div>
                                             )}
@@ -515,9 +515,9 @@ export default function DecesForm({
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                             <Field label="Sexe">
                                                 <select
-                                                    value={form.details.sexe_defunt}
+                                                    value={form.details.genre_defunt}
                                                     onChange={(e) =>
-                                                        setDetail("sexe_defunt", e.target.value)
+                                                        setDetail("genre_defunt", e.target.value)
                                                     }
                                                 >
                                                     <option value="">Choisir</option>

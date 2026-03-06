@@ -286,7 +286,7 @@ class LiturgieController extends Controller
 
     private function loadFamilyActesData(User $user): array
     {
-        $columns = ['id', 'nom', 'prenom', 'classe_id', 'sexe'];
+        $columns = ['id', 'nom', 'prenom', 'classe_id', 'genre'];
         $optionalColumns = ['date_naissance', 'lieu_naissance', 'pere', 'mere'];
         foreach ($optionalColumns as $col) {
             if (Schema::hasColumn('users', $col)) {
