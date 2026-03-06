@@ -73,12 +73,15 @@ $empty = fn($v, $label = 'Non renseigné') =>
       <tr>
         {{-- Logo --}}
         <td width="70" style="vertical-align:middle;padding-right:14px;padding-bottom:18px;">
-          <div style="width:64px;height:64px;border:2px solid #6B46C135;border-radius:12px;background:#f3f0ff;text-align:center;padding-top:14px;overflow:hidden;">
-            @if(isset($logoPath) && file_exists(public_path($logoPath)))
-              <img src="{{ public_path($logoPath) }}" width="60" height="60"
+          <div style="width:64px;height:64px;border:2px solid #6B46C135;border-radius:12px;background:#f3f0ff;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+            @if(!empty($logoDataUri))
+              <img src="{{ $logoDataUri }}" width="60" height="60"
+                   style="object-fit:contain;border-radius:10px;">
+            @elseif(file_exists(public_path('images/logo.png')))
+              <img src="{{ asset('images/logo.png') }}" width="60" height="60"
                    style="object-fit:contain;border-radius:10px;">
             @else
-              <span style="font-size:8px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#6B46C1;line-height:1.5;">LOGO<br>EMJC</span>
+              <span style="font-size:8px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#6B46C1;line-height:1.5;display:inline-block;margin-top:14px;">LOGO<br>EMJC</span>
             @endif
           </div>
         </td>

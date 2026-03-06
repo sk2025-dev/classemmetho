@@ -410,58 +410,58 @@
                 <span class="corner-ornament bottom-left"></span>
                 <span class="corner-ornament bottom-right"></span>
                 <div class="border-inner">
-                <div class="header">
-                    <div class="cell logo-container">
-                        {{-- utiliser dataUri si fourni, sinon importer le fichier public/images/logo.png --}}
-                        @if(!empty($logoDataUri))
-                        <img src="{{ $logoDataUri }}" class="logo-img" alt="Logo">
-                        @elseif(file_exists(public_path('images/logo.png')))
-                        <img src="{{ asset('images/logo.png') }}" class="logo-img" alt="Logo">
-                        @else
-                        <div class="note">Logo</div>
-                        @endif
+                    <div class="header">
+                        <div class="cell logo-container">
+                            {{-- utiliser dataUri si fourni, sinon importer le fichier public/images/logo.png --}}
+                            @if(!empty($logoDataUri))
+                            <img src="{{ $logoDataUri }}" class="logo-img" alt="Logo">
+                            @elseif(file_exists(public_path('images/logo.png')))
+                            <img src="{{ asset('images/logo.png') }}" class="logo-img" alt="Logo">
+                            @else
+                            <div class="note">Logo</div>
+                            @endif
+                        </div>
+                        <div class="cell title-container">
+                            <h1>CERTIFICAT D'ACTE LITURGIQUE</h1>
+                            <div class="church-name">Église Méthodiste Jubilé de Cocody</div>
+                        </div>
+                        <div class="cell qr-container">
+                            {{-- toujours afficher le QR qui pointe vers le certificat (data-uri) --}}
+                            @if(!empty($qrDataUri))
+                            <img src="{{ $qrDataUri }}" class="qr-img" alt="QR Code vers certificat">
+                            @else
+                            <div class="note">Réf : {{ $reference }}</div>
+                            @endif
+                        </div>
                     </div>
-                    <div class="cell title-container">
-                        <h1>CERTIFICAT D'ACTE LITURGIQUE</h1>
-                        <div class="church-name">Église Méthodiste Jubilé de Cocody</div>
-                    </div>
-                    <div class="cell qr-container">
-                        {{-- toujours afficher le QR qui pointe vers le certificat (data-uri) --}}
-                        @if(!empty($qrDataUri))
-                        <img src="{{ $qrDataUri }}" class="qr-img" alt="QR Code vers certificat">
-                        @else
-                        <div class="note">Réf : {{ $reference }}</div>
-                        @endif
-                    </div>
-                </div>
 
-                <div class="divider"></div>
+                    <div class="divider"></div>
 
-                <div class="content-main">
-                    <div class="subtitle">Ce certificat est décerné à</div>
-                    <div class="recipient">{{ strtoupper($nomComplet) }}</div>
+                    <div class="content-main">
+                        <div class="subtitle">Ce certificat est décerné à</div>
+                        <div class="recipient">{{ strtoupper($nomComplet) }}</div>
 
-                    <div class="attestation-text">
-                        L'Église Méthodiste Jubilé de Cocody atteste solennellement que la personne mentionnée ci-dessus 
-                        a reçu cet acte liturgique au sein de notre communauté paroissiale le {{ $dateEmission }}.
-                        Ce certificat est délivré pour servir et valoir ce que de droit.
+                        <div class="attestation-text">
+                            L'Église Méthodiste Jubilé de Cocody atteste solennellement que la personne mentionnée ci-dessus
+                            a reçu cet acte liturgique au sein de notre communauté paroissiale le {{ $dateEmission }}.
+                            Ce certificat est délivré pour servir et valoir ce que de droit.
+                        </div>
                     </div>
-                </div>
 
-                <div class="signature-section">
-                    <div class="cell signature-left">
-                        <div class="ref-number">Réf : {{ $reference }}</div>
+                    <div class="signature-section">
+                        <div class="cell signature-left">
+                            <div class="ref-number">Réf : {{ $reference }}</div>
+                        </div>
+                        <div class="cell signature-center">
+                            <div class="signature-label">Le Pasteur</div>
+                            <div class="signature-line"></div>
+                            <div class="signature-name">N'GORAN MISS</div>
+                        </div>
+                        <div class="cell signature-right">
+                            <div class="footer-info">Fait à Cocody</div>
+                            <div class="footer-info">Le {{ $dateEmission }}</div>
+                        </div>
                     </div>
-                    <div class="cell signature-center">
-                        <div class="signature-label">Le Pasteur</div>
-                        <div class="signature-line"></div>
-                        <div class="signature-name">N'GORAN MISS</div>
-                    </div>
-                    <div class="cell signature-right">
-                        <div class="footer-info">Fait à Cocody</div>
-                        <div class="footer-info">Le {{ $dateEmission }}</div>
-                    </div>
-                </div>
                 </div>
             </div>
         </div>
