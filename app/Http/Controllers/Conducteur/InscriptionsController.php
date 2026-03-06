@@ -1211,7 +1211,7 @@ class InscriptionsController extends Controller
 
             $photoPath = null;
             if ($request->hasFile('responsable.photo')) {
-                $photoPath = $request->file('responsable.photo')->store('photos/users', 'public');
+                $photoPath = $request->file('responsable.photo')->store('profiles', 'public');
             }
 
             $responsable = User::create([
@@ -1244,7 +1244,7 @@ class InscriptionsController extends Controller
 
                 $membrePhotoPath = null;
                 if ($request->hasFile("membres.{$index}.photo")) {
-                    $membrePhotoPath = $request->file("membres.{$index}.photo")->store('photos/users', 'public');
+                    $membrePhotoPath = $request->file("membres.{$index}.photo")->store('profiles', 'public');
                 }
 
                 $membre = User::create([

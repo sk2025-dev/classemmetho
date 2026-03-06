@@ -123,7 +123,7 @@ class MemberController extends Controller
         // Handle photo upload
         $photoPath = null;
         if ($request->hasFile('photo') && $request->file('photo')->isValid()) {
-            $photoPath = $request->file('photo')->store('members/photos', 'public');
+            $photoPath = $request->file('photo')->store('profiles', 'public');
         }
 
         // Ensure identifier is generated so DB non-null constraint is satisfied
@@ -270,7 +270,7 @@ class MemberController extends Controller
 
         // Handle photo upload
         if ($request->hasFile('photo') && $request->file('photo')->isValid()) {
-            $photoPath = $request->file('photo')->store('members/photos', 'public');
+            $photoPath = $request->file('photo')->store('profiles', 'public');
             $validated['photo_path'] = $photoPath;
         }
 

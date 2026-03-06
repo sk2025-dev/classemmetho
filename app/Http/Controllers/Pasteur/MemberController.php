@@ -115,7 +115,7 @@ class MemberController extends Controller
         // Handle photo upload
         $photoPath = null;
         if ($request->hasFile('photo') && $request->file('photo')->isValid()) {
-            $photoPath = $request->file('photo')->store('members/photos', 'public');
+            $photoPath = $request->file('photo')->store('profiles', 'public');
         }
 
         // Ensure identifier is generated
@@ -241,7 +241,7 @@ class MemberController extends Controller
 
         // Handle photo upload
         if ($request->hasFile('photo') && $request->file('photo')->isValid()) {
-            $validated['photo_path'] = $request->file('photo')->store('members/photos', 'public');
+            $validated['photo_path'] = $request->file('photo')->store('profiles', 'public');
         }
 
         // Mettre à jour les infos du membre
