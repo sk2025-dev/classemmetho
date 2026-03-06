@@ -32,7 +32,6 @@ class DashboardController extends Controller
                 'inscriptions' => [],
                 'users' => [],
                 'className' => 'Aucune classe assignée',
-                'flashAnnouncements' => [],
             ]);
         }
 
@@ -40,8 +39,6 @@ class DashboardController extends Controller
         // NOTE: classe_id dans le JSON est une chaîne, donc on le convertit pour la comparaison
         $classIdsStr = array_map('strval', $classIds);
         $className = $conductorClasses->first()->nom ?? 'Classes multiples';
-
-        $flashAnnouncements = [];
 
         // 1. Récupérer TOUTES les inscriptions en attente de sa classe
         $placeholders = implode(',', array_fill(0, count($classIdsStr), '?'));

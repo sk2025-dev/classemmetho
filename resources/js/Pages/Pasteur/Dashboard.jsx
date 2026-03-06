@@ -1,6 +1,5 @@
 import React from "react";
 import { Link, router } from "@inertiajs/react";
-import VerticalTicker from "@/Components/VerticalTicker";
 
 // --- COMPOSANT ICÔNE ---
 const Icon = ({ name, className }) => {
@@ -83,7 +82,7 @@ const Icon = ({ name, className }) => {
     );
 };
 
-export default function Dashboard({ role, pendingInscriptions, auth, familyStats, familyData, flashAnnouncements = [] }) {
+export default function Dashboard({ role, pendingInscriptions, auth, familyStats, familyData }) {
     const menuItems = [
         {
             title: "Inscriptions",
@@ -156,15 +155,6 @@ export default function Dashboard({ role, pendingInscriptions, auth, familyStats
         router.post("/logout");
     };
 
-    // Messages pour le ticker
-    const flashMessages = [
-        { id: 1, text: "✝️ Demandes liturgiques en attente de votre validation" },
-        { id: 2, text: "📝 Annonces paroissiales à valider et publier" },
-        { id: 3, text: "🔔 Préparation de la célébration dominicale" },
-        { id: 4, text: "👥 Réunion pastorale mensuelle le 20 mars" },
-        { id: 5, text: "❤️ Accompagnement spirituel des familles disponible" },
-    ];
-
     // Utilise uniquement le layout MainLayout qui fournit déjà le header
     return (
         <div
@@ -177,8 +167,6 @@ export default function Dashboard({ role, pendingInscriptions, auth, familyStats
                 overflowX: "hidden",
             }}
         >
-            {/* Barre d'infos Flash */}
-            <VerticalTicker messages={flashMessages} interval={4000} label="Info Pasteur" />
             {/* MAIN CONTENT */}
             <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
                 <div className="mb-10">

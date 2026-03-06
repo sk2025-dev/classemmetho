@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="fr">
+<html lang='fr'>
 
 <head>
-    <meta charset="utf-8">
+    <meta charset='utf-8'>
     <title>Certificat {{ $acte->reference }}</title>
     <style>
         @page {
@@ -14,469 +14,358 @@
             box-sizing: border-box;
         }
 
-        html {
-            width: 297mm;
-            height: 210mm;
+        html,
+        body {
             margin: 0;
             padding: 0;
-            overflow: hidden;
+            width: 297mm;
+            height: 210mm;
+            background: #0b1028;
+            font-family: 'Georgia', 'Times New Roman', serif;
+            color: #0f2c59;
         }
 
         body {
-            font-family: 'Georgia', 'Times New Roman', serif;
-            color: #1a1e2e;
-            font-size: 12px;
-            margin: 0;
-            padding: 0;
-            background: #FFFFFF;
-            width: 297mm;
-            height: 210mm;
-            overflow: hidden;
-        }
-
-        /* Certificat professionnel prestige */
-        .certificate {
-            background: #FFFFFF;
-            width: 100%;
-            height: 100%;
-            position: relative;
-            text-align: center;
-            padding: 0;
-            margin: 0;
-            overflow: hidden;
-            page-break-inside: avoid;
-            page-break-before: avoid;
-            page-break-after: avoid;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .page {
             width: 297mm;
             height: 210mm;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            page-break-inside: avoid;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .border-frame {
-            border: 8px solid #0F2C59;
-            padding: 6px;
-            position: relative;
+        .certificate {
+            width: 282mm;
+            height: 194mm;
+            border: 6px solid #0f2c59;
+            padding: 8px;
+            background: #ffffff;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .inner {
             width: 100%;
             height: 100%;
+            border: 3px solid #c9a961;
+            padding: 18px 30px;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
-            page-break-inside: avoid;
-            background: #FFFFFF;
-        }
-
-        .border-inner {
-            border: 3px solid #C9A961;
-            padding: 16px 30px;
+            justify-content: space-between;
             position: relative;
-            background: #FFFFFF;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            overflow: hidden;
-            page-break-inside: avoid;
+            background: linear-gradient(180deg, #ffffff 0%, #fdfdf5 100%);
         }
 
-        .content-main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-            page-break-inside: avoid;
-        }
-
-        /* Décorations d'angle simplifiées */
-        .corner-ornament {
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            border: 0;
-        }
-
-        .corner-ornament::before,
-        .corner-ornament::after {
+        .inner::before,
+        .inner::after {
             content: '';
             position: absolute;
-            background: #C9A961;
-        }
-
-        .corner-ornament.top-left::before {
-            top: 0;
-            left: 0;
-            width: 30px;
-            height: 3px;
-        }
-
-        .corner-ornament.top-left::after {
-            top: 0;
-            left: 0;
-            width: 3px;
-            height: 30px;
-        }
-
-        .corner-ornament.top-right::before {
-            top: 0;
-            right: 0;
-            width: 30px;
-            height: 3px;
-        }
-
-        .corner-ornament.top-right::after {
-            top: 0;
-            right: 0;
-            width: 3px;
-            height: 30px;
-        }
-
-        .corner-ornament.bottom-left::before {
-            bottom: 0;
-            left: 0;
-            width: 30px;
-            height: 3px;
-        }
-
-        .corner-ornament.bottom-left::after {
-            bottom: 0;
-            left: 0;
-            width: 3px;
-            height: 30px;
-        }
-
-        .corner-ornament.bottom-right::before {
-            bottom: 0;
-            right: 0;
-            width: 30px;
-            height: 3px;
-        }
-
-        .corner-ornament.bottom-right::after {
-            bottom: 0;
-            right: 0;
-            width: 3px;
-            height: 30px;
-        }
-
-        .header {
-            display: table;
-            width: 100%;
-            margin-bottom: 6px;
-            position: relative;
-        }
-
-        .header .cell {
-            display: table-cell;
-            vertical-align: middle;
-        }
-
-        .logo-container {
-            width: 65px;
-            text-align: left;
-        }
-
-        .logo-img {
-            width: 60px;
-            height: auto;
-            object-fit: contain;
-        }
-
-        .title-container {
-            flex: 1;
-            text-align: center;
-            padding: 0 15px;
-        }
-
-        .title-container h1 {
-            font-family: 'Georgia', serif;
-            font-size: 1.5rem;
-            color: #0F2C59;
-            margin: 0 0 3px 0;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            line-height: 1.1;
-            font-weight: 800;
-            word-break: break-word;
-        }
-
-        .church-name {
-            font-family: 'Georgia', serif;
-            font-size: 0.75rem;
-            color: #5A6C7D;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            margin-top: 1px;
-            font-style: italic;
-        }
-
-        .qr-container {
-            width: 65px;
-            text-align: right;
-        }
-
-        .qr-img {
             width: 60px;
             height: 60px;
-            border: 2px solid #C9A961;
-            border-radius: 4px;
-            padding: 3px;
-            background: white;
+            border: 2px solid #c9a961;
         }
 
-        .divider {
+        .inner::before {
+            top: -1px;
+            left: -1px;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .inner::after {
+            bottom: -1px;
+            right: -1px;
+            border-left: none;
+            border-top: none;
+        }
+
+        .top-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .logo-container,
+        .qr-container {
+            width: 70px;
+            height: 70px;
+        }
+
+        .logo-img,
+        .qr-img {
             width: 100%;
-            height: 1px;
-            background: linear-gradient(to right, transparent 0%, #C9A961 20%, #C9A961 80%, transparent 100%);
-            margin: 4px 0;
-            position: relative;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
         }
 
-        .subtitle {
-            font-family: 'Georgia', serif;
-            font-size: 0.95rem;
-            color: #5A6C7D;
-            text-transform: none;
-            letter-spacing: 0.5px;
-            margin: 8px 0 6px 0;
-            font-weight: 600;
-            font-style: italic;
-        }
-
-        .recipient {
-            font-family: 'Georgia', serif;
-            font-size: 34px;
-            font-weight: 900;
+        .top-badge {
+            flex: 1;
             text-align: center;
-            margin: 8px 0;
-            color: #0F2C59;
-            line-height: 1.1;
-            text-transform: uppercase;
-            word-break: break-word;
-            max-width: 85%;
+        }
+
+        .top-badge span {
+            display: block;
+            font-size: 0.8rem;
             letter-spacing: 2px;
-            position: relative;
-            padding-bottom: 8px;
+            text-transform: uppercase;
+            color: #4b566f;
         }
 
-        .recipient::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 50%;
-            height: 2px;
-            background: linear-gradient(to right, transparent 0%, #C9A961 30%, #C9A961 70%, transparent 100%);
+        .top-badge strong {
+            font-size: 1rem;
+            letter-spacing: 3px;
+            color: #0f2c59;
         }
 
-        .attestation-text {
-            font-size: 0.85rem;
-            color: #374151;
-            line-height: 1.4;
-            margin: 8px auto 6px auto;
-            font-weight: 500;
-            padding: 0 20px;
-            word-break: break-word;
+        .title-block {
             text-align: center;
-            max-width: 90%;
-            font-style: normal;
+            margin-top: 8px;
+        }
+
+        .title-block h1 {
+            margin: 0;
+            font-size: 2.2rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: #172a57;
+        }
+
+        .title-block .type-label {
+            font-size: 1rem;
+            letter-spacing: 3px;
+            color: #c07e08;
+            margin-top: 4px;
+        }
+
+        .title-block .location {
+            font-size: 0.85rem;
+            margin-top: 6px;
+            color: #5a647d;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .gold-line {
+            width: 180px;
+            height: 6px;
+            margin: 10px auto;
+            background: linear-gradient(90deg, transparent 0%, #c9a961 40%, #c9a961 60%, transparent 100%);
+            border-radius: 4px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            margin: 12px 0 6px;
+        }
+
+        .info-card {
+            border: 1px solid rgba(15, 44, 89, 0.1);
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: #fbfbfb;
+            min-height: 56px;
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin-bottom: 2px;
+        }
+
+        .info-value {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0f2c59;
+            line-height: 1.2;
+        }
+
+        .attestation {
+            margin-top: 10px;
+            padding: 12px 24px;
+            border-radius: 10px;
+            background: linear-gradient(145deg, #0f2c59, #12296b);
+            color: #fdf6e3;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            text-align: center;
+            font-weight: 500;
+            letter-spacing: 0.5px;
         }
 
         .signature-section {
-            display: table;
-            width: 100%;
-            margin-top: auto;
-            padding-top: 10px;
-            border-top: 1px solid #E5E7EB;
-        }
-
-        .signature-section .cell {
-            display: table-cell;
-            vertical-align: bottom;
-        }
-
-        .signature-left {
-            width: 30%;
-            text-align: left;
-            padding: 0 10px;
-        }
-
-        .signature-center {
-            width: 40%;
-            text-align: center;
-        }
-
-        .signature-right {
-            width: 30%;
-            text-align: right;
-            padding: 0 10px;
-        }
-
-        .signature-line {
-            width: 150px;
-            margin: 0 auto 4px auto;
-            border-bottom: 2px solid #0F2C59;
-            height: 25px;
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 20px;
+            margin-top: 24px;
             align-items: flex-end;
-            justify-content: center;
-            overflow: hidden;
         }
 
-        .signature-img {
-            max-width: 140px;
-            max-height: 35px;
-            object-fit: contain;
-            margin-bottom: -5px;
+        .signature-block {
+            text-align: center;
         }
 
         .signature-label {
             font-size: 0.75rem;
-            color: #6B7280;
-            font-weight: 600;
+            letter-spacing: 2px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 2px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+
+        .signature-line {
+            width: 160px;
+            height: 2px;
+            margin: 0 auto 5px;
+            background: #0f2c59;
         }
 
         .signature-name {
             font-size: 1rem;
-            color: #0F2C59;
-            font-weight: 800;
-            text-transform: uppercase;
             letter-spacing: 1px;
-            margin-top: 2px;
-        }
-
-        .footer-info {
-            font-size: 0.85rem;
-            color: #4B5563;
-            font-weight: 600;
-            line-height: 1.4;
-        }
-
-        .ref-number {
-            font-size: 0.8rem;
-            color: #6B7280;
+            color: #0f2c59;
             font-weight: 700;
-            background: #F3F4F6;
-            padding: 4px 10px;
-            border-radius: 4px;
+        }
+
+        .footer-note {
+            margin-top: 10px;
+            font-size: 0.75rem;
+            color: #4b5563;
+            text-align: center;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .reference-badge {
             display: inline-block;
-            border: 1px solid #E5E7EB;
+            padding: 4px 10px;
+            border-radius: 12px;
+            border: 1px solid #c9a961;
+            color: #0f2c59;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-top: 4px;
         }
     </style>
 </head>
 
 <body>
     @php
+    $details = $acte->details ?? [];
+    $createur = $acte->createur ?? $acte->membre ?? null;
+    $nomComplet = trim(($createur->prenom ?? '') . ' ' . ($createur->nom ?? '')) ?: 'Nom et prénom';
+    $reference = $acte->reference ?? ('ACTE-' . $acte->id);
+    $dateActe = optional($acte->date_souhaitee)->format('d/m/Y') ?? '-';
+    $dateEmission = $dateActe !== '-' ? $dateActe : now()->format('d/m/Y');
+    $classeNom = $acte->classe?->nom ?? $createur->classe?->nom ?? '—';
+    $conducteurNom = trim(($acte->conducteur->prenom ?? '') . ' ' . ($acte->conducteur->nom ?? '')) ?: '—';
+    $pasteurNom = trim(($acte->pasteur->prenom ?? '') . ' ' . ($acte->pasteur->nom ?? '')) ?: '—';
+    $lieuActe = $details['lieu'] ?? $details['lieu_deces'] ?? $details['lieu_sepulture'] ?? '—';
+
     $typeLabels = [
-    'bapteme' => 'BAPTÊME',
-    'mariage' => 'MARIAGE',
-    'funerailles' => 'FUNÉRAILLES',
-    'remerciement' => 'REMERCIEMENT',
-    // garder seuil générique en cas d'autres types
+        'bapteme' => 'BAPTÊME',
+        'mariage' => 'MARIAGE',
+        'funerailles' => 'FUNÉRAILLES',
+        'remerciement' => 'REMERCIEMENT',
     ];
     $typeLabel = $typeLabels[$acte->type_acte ?? ''] ?? 'ACTE LITURGIQUE';
 
-    $typeTexts = [
-    'bapteme' => 'Pour avoir reçu le sacrement saint du baptême au sein de notre communauté paroissiale, marquant son entrée dans la famille de Dieu.',
-    'mariage' => 'Pour avoir uni leurs liens par le sacrement du mariage, témoignant de leur amour et de leur engagement devant Dieu et l’Assemblée.',
-    'funerailles' => 'Pour avoir accompagné avec dignité et prière le défunt vers la maison du Père, en présence de ses proches et de la communauté.',
-    'remerciement' => 'Pour exprimer notre profonde gratitude envers le généreux soutien et les prières offerts pour la vie de notre paroisse.',
-    ];
-    $bodyText = $typeTexts[$acte->type_acte ?? ''] ?? '';
-
-    // Phrases d'attestation personnalisées selon le type d'acte
     $attestationPhrases = [
-    'bapteme' => 's\'est reçu le sacrement saint du baptême',
-    'mariage' => 'ont uni leurs liens par le sacrement du mariage',
-    'funerailles' => 'a été conduit vers la maison du Père',
-    'remerciement' => 'a généreusement soutenu notre communauté',
+        'bapteme' => 'a reçu le sacrement saint du baptême',
+        'mariage' => 'a uni ses liens par le sacrement du mariage',
+        'funerailles' => 'a été conduit vers la maison du Père',
+        'remerciement' => 'a généreusement soutenu notre communauté',
     ];
-    $attestationPhrase = $attestationPhrases[$acte->type_acte ?? ''] ?? 'a reçu cet acte liturgique';
+    $attestationPhrase = $attestationPhrases[$acte->type_acte ?? ''] ?? 'a participé à cet acte liturgique';
+    $attestationDate = $dateActe !== '-' ? $dateActe : $dateEmission;
 
-    $fullName = trim(($acte->membre->prenom ?? '') . ' ' . ($acte->membre->nom ?? '')) ?: 'Nom et Prénom';
-    $dateActe = optional($acte->date_souhaitee)->format('d/m/Y') ?? '-';
-    $reference = $acte->reference ?? ('ACTE-' . $acte->id);
-
-    // Alias de compatibilite si le template evolue avec les noms utilises ailleurs
-    $nomComplet = $fullName;
-    $typeActe = $typeLabel;
-    $dateEmission = $dateActe !== '-' ? $dateActe : now()->format('d/m/Y');
+    $infoCards = [
+        'Type d’acte' => $typeLabel,
+        'Référence' => $reference,
+        'Date souhaitée' => $dateActe !== '-' ? $dateActe : 'À confirmer',
+        'Classe / Groupe' => $classeNom,
+        'Lieu prévu' => $lieuActe,
+        'Responsable' => $conducteurNom,
+    ];
     @endphp
 
-    <div class="page">
-        <div class="certificate">
-            <div class="border-frame">
-                <span class="corner-ornament top-left"></span>
-                <span class="corner-ornament top-right"></span>
-                <span class="corner-ornament bottom-left"></span>
-                <span class="corner-ornament bottom-right"></span>
-                <div class="border-inner">
-                    <div class="header">
-                        <div class="cell logo-container">
-                            {{-- utiliser dataUri si fourni, sinon importer le fichier public/images/logo.png --}}
-                            @if(!empty($logoDataUri))
-                            <img src="{{ $logoDataUri }}" class="logo-img" alt="Logo">
-                            @elseif(file_exists(public_path('images/logo.png')))
-                            <img src="{{ asset('images/logo.png') }}" class="logo-img" alt="Logo">
-                            @else
-                            <div class="note">Logo</div>
-                            @endif
-                        </div>
-                        <div class="cell title-container">
-                            <h1>CERTIFICAT D'ACTE LITURGIQUE</h1>
-                            <div class="church-name">Église Méthodiste Jubilé de Cocody</div>
-                        </div>
-                        <div class="cell qr-container">
-                            {{-- toujours afficher le QR qui pointe vers le certificat (data-uri) --}}
-                            @if(!empty($qrDataUri))
-                            <img src="{{ $qrDataUri }}" class="qr-img" alt="QR Code vers certificat">
-                            @else
-                            <div class="note">Réf : {{ $reference }}</div>
-                            @endif
-                        </div>
+    <div class='page'>
+        <div class='certificate'>
+            <div class='inner'>
+                <div class='top-row'>
+                    <div class='logo-container'>
+                        @if(!empty($logoDataUri))
+                        <img src='{{ $logoDataUri }}' class='logo-img' alt='Logo'>
+                        @elseif(file_exists(public_path('images/logo.png')))
+                        <img src='{{ asset('images/logo.png') }}' class='logo-img' alt='Logo'>
+                        @else
+                        <div></div>
+                        @endif
                     </div>
-
-                    <div class="divider"></div>
-
-                    <div class="content-main">
-                        <div class="subtitle">Ce certificat est décerné à</div>
-                        <div class="recipient">{{ strtoupper($nomComplet) }}</div>
-
-                        <div class="attestation-text">
-                            L'Église Méthodiste Jubilé de Cocody atteste solennellement que la personne mentionnée ci-dessus
-                            a reçu cet acte liturgique au sein de notre communauté paroissiale le {{ $dateEmission }}.
-                            Ce certificat est délivré pour servir et valoir ce que de droit.
-                        </div>
+                    <div class='top-badge'>
+                        <span>Certificat officiel</span>
+                        <strong>Acte liturgique</strong>
+                        <span class='reference-badge'>Réf {{ $reference }}</span>
                     </div>
-
-                    <div class="signature-section">
-                        <div class="cell signature-left">
-                            <div class="ref-number">Réf : {{ $reference }}</div>
-                        </div>
-                        <div class="cell signature-center">
-                            <div class="signature-label">Le Pasteur</div>
-                            <div class="signature-line">
-                                @if(!empty($signaturePasteurDataUri))
-                                    <img src="{{ $signaturePasteurDataUri }}" class="signature-img" alt="Signature Pasteur">
-                                @endif
-                            </div>
-                            <div class="signature-name">N'GORAN MISS</div>
-                        </div>
-                        <div class="cell signature-right">
-                            <div class="footer-info">Fait à Cocody</div>
-                            <div class="footer-info">Le {{ $dateEmission }}</div>
-                        </div>
+                    <div class='qr-container'>
+                        @if(!empty($qrDataUri))
+                        <img src='{{ $qrDataUri }}' class='qr-img' alt='QR Code'>
+                        @else
+                        <div class='reference-badge'>QR indisponible</div>
+                        @endif
                     </div>
+                </div>
+
+                <div class='title-block'>
+                    <div class='type-label'>{{ $typeLabel }}</div>
+                    <h1>Certificat d’acte liturgique</h1>
+                    <div class='location'>Église Méthodiste Jubilé de Cocody</div>
+                </div>
+
+                <div class='gold-line'></div>
+
+                <div class='info-grid'>
+                    @foreach($infoCards as $label => $value)
+                    <div class='info-card'>
+                        <div class='info-label'>{{ $label }}</div>
+                        <div class='info-value'>{{ $value }}</div>
+                    </div>
+                    @endforeach
+                </div>
+
+                <div class='attestation'>
+                    La présente attestation confirme que {{ strtoupper($nomComplet) }} {{ $attestationPhrase }} au sein de notre commune paroissiale le {{ $attestationDate }}. Ce document est délivré pour valoir ce que de droit et reste vérifiable via le code QR ci-dessus.
+                </div>
+
+                <div class='signature-section'>
+                    <div class='signature-block'>
+                        <div class='signature-label'>Le Conducteur</div>
+                        <div class='signature-line'></div>
+                        <div class='signature-name'>{{ $conducteurNom }}</div>
+                    </div>
+                    <div class='signature-block'>
+                        <div class='signature-label'>Le Pasteur</div>
+                        <div class='signature-line'></div>
+                        <div class='signature-name'>{{ $pasteurNom }}</div>
+                    </div>
+                    <div class='signature-block'>
+                        <div class='signature-label'>Lieu & date</div>
+                        <div class='signature-line'></div>
+                        <div class='signature-name'>Cocody · {{ $dateEmission }}</div>
+                    </div>
+                </div>
+
+                <div class='footer-note'>
+                    Émis par l’Église Méthodiste Jubilé de Cocody · Certificat digital authentifiable
                 </div>
             </div>
         </div>

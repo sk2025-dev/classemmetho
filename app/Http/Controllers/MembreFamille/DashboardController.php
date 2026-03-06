@@ -15,7 +15,6 @@ class DashboardController extends Controller
 
         return Inertia::render('MembreFamille/Dashboard', [
             'role' => $user->role,
-            'flashAnnouncements' => $flashAnnouncements,
         ]);
     }
 }

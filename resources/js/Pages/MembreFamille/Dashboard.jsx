@@ -1,6 +1,5 @@
 import React from "react";
 import { Link, router } from "@inertiajs/react";
-import VerticalTicker from "@/Components/VerticalTicker";
 
 // --- COMPOSANT ICÔNE ---
 const Icon = ({ name, className }) => {
@@ -83,7 +82,7 @@ const Icon = ({ name, className }) => {
     );
 };
 
-export default function Dashboard({ role, pendingInscriptions, auth, flashAnnouncements = [] }) {
+export default function Dashboard({ role, pendingInscriptions, auth }) {
     const menuItems = [
         {
             title: "Inscription",
@@ -156,15 +155,6 @@ export default function Dashboard({ role, pendingInscriptions, auth, flashAnnoun
         router.post("/logout");
     };
 
-    // Messages pour le ticker
-    const flashMessages = [
-        { id: 1, text: "✝️ Prochaine messe dominicale à 10h30" },
-        { id: 2, text: "📖 École du dimanche pour enfants à 9h30" },
-        { id: 3, text: "🙏 Prière communautaire vendredi 19h" },
-        { id: 4, text: "🎵 Chorale : répétition samedi 16h" },
-        { id: 5, text: "💡 Groupe de jeunes : réunion jeudi 18h" },
-    ];
-
     // Utilise uniquement le layout MainLayout qui fournit déjà le header
     return (
         <div
@@ -177,8 +167,6 @@ export default function Dashboard({ role, pendingInscriptions, auth, flashAnnoun
                 overflowX: "hidden",
             }}
         >
-                {/* Barre d'infos Flash */}
-                <VerticalTicker messages={flashMessages} interval={4000} label="Actualités" />
                 {/* MAIN CONTENT */}
                 <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
                 <div className="mb-10">
