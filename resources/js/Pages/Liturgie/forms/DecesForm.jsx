@@ -367,14 +367,6 @@ export default function DecesForm({
                                                     {form.details.prenom_defunt} {form.details.nom_defunt}
                                                 </p>
                                             </div>
-                                            {form.details.date_naissance_defunt && (
-                                                <div className="space-y-2">
-                                                    <p className="text-xs font-semibold text-slate-500 uppercase">Date de naissance</p>
-                                                    <p className="text-sm text-slate-800">
-                                                        {form.details.date_naissance_defunt}
-                                                    </p>
-                                                </div>
-                                            )}
                                             {form.details.genre_defunt && (
                                                 <div className="space-y-2">
                                                     <p className="text-xs font-semibold text-slate-500 uppercase">Sexe</p>
@@ -467,17 +459,6 @@ export default function DecesForm({
                                     </Field>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                    <Field label="Date de naissance">
-                                        <input
-                                            type="date"
-                                            value={form.details.date_naissance_defunt}
-                                            onChange={(e) =>
-                                                setDetail("date_naissance_defunt", e.target.value)
-                                            }
-                                            readOnly={form.membre_id !== "autre"}
-                                            className={form.membre_id !== "autre" ? "bg-slate-100" : ""}
-                                        />
-                                    </Field>
                                     <Field label="Date de deces *">
                                         <input
                                             type="date"
