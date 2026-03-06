@@ -11,6 +11,7 @@ import {
     Edit,
     User,
 } from "lucide-react";
+import ProfilePhoto from "@/Components/ProfilePhoto";
 
 // Composant Badge pour le Rôle
 const StatusBadge = ({ role }) => {
@@ -162,17 +163,11 @@ export default function Inscriptions({ family, members, familyStats }) {
                                         return (
                                             <tr key={member.id} className={`border-b border-gray-200 hover:bg-gray-50 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
                                                 <td className="px-6 py-4 text-left text-sm font-medium text-gray-900 flex items-center gap-3">
-                                                    {member.profile_photo_url ? (
-                                                        <img
-                                                            src={member.profile_photo_url}
-                                                            alt={`${member.prenom} ${member.nom}`}
-                                                            className="w-8 h-8 rounded-full object-cover border border-gray-200"
-                                                            onError={(e) => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'flex'; }}
-                                                        />
-                                                    ) : null}
-                                                    <span style={{ display: !member.profile_photo_url ? 'flex' : 'none', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', backgroundColor: '#FCD34D', borderRadius: '50%', fontWeight: 'bold', fontSize: '12px', color: '#0B4E82', flexShrink: 0 }}>
-                                                        {member.prenom?.[0]?.toUpperCase()}{member.nom?.[0]?.toUpperCase()}
-                                                    </span>
+                                                    <ProfilePhoto 
+                                                        user={member} 
+                                                        size="sm" 
+                                                        rounded={true}
+                                                    />
                                                     <div>
                                                         <span>{member.prenom} {member.nom}</span>
                                                         {isCurrentUser && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">(Moi)</span>}

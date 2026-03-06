@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Family;
+use App\Helpers\PhotoHelper;
 
 class InscriptionsController extends Controller
 {
@@ -80,6 +81,7 @@ class InscriptionsController extends Controller
                     'classe_name' => $m->classe?->nom ?? 'N/A',
                     'role' => $m->id === $family->responsable_id ? 'responsable_famille' : 'membre',
                     'is_responsable' => $m->id === $family->responsable_id,
+                    'profile_photo_url' => PhotoHelper::getPhotoUrl($m->photo_path, $m->prenom, $m->nom),
                 ];
             })->values();
         }

@@ -81,7 +81,7 @@ class InscriptionApprovalController extends Controller
                             'fonction_professionnelle' => $inscription->data['person']['fonction_professionnelle'] ?? null,
                             'fonction_id' => $inscription->data['person']['fonction'] ?? null,
                             'classe_id' => $inscription->classe_id,
-                            'photo_path' => $inscription->photo_data,
+                            'photo_path' => $inscription->photo_path,
                             'ville_id' => $inscription->data['person']['ville_id'] ?? null,
                             'identifier' => $identifier,
                             'password' => bcrypt($tempPassword),
@@ -189,7 +189,7 @@ class InscriptionApprovalController extends Controller
                     'telephone2' => $inscription->telephone2 ?? ($inscription->responsable_telephone2 ?? ($inscription->data['responsable']['telephone2'] ?? null)),
                     'date_naissance' => $inscription->date_naissance ?? ($inscription->data['responsable']['dateNaissance'] ?? null),
                     'genre' => $inscription->genre ?? ($inscription->responsable_genre ?? ($inscription->data['responsable']['genre'] ?? null)),
-                    'photo_path' => $inscription->photo_data,
+                    'photo_path' => $inscription->photo_path,
                     'identifier' => $identifier,  // ✅ Identifiant généré
                     'password' => bcrypt($tempPassword), // Mot de passe temporaire
                     'family_id' => $family?->id,
@@ -412,7 +412,7 @@ class InscriptionApprovalController extends Controller
                             'fonction_professionnelle' => $inscription->data['person']['fonction_professionnelle'] ?? null,
                             'fonction_id' => $inscription->data['person']['fonction'] ?? null,
                             'classe_id' => $inscription->classe_id,
-                            'photo_path' => $inscription->photo_data,
+                            'photo_path' => $inscription->photo_path,
                             'ville_id' => $inscription->data['person']['ville_id'] ?? null,
                             'identifier' => $identifier,
                             'password' => bcrypt($tempPassword),
@@ -725,7 +725,7 @@ class InscriptionApprovalController extends Controller
             'telephone2' => $tel2Conducteur,
             'date_naissance' => $dateNaissanceConducteur,
             'genre' => $genreConducteur,
-            'photo_path' => $inscriptionConducteur->photo_data,
+            'photo_path' => $inscriptionConducteur->photo_path,
             'identifier' => $identifierConducteur,
             'password' => bcrypt($tempPasswordConducteur),
             'family_id' => $family->id,
@@ -784,7 +784,7 @@ class InscriptionApprovalController extends Controller
                     'telephone2' => $membreData['telephone2'] ?? null,
                     'date_naissance' => $membreData['dateNaissance'] ?? null,
                     'genre' => $membreData['genre'] ?? null,
-                    'photo_path' => $membreData['photo_data'] ?? null,
+                    'photo_path' => $membreData['photo_path'] ?? null,
                     'identifier' => $identifierMembre,
                     'password' => bcrypt($tempPasswordMembre),
                     'family_id' => $family->id,
@@ -1037,7 +1037,7 @@ class InscriptionApprovalController extends Controller
             'telephone2' => $inscription->telephone2 ?? ($inscription->responsable_telephone2 ?? ($inscription->data['responsable']['telephone2'] ?? null)),
             'date_naissance' => $inscription->date_naissance ?? ($inscription->data['responsable']['dateNaissance'] ?? null),
             'genre' => $inscription->genre ?? ($inscription->responsable_genre ?? ($inscription->data['responsable']['genre'] ?? null)),
-            'photo_path' => $inscription->photo_data,
+            'photo_path' => $inscription->photo_path,
             'identifier' => $identifier,  // ✅ Identifiant généré
             'password' => bcrypt($tempPassword), // Mot de passe temporaire
             'family_id' => $family->id,
