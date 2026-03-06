@@ -98,6 +98,7 @@ class ProfileController extends Controller
             'profession' => $validated['profession'] ?? $user->profession,
             'fonction_id' => $validated['fonction_id'] ?? $user->fonction_id,
             'relation' => $validated['relation'] ?? $user->relation,
+            'photo_path' => $validated['photo_path'] ?? $user->photo_path,
         ]);
 
         // Mettre à jour les sacrements (relation hasOne)

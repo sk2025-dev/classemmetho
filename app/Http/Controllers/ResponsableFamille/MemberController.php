@@ -286,6 +286,7 @@ class MemberController extends Controller
             'profession' => $validated['profession'] ?? $member->profession,
             'fonction_id' => $validated['fonction_id'] ?? $member->fonction_id,
             'relation' => $validated['relation'] ?? $member->relation,
+            'photo_path' => $validated['photo_path'] ?? $member->photo_path,
         ]);
 
         // Enregistrer les modifications dans l'audit
