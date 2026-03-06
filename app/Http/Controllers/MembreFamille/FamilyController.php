@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\MembreFamille;
 
 use App\Http\Controllers\Controller;
+use App\Helpers\PhotoHelper;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Family;
@@ -69,6 +70,8 @@ class FamilyController extends Controller
                     'role' => $m->id === $family->responsable_id ? 'responsable_famille' : 'membre',
                     'is_responsable' => $m->id === $family->responsable_id,
                     'is_current_user' => $m->id === $user->id,
+                    'photo_path' => $m->photo_path,
+                    'profile_photo_url' => PhotoHelper::getPhotoUrl($m->photo_path, $m->prenom, $m->nom),
                 ];
             })->values();
         }
