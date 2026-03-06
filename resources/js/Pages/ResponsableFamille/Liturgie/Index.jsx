@@ -641,12 +641,8 @@ export default function Index({
                                             <div className="st-track">
                                                 <StatusStep
                                                     label="Soumise"
-                                                    done={acte.statut !==
-                                                        "SOUMISE"}
-                                                    active={
-                                                        acte.statut ===
-                                                        "SOUMISE"
-                                                    }
+                                                    done={true}
+                                                    active={false}
                                                     date={datesSoumise}
                                                 />
                                                 <StatusStep
