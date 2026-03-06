@@ -672,7 +672,7 @@ export default function DecesForm({
                                     <button
                                         type="submit"
                                         disabled={processing}
-                                        className="btn-main"
+                                        className={`btn-main ${processing ? 'btn-green' : ''}`}
                                     >
                                         {processing
                                             ? "Soumission..."

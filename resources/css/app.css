@@ -517,3 +517,140 @@ body, #app {
         font-size: 16px;
     }
 }
+
+/* ========== STATUS STEPS STYLING ========== */
+.st-track {
+    display: flex;
+    justify-content: space-between;
+    margin: 1.5rem 0;
+    gap: 1rem;
+}
+
+.st-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    text-align: center;
+}
+
+.st-dot {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 18px;
+    margin-bottom: 8px;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+/* États des points */
+.st-dot.wait {
+    background: #f1f5f9;
+    color: #94a3b8;
+    border-color: #cbd5e1;
+}
+
+.st-dot.active {
+    background: #dbeafe;
+    color: #0284c7;
+    border-color: #0284c7;
+    animation: pulse-blue 2s infinite;
+}
+
+.st-dot.done {
+    background: #dcfce7;
+    color: #16a34a;
+    border-color: #16a34a;
+    box-shadow: 0 0 8px rgba(22, 163, 74, 0.3);
+}
+
+.st-dot.refused {
+    background: #fee2e2;
+    color: #dc2626;
+    border-color: #dc2626;
+}
+
+@keyframes pulse-blue {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(2, 132, 199, 0);
+    }
+}
+
+.st-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.st-label {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.st-label.wait {
+    color: #94a3b8;
+}
+
+.st-label.active {
+    color: #0284c7;
+}
+
+.st-label.done {
+    color: #16a34a;
+}
+
+.st-label.refused {
+    color: #dc2626;
+}
+
+.st-date {
+    font-size: 11px;
+    color: #64748b;
+    font-weight: normal;
+}
+
+.st-waiting {
+    color: #fb923c !important;
+}
+
+/* ========== BUTTONS ========== */
+.btn-main {
+    background: #3b82f6;
+    color: white;
+    padding: 10px 24px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-main:hover:not(:disabled) {
+    background: #2563eb;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.btn-main:disabled {
+    background: #93c5fd;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.btn-green {
+    background: #10b981 !important;
+}
+
+.btn-green:hover:not(:disabled) {
+    background: #059669 !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}

@@ -2434,7 +2434,7 @@ function StatusStep({ label, done, active, refused, date }) {
           : active
             ? "active"
             : "wait";
-    const icon = refused ? "✕" : done ? "✓" : active ? "…" : "·";
+    const icon = refused ? "✕" : done ? "✓" : ""; // Empty circle for active/wait
     return (
         <div className="st-step">
             <div className={`st-dot ${cls}`}>{icon}</div>
@@ -2864,7 +2864,7 @@ const styles = `
 .st-track{display:flex;align-items:center;background:#F5F4F0;border:1px solid #E8E4DC;border-radius:8px;padding:15px 20px ;margin-top:10px }
 .st-step{display:flex;align-items:flex-start;gap:6px;flex:1}.st-step:not(:last-child)::after{content:"→";color:#D6D1C7;font-size:11px;margin-left:5px;margin-top:2px}
 .st-dot{width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;border:2px solid transparent;flex-shrink:0;margin-top:2px}
-.st-dot.done{background:#4A7C5E;color:#fff}.st-dot.active{background:rgba(184,122,32,.08);color:#B87A20;border-color:#B87A20}.st-dot.wait{background:#EDEAE3;color:#9C9484;border-color:#D6D1C7}.st-dot.refused{background:#C06040;color:#fff}
+.st-dot.done{background:#4A7C5E;color:#fff}.st-dot.active{background:#fff;color:#B87A20;border-color:#B87A20}.st-dot.wait{background:#fff;color:#9C9484;border-color:#D6D1C7}.st-dot.refused{background:#C06040;color:#fff}
 .st-content{display:flex;flex-direction:column;gap:2px}
 .st-label{font-size:10px;font-weight:700;color:#9C9484}.st-label.done{color:#4A7C5E}.st-label.active{color:#B87A20}.st-label.refused{color:#C06040}
 .st-date{font-size:9px;color:#7E7A70;font-weight:600}
