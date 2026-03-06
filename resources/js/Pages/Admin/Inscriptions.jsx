@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Head, Link, usePage, router } from "@inertiajs/react";
 import axios from "axios";
+import ProfilePhoto from "@/Components/ProfilePhoto";
 
 const StatusBadge = ({ status }) => {
     const normalizedStatus = status?.toLowerCase();
@@ -301,45 +302,11 @@ export default function Inscriptions() {
                                             {idx + 1}
                                         </td>
                                         <td className="px-4 py-3 whitespace-nowrap flex items-center gap-3">
-                                            {inscription.profile_photo_url ? (
-                                                <img
-                                                    src={inscription.profile_photo_url}
-                                                    alt={`${inscription.prenom} ${inscription.nom}`}
-                                                    style={{
-                                                        width: "36px",
-                                                        height: "36px",
-                                                        borderRadius: "50%",
-                                                        objectFit: "cover",
-                                                        border: "2px solid #EDD31D",
-                                                    }}
-                                                    onError={(e) => {
-                                                        e.target.style.display = 'none';
-                                                        e.target.nextElementSibling.style.display = 'inline-flex';
-                                                    }}
-                                                />
-                                            ) : null}
-                                            <span
-                                                style={{
-                                                    backgroundColor: "#EDD31D",
-                                                    borderRadius: "50%",
-                                                    display: !inscription.profile_photo_url ? "inline-flex" : "none",
-                                                    alignItems: "center",
-                                                    justifyContent: "center",
-                                                    width: "36px",
-                                                    height: "36px",
-                                                }}
-                                            >
-                                                <span
-                                                    style={{
-                                                        color: "#0B4E82",
-                                                        fontWeight: "bold",
-                                                        fontSize: "1em",
-                                                    }}
-                                                >
-                                                    {inscription.prenom?.charAt(0)}
-                                                    {inscription.nom?.charAt(0)}
-                                                </span>
-                                            </span>
+                                            <ProfilePhoto 
+                                                user={inscription} 
+                                                size="md" 
+                                                rounded={true}
+                                            />
                                             <span className="font-medium text-gray-900">
                                                 {inscription.prenom}{" "}
                                                 {inscription.nom}

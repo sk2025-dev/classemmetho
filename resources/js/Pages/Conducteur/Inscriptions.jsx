@@ -7,6 +7,7 @@ import Select2Fonction from "../../Components/Select2Fonction";
 import Select2Relation from "../../Components/Select2Relation";
 import { Eye, Edit, Pencil, Power, Trash2, User, Users, Plus, Check, X, Clock, UserCheck, UserX, CheckCircle, Mail, Phone, Heart, Calendar, MapPin, Award, Gift, BookOpen, ChevronDown, ChevronUp, Briefcase, ArrowLeft, FileText, Ban, ToggleLeft, ToggleRight } from "lucide-react";
 import DeleteConfirmationModal from "../../Components/DeleteConfirmationModal";
+import { normalizePhotoUrl } from "@/Helpers/PhotoUrlHelper";
 
 // Mapping des icônes Lucide pour usage dans les composants
 const lucideIcons = {
@@ -129,20 +130,6 @@ export default function Inscriptions({
     rejectedCount = 0,
     userFamilyId = null,
 }) {
-    const normalizePhotoUrl = (raw) => {
-        if (!raw || typeof raw !== "string") return null;
-        if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("/")) {
-            return raw;
-        }
-        if (raw.startsWith("storage/")) {
-            return `/${raw}`;
-        }
-        if (raw.startsWith("public/")) {
-            return `/storage/${raw.replace(/^public\//, "")}`;
-        }
-        return `/storage/${raw.replace(/^\/+/, "")}`;
-    };
-
     const formatDateDisplay = (value, fallback = "N/A") => {
         if (!value) return fallback;
 

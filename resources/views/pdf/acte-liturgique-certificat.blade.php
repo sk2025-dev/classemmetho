@@ -467,7 +467,7 @@
                             <div class="signature-label">Le Pasteur</div>
                             <div class="signature-line">
                                 @if(!empty($signaturePasteurDataUri))
-                                    <img src="{{ $signaturePasteurDataUri }}" class="signature-img" alt="Signature Pasteur">
+                                <img src="{{ $signaturePasteurDataUri }}" class="signature-img" alt="Signature Pasteur">
                                 @endif
                             </div>
                             <div class="signature-name">N'GORAN MISS</div>

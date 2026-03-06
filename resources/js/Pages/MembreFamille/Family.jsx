@@ -15,6 +15,7 @@ import {
     CheckCircle,
     Trash2,
 } from "lucide-react";
+import ProfilePhoto from "@/Components/ProfilePhoto";
 
 // Composant Badge pour le Rôle avec style moderne
 const StatusBadge = ({ role }) => {
@@ -188,17 +189,11 @@ export default function Family({ family, members, familyStats, auth }) {
                                                 #{member.id}
                                             </td>
                                             <td className="px-6 py-4 text-left text-sm font-medium text-gray-900 flex items-center gap-3">
-                                                {member.profile_photo_url ? (
-                                                    <img
-                                                        src={member.profile_photo_url}
-                                                        alt={`${member.prenom} ${member.nom}`}
-                                                        className="w-8 h-8 rounded-full object-cover border border-gray-200"
-                                                        onError={(e) => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'flex'; }}
-                                                    />
-                                                ) : null}
-                                                <span style={{ display: !member.profile_photo_url ? 'flex' : 'none', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', backgroundColor: '#FCD34D', borderRadius: '50%', fontWeight: 'bold', fontSize: '12px', color: '#0B4E82', flexShrink: 0 }}>
-                                                    {member.prenom?.[0]?.toUpperCase()}{member.nom?.[0]?.toUpperCase()}
-                                                </span>
+                                                <ProfilePhoto 
+                                                    user={member} 
+                                                    size="sm" 
+                                                    rounded={true}
+                                                />
                                                 <span>{member.prenom} {member.nom}</span>
                                             </td>
                                             <td className="px-6 py-4 text-left text-sm">

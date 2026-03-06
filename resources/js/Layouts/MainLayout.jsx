@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, router, usePage } from "@inertiajs/react";
 import GoodbyeLoader from "../Components/GoodbyeLoader";
-import { getPhotoUrl } from "../Helpers/PhotoHelper";
+import { getAvatarUrl } from "@/Helpers/PhotoUrlHelper";
 
 // Header professionnel et minimaliste
 function AppHeader({ auth, onLogout }) {
@@ -99,16 +99,11 @@ function AppHeader({ auth, onLogout }) {
                             >
                                 {/* Avatar */}
                                 <div className="w-9 h-9 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 text-sm font-medium overflow-hidden">
-                                    {auth?.user?.profile_photo_url ? (
-                                        <img
-                                            src={auth?.user?.profile_photo_url}
-                                            alt={auth?.user?.prenom}
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                e.target.style.display = "none";
-                                            }}
-                                        />
-                                    ) : null}
+                                    <img
+                                        src={getAvatarUrl(auth?.user)}
+                                        alt={auth?.user?.prenom || 'Profil'}
+                                        className="w-full h-full object-cover"
+                                    />
                                 </div>
 
                                 {/* Infos utilisateur (desktop) */}
@@ -146,40 +141,11 @@ function AppHeader({ auth, onLogout }) {
                                     <div className="p-4 border-b border-gray-100">
                                         <div className="flex items-start gap-3">
                                             <div className="w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center text-white font-medium overflow-hidden flex-shrink-0">
-                                                {auth?.user
-                                                    ?.profile_photo_url ? (
-                                                    <img
-                                                        src={
-                                                            auth?.user
-                                                                ?.profile_photo_url
-                                                        }
-                                                        alt={auth?.user?.prenom}
-                                                        className="w-full h-full object-cover"
-                                                        onError={(e) => {
-                                                            e.target.style.display =
-                                                                "none";
-                                                            e.target.nextElementSibling.style.display =
-                                                                "flex";
-                                                        }}
-                                                    />
-                                                ) : null}
-                                                <span
-                                                    style={{
-                                                        display: !auth?.user
-                                                            ?.profile_photo_url
-                                                            ? "flex"
-                                                            : "none",
-                                                        alignItems: "center",
-                                                        justifyContent:
-                                                            "center",
-                                                        width: "100%",
-                                                        height: "100%",
-                                                    }}
-                                                >
-                                                    {auth?.user?.prenom?.[0]?.toUpperCase() ||
-                                                        auth?.user?.name?.[0]?.toUpperCase() ||
-                                                        "U"}
-                                                </span>
+                                                <img
+                                                    src={getAvatarUrl(auth?.user)}
+                                                    alt={auth?.user?.prenom || 'Profil'}
+                                                    className="w-full h-full object-cover"
+                                                />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h3 className="font-semibold text-gray-900 truncate">
