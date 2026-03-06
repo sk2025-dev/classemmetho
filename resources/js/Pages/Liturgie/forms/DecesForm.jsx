@@ -139,7 +139,7 @@ export default function DecesForm({
             if (Object.keys(nextErrors).length)
                 return setErrors((prev) => ({ ...prev, ...nextErrors }));
         }
-        setStep((s) => Math.min(2, s + 1));
+        setStep((s) => Math.min(3, s + 1));
     };
 
     const prev = () => setStep((s) => Math.max(1, s - 1));
@@ -274,8 +274,8 @@ export default function DecesForm({
                     {!success && (
                         <>
                             <div className="h-[3px] bg-gradient-to-r from-transparent via-slate-500 to-transparent" />
-                            <div className="grid grid-cols-2 bg-slate-50 border-b border-slate-200">
-                                {["Defunt(e)", "Confirmation"].map(
+                            <div className="grid grid-cols-3 bg-slate-50 border-b border-slate-200">
+                                {["Soumis", "Validation Conducteur", "Validation Pasteur"].map(
                                     (label, idx) => {
                                         const sn = idx + 1;
                                         const active = step === sn;
@@ -682,7 +682,53 @@ export default function DecesForm({
                             </section>
                         )}
 
-                        {success && (
+                        {!success && step === 3 && (
+                            </section>
+                        )}
+
+                        {!success && step === 3 && (
+                            <section className="text-center py-12">
+                                <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center">
+                                    <CheckCircle2 size={32} />
+                                </div>
+                                <h2 className="text-2xl font-semibold text-slate-800 mb-4">
+                                    Declaration transmise au conducteur
+                                </h2>
+                                <p className="text-slate-600 max-w-md mx-auto mb-6">
+                                    Votre declaration a ete soumise avec succes. Elle sera validee par le conducteur, puis par le pasteur.
+                                </p>
+                                <div className="bg-blue-50 border border-blue-200 rounded-sm p-4 mb-6 text-left max-w-md mx-auto">
+                                    <p className="text-sm font-semibold text-blue-900 mb-3">Processus de validation:</p>
+                                    <ul className="text-sm text-blue-800 space-y-2">
+                                        <li>✓ <strong>Soumis</strong> - Votre declaration</li>
+                                        <li>⏳ <strong>Validation Conducteur</strong> - En attente</li>
+                                        <li>⏳ <strong>Validation Pasteur</strong> - En attente</li>
+                                    </ul>
+                                    <p className="text-xs text-blue-700 mt-3 italic">
+                                        Des le pasteur validera, vous recevrez une notification avec le certificat PDF.
+                                    </p>
+                                </div>
+                                <p className="text-sm italic text-slate-500 mt-4">
+                                    "L'Eternel est proche de ceux qui ont le coeur brise." - Psaume 34.19
+                                </p>
+                                {successMsg && (
+                                    <p className="text-sm text-slate-700 mt-3">
+                                        {successMsg}
+                                    </p>
+                                )}
+                                <div className="mt-6">
+                                    <button
+                                        type="button"
+                                        onClick={reset}
+                                        className="btn-main"
+                                    >
+                                        Retour au tableau de bord
+                                    </button>
+                                </div>
+                            </section>
+                        )}
+
+                        {success && step === 3 && (
                             <section className="text-center py-12">
                                 <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center">
                                     <CheckCircle2 size={32} />

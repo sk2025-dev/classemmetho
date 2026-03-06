@@ -650,7 +650,7 @@ export default function Index({
                                                     date={datesSoumise}
                                                 />
                                                 <StatusStep
-                                                    label="Conducteur"
+                                                    label="Validation du conducteur"
                                                     done={
                                                         acte.statut ===
                                                             "TRANSMISE_AU_PASTEUR" ||
@@ -671,7 +671,7 @@ export default function Index({
                                                     date={refusConducteur ? formatDateTime(refusConducteur.created_at) : etapeConducteur?.date}
                                                 />
                                                 <StatusStep
-                                                    label="Pasteur"
+                                                    label="Validation du pasteur"
                                                     done={
                                                         acte.statut ===
                                                             "VALIDEE" ||
@@ -690,33 +690,6 @@ export default function Index({
                                                         "REFUSEE_PAR_PASTEUR"
                                                     }
                                                     date={refusPasteur ? formatDateTime(refusPasteur.created_at) : etapePasteur?.date}
-                                                />
-                                                <StatusStep
-                                                    label="Validé"
-                                                    done={
-                                                        acte.statut ===
-                                                            "VALIDEE" ||
-                                                        DONE.includes(
-                                                            acte.statut,
-                                                        )
-                                                    }
-                                                    active={
-                                                        acte.statut ===
-                                                        "VALIDEE"
-                                                    }
-                                                    date={etapePasteur?.date}
-                                                />
-                                                <StatusStep
-                                                    label={finalStepLabel(
-                                                        acte.type_acte,
-                                                    )}
-                                                    done={DONE.includes(
-                                                        acte.statut,
-                                                    )}
-                                                    active={DONE.includes(
-                                                        acte.statut,
-                                                    )}
-                                                    date={etapeFinal?.date}
                                                 />
                                             </div>
                                             <div className="d-actions">
