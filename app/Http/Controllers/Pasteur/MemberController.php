@@ -77,7 +77,7 @@ class MemberController extends Controller
                 'profession' => 'nullable|string|max:255',
                 'fonction_id' => 'nullable|exists:fonctions,id',
                 'relation' => 'nullable|string|max:255',
-                'photo' => 'nullable|image|mimes:jpeg,png,gif|max:5120',
+                'photo' => 'nullable',
                 // Sacrements
                 'baptise' => 'nullable|in:0,1',
                 'date_bapteme' => 'nullable|date|required_if:baptise,1',
@@ -116,6 +116,8 @@ class MemberController extends Controller
         $photoPath = null;
         if ($request->hasFile('photo') && $request->file('photo')->isValid()) {
             $photoPath = $request->file('photo')->store('profiles', 'public');
+        } elseif (is_string($request->input('photo')) && !empty($request->input('photo'))) {
+            $photoPath = $this->resolvePhotoPathFromInput($request->input('photo'));
         }
 
         // Ensure identifier is generated
@@ -227,7 +229,7 @@ class MemberController extends Controller
             'profession' => 'nullable|string|max:255',
             'fonction_id' => 'nullable|exists:fonctions,id',
             'relation' => 'nullable|string|max:255',
-            'photo' => 'nullable|image|mimes:jpeg,png,gif|max:5120',
+            'photo' => 'nullable',
             'baptise' => 'nullable|in:0,1',
             'date_bapteme' => 'nullable|date|required_if:baptise,1',
             'lieu_bapteme' => 'nullable|string|max:255|required_if:baptise,1',
@@ -242,6 +244,8 @@ class MemberController extends Controller
         // Handle photo upload
         if ($request->hasFile('photo') && $request->file('photo')->isValid()) {
             $validated['photo_path'] = $request->file('photo')->store('profiles', 'public');
+        } elseif (is_string($request->input('photo')) && !empty($request->input('photo'))) {
+            $validated['photo_path'] = $this->resolvePhotoPathFromInput($request->input('photo'));
         }
 
         // Mettre à jour les infos du membre
@@ -302,5 +306,33 @@ class MemberController extends Controller
         return redirect()
             ->route('pasteur.members.show', $id)
             ->with('success', 'Modifications sauvegardées avec succès');
+    }
+
+    private function resolvePhotoPathFromInput(?string $photo): ?string
+    {
+        if (empty($photo)) {
+            return null;
+        }
+
+        $photo = trim($photo);
+
+        if (str_starts_with($photo, '/storage/')) {
+            return ltrim(substr($photo, strlen('/storage/')), '/');
+        }
+
+        if (str_starts_with($photo, 'storage/')) {
+            return ltrim(substr($photo, strlen('storage/')), '/');
+        }
+
+        if (str_starts_with($photo, 'http://') || str_starts_with($photo, 'https://')) {
+            $parsed = parse_url($photo);
+            if (!empty($parsed['path']) && str_contains($parsed['path'], '/storage/')) {
+                $relative = substr($parsed['path'], strpos($parsed['path'], '/storage/') + strlen('/storage/'));
+                return ltrim($relative, '/');
+            }
+            return null;
+        }
+
+        return ltrim($photo, '/');
     }
 }

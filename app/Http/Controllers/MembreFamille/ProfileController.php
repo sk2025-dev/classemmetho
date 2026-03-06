@@ -46,7 +46,7 @@ class ProfileController extends Controller
                 'relation' => 'nullable|string|max:255',
                 'date_mariage' => 'nullable|date',
                 'lieu_mariage' => 'nullable|string|max:255',
-                'photo' => 'nullable|image|mimes:jpeg,png,gif|max:5120',
+                'photo' => 'nullable',
                 'baptise' => 'nullable|in:0,1',
                 'date_bapteme' => 'nullable|date|required_if:baptise,1',
                 'lieu_bapteme' => 'nullable|string|max:255|required_if:baptise,1',
@@ -84,6 +84,8 @@ class ProfileController extends Controller
         if ($request->hasFile('photo') && $request->file('photo')->isValid()) {
             $photoPath = $request->file('photo')->store('profiles', 'public');
             $validated['photo_path'] = $photoPath;
+        } elseif (is_string($request->input('photo')) && !empty($request->input('photo'))) {
+            $validated['photo_path'] = $this->resolvePhotoPathFromInput($request->input('photo'));
         }
 
         // Mettre à jour l'utilisateur (colonnes qui existent dans users)
@@ -149,5 +151,33 @@ class ProfileController extends Controller
         return redirect()
             ->route('membre_famille.family')
             ->with('success', 'Modifications sauvegardées avec succès');
+    }
+
+    private function resolvePhotoPathFromInput(?string $photo): ?string
+    {
+        if (empty($photo)) {
+            return null;
+        }
+
+        $photo = trim($photo);
+
+        if (str_starts_with($photo, '/storage/')) {
+            return ltrim(substr($photo, strlen('/storage/')), '/');
+        }
+
+        if (str_starts_with($photo, 'storage/')) {
+            return ltrim(substr($photo, strlen('storage/')), '/');
+        }
+
+        if (str_starts_with($photo, 'http://') || str_starts_with($photo, 'https://')) {
+            $parsed = parse_url($photo);
+            if (!empty($parsed['path']) && str_contains($parsed['path'], '/storage/')) {
+                $relative = substr($parsed['path'], strpos($parsed['path'], '/storage/') + strlen('/storage/'));
+                return ltrim($relative, '/');
+            }
+            return null;
+        }
+
+        return ltrim($photo, '/');
     }
 }

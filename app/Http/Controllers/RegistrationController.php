@@ -106,13 +106,23 @@ class RegistrationController extends Controller
                     $photoUrl = null;
                 }
 
+                // Si la photo a déjà été uploadée séparément (URL), on récupère le chemin
+                if (empty($photoPath) && !empty($data['responsable']['photo']) && is_string($data['responsable']['photo'])) {
+                    $photoUrl = $data['responsable']['photo'];
+                    $photoPath = $this->resolvePhotoPathFromUrl($photoUrl);
+                }
+
                 // Convertir les photos des membres en fichiers si présentes
                 if (!empty($data['membres']) && is_array($data['membres'])) {
                     foreach ($data['membres'] as $i => $membre) {
                         if (!empty($membre['photo']) && is_object($membre['photo']) && method_exists($membre['photo'], 'isValid') && $membre['photo']->isValid()) {
                             $memberPhotoData = $this->storePhotoAsFile($membre['photo']);
                             $data['membres'][$i]['photo_path'] = $memberPhotoData['path'] ?? null;
+                            $data['membres'][$i]['photo_url'] = $memberPhotoData['url'] ?? null;
                             unset($data['membres'][$i]['photo']);
+                        } elseif (!empty($membre['photo']) && is_string($membre['photo'])) {
+                            $data['membres'][$i]['photo_path'] = $this->resolvePhotoPathFromUrl($membre['photo']);
+                            $data['membres'][$i]['photo_url'] = $membre['photo'];
                         }
 
                         // Convertir les booléens des membres de strings en vrais booléens
@@ -691,6 +701,32 @@ class RegistrationController extends Controller
                 $responsableInput = $request->input('responsable', []);
                 $membresInput = $request->input('membres', []);
 
+                // Normaliser la photo du responsable (fichier uploadé ou URL déjà uploadée)
+                $photoPath = null;
+                $photoUrl = null;
+                if ($request->hasFile('responsable.photo')) {
+                    $photoData = $this->storePhotoAsFile($request->file('responsable.photo'));
+                    $photoPath = $photoData['path'] ?? null;
+                    $photoUrl = $photoData['url'] ?? null;
+                } elseif (!empty($responsableInput['photo']) && is_string($responsableInput['photo'])) {
+                    $photoUrl = $responsableInput['photo'];
+                    $photoPath = $this->resolvePhotoPathFromUrl($photoUrl);
+                }
+
+                // Normaliser les photos des membres (fichier uploadé ou URL déjà uploadée)
+                $normalizedMembers = is_array($membresInput) ? $membresInput : [];
+                foreach ($normalizedMembers as $index => $member) {
+                    if ($request->hasFile("membres.{$index}.photo")) {
+                        $memberPhotoData = $this->storePhotoAsFile($request->file("membres.{$index}.photo"));
+                        $normalizedMembers[$index]['photo_path'] = $memberPhotoData['path'] ?? null;
+                        $normalizedMembers[$index]['photo_url'] = $memberPhotoData['url'] ?? null;
+                        unset($normalizedMembers[$index]['photo']);
+                    } elseif (!empty($member['photo']) && is_string($member['photo'])) {
+                        $normalizedMembers[$index]['photo_path'] = $this->resolvePhotoPathFromUrl($member['photo']);
+                        $normalizedMembers[$index]['photo_url'] = $member['photo'];
+                    }
+                }
+
                 $familleData = [
                     'nom' => $familleInput['nom'] ?? $validated['nom'],
                     'adresse' => $familleInput['adresse'] ?? $validated['adresse'] ?? null,
@@ -727,6 +763,8 @@ class RegistrationController extends Controller
                     'marieReligieusement' => $validated['spirituel']['marieReligieusement'] === 'true',
                     'dateMariageReligieux' => $validated['spirituel']['dateMariage'] ?? null,
                     'lieuMariageReligieux' => $validated['spirituel']['lieuMariage'] ?? null,
+                    'photo_path' => $photoPath,
+                    'photo_url' => $photoUrl,
                 ];
 
                 $inscription = Inscription::create([
@@ -734,6 +772,8 @@ class RegistrationController extends Controller
                     'classe_id' => $validated['classe_id'],
                     'nom' => $validated['nom'],
                     'prenom' => $validated['prenom'],
+                    'photo_path' => $photoPath,
+                    'profile_photo_url' => $photoUrl,
                     'responsable_nom' => $responsableData['nom'] ?? $validated['nom'],
                     'responsable_prenom' => $responsableData['prenom'] ?? $validated['prenom'],
                     'responsable_email' => $responsableData['email'] ?? ($validated['email'] ?? null),
@@ -766,7 +806,7 @@ class RegistrationController extends Controller
                     'data' => [
                         'famille' => $familleData,
                         'responsable' => $responsableData,
-                        'membres' => is_array($membresInput) ? $membresInput : [],
+                        'membres' => $normalizedMembers,
                         'spirituel' => [
                             'baptise' => $validated['spirituel']['baptise'] === 'true',
                             'dateBapteme' => $validated['spirituel']['dateBapteme'] ?? null,
@@ -929,6 +969,44 @@ class RegistrationController extends Controller
             ]);
             return null;
         }
+    }
+
+    /**
+     * Résout le chemin relatif de stockage à partir d'une URL publique.
+     */
+    private function resolvePhotoPathFromUrl(string $url): ?string
+    {
+        if (!$url) {
+            return null;
+        }
+
+        // Cas déjà relatif (ex: "profiles/abc.jpg")
+        if (!str_contains($url, '://') && !str_starts_with($url, '/storage/') && !str_starts_with($url, 'storage/')) {
+            return ltrim($url, '/');
+        }
+
+        // Cas "/storage/..."
+        if (str_starts_with($url, '/storage/')) {
+            return ltrim(substr($url, strlen('/storage/')), '/');
+        }
+
+        // Cas "storage/..."
+        if (str_starts_with($url, 'storage/')) {
+            return ltrim(substr($url, strlen('storage/')), '/');
+        }
+
+        $storageUrl = asset('storage/');
+        if (str_starts_with($url, $storageUrl)) {
+            return ltrim(str_replace($storageUrl, '', $url), '/');
+        }
+
+        $parsed = parse_url($url);
+        if (isset($parsed['path']) && str_contains($parsed['path'], '/storage/')) {
+            $relative = substr($parsed['path'], strpos($parsed['path'], '/storage/') + strlen('/storage/'));
+            return ltrim($relative, '/');
+        }
+
+        return null;
     }
 
     /**
