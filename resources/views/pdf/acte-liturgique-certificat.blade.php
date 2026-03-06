@@ -6,8 +6,20 @@
     <title>Certificat {{ $acte->reference }}</title>
     <style>
         @page {
-            margin: 24px;
+            margin: 0;
             size: A4 landscape;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            width: 297mm;
+            height: 210mm;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
         }
 
         body {
@@ -16,243 +28,338 @@
             font-size: 12px;
             margin: 0;
             padding: 0;
-            background: #ffffff;
-            height: 100%;
+            background: #FFFFFF;
+            width: 297mm;
+            height: 210mm;
+            overflow: hidden;
         }
 
-        /* Certificat professionnel moderne */
+        /* Certificat professionnel prestige */
         .certificate {
-            background: #ffffff;
+            background: #FFFFFF;
             width: 100%;
             height: 100%;
             position: relative;
             text-align: center;
             padding: 0;
             margin: 0;
+            overflow: hidden;
+            page-break-inside: avoid;
+            page-break-before: avoid;
+            page-break-after: avoid;
+        }
+
+        .page {
+            width: 297mm;
+            height: 210mm;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            page-break-inside: avoid;
         }
 
         .border-frame {
-            border: 8px solid #1A365D;
-            padding: 8px;
+            border: 8px solid #0F2C59;
+            padding: 6px;
             position: relative;
             width: 100%;
             height: 100%;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+            page-break-inside: avoid;
+            background: #FFFFFF;
         }
 
         .border-inner {
-            border: 3px solid #D4AF37;
-            padding: 60px 80px;
+            border: 3px solid #C9A961;
+            padding: 16px 30px;
             position: relative;
-            background: #ffffff;
+            background: #FFFFFF;
             flex: 1;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            justify-content: flex-start;
+            overflow: hidden;
+            page-break-inside: avoid;
         }
 
-        /* Décorations d'angle */
+        .content-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            page-break-inside: avoid;
+        }
+
+        /* Décorations d'angle simplifiées */
         .corner-ornament {
             position: absolute;
-            width: 60px;
-            height: 60px;
+            width: 40px;
+            height: 40px;
+            border: 0;
         }
-        .corner-ornament.top-left {
-            top: -3px;
-            left: -3px;
-            border-top: 3px solid #D4AF37;
-            border-left: 3px solid #D4AF37;
+
+        .corner-ornament::before,
+        .corner-ornament::after {
+            content: '';
+            position: absolute;
+            background: #C9A961;
         }
-        .corner-ornament.top-right {
-            top: -3px;
-            right: -3px;
-            border-top: 3px solid #D4AF37;
-            border-right: 3px solid #D4AF37;
+
+        .corner-ornament.top-left::before {
+            top: 0;
+            left: 0;
+            width: 30px;
+            height: 3px;
         }
-        .corner-ornament.bottom-left {
-            bottom: -3px;
-            left: -3px;
-            border-bottom: 3px solid #D4AF37;
-            border-left: 3px solid #D4AF37;
+
+        .corner-ornament.top-left::after {
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 30px;
         }
-        .corner-ornament.bottom-right {
-            bottom: -3px;
-            right: -3px;
-            border-bottom: 3px solid #D4AF37;
-            border-right: 3px solid #D4AF37;
+
+        .corner-ornament.top-right::before {
+            top: 0;
+            right: 0;
+            width: 30px;
+            height: 3px;
+        }
+
+        .corner-ornament.top-right::after {
+            top: 0;
+            right: 0;
+            width: 3px;
+            height: 30px;
+        }
+
+        .corner-ornament.bottom-left::before {
+            bottom: 0;
+            left: 0;
+            width: 30px;
+            height: 3px;
+        }
+
+        .corner-ornament.bottom-left::after {
+            bottom: 0;
+            left: 0;
+            width: 3px;
+            height: 30px;
+        }
+
+        .corner-ornament.bottom-right::before {
+            bottom: 0;
+            right: 0;
+            width: 30px;
+            height: 3px;
+        }
+
+        .corner-ornament.bottom-right::after {
+            bottom: 0;
+            right: 0;
+            width: 3px;
+            height: 30px;
         }
 
         .header {
             display: table;
             width: 100%;
-            margin-bottom: 25px;
-            border-bottom: 2px solid #D4AF37;
-            padding-bottom: 18px;
+            margin-bottom: 6px;
+            position: relative;
         }
 
         .header .cell {
             display: table-cell;
-            vertical-align: top;
+            vertical-align: middle;
         }
 
         .logo-container {
-            width: 80px;
+            width: 65px;
             text-align: left;
         }
 
         .logo-img {
-            width: 80px;
+            width: 60px;
             height: auto;
             object-fit: contain;
         }
 
         .title-container {
             flex: 1;
+            text-align: center;
+            padding: 0 15px;
         }
 
         .title-container h1 {
             font-family: 'Georgia', serif;
-            font-size: 2.2rem;
-            color: #1A365D;
-            margin: 0;
+            font-size: 1.5rem;
+            color: #0F2C59;
+            margin: 0 0 3px 0;
             text-transform: uppercase;
-            letter-spacing: 4px;
-            line-height: 1.2;
-            font-weight: 700;
+            letter-spacing: 3px;
+            line-height: 1.1;
+            font-weight: 800;
+            word-break: break-word;
+        }
+
+        .church-name {
+            font-family: 'Georgia', serif;
+            font-size: 0.75rem;
+            color: #5A6C7D;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-top: 1px;
+            font-style: italic;
         }
 
         .qr-container {
-            width: 80px;
+            width: 65px;
             text-align: right;
         }
 
         .qr-img {
-            width: 90px;
-            height: 90px;
-            border: 2px solid #1A365D;
+            width: 60px;
+            height: 60px;
+            border: 2px solid #C9A961;
             border-radius: 4px;
-            padding: 4px;
+            padding: 3px;
             background: white;
+        }
+
+        .divider {
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(to right, transparent 0%, #C9A961 20%, #C9A961 80%, transparent 100%);
+            margin: 4px 0;
+            position: relative;
         }
 
         .subtitle {
             font-family: 'Georgia', serif;
-            font-size: 0.85rem;
-            color: #2C5282;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            margin-bottom: 18px;
+            font-size: 0.95rem;
+            color: #5A6C7D;
+            text-transform: none;
+            letter-spacing: 0.5px;
+            margin: 8px 0 6px 0;
             font-weight: 600;
+            font-style: italic;
         }
 
-        .recipient-name {
+        .recipient {
             font-family: 'Georgia', serif;
-            font-size: 3rem;
-            color: #1A365D;
-            margin: 15px 0 25px 0;
-            line-height: 1.2;
-            font-weight: 700;
-            font-style: italic;
+            font-size: 34px;
+            font-weight: 900;
+            text-align: center;
+            margin: 8px 0;
+            color: #0F2C59;
+            line-height: 1.1;
+            text-transform: uppercase;
+            word-break: break-word;
+            max-width: 85%;
+            letter-spacing: 2px;
+            position: relative;
+            padding-bottom: 8px;
         }
 
-        .body-text {
-            font-size: 1.05rem;
-            color: #444;
-            line-height: 1.9;
-            margin-bottom: 30px;
-            min-height: 40px;
-            font-style: italic;
-            padding: 0 25px;
+        .recipient::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50%;
+            height: 2px;
+            background: linear-gradient(to right, transparent 0%, #C9A961 30%, #C9A961 70%, transparent 100%);
         }
 
-        .footer {
+        .attestation-text {
+            font-size: 0.85rem;
+            color: #374151;
+            line-height: 1.4;
+            margin: 8px auto 6px auto;
+            font-weight: 500;
+            padding: 0 20px;
+            word-break: break-word;
+            text-align: center;
+            max-width: 90%;
+            font-style: normal;
+        }
+
+        .signature-section {
             display: table;
             width: 100%;
-            margin-top: 20px;
-            /* reduced spacing to bring date closer */
+            margin-top: auto;
+            padding-top: 10px;
+            border-top: 1px solid #E5E7EB;
         }
 
-        .signature-block {
-            text-align: right;
-            margin-top: 25px;
-            margin-bottom: 15px;
-            padding-right: 20px;
-        }
-
-        .signature-block .stamp-real-img {
-            max-width: 130px;
-            max-height: 70px;
-            opacity: 0.85;
-            position: static;
-            transform: none;
-        }
-        
-        .signature-role {
-            font-size: 0.9rem;
-            color: #1A365D;
-            font-weight: 600;
-            margin-top: 5px;
-        }
-
-        /* landscape orientation adjustables */
-        @page {
-            size: A4 landscape;
-        }
-
-        .footer .cell {
+        .signature-section .cell {
             display: table-cell;
             vertical-align: bottom;
         }
 
-        .footer-left {
-            width: 33%;
+        .signature-left {
+            width: 30%;
             text-align: left;
-            padding-bottom: 10px;
+            padding: 0 10px;
         }
 
-        .footer-center {
-            width: 33%;
+        .signature-center {
+            width: 40%;
             text-align: center;
-            border-top: 2px solid #D4AF37;
-            padding-top: 10px;
-        }
-        
-        .footer-center:before {
-            content: "ÉGLISE MÉTHODISTE JUBILÉ DE COCODY";
-            font-size: 0.75rem;
-            color: #2C5282;
-            font-weight: 600;
-            letter-spacing: 1px;
         }
 
-        .footer-right {
-            width: 33%;
+        .signature-right {
+            width: 30%;
             text-align: right;
-            padding-bottom: 10px;
+            padding: 0 10px;
         }
 
-        .date-display {
-            font-weight: 600;
-            color: #1A365D;
-            font-size: 0.9rem;
-            line-height: 1.6;
+        .signature-line {
+            width: 150px;
+            margin: 0 auto 4px auto;
+            border-bottom: 2px solid #0F2C59;
+            height: 25px;
         }
-        
-        .attestation-text {
+
+        .signature-label {
+            font-size: 0.75rem;
+            color: #6B7280;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
+        .signature-name {
             font-size: 1rem;
-            color: #2C5282;
-            line-height: 1.8;
-            margin: 20px 0 15px 0;
-            font-weight: 600;
-            padding: 0 20px;
+            color: #0F2C59;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 2px;
         }
-        
-        .recipient-name-highlight {
-            font-size: 1.2rem;
+
+        .footer-info {
+            font-size: 0.85rem;
+            color: #4B5563;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .ref-number {
+            font-size: 0.8rem;
+            color: #6B7280;
             font-weight: 700;
-            color: #1A365D;
-            font-style: italic;
+            background: #F3F4F6;
+            padding: 4px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            border: 1px solid #E5E7EB;
         }
     </style>
 </head>
@@ -278,25 +385,31 @@
 
     // Phrases d'attestation personnalisées selon le type d'acte
     $attestationPhrases = [
-        'bapteme' => 's\'est reçu le sacrement saint du baptême',
-        'mariage' => 'ont uni leurs liens par le sacrement du mariage',
-        'funerailles' => 'a été conduit vers la maison du Père',
-        'remerciement' => 'a généreusement soutenu notre communauté',
+    'bapteme' => 's\'est reçu le sacrement saint du baptême',
+    'mariage' => 'ont uni leurs liens par le sacrement du mariage',
+    'funerailles' => 'a été conduit vers la maison du Père',
+    'remerciement' => 'a généreusement soutenu notre communauté',
     ];
     $attestationPhrase = $attestationPhrases[$acte->type_acte ?? ''] ?? 'a reçu cet acte liturgique';
 
     $fullName = trim(($acte->membre->prenom ?? '') . ' ' . ($acte->membre->nom ?? '')) ?: 'Nom et Prénom';
     $dateActe = optional($acte->date_souhaitee)->format('d/m/Y') ?? '-';
     $reference = $acte->reference ?? ('ACTE-' . $acte->id);
+
+    // Alias de compatibilite si le template evolue avec les noms utilises ailleurs
+    $nomComplet = $fullName;
+    $typeActe = $typeLabel;
+    $dateEmission = $dateActe !== '-' ? $dateActe : now()->format('d/m/Y');
     @endphp
 
-    <div class="certificate">
-        <div class="border-frame">
-            <span class="corner-ornament top-left"></span>
-            <span class="corner-ornament top-right"></span>
-            <span class="corner-ornament bottom-left"></span>
-            <span class="corner-ornament bottom-right"></span>
-            <div class="border-inner">
+    <div class="page">
+        <div class="certificate">
+            <div class="border-frame">
+                <span class="corner-ornament top-left"></span>
+                <span class="corner-ornament top-right"></span>
+                <span class="corner-ornament bottom-left"></span>
+                <span class="corner-ornament bottom-right"></span>
+                <div class="border-inner">
                 <div class="header">
                     <div class="cell logo-container">
                         {{-- utiliser dataUri si fourni, sinon importer le fichier public/images/logo.png --}}
@@ -309,7 +422,8 @@
                         @endif
                     </div>
                     <div class="cell title-container">
-                        <h1>CERTIFICAT DE<br>{{ $typeLabel }}</h1>
+                        <h1>CERTIFICAT D'ACTE LITURGIQUE</h1>
+                        <div class="church-name">Église Méthodiste Jubilé de Cocody</div>
                     </div>
                     <div class="cell qr-container">
                         {{-- toujours afficher le QR qui pointe vers le certificat (data-uri) --}}
@@ -321,35 +435,33 @@
                     </div>
                 </div>
 
-                <div class="subtitle">Ce certificat est fièrement décerné à</div>
-                <div class="recipient-name">{{ $fullName }}</div>
-                
-                <div class="attestation-text">
-                    L'Église Méthodiste Jubilé de Cocody atteste que <span class="recipient-name-highlight">{{ $fullName }}</span><br>
-                    {{ $attestationPhrase }} au sein de notre communauté religieuse le {{ $dateActe }}.
-                </div>
-                
-                <div class="body-text">{{ $bodyText }}</div>
+                <div class="divider"></div>
 
-                @if(!empty($signaturePath))
-                <div class="signature-block">
-                    <img src="{{ $signaturePath }}" class="stamp-real-img" alt="Signature du pasteur">
-                    @if(!empty($signatureName))
-                    <div class="signature-role">{{ $signatureName }}</div>
-                    @endif
-                    <div class="signature-role">{{ $signatureRole }}</div>
-                </div>
-                @endif
+                <div class="content-main">
+                    <div class="subtitle">Ce certificat est décerné à</div>
+                    <div class="recipient">{{ strtoupper($nomComplet) }}</div>
 
-                <div class="footer">
-                    <div class="footer-left"></div>
-                    <div class="footer-center"></div>
-                    <div class="footer-right">
-                        <div>
-                            <div class="date-display">Fait le {{ now()->format('d/m/Y') }}</div>
-                            <div class="reference-display">Réf : {{ $reference }}</div>
-                        </div>
+                    <div class="attestation-text">
+                        L'Église Méthodiste Jubilé de Cocody atteste solennellement que la personne mentionnée ci-dessus 
+                        a reçu cet acte liturgique au sein de notre communauté paroissiale le {{ $dateEmission }}.
+                        Ce certificat est délivré pour servir et valoir ce que de droit.
                     </div>
+                </div>
+
+                <div class="signature-section">
+                    <div class="cell signature-left">
+                        <div class="ref-number">Réf : {{ $reference }}</div>
+                    </div>
+                    <div class="cell signature-center">
+                        <div class="signature-label">Le Pasteur</div>
+                        <div class="signature-line"></div>
+                        <div class="signature-name">N'GORAN MISS</div>
+                    </div>
+                    <div class="cell signature-right">
+                        <div class="footer-info">Fait à Cocody</div>
+                        <div class="footer-info">Le {{ $dateEmission }}</div>
+                    </div>
+                </div>
                 </div>
             </div>
         </div>
