@@ -7,41 +7,78 @@
     <style>
         @page {
             margin: 24px;
+            size: A4 landscape;
         }
 
         body {
-            font-family: DejaVu Sans, sans-serif;
-            color: #1f2937;
+            font-family: 'Georgia', 'Times New Roman', serif;
+            color: #1a1e2e;
             font-size: 12px;
+            background: #f8f9fa;
         }
 
-        /* structuration identique au composant React fourni */
+        /* Certificat professionnel moderne */
         .certificate {
-            background-color: #ffffff;
+            background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
             width: 100%;
             max-width: 850px;
             position: relative;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
             text-align: center;
-            padding: 5px;
+            padding: 0;
+            margin: 0 auto;
         }
 
         .border-frame {
-            border: 15px solid #0f2c5c;
-            padding: 5px;
+            border: 8px solid #1A365D;
+            padding: 8px;
+            position: relative;
         }
 
         .border-inner {
-            border: 3px solid #c5a059;
-            padding: 40px 50px;
+            border: 3px solid #D4AF37;
+            padding: 35px 45px;
+            position: relative;
+            background: #fff;
+        }
+
+        /* Décorations d'angle */
+        .corner-ornament {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+        }
+        .corner-ornament.top-left {
+            top: -3px;
+            left: -3px;
+            border-top: 3px solid #D4AF37;
+            border-left: 3px solid #D4AF37;
+        }
+        .corner-ornament.top-right {
+            top: -3px;
+            right: -3px;
+            border-top: 3px solid #D4AF37;
+            border-right: 3px solid #D4AF37;
+        }
+        .corner-ornament.bottom-left {
+            bottom: -3px;
+            left: -3px;
+            border-bottom: 3px solid #D4AF37;
+            border-left: 3px solid #D4AF37;
+        }
+        .corner-ornament.bottom-right {
+            bottom: -3px;
+            right: -3px;
+            border-bottom: 3px solid #D4AF37;
+            border-right: 3px solid #D4AF37;
         }
 
         .header {
             display: table;
             width: 100%;
-            margin-bottom: 30px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 20px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #D4AF37;
+            padding-bottom: 18px;
         }
 
         .header .cell {
@@ -65,13 +102,14 @@
         }
 
         .title-container h1 {
-            font-family: 'Cinzel', serif;
-            font-size: 2.5rem;
-            color: #0f2c5c;
+            font-family: 'Georgia', serif;
+            font-size: 2.2rem;
+            color: #1A365D;
             margin: 0;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            line-height: 1.1;
+            letter-spacing: 4px;
+            line-height: 1.2;
+            font-weight: 700;
         }
 
         .qr-container {
@@ -80,37 +118,42 @@
         }
 
         .qr-img {
-            width: 100px;
-            height: 100px;
-            border: 1px solid #ddd;
-            padding: 2px;
+            width: 90px;
+            height: 90px;
+            border: 2px solid #1A365D;
+            border-radius: 4px;
+            padding: 4px;
             background: white;
         }
 
         .subtitle {
-            font-family: 'Lato', sans-serif;
-            font-size: 0.9rem;
-            color: #c5a059;
+            font-family: 'Georgia', serif;
+            font-size: 0.85rem;
+            color: #2C5282;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 20px;
-            font-weight: 700;
+            letter-spacing: 3px;
+            margin-bottom: 18px;
+            font-weight: 600;
         }
 
         .recipient-name {
-            font-family: 'Great Vibes', cursive;
-            font-size: 3.5rem;
-            color: #0f2c5c;
-            margin: 10px 0 30px 0;
-            line-height: 1;
+            font-family: 'Georgia', serif;
+            font-size: 3rem;
+            color: #1A365D;
+            margin: 15px 0 25px 0;
+            line-height: 1.2;
+            font-weight: 700;
+            font-style: italic;
         }
 
         .body-text {
-            font-size: 1.1rem;
-            color: #555;
-            line-height: 1.8;
-            margin-bottom: 50px;
-            min-height: 60px;
+            font-size: 1.05rem;
+            color: #444;
+            line-height: 1.9;
+            margin-bottom: 35px;
+            min-height: 55px;
+            font-style: italic;
+            padding: 0 25px;
         }
 
         .footer {
@@ -122,16 +165,24 @@
 
         .signature-block {
             text-align: right;
-            margin-top: 20px;
-            margin-bottom: 20px;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            padding-right: 20px;
         }
 
         .signature-block .stamp-real-img {
-            max-width: 150px;
-            max-height: 80px;
-            opacity: 0.9;
+            max-width: 130px;
+            max-height: 70px;
+            opacity: 0.85;
             position: static;
             transform: none;
+        }
+        
+        .signature-role {
+            font-size: 0.9rem;
+            color: #1A365D;
+            font-weight: 600;
+            margin-top: 5px;
         }
 
         /* landscape orientation adjustables */
@@ -145,44 +196,44 @@
         }
 
         .footer-left {
-            width: 30%;
+            width: 33%;
             text-align: left;
             padding-bottom: 10px;
         }
 
         .footer-center {
-            width: 30%;
+            width: 33%;
             text-align: center;
+            border-top: 2px solid #D4AF37;
+            padding-top: 10px;
+        }
+        
+        .footer-center:before {
+            content: "ÉGLISE MÉTHODISTE JUBILÉ DE COCODY";
+            font-size: 0.75rem;
+            color: #2C5282;
+            font-weight: 600;
+            letter-spacing: 1px;
         }
 
         .footer-right {
-            width: 30%;
+            width: 33%;
             text-align: right;
-            height: 120px;
-            position: relative;
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-        }
-
-        .stamp-real-img {
-            width: 110px;
-            height: auto;
-            opacity: 0.85;
-            transform: rotate(-15deg);
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            z-index: 10;
+            padding-bottom: 10px;
         }
 
         .date-display {
-            font-weight: bold;
-            color: #333;
-            font-size: 1rem;
-            line-height: 1.5;
-            margin-top: -10px;
-            /* remonter la date */
+            font-weight: 600;
+            color: #1A365D;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .reference-display {
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
         }
     </style>
 </head>
@@ -213,6 +264,10 @@
 
     <div class="certificate">
         <div class="border-frame">
+            <span class="corner-ornament top-left"></span>
+            <span class="corner-ornament top-right"></span>
+            <span class="corner-ornament bottom-left"></span>
+            <span class="corner-ornament bottom-right"></span>
             <div class="border-inner">
                 <div class="header">
                     <div class="cell logo-container">
@@ -256,7 +311,10 @@
                     <div class="footer-left"></div>
                     <div class="footer-center"></div>
                     <div class="footer-right">
-                        <div class="date-display">Fait le : {{ now()->format('d/m/Y H:i') }} à Abidjan</div>
+                        <div>
+                            <div class="date-display">Fait le {{ now()->format('d/m/Y') }}</div>
+                            <div class="reference-display">Réf : {{ $reference }}</div>
+                        </div>
                     </div>
                 </div>
             </div>

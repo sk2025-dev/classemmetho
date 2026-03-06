@@ -34,9 +34,9 @@ $dateEmission = optional($acte->updated_at)->format('d/m/Y') ?? Carbon::now()->f
         }
 
         /* ── Palette ──
-           C1 = #6B46C1 (violet)
-           C2 = #1E40AF (bleu)
-           C3 = #B6C01A (lime)
+           C1 = #2C5282 (bleu professionnel)
+           C2 = #1A365D (bleu foncé)
+           C3 = #D4AF37 (or élégant)
         ─────────────── */
 
         .page {
@@ -49,17 +49,17 @@ $dateEmission = optional($acte->updated_at)->format('d/m/Y') ?? Carbon::now()->f
         .bg-arc {
             position: absolute; top: -120px; right: -120px;
             width: 340px; height: 340px; border-radius: 50%;
-            border: 55px solid #6B46C109; z-index: 0;
+            border: 55px solid #2C528209; z-index: 0;
         }
         .bg-arc-2 {
             position: absolute; top: -60px; right: -60px;
             width: 200px; height: 200px; border-radius: 50%;
-            border: 30px solid #1E40AF07; z-index: 0;
+            border: 30px solid #1A365D07; z-index: 0;
         }
         .bg-corner {
             position: absolute; bottom: 0; left: 0;
             width: 140px; height: 140px;
-            background: #B6C01A0b;
+            background: #D4AF370b;
             clip-path: polygon(0 100%, 0 0, 100% 100%);
             z-index: 0;
         }
@@ -68,14 +68,14 @@ $dateEmission = optional($acte->updated_at)->format('d/m/Y') ?? Carbon::now()->f
         .stripe {
             position: absolute; top: 0; left: 0;
             width: 7px; height: 100%;
-            background: linear-gradient(180deg, #6B46C1 0%, #1E40AF 55%, #B6C01A 100%);
+            background: linear-gradient(180deg, #2C5282 0%, #1A365D 55%, #D4AF37 100%);
             z-index: 3;
         }
 
         /* ══ FILIGRANE ══ */
         .watermark {
             position: absolute; bottom: 68px; right: 38px;
-            opacity: 0.038; z-index: 1; pointer-events: none;
+            opacity: 0.025; z-index: 1; pointer-events: none;
         }
 
         /* ══ HEADER ══ */
@@ -89,34 +89,34 @@ $dateEmission = optional($acte->updated_at)->format('d/m/Y') ?? Carbon::now()->f
 
         .logo-wrap {
             width: 64px; height: 64px; border-radius: 14px;
-            background: linear-gradient(135deg, #6B46C11a, #1E40AF1a, #B6C01A1a);
-            border: 2px solid #6B46C128;
+            background: linear-gradient(135deg, #2C52821a, #1A365D1a, #D4AF371a);
+            border: 2px solid #2C528228;
             display: flex; align-items: center; justify-content: center;
             flex-shrink: 0; overflow: hidden;
-            box-shadow: 0 4px 16px #6B46C118;
+            box-shadow: 0 4px 16px #2C528218;
         }
         .logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
         .logo-text {
             font-size: 8px; font-weight: 800;
             letter-spacing: 1.5px; text-transform: uppercase;
-            color: #6B46C1; text-align: center; line-height: 1.5;
+            color: #2C5282; text-align: center; line-height: 1.5;
         }
 
         .church-name {
             font-size: 14.5px; font-weight: 800;
             text-transform: uppercase; letter-spacing: 0.6px;
-            color: #1E40AF; line-height: 1.2; margin-bottom: 4px;
+            color: #1A365D; line-height: 1.2; margin-bottom: 4px;
         }
-        .church-name span { color: #6B46C1; }
+        .church-name span { color: #2C5282; }
         .church-contact { font-size: 9.5px; color: #9098b4; font-style: italic; }
 
         .header-right { text-align: right; flex-shrink: 0; }
         .ref-pill {
             display: inline-block;
-            background: linear-gradient(135deg, #6B46C112, #1E40AF12);
-            border: 1.5px solid #6B46C12e;
+            background: linear-gradient(135deg, #2C528212, #1A365D12);
+            border: 1.5px solid #2C52822e;
             border-radius: 7px; padding: 5px 13px;
-            font-size: 9.5px; font-weight: 700; color: #6B46C1;
+            font-size: 9.5px; font-weight: 700; color: #2C5282;
             letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 5px;
         }
         .emit-date { font-size: 10.5px; color: #9098b4; }
@@ -132,7 +132,7 @@ $dateEmission = optional($acte->updated_at)->format('d/m/Y') ?? Carbon::now()->f
         /* ══ BANDEAU TITRE ══ */
         .title-band {
             position: relative; z-index: 2;
-            background: linear-gradient(135deg, #6B46C1f0 0%, #1E40AFf5 60%, #4a6208ee 100%);
+            background: linear-gradient(135deg, #2C5282f0 0%, #1A365Df5 60%, #D4AF37ee 100%);
             padding: 22px 50px;
             display: flex; align-items: center;
             justify-content: space-between;
@@ -159,7 +159,7 @@ $dateEmission = optional($acte->updated_at)->format('d/m/Y') ?? Carbon::now()->f
         }
         .title-sup::before {
             content: ''; width: 18px; height: 1.5px;
-            background: #B6C01A; display: inline-block; opacity: 0.7;
+            background: #D4AF37; display: inline-block; opacity: 0.7;
         }
         .title-main {
             font-size: 22px; font-weight: 800; color: #fff;
@@ -189,14 +189,14 @@ $dateEmission = optional($acte->updated_at)->format('d/m/Y') ?? Carbon::now()->f
         .s-head { display: flex; align-items: center; gap: 10px; margin-bottom: 11px; }
         .s-bar {
             width: 3px; height: 14px; border-radius: 2px; flex-shrink: 0;
-            background: linear-gradient(180deg, #6B46C1 0%, #B6C01A 100%);
+            background: linear-gradient(180deg, #2C5282 0%, #D4AF37 100%);
         }
         .s-title {
             font-size: 8.5px; font-weight: 700;
             letter-spacing: 2.5px; text-transform: uppercase;
-            color: #6B46C1; white-space: nowrap;
+            color: #2C5282; white-space: nowrap;
         }
-        .s-rule { flex: 1; height: 1px; background: linear-gradient(90deg, #6B46C125, transparent); }
+        .s-rule { flex: 1; height: 1px; background: linear-gradient(90deg, #2C528225, transparent); }
 
         /* Cards */
         .cards-row {
@@ -207,12 +207,12 @@ $dateEmission = optional($acte->updated_at)->format('d/m/Y') ?? Carbon::now()->f
         .card {
             display: table-cell; width: 50%;
             background: #f9f8ff; border-radius: 12px;
-            border: 1px solid #6B46C11c; vertical-align: top;
-            overflow: hidden; box-shadow: 0 2px 10px #6B46C10d;
+            border: 1px solid #2C52821c; vertical-align: top;
+            overflow: hidden; box-shadow: 0 2px 10px #2C52820d;
         }
         .card-cap { padding: 10px 16px; display: flex; align-items: center; gap: 8px; }
-        .card.c-violet .card-cap { background: linear-gradient(135deg, #6B46C1 0%, #1E40AF 100%); }
-        .card.c-blue   .card-cap { background: linear-gradient(135deg, #1E40AF 0%, #163680 100%); }
+        .card.c-violet .card-cap { background: linear-gradient(135deg, #2C5282 0%, #1A365D 100%); }
+        .card.c-blue   .card-cap { background: linear-gradient(135deg, #1A365D 0%, #0D2545 100%); }
 
         .cap-icon {
             width: 20px; height: 20px; border-radius: 5px;
@@ -227,12 +227,12 @@ $dateEmission = optional($acte->updated_at)->format('d/m/Y') ?? Carbon::now()->f
             color: rgba(255,255,255,0.88);
         }
         .card-rows { padding: 2px 16px 4px; }
-        .field { padding: 8px 0; border-bottom: 1px solid #6B46C10f; }
+        .field { padding: 8px 0; border-bottom: 1px solid #2C52820f; }
         .field:last-child { border-bottom: none; padding-bottom: 0; }
         .f-label {
             font-size: 8px; font-weight: 700;
             letter-spacing: 1.2px; text-transform: uppercase;
-            color: #6B46C170; margin-bottom: 2px;
+            color: #2C528270; margin-bottom: 2px;
         }
         .f-val { font-size: 12.5px; font-weight: 700; color: #1a1e2e; line-height: 1.3; }
         .f-empty { font-size: 11px; font-weight: 400; color: #c0c4d8; font-style: italic; }
@@ -241,11 +241,11 @@ $dateEmission = optional($acte->updated_at)->format('d/m/Y') ?? Carbon::now()->f
         .corps-wrap { margin: 2px 0 20px; }
         .corps-box {
             position: relative; background: #f9f8ff;
-            border: 1px solid #6B46C11c;
-            border-left: 5px solid #6B46C1;
+            border: 1px solid #2C52821c;
+            border-left: 5px solid #2C5282;
             border-radius: 0 10px 10px 0;
             padding: 16px 20px;
-            box-shadow: 0 2px 8px #6B46C10a;
+            box-shadow: 0 2px 8px #2C52820a;
         }
         .corps-p {
             font-size: 12.5px; line-height: 1.95;
@@ -255,17 +255,17 @@ $dateEmission = optional($acte->updated_at)->format('d/m/Y') ?? Carbon::now()->f
         /* Signatures */
         .sig-row { display: table; width: 100%; border-collapse: collapse; margin-top: 13px; }
         .sig-col { display: table-cell; width: 50%; text-align: center; padding: 0 16px; }
-        .sig-col:first-child { padding-left: 0; border-right: 1px dashed #6B46C128; }
+        .sig-col:first-child { padding-left: 0; border-right: 1px dashed #2C528228; }
         .sig-col:last-child  { padding-right: 0; }
         .sig-lbl {
             display: block; font-size: 8px; font-weight: 700;
             letter-spacing: 2px; text-transform: uppercase;
-            color: #6B46C170; margin-bottom: 28px;
+            color: #2C528270; margin-bottom: 28px;
         }
         .sig-area { height: 36px; }
         .sig-line {
             height: 1px; margin-bottom: 7px;
-            background: linear-gradient(90deg, transparent 0%, #6B46C145 50%, transparent 100%);
+            background: linear-gradient(90deg, transparent 0%, #2C528245 50%, transparent 100%);
         }
         .sig-name { font-size: 9.5px; font-weight: 600; color: #6b7280; }
 
@@ -276,8 +276,8 @@ $dateEmission = optional($acte->updated_at)->format('d/m/Y') ?? Carbon::now()->f
             background: linear-gradient(90deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%);
         }
         .footer-body {
-            background: linear-gradient(135deg, #6B46C10a 0%, #1E40AF08 50%, #B6C01A08 100%);
-            border-top: 1px solid #6B46C114;
+            background: linear-gradient(135deg, #2C52820a 0%, #1A365D08 50%, #D4AF3708 100%);
+            border-top: 1px solid #2C528214;
             padding: 12px 40px 12px 50px;
             display: flex; align-items: center;
             justify-content: space-between; gap: 16px;
@@ -285,17 +285,17 @@ $dateEmission = optional($acte->updated_at)->format('d/m/Y') ?? Carbon::now()->f
         .footer-txt { font-size: 8.5px; color: #9098b4; line-height: 1.75; }
         .footer-stamp {
             display: flex; align-items: center; gap: 7px;
-            background: linear-gradient(135deg, #6B46C115, #B6C01A15);
-            border: 1.5px solid #6B46C130;
+            background: linear-gradient(135deg, #2C528215, #D4AF3715);
+            border: 1.5px solid #2C528230;
             border-radius: 25px; padding: 5px 15px; flex-shrink: 0;
         }
         .stamp-dot {
             width: 7px; height: 7px; border-radius: 50%;
-            background: linear-gradient(135deg, #6B46C1, #B6C01A);
+            background: linear-gradient(135deg, #2C5282, #D4AF37);
         }
         .stamp-txt {
             font-size: 8.5px; font-weight: 800;
-            letter-spacing: 2px; text-transform: uppercase; color: #6B46C1;
+            letter-spacing: 2px; text-transform: uppercase; color: #2C5282;
         }
 
         @media print { body { background: #fff; } .page { margin: 0; } }
@@ -312,16 +312,16 @@ $dateEmission = optional($acte->updated_at)->format('d/m/Y') ?? Carbon::now()->f
     {{-- Filigrane --}}
     <div class="watermark">
         <svg width="150" height="150" viewBox="0 0 100 100" fill="none">
-            <circle cx="50" cy="50" r="47" stroke="#6B46C1" stroke-width="1.5"/>
-            <circle cx="50" cy="50" r="37" stroke="#1E40AF" stroke-width="1"/>
-            <circle cx="50" cy="50" r="27" stroke="#6B46C1" stroke-width="0.7"/>
-            <circle cx="50" cy="50" r="17" stroke="#B6C01A" stroke-width="0.6"/>
-            <line x1="50" y1="3" x2="50" y2="97" stroke="#6B46C1" stroke-width="0.5"/>
-            <line x1="3" y1="50" x2="97" y2="50" stroke="#6B46C1" stroke-width="0.5"/>
-            <line x1="17" y1="17" x2="83" y2="83" stroke="#1E40AF" stroke-width="0.4"/>
-            <line x1="83" y1="17" x2="17" y2="83" stroke="#1E40AF" stroke-width="0.4"/>
-            <text x="50" y="47" text-anchor="middle" font-size="7" fill="#6B46C1" font-family="Arial" font-weight="bold">EMJC</text>
-            <text x="50" y="57" text-anchor="middle" font-size="5" fill="#1E40AF" font-family="Arial">COCODY</text>
+            <circle cx="50" cy="50" r="47" stroke="#2C5282" stroke-width="1.5"/>
+            <circle cx="50" cy="50" r="37" stroke="#1A365D" stroke-width="1"/>
+            <circle cx="50" cy="50" r="27" stroke="#2C5282" stroke-width="0.7"/>
+            <circle cx="50" cy="50" r="17" stroke="#D4AF37" stroke-width="0.6"/>
+            <line x1="50" y1="3" x2="50" y2="97" stroke="#2C5282" stroke-width="0.5"/>
+            <line x1="3" y1="50" x2="97" y2="50" stroke="#2C5282" stroke-width="0.5"/>
+            <line x1="17" y1="17" x2="83" y2="83" stroke="#1A365D" stroke-width="0.4"/>
+            <line x1="83" y1="17" x2="17" y2="83" stroke="#1A365D" stroke-width="0.4"/>
+            <text x="50" y="47" text-anchor="middle" font-size="7" fill="#2C5282" font-family="Arial" font-weight="bold">EMJC</text>
+            <text x="50" y="57" text-anchor="middle" font-size="5" fill="#1A365D" font-family="Arial">COCODY</text>
         </svg>
     </div>
 
