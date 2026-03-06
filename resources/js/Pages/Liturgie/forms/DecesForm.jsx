@@ -472,8 +472,6 @@ export default function DecesForm({
                                             <Err>{errors["details.date_deces"]}</Err>
                                         )}
                                     </Field>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <Field label="Lieu du deces">
                                         <input
                                             value={form.details.lieu_deces}
