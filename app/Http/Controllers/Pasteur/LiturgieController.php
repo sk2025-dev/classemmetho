@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\ActeLiturgiqueService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -23,12 +24,12 @@ class LiturgieController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        $actes = ActeLiturgique::with(['membre', 'classe', 'historiques.acteur'])
+        $actes = ActeLiturgique::with(['membre', 'classe', 'family', 'historiques.acteur'])
             ->where('statut', 'TRANSMISE_AU_PASTEUR')
             ->latest()
             ->paginate(10, ['*'], 'actes_page');
 
-        $historique = ActeLiturgiqueHistorique::with(['acte.membre', 'acte.classe'])
+        $historique = ActeLiturgiqueHistorique::with(['acte.membre', 'acte.classe', 'acte.family'])
             ->where('acteur_id', $user->id)
             ->whereIn('statut_nouveau', ['VALIDEE', 'REFUSEE_PAR_PASTEUR', 'CELEBRE', 'TERMINE'])
             ->latest()
@@ -41,6 +42,8 @@ class LiturgieController extends Controller
                     'membre' => $acte?->membre,
                     'classe' => $acte?->classe,
                     'classe_id' => $acte?->classe_id,
+                    'family' => $acte?->family,
+                    'family_id' => $acte?->family_id,
                     'reference' => $acte?->reference,
                     'statut' => $item->statut_nouveau,
                     'note_pastorale' => $item->commentaire,
@@ -49,24 +52,71 @@ class LiturgieController extends Controller
             })
             ->values();
 
+        $columns = ['id', 'nom', 'prenom', 'classe_id', 'sexe'];
+        $optionalColumns = ['date_naissance', 'lieu_naissance', 'pere', 'mere'];
+        foreach ($optionalColumns as $col) {
+            if (Schema::hasColumn('users', $col)) {
+                $columns[] = $col;
+            }
+        }
+
         $familyMembers = User::query()
             ->where('family_id', $user->family_id)
-            ->select('id', 'nom', 'prenom', 'classe_id')
+            ->with('classe')
+            ->select($columns)
             ->orderBy('prenom')
             ->orderBy('nom')
-            ->get();
+            ->get()
+            ->map(function ($member) {
+                if (!empty($member->date_naissance)) {
+                    $member->date_naissance = $member->date_naissance->format('Y-m-d');
+                }
+                return $member;
+            });
 
         // Load announcements from all families
-        $annonces = ActeLiturgique::with(['createur', 'family', 'membre'])
+        $annonces = ActeLiturgique::with(['createur', 'family', 'classe', 'membre'])
             ->annonces()
+            ->where('statut', 'TRANSMISE_AU_PASTEUR')
             ->orderBy('created_at', 'desc')
             ->get();
+
+        // Load announcement history
+        $annoncesHistorique = ActeLiturgiqueHistorique::with(['acte.createur', 'acte.family', 'acte.classe', 'acte.membre'])
+            ->whereHas('acte', function ($q) {
+                $q->annonces();
+            })
+            ->where('acteur_id', $user->id)
+            ->whereIn('statut_nouveau', ['VALIDEE', 'REFUSEE_PAR_PASTEUR', 'PUBLIEE', 'ARCHIVEE'])
+            ->latest()
+            ->get()
+            ->map(function ($item) {
+                $acte = $item->acte;
+                return [
+                    'id' => $acte?->id,
+                    'type_acte' => $acte?->type_acte,
+                    'type_annonce' => $acte?->type_annonce,
+                    'message' => $acte?->details?->contenu ?? $acte?->message,
+                    'createur' => $acte?->createur,
+                    'famille' => $acte?->family,
+                    'family_id' => $acte?->family_id,
+                    'classe' => $acte?->classe,
+                    'classe_id' => $acte?->classe_id,
+                    'membre' => $acte?->membre,
+                    'reference' => $acte?->reference,
+                    'statut' => $item->statut_nouveau,
+                    'commentaire' => $item->commentaire,
+                    'validated_at' => optional($item->created_at)->toISOString(),
+                ];
+            })
+            ->values();
 
         return Inertia::render('Pasteur/Liturgie/Index', [
             'actes' => $actes,
             'historique' => $historique,
             'familyMembers' => $familyMembers,
             'annonces' => $annonces,
+            'annoncesHistorique' => $annoncesHistorique,
         ]);
     }
 

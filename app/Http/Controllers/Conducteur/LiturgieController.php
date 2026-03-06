@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\ActeLiturgiqueService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Inertia\Inertia;
@@ -48,12 +49,27 @@ class LiturgieController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        $columns = ['id', 'nom', 'prenom', 'classe_id', 'sexe'];
+        $optionalColumns = ['date_naissance', 'lieu_naissance', 'pere', 'mere'];
+        foreach ($optionalColumns as $col) {
+            if (Schema::hasColumn('users', $col)) {
+                $columns[] = $col;
+            }
+        }
+
         $familyMembers = User::query()
             ->whereIn('classe_id', $classIds)
-            ->select('id', 'nom', 'prenom', 'classe_id')
+            ->with('classe')
+            ->select($columns)
             ->orderBy('prenom')
             ->orderBy('nom')
-            ->get();
+            ->get()
+            ->map(function ($member) {
+                if (!empty($member->date_naissance)) {
+                    $member->date_naissance = $member->date_naissance->format('Y-m-d');
+                }
+                return $member;
+            });
 
         return Inertia::render('Conducteur/Liturgie/Index', [
             'actes' => $actes,
@@ -181,14 +197,19 @@ class LiturgieController extends Controller
             abort(403, 'La fiche PDF est disponible après validation du pasteur.');
         }
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.fiche-demande', ['acte' => $acte])
+        $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.fiche-demande', [
+            'acte' => $acte,
+            'logoDataUri' => $logoDataUri,
+        ])
             ->setPaper('a4', 'portrait');
 
         $prefix = $acte->type_acte === 'priere' ? 'Priere' : 'Acte';
         return $pdf->download("{$prefix}_{$acte->reference}.pdf");
     }
 
-    private function buildQrDataUri(string $payload): ?string
+    private function generateQrCode(string $payload): ?string
     {
         if (!class_exists(\Endroid\QrCode\QrCode::class) || !class_exists(\Endroid\QrCode\Writer\PngWriter::class)) {
             return null;
@@ -202,6 +223,11 @@ class LiturgieController extends Controller
         } catch (\Throwable $e) {
             return null;
         }
+    }
+
+    private function buildQrDataUri(string $payload): ?string
+    {
+        return $this->generateQrCode($payload);
     }
 
     private function buildImageDataUri(string $path): ?string

@@ -138,6 +138,8 @@ export default function Index({
     );
     const [annFilter, setAnnFilter] = useState("tous");
     const [quickFilter, setQuickFilter] = useState("all");
+    const [selectedFamily, setSelectedFamily] = useState("all");
+    const [selectedClasse, setSelectedClasse] = useState("all");
     const [searchTerm, setSearchTerm] = useState("");
     const [annPage, setAnnPage] = useState(1);
     const annPerPage = 6;
@@ -181,17 +183,41 @@ export default function Index({
         setAnnoncesHistorique(rawAnnoncesHistorique || []);
     }, [annHistKey]);
 
-    const historyTotalPages = Math.max(
-        1,
-        Math.ceil(historiqueList.length / historyPerPage),
-    );
-    const pagedHistorique = historiqueList.slice(
-        (historyPage - 1) * historyPerPage,
-        historyPage * historyPerPage,
-    );
-    useEffect(() => {
-        if (historyPage > historyTotalPages) setHistoryPage(historyTotalPages);
-    }, [historyPage, historyTotalPages]);
+    /* ── FAMILIES ET CLASSES POUR FILTRES ── */
+    const availableFamilies = useMemo(() => {
+        const familySet = new Set();
+        [...localActes, ...historiqueList, ...annonces, ...annoncesHistorique].forEach((item) => {
+            if (item.family?.nom || item.family?.id) {
+                familySet.add(
+                    JSON.stringify({
+                        id: item.family?.id,
+                        nom: item.family?.nom,
+                    }),
+                );
+            }
+        });
+        return Array.from(familySet)
+            .map((f) => JSON.parse(f))
+            .filter(f => f.id && f.nom)
+            .sort((a, b) => a.nom.localeCompare(b.nom));
+    }, [localActes, historiqueList, annonces, annoncesHistorique]);
+
+    const availableClasses = useMemo(() => {
+        const classeSet = new Set();
+        [...localActes, ...historiqueList, ...annonces, ...annoncesHistorique].forEach((item) => {
+            if (item.classe?.id && item.classe?.nom) {
+                classeSet.add(
+                    JSON.stringify({
+                        id: item.classe.id,
+                        nom: item.classe.nom,
+                    }),
+                );
+            }
+        });
+        return Array.from(classeSet)
+            .map((c) => JSON.parse(c))
+            .sort((a, b) => a.nom.localeCompare(b.nom));
+    }, [localActes, historiqueList, annonces, annoncesHistorique]);
 
     /* ── FILTRES COMMUNS (ACTES + ANNONCES) ── */
     const VALID_STATUSES = ["VALIDEE", "PUBLIEE", "ARCHIVEE", "CELEBRE", "TERMINE"];
@@ -211,6 +237,18 @@ export default function Index({
             );
         }
 
+        if (selectedFamily && selectedFamily !== "all") {
+            result = result.filter((a) =>
+                String(a.family?.id) === selectedFamily
+            );
+        }
+
+        if (selectedClasse && selectedClasse !== "all") {
+            result = result.filter((a) =>
+                String(a.classe?.id) === selectedClasse
+            );
+        }
+
         if (searchNeedle) {
             result = result.filter((a) =>
                 [
@@ -227,9 +265,50 @@ export default function Index({
         }
 
         return result;
-    }, [localActes, quickFilter, searchNeedle]);
-    
-    const annFiltered = useMemo(() => {
+    }, [localActes, quickFilter, selectedFamily, selectedClasse, searchNeedle]);
+
+    const filteredHistorique = useMemo(() => {
+        let result = [...historiqueList];
+
+        if (quickFilter && quickFilter !== "all") {
+            result = result.filter((a) =>
+                String(a.type_acte || "")
+                    .toLowerCase()
+                    .includes(quickFilter.toLowerCase()),
+            );
+        }
+
+        if (selectedFamily && selectedFamily !== "all") {
+            result = result.filter((a) =>
+                String(a.family_id || a.family?.id) === selectedFamily
+            );
+        }
+
+        if (selectedClasse && selectedClasse !== "all") {
+            result = result.filter((a) =>
+                String(a.classe_id || a.classe?.id) === selectedClasse
+            );
+        }
+
+        if (searchNeedle) {
+            result = result.filter((a) =>
+                [
+                    a.type_acte,
+                    a.reference,
+                    a.statut,
+                    a.membre?.prenom,
+                    a.membre?.nom,
+                    a.classe?.nom,
+                    a.family?.nom,
+                ].some((field) =>
+                    String(field || "").toLowerCase().includes(searchNeedle),
+                ),
+            );
+        }
+
+        return result;
+    }, [historiqueList, quickFilter, selectedFamily, selectedClasse, searchNeedle]);
+        const annFiltered = useMemo(() => {
         let result = [...annonces];
         
         // Afficher uniquement les annonces en attente de validation du pasteur
@@ -246,6 +325,18 @@ export default function Index({
                         .toLowerCase()
                         .includes(quickFilter.toLowerCase()),
                 ),
+            );
+        }
+
+        if (selectedFamily && selectedFamily !== "all") {
+            result = result.filter((a) =>
+                String(a.family?.id) === selectedFamily
+            );
+        }
+
+        if (selectedClasse && selectedClasse !== "all") {
+            result = result.filter((a) =>
+                String(a.classe?.id) === selectedClasse
             );
         }
         
@@ -269,7 +360,7 @@ export default function Index({
         }
         
         return result;
-    }, [annonces, quickFilter, searchNeedle]);
+    }, [annonces, quickFilter, selectedFamily, selectedClasse, searchNeedle]);
     
     const annHistFiltered = useMemo(() => {
         let result = [...annoncesHistorique];
@@ -304,6 +395,18 @@ export default function Index({
                 ),
             );
         }
+
+        if (selectedFamily && selectedFamily !== "all") {
+            result = result.filter((a) =>
+                String(a.family?.id) === selectedFamily
+            );
+        }
+
+        if (selectedClasse && selectedClasse !== "all") {
+            result = result.filter((a) =>
+                String(a.classe?.id) === selectedClasse
+            );
+        }
         
         // Filter by search term
         if (searchNeedle) {
@@ -325,7 +428,20 @@ export default function Index({
         }
         
         return result;
-    }, [annoncesHistorique, annFilter, quickFilter, searchNeedle]);
+    }, [annoncesHistorique, annFilter, quickFilter, selectedFamily, selectedClasse, searchNeedle]);
+
+    const historyTotalPages = Math.max(
+        1,
+        Math.ceil(filteredHistorique.length / historyPerPage),
+    );
+    const pagedHistorique = filteredHistorique.slice(
+        (historyPage - 1) * historyPerPage,
+        historyPage * historyPerPage,
+    );
+    useEffect(() => {
+        if (historyPage > historyTotalPages) setHistoryPage(historyTotalPages);
+    }, [historyPage, historyTotalPages]);
+
     const annTotalPages = Math.max(
         1,
         Math.ceil(annFiltered.length / annPerPage),
@@ -1376,6 +1492,32 @@ export default function Index({
                                     <option value="felicitations">🎉 Félicitations</option>
                                     <option value="generale">📢 Générale</option>
                                 </optgroup>
+                            </select>
+                            <select
+                                className="quick-dropdown"
+                                value={selectedFamily}
+                                onChange={(e) => setSelectedFamily(e.target.value)}
+                                title="Filtrer par famille"
+                            >
+                                <option value="all">👨‍👩‍👧‍👦 Toutes les familles</option>
+                                {availableFamilies.map((family) => (
+                                    <option key={family.id} value={family.id}>
+                                        👨‍👩‍👧‍👦 {family.nom}
+                                    </option>
+                                ))}
+                            </select>
+                            <select
+                                className="quick-dropdown"
+                                value={selectedClasse}
+                                onChange={(e) => setSelectedClasse(e.target.value)}
+                                title="Filtrer par classe"
+                            >
+                                <option value="all">🎓 Toutes les classes</option>
+                                {availableClasses.map((classe) => (
+                                    <option key={classe.id} value={classe.id}>
+                                        🎓 {classe.nom}
+                                    </option>
+                                ))}
                             </select>
                             <input
                                 type="search"

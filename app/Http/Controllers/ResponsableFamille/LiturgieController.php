@@ -241,7 +241,12 @@ class LiturgieController extends Controller
             abort(403, 'La fiche PDF est disponible après validation du pasteur.');
         }
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.fiche-demande', ['acte' => $acte])
+        $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.fiche-demande', [
+            'acte' => $acte,
+            'logoDataUri' => $logoDataUri,
+        ])
             ->setPaper('a4', 'portrait');
 
         $prefix = $acte->type_acte === 'priere' ? 'Priere' : 'Acte';
@@ -281,7 +286,7 @@ class LiturgieController extends Controller
 
     private function loadFamilyActesData(User $user): array
     {
-        $columns = ['id', 'nom', 'prenom', 'classe_id'];
+        $columns = ['id', 'nom', 'prenom', 'classe_id', 'sexe'];
         $optionalColumns = ['date_naissance', 'lieu_naissance', 'pere', 'mere'];
         foreach ($optionalColumns as $col) {
             if (Schema::hasColumn('users', $col)) {
@@ -290,6 +295,7 @@ class LiturgieController extends Controller
         }
 
         $familyMembers = User::where('family_id', $user->family_id)
+            ->with('classe')
             ->select($columns)
             ->orderBy('nom')
             ->orderBy('prenom')

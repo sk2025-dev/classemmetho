@@ -264,10 +264,28 @@ class AnnonceController extends Controller
             abort(403, 'La fiche PDF est disponible uniquement après validation du pasteur.');
         }
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.fiche-demande', ['acte' => $acte])
-            ->setPaper('a4', 'portrait');
+        $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.fiche-demande', [
+            'acte' => $acte,
+            'logoDataUri' => $logoDataUri,
+        ])->setPaper('a4', 'portrait');
 
         $prefix = $acte->type_acte === 'priere' ? 'Priere' : 'Annonce';
         return $pdf->download("{$prefix}_{$acte->reference}.pdf");
+    }
+
+    private function buildImageDataUri(string $path): ?string
+    {
+        if (!file_exists($path)) {
+            return null;
+        }
+
+        $type = pathinfo($path, PATHINFO_EXTENSION);
+        $data = file_get_contents($path);
+        if ($data === false) {
+            return null;
+        }
+
+        return 'data:image/' . $type . ';base64,' . base64_encode($data);
     }
 }
