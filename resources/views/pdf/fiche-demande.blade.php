@@ -291,17 +291,27 @@ $empty = fn($v, $label = 'Non renseigné') =>
         {{-- Zone signatures --}}
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr>
-            <td width="48%" style="text-align:center;padding:10px 14px 0 0;border-right:1px dashed #6B46C135;">
-              <div style="font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#6B46C180;margin-bottom:28px;">
+            <td width="48%" style="text-align:center;padding:10px 14px 0 0;border-right:1px dashed #6B46C135;vertical-align:top;">
+              <div style="font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#6B46C180;margin-bottom:8px;">
                 Signature du demandeur
+              </div>
+              <div style="min-height:40px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;">
+                @if(!empty($signatureDemandeurDataUri))
+                  <img src="{{ $signatureDemandeurDataUri }}" style="max-width:140px;max-height:45px;object-fit:contain;" alt="Signature Demandeur">
+                @endif
               </div>
               <div style="height:1px;background:#6B46C150;margin-bottom:7px;"></div>
               <div style="font-size:9.5px;font-weight:600;color:#6b7280;">{{ $nomComplet }}</div>
             </td>
             <td width="4%">&nbsp;</td>
-            <td width="48%" style="text-align:center;padding:10px 0 0 14px;">
-              <div style="font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#6B46C180;margin-bottom:28px;">
+            <td width="48%" style="text-align:center;padding:10px 0 0 14px;vertical-align:top;">
+              <div style="font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#6B46C180;margin-bottom:8px;">
                 Visa &amp; Cachet du Pasteur
+              </div>
+              <div style="min-height:40px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;">
+                @if(!empty($signaturePasteurDataUri))
+                  <img src="{{ $signaturePasteurDataUri }}" style="max-width:140px;max-height:45px;object-fit:contain;" alt="Signature Pasteur">
+                @endif
               </div>
               <div style="height:1px;background:#6B46C150;margin-bottom:7px;"></div>
               <div style="font-size:9.5px;font-weight:600;color:#6b7280;">Pasteur responsable</div>

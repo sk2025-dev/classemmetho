@@ -324,6 +324,17 @@
             margin: 0 auto 4px auto;
             border-bottom: 2px solid #0F2C59;
             height: 25px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .signature-img {
+            max-width: 140px;
+            max-height: 35px;
+            object-fit: contain;
+            margin-bottom: -5px;
         }
 
         .signature-label {
@@ -454,7 +465,11 @@
                         </div>
                         <div class="cell signature-center">
                             <div class="signature-label">Le Pasteur</div>
-                            <div class="signature-line"></div>
+                            <div class="signature-line">
+                                @if(!empty($signaturePasteurDataUri))
+                                    <img src="{{ $signaturePasteurDataUri }}" class="signature-img" alt="Signature Pasteur">
+                                @endif
+                            </div>
                             <div class="signature-name">N'GORAN MISS</div>
                         </div>
                         <div class="cell signature-right">
