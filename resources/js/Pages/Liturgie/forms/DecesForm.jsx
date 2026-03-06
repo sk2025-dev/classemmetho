@@ -683,10 +683,6 @@ export default function DecesForm({
                         )}
 
                         {!success && step === 3 && (
-                            </section>
-                        )}
-
-                        {!success && step === 3 && (
                             <section className="text-center py-12">
                                 <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center">
                                     <CheckCircle2 size={32} />
