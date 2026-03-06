@@ -39,7 +39,7 @@ $empty = fn($v, $label = 'Non renseigné') =>
             -webkit-print-color-adjust: exact;
         }
 
-        .page { width: 210mm; min-height: 297mm; background: #fff; }
+        .page { width: 210mm; height: auto; background: #fff; }
 
         .f-lbl {
             display: block;
@@ -54,7 +54,7 @@ $empty = fn($v, $label = 'Non renseigné') =>
 <body>
 <div class="page">
 
-<table width="100%" cellpadding="0" cellspacing="0" style="min-height:297mm;">
+<table width="100%" cellpadding="0" cellspacing="0" style="height:auto;">
 <tr>
 
   {{-- ══ BANDE LATÉRALE (3 segments de couleur) ══ --}}
