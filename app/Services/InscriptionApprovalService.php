@@ -95,9 +95,24 @@ class InscriptionApprovalService
      */
     private function createFamilyWithMembers(Inscription $inscription, array $data): void
     {
+        Log::info('🔍 createFamilyWithMembers started', [
+            'inscription_id' => $inscription->id,
+            'data_keys' => array_keys($data),
+            'data_famille' => isset($data['famille']) ? 'EXISTS' : 'MISSING',
+            'data_responsable' => isset($data['responsable']) ? 'EXISTS' : 'MISSING',
+            'data_membres' => isset($data['membres']) ? 'EXISTS (' . count($data['membres']) . ' items)' : 'MISSING',
+        ]);
+
         $familleData = $data['famille'] ?? [];
         $responsableData = $data['responsable'] ?? [];
         $membresData = $data['membres'] ?? [];
+
+        Log::info('📋 Extracted data', [
+            'membres_count' => count($membresData),
+            'first_membre_keys' => array_keys($membresData[0] ?? []),
+            'first_membre_photo_path' => $membresData[0]['photo_path'] ?? 'MISSING',
+        ]);
+
         $responsableNom = $inscription->responsable_nom ?? ($responsableData['nom'] ?? null);
         $responsablePrenom = $inscription->responsable_prenom ?? ($responsableData['prenom'] ?? null);
         $responsableEmail = $this->resolveEmail(
@@ -154,7 +169,14 @@ class InscriptionApprovalService
 
         // ✅ Créer les membres de la famille
         if (!empty($membresData) && is_array($membresData)) {
-            foreach ($membresData as $membreData) {
+            foreach ($membresData as $index => $membreData) {
+                Log::info('👤 Creating family member', [
+                    'index' => $index,
+                    'name' => $membreData['prenom'] . ' ' . $membreData['nom'],
+                    'photo_path_in_data' => $membreData['photo_path'] ?? 'MISSING',
+                    'photo_url_in_data' => $membreData['photo_url'] ?? 'MISSING',
+                ]);
+
                 $member = User::create([
                     'nom' => $membreData['nom'] ?? null,
                     'prenom' => $membreData['prenom'] ?? null,
@@ -181,6 +203,12 @@ class InscriptionApprovalService
                     'must_change_password' => true,
                 ]);
 
+                Log::info('✅ Member created', [
+                    'member_id' => $member->id,
+                    'name' => $member->prenom . ' ' . $member->nom,
+                    'photo_path_saved' => $member->photo_path ?? 'NULL',
+                ]);
+
                 // Créer les sacrements du membre
                 $this->createUserSacrementsFromMember($member->id, $membreData);
             }
@@ -196,6 +224,12 @@ class InscriptionApprovalService
      */
     private function createConductorWithFamily(Inscription $inscription, array $data): void
     {
+        Log::info('🔍 createConductorWithFamily started', [
+            'inscription_id' => $inscription->id,
+            'data_keys' => array_keys($data),
+            'data_membres' => isset($data['membres']) ? 'EXISTS (' . count($data['membres']) . ' items)' : 'MISSING',
+        ]);
+
         $familleData = $data['famille'] ?? [];
         $responsableData = $data['responsable'] ?? [];
         $membresData = $data['membres'] ?? [];
@@ -256,7 +290,13 @@ class InscriptionApprovalService
 
         // ✅ Créer les membres de la famille du conducteur
         if (!empty($membresData) && is_array($membresData)) {
-            foreach ($membresData as $membreData) {
+            foreach ($membresData as $index => $membreData) {
+                Log::info('👤 Creating member for conductor', [
+                    'index' => $index,
+                    'name' => ($membreData['prenom'] ?? '') . ' ' . ($membreData['nom'] ?? ''),
+                    'photo_path_in_data' => $membreData['photo_path'] ?? 'MISSING',
+                ]);
+
                 $member = User::create([
                     'nom' => $membreData['nom'] ?? null,
                     'prenom' => $membreData['prenom'] ?? null,
@@ -281,6 +321,12 @@ class InscriptionApprovalService
                     'classe_id' => $classeId,
                     'ville_id' => $family->ville_id,
                     'must_change_password' => true,
+                ]);
+
+                Log::info('✅ Member for conductor created', [
+                    'member_id' => $member->id,
+                    'name' => ($member->prenom ?? '') . ' ' . ($member->nom ?? ''),
+                    'photo_path_saved' => $member->photo_path ?? 'NULL',
                 ]);
 
                 // Créer les sacrements du membre
