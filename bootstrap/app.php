@@ -7,6 +7,7 @@ use App\Http\Middleware\ApiUtf8Encoding;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\ShareAnnouncements;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,27 +17,28 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->validateCsrfTokens(except: [
-            'conducteur/inscriptions/*/approve',
-            'conducteur/inscriptions/*/reject',
-            'conducteur/dashboard/inscriptions/*/approve',
-            'conducteur/dashboard/inscriptions/*/reject',
-        ]);
+    $middleware->validateCsrfTokens(except: [
+        'conducteur/inscriptions/*/approve',
+        'conducteur/inscriptions/*/reject',
+        'conducteur/dashboard/inscriptions/*/approve',
+        'conducteur/dashboard/inscriptions/*/reject',
+    ]);
 
-        $middleware->web(prepend: [
-            EnsureUtf8Encoding::class,
-        ], append: [
-            HandleInertiaRequests::class,
-        ]);
+    $middleware->web(prepend: [
+        EnsureUtf8Encoding::class,
+    ], append: [
+        HandleInertiaRequests::class,
+        ShareAnnouncements::class, // <-- Ajouté ici
+    ]);
 
-        $middleware->api(prepend: [
-            ApiUtf8Encoding::class,
-        ]);
+    $middleware->api(prepend: [
+        ApiUtf8Encoding::class,
+    ]);
 
-        $middleware->alias([
-            'role' => CheckRole::class,
-        ]);
-    })
+    $middleware->alias([
+        'role' => CheckRole::class,
+    ]);
+})
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();

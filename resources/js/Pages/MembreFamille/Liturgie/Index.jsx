@@ -241,7 +241,7 @@ export default function Index({
                 {/* ── BARRE ACTIONS ── */}
                 <div className="rf-actions">
                     <Link
-                        href="/responsable-famille/dashboard"
+                        href="/membre-famille/dashboard"
                         className="btn-ghost"
                     >
                         <ArrowLeft size={16} /> Retour
@@ -428,10 +428,10 @@ export default function Index({
                                         </div>
                                     </div>
                                     <Link
-                                        href="/responsable-famille/liturgie/nouvelle"
+                                        href="/membre-famille/liturgie/nouvelle"
                                         className="ph-link"
                                     >
-                                        + Nouvelle
+                                        + Nouvelle demande
                                     </Link>
                                 </div>
                                 {localActes.length === 0 && (
@@ -627,7 +627,7 @@ export default function Index({
                                                         className="btn-pdf"
                                                         onClick={() =>
                                                             window.open(
-                                                                `/responsable-famille/liturgie/${acte.id}/certificat`,
+                                                                `/membreFamille/liturgie/${acte.id}/certificat`,
                                                                 "_blank",
                                                             )
                                                         }
@@ -839,7 +839,7 @@ export default function Index({
                                     ))}
                                 </div>
                                 <Link
-                                    href="/responsable-famille/liturgie/nouvelle"
+                                    href="/Admin/liturgie/nouvelle"
                                     className="btn-cta"
                                 >
                                     + Nouvelle demande d'acte

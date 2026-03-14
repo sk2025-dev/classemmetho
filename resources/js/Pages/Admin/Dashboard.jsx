@@ -134,7 +134,7 @@ export default function Dashboard({ role, pendingInscriptions, auth }) {
             title: "Actes Liturgiques",
             desc: "Mariage, Baptême, etc.",
             icon: "liturgique",
-            href: "/admin/liturgie",
+            href: "/admin/actesLiturgique",
             color: "text-purple-600",
             bg: "bg-purple-100",
         },
@@ -185,7 +185,7 @@ export default function Dashboard({ role, pendingInscriptions, auth }) {
         router.post("/logout");
     };
 
-    // Messages pour le ticker
+    // Messages pour le ticker (plus utilisé mais gardé au cas où)
     const flashMessages = [
         { id: 1, text: "🛠️ Système de gestion paroissiale opérationnel" },
         { id: 2, text: "📊 Statistiques générales disponibles dans le tableau de bord" },
@@ -194,7 +194,6 @@ export default function Dashboard({ role, pendingInscriptions, auth }) {
         { id: 5, text: "⚙️ Configuration du système accessible dans Administration" },
     ];
 
-    // Utilise uniquement le layout MainLayout qui fournit déjà le header
     return (
         <div
             className="min-h-screen admin-page px-4 sm:px-6 lg:px-8"
@@ -206,8 +205,6 @@ export default function Dashboard({ role, pendingInscriptions, auth }) {
                 overflowX: "hidden",
             }}
         >
-            {/* Barre d'infos Flash */}
-            <VerticalTicker messages={flashMessages} interval={4000} label="Info Admin" />
             {/* MAIN CONTENT */}
             <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
                 <div className="mb-10">

@@ -56,7 +56,6 @@ const STYLES = {
     photoExtraLarge: "w-32 h-32 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden border-3 border-blue-300 flex items-center justify-center shadow-lg",
 };
 
-
 const FormStepper = ({ currentStep, totalSteps, labels, onStepClick }) => {
     const icons = [Home, User, Users, CheckCircle];
     return (
@@ -201,8 +200,6 @@ const MultiSelectDropdown = ({ items, selected, onChange, placeholder = "Sélect
     );
 };
 
-
-
 // --- Main Component ---
 export default function RegisterFamille({
     labels = ["Pasteur", "Responsable", "Membres", "Vérification"],
@@ -319,7 +316,8 @@ export default function RegisterFamille({
     const [hasMembersToAdd, setHasMembersToAdd] = usePersistentState('registerPasteur_hasMembersToAdd', null);
     const [churchRoles, setChurchRoles] = useState([]);
     const [selectedRolesResponsable, setSelectedRolesResponsable] = usePersistentState('registerPasteur_selectedRolesResponsable', []);
-    const [selectedMembresRoles, setSelectedMembresRoles] = usePersistentState('registerPasteur_selectedMembresRoles', new Set());
+    // Remplacer Set par un tableau pour éviter les problèmes de sérialisation
+    const [selectedMembresRoles, setSelectedMembresRoles] = usePersistentState('registerPasteur_selectedMembresRoles', []);
     const [selectedCity, setSelectedCity] = usePersistentState('registerPasteur_selectedCity', null);
 
     // Refs
@@ -342,14 +340,11 @@ export default function RegisterFamille({
 
     // 🔧 Fonction utilitaire pour récupérer les erreurs (locale + serveur)
     const getFieldError = (fieldName) => {
-        // Vérifier les erreurs locales d'abord
         if (errors[fieldName]) {
             return errors[fieldName];
         }
-        // Puis les erreurs du serveur
         if (serverErrors[fieldName]) {
             const serverError = serverErrors[fieldName];
-            // Si c'est un tableau, prendre le premier message
             return Array.isArray(serverError) ? serverError[0] : serverError;
         }
         return null;
@@ -359,7 +354,6 @@ export default function RegisterFamille({
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Charger les classes depuis la base de données
                 const classesRes = await fetch('/api/classes');
                 if (classesRes.ok) {
                     const classesData = await classesRes.json();
@@ -369,7 +363,6 @@ export default function RegisterFamille({
                     setClassesDatabase([]);
                 }
 
-                // Charger les villes depuis la base de données
                 const villesRes = await fetch('/api/villes');
                 if (villesRes.ok) {
                     const villesData = await villesRes.json();
@@ -379,11 +372,9 @@ export default function RegisterFamille({
                     setVillesDatabase([]);
                 }
 
-                // Charger les fonctions d'église
                 const rolesRes = await fetch('/api/fonctions');
                 if (rolesRes.ok) {
                     const rolesData = await rolesRes.json();
-                    // L'API retourne { success: true, fonctions: [...], count: ... }
                     const fonctionsArray = rolesData.fonctions || rolesData.data || (Array.isArray(rolesData) ? rolesData : []);
                     setChurchRoles(Array.isArray(fonctionsArray) ? fonctionsArray : []);
                 } else {
@@ -435,7 +426,6 @@ export default function RegisterFamille({
     const isValidPhoneFormat = (phone) => {
         if (!phone) return false;
         const cleaned = phone.replace(/\D/g, "");
-        // UNIQUEMENT 10 chiffres exactement
         return cleaned.length === 10;
     };
 
@@ -445,17 +435,44 @@ export default function RegisterFamille({
      * Enlève tous les caractères non-numériques
      */
     const formatPhoneNumber = (text) => {
-        // Garder UNIQUEMENT les chiffres
         const cleaned = text.replace(/\D/g, "");
-
-        // UNIQUEMENT 10 chiffres maximum
         return cleaned.substring(0, 10);
+    };
+
+    // --- Fonctions de nettoyage UTF-8 ---
+    const sanitizeText = (str) => {
+        if (typeof str !== 'string') return str;
+        // Supprimer les caractères de contrôle (sauf \n, \r, \t)
+        let cleaned = str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+        // Supprimer les surrogates isolés (invalides en UTF-8)
+        cleaned = cleaned.replace(/([\uD800-\uDBFF](?![\uDC00-\uDFFF]))|((?<![\uD800-\uDBFF])[\uDC00-\uDFFF])/g, '');
+        return cleaned;
+    };
+
+    const sanitizeObject = (obj) => {
+        if (!obj || typeof obj !== 'object') return obj;
+        const newObj = Array.isArray(obj) ? [] : {};
+        for (const [key, value] of Object.entries(obj)) {
+            if (value instanceof File) {
+                newObj[key] = value;
+            } else if (typeof value === 'string') {
+                const cleaned = sanitizeText(value);
+                if (cleaned !== value) {
+                    console.warn(`🔧 Champ "${key}" a été nettoyé (caractères non UTF-8 supprimés)`, { original: value, cleaned });
+                }
+                newObj[key] = cleaned;
+            } else if (value && typeof value === 'object') {
+                newObj[key] = sanitizeObject(value);
+            } else {
+                newObj[key] = value;
+            }
+        }
+        return newObj;
     };
 
     const ajouterMembre = () => {
         const newErrors = {};
 
-        // Champs obligatoires pour les membres
         if (!membreTemp.nom) newErrors["membre.nom"] = "Nom requis";
         if (!membreTemp.prenom) newErrors["membre.prenom"] = "Prénom requis";
         if (!membreTemp.dateNaissance) newErrors["membre.dateNaissance"] = "Date de naissance requise";
@@ -464,22 +481,18 @@ export default function RegisterFamille({
         if (!membreTemp.relation) newErrors["membre.relation"] = "Lien de parenté requis";
         if (!membreTemp.statutMarital) newErrors["membre.statutMarital"] = "Statut marital requis";
 
-        // Validations conditionnelles si les champs sont présents
         if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["membre.email"] = "Adresse email invalide";
         if (membreTemp.dateNaissance && new Date(membreTemp.dateNaissance) > new Date())
             newErrors["membre.dateNaissance"] = "La date ne doit pas être dans le futur";
 
-        // Si fourni, valider le format téléphone
         if (membreTemp.telephone && !isValidPhoneFormat(membreTemp.telephone)) {
             newErrors["membre.telephone"] = "Doit contenir exactement 10 chiffres";
         }
 
-        // Valider format des champs requis
         if (membreTemp.genre && !['M', 'F'].includes(membreTemp.genre)) newErrors["membre.genre"] = "Genre invalide";
         if (membreTemp.statutMarital && !['celibataire', 'marie', 'divorce', 'veuf', 'dot'].includes(membreTemp.statutMarital)) newErrors["membre.statutMarital"] = "Statut marital invalide";
         if (membreTemp.profession && membreTemp.profession.trim().length < 2) newErrors["membre.profession"] = "Profession trop courte";
 
-        // Vérifier conditions statut marital
         if (membreTemp.statutMarital === "marie") {
             if (!membreTemp.dateMariage) newErrors["membre.dateMariage"] = "Date requise";
             if (!membreTemp.lieuMariage) newErrors["membre.lieuMariage"] = "Lieu requis";
@@ -497,7 +510,6 @@ export default function RegisterFamille({
             if (!membreTemp.lieuDote) newErrors["membre.lieuDote"] = "Lieu requis";
         }
 
-        // Validation des champs religieux si cochés
         if (membreTemp.baptise) {
             if (!membreTemp.dateBapteme) newErrors["membre.dateBapteme"] = "Date de baptême requise";
             if (!membreTemp.lieuBapteme) newErrors["membre.lieuBapteme"] = "Lieu de baptême requis";
@@ -516,10 +528,8 @@ export default function RegisterFamille({
             return;
         }
 
-        // Ajouter le membre à la liste
         setMembres([...membres, { ...membreTemp }]);
 
-        // Afficher toast avec bouton Modifier
         const memberToEdit = { ...membreTemp };
         showSuccess(
             "✅ Membre ajouté avec succès !",
@@ -533,7 +543,6 @@ export default function RegisterFamille({
             }
         );
 
-        // Reset après 1.5s
         setTimeout(() => {
             setMembreTemp({
                 nom: "",
@@ -641,7 +650,6 @@ export default function RegisterFamille({
             if (!responsable.statutMarital)
                 newErrors["responsable.statutMarital"] = "Requis";
 
-            // Validation des champs religieux si cochés
             if (responsable.baptise) {
                 if (!responsable.dateBapteme) newErrors["responsable.dateBapteme"] = "Date de baptême requise";
                 if (!responsable.lieuBapteme) newErrors["responsable.lieuBapteme"] = "Lieu de baptême requis";
@@ -656,12 +664,10 @@ export default function RegisterFamille({
             }
         }
         if (s === 3) {
-            // Si l'utilisateur a choisi d'ajouter des membres, les valider
             if (hasMembersToAdd === true) {
                 if (membres.length === 0) {
                     newErrors["membres"] = "Veuillez ajouter au moins un membre de la famille";
                 } else {
-                    // Valider que chaque membre a les champs requis
                     membres.forEach((m, idx) => {
                         if (!m.dateNaissance) {
                             newErrors[`membres[${idx}].dateNaissance`] = "Date de naissance requise";
@@ -673,7 +679,6 @@ export default function RegisterFamille({
                     });
                 }
             }
-            // Si l'utilisateur a dit "Non", pas besoin de valider les membres
         }
 
         setErrors(newErrors);
@@ -690,54 +695,27 @@ export default function RegisterFamille({
     const handleSubmit = async (e) => {
         if (e) e.preventDefault();
 
-        // Validation complète avant soumission
         const validationErrors = {};
 
-        // Valider le responsable
         if (!responsable.nom) validationErrors["responsable.nom"] = "Nom du responsable requis";
         if (!responsable.prenom) validationErrors["responsable.prenom"] = "Prénom du responsable requis";
         if (!responsable.email || !/^\S+@\S+\.\S+$/.test(responsable.email)) validationErrors["responsable.email"] = "Email valide requis";
         if (!responsable.dateNaissance) validationErrors["responsable.dateNaissance"] = "Date de naissance requise";
 
-        // Valider les membres s'ils sont requis
         if (hasMembersToAdd === true) {
             if (membres.length === 0) {
                 validationErrors["membres"] = "Veuillez ajouter au moins un membre";
             } else {
                 let memberErrors = [];
                 membres.forEach((m, idx) => {
-                    let memberHasErrors = false;
-                    if (!m.nom) {
-                        memberErrors.push(`Membre ${idx + 1}: Nom requis`);
-                        memberHasErrors = true;
-                    }
-                    if (!m.prenom) {
-                        memberErrors.push(`Membre ${idx + 1}: Prénom requis`);
-                        memberHasErrors = true;
-                    }
-                    if (!m.dateNaissance) {
-                        memberErrors.push(`Membre ${idx + 1}: Date de naissance requise`);
-                        memberHasErrors = true;
-                    } else if (new Date(m.dateNaissance) > new Date()) {
-                        memberErrors.push(`Membre ${idx + 1}: La date ne doit pas être dans le futur`);
-                        memberHasErrors = true;
-                    }
-                    if (!m.relation) {
-                        memberErrors.push(`Membre ${idx + 1}: Relation requise`);
-                        memberHasErrors = true;
-                    }
-                    if (!m.genre) {
-                        memberErrors.push(`Membre ${idx + 1}: Genre requis`);
-                        memberHasErrors = true;
-                    }
-                    if (!m.statutMarital) {
-                        memberErrors.push(`Membre ${idx + 1}: Statut marital requis`);
-                        memberHasErrors = true;
-                    }
-                    if (!m.profession) {
-                        memberErrors.push(`Membre ${idx + 1}: Profession requise`);
-                        memberHasErrors = true;
-                    }
+                    if (!m.nom) memberErrors.push(`Membre ${idx + 1}: Nom requis`);
+                    if (!m.prenom) memberErrors.push(`Membre ${idx + 1}: Prénom requis`);
+                    if (!m.dateNaissance) memberErrors.push(`Membre ${idx + 1}: Date de naissance requise`);
+                    else if (new Date(m.dateNaissance) > new Date()) memberErrors.push(`Membre ${idx + 1}: La date ne doit pas être dans le futur`);
+                    if (!m.relation) memberErrors.push(`Membre ${idx + 1}: Relation requise`);
+                    if (!m.genre) memberErrors.push(`Membre ${idx + 1}: Genre requis`);
+                    if (!m.statutMarital) memberErrors.push(`Membre ${idx + 1}: Statut marital requis`);
+                    if (!m.profession) memberErrors.push(`Membre ${idx + 1}: Profession requise`);
                 });
                 if (memberErrors.length > 0) {
                     validationErrors["membres_detailed"] = memberErrors.join("\n");
@@ -745,7 +723,6 @@ export default function RegisterFamille({
             }
         }
 
-        // Afficher les erreurs s'il y en a
         if (Object.keys(validationErrors).length > 0) {
             let errorMessage = "❌ Veuillez corriger les erreurs suivantes:\n\n";
             Object.values(validationErrors).forEach(err => {
@@ -762,7 +739,6 @@ export default function RegisterFamille({
 
         setErrors({});
 
-        // Valider toutes les étapes
         for (let s = 1; s <= totalSteps; s++) {
             if (!validateStep(s)) {
                 setStep(s);
@@ -777,73 +753,81 @@ export default function RegisterFamille({
 
         setLoading(true);
 
+        // --- Nettoyage anti UTF-8 malformed ---
+        const sanitizedFamille = sanitizeObject(famille);
+        const sanitizedResponsable = sanitizeObject(responsable);
+        const sanitizedMembres = membres.map(m => sanitizeObject(m));
+
+        // --- LOG DES CODES DE CARACTÈRES (pour détecter les caractères invisibles) ---
+        const logCharCodes = (obj, path = '') => {
+            Object.entries(obj).forEach(([key, value]) => {
+                if (typeof value === 'string') {
+                    const codes = [...value].map(c => c.charCodeAt(0));
+                    console.log(`${path}${key}: "${value}"`, 'charCodes:', codes);
+                } else if (value && typeof value === 'object') {
+                    logCharCodes(value, `${path}${key}.`);
+                }
+            });
+        };
+        console.log('=== CODES CARACTÈRES AVANT ENVOI ===');
+        logCharCodes(sanitizedFamille, 'famille.');
+        logCharCodes(sanitizedResponsable, 'responsable.');
+        sanitizedMembres.forEach((m, i) => logCharCodes(m, `membres[${i}].`));
+
         const formData = new FormData();
 
-        // --- 1. Famille (avec nettoyage téléphone) ---
-        Object.entries(famille).forEach(([k, v]) => {
-            // On n'envoie pas les ID vides
-            if (
-                (k === "classe_id" || k === "ville") &&
-                (!v || v === "" || v === null)
-            )
+        // --- 1. Famille ---
+        Object.entries(sanitizedFamille).forEach(([k, v]) => {
+            if ((k === "classe_id" || k === "ville") && (!v || v === "" || v === null))
                 return;
-
-            // Ne pas envoyer les valeurs null/undefined/vides
             if (v === null || v === undefined || v === "") {
                 return;
             }
-
             let valueToSend = v;
-
-            // CORRECTION : On enlève le préfixe "225" si présent pour le téléphone
             if ((k === "telephone" || k === "telephone2") && valueToSend) {
                 valueToSend = valueToSend.toString().replace(/^225/, "");
             }
-
-            // Convertir les booléens en 1/0 pour FormData
             if (typeof valueToSend === 'boolean') {
                 valueToSend = valueToSend ? '1' : '0';
             }
-
             formData.append(`famille[${k}]`, valueToSend);
         });
 
-        // --- 2. Responsable (avec nettoyage téléphone) ---
-        Object.entries(responsable).forEach(([k, v]) => {
+        // --- 2. Responsable ---
+        Object.entries(sanitizedResponsable).forEach(([k, v]) => {
             if (k === "photoPreview") {
                 return;
             }
-
             if (k === "photo") {
-                // Ne pas envoyer les photos vides, mais vérifier que c'est un File
                 if (v instanceof File) {
-                    formData.append(`responsable[photo]`, v);
+                    // Nettoyer le nom du fichier (supprimer accents et caractères spéciaux)
+                    const safeName = v.name
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .replace(/[^a-zA-Z0-9.-]/g, '_');
+                    const safeFile = new File([v], safeName, { type: v.type });
+                    formData.append(`responsable[photo]`, safeFile);
+                } else {
+                    console.warn('Champ photo du responsable ignoré (non valide) :', v);
                 }
             } else {
                 let valueToSend = v ?? "";
-
-                // CORRECTION : On enlève le préfixe "225" pour le téléphone du responsable
                 if (k === "tel" && valueToSend) {
                     valueToSend = valueToSend.toString().replace(/^225/, "");
                 }
-
-                // Convertir les booléens en 1/0 pour FormData
                 if (typeof valueToSend === 'boolean') {
                     valueToSend = valueToSend ? '1' : '0';
                 }
-
                 formData.append(`responsable[${k}]`, valueToSend);
             }
         });
 
-        // --- 3. Membres - Valider et envoyer ---
-        if (membres.length > 0) {
-            console.log('Membres avant envoi (brut):', JSON.stringify(membres, null, 2));
+        // --- 3. Membres ---
+        if (sanitizedMembres.length > 0) {
+            console.log('Membres avant envoi (brut):', JSON.stringify(sanitizedMembres, null, 2));
 
-            // Valider les données des membres AVANT envoi
             const membreValidationErrors = {};
-            membres.forEach((m, i) => {
-                // Chequer que les champs requis ne sont pas vides ou null
+            sanitizedMembres.forEach((m, i) => {
                 if (!m.nom || m.nom.toString().trim() === "") {
                     membreValidationErrors[`membres[${i}].nom`] = "Nom vide";
                 }
@@ -877,31 +861,31 @@ export default function RegisterFamille({
                 return;
             }
 
-            membres.forEach((m, i) => {
+            sanitizedMembres.forEach((m, i) => {
                 Object.entries(m).forEach(([k, v]) => {
-                    // Ne pas envoyer les champs vides, surtout pas les photos vides
                     if (v === null || v === undefined || v === "") {
                         return;
                     }
-
                     if (k === "photo") {
-                        // Vérifier que c'est vraiment un File
                         if (v instanceof File) {
-                            formData.append(`membres[${i}][photo]`, v);
+                            // Nettoyer le nom du fichier
+                            const safeName = v.name
+                                .normalize('NFD')
+                                .replace(/[\u0300-\u036f]/g, '')
+                                .replace(/[^a-zA-Z0-9.-]/g, '_');
+                            const safeFile = new File([v], safeName, { type: v.type });
+                            formData.append(`membres[${i}][photo]`, safeFile);
+                        } else {
+                            console.warn(`Photo du membre ${i} ignorée (non valide) :`, v);
                         }
                     } else if (k !== "photoPreview") {
-                        // Nettoyer le téléphone si présent
                         let valueToSend = v;
                         if (k === "telephone" && valueToSend) {
                             valueToSend = valueToSend.toString().replace(/^225/, "");
                         }
-
-                        // Convertir les booléens en 1/0 pour FormData
                         if (typeof valueToSend === 'boolean') {
                             valueToSend = valueToSend ? '1' : '0';
                         }
-
-                        // Envoyer la valeur trimée si string, sinon la valeur
                         if (typeof valueToSend === "string") {
                             valueToSend = valueToSend.trim();
                         }
@@ -914,33 +898,22 @@ export default function RegisterFamille({
         formData.append("type", "pasteur");
         formData.append("consentement", consentement ? "1" : "0");
 
-        // 🔐 Récupérer et ajouter le token CSRF au FormData
         let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-
-        // Fallback si la meta n'existe pas - chercher dans window.axios
         if (!csrfToken && window.axios?.defaults?.headers?.common?.['X-CSRF-TOKEN']) {
             csrfToken = window.axios.defaults.headers.common['X-CSRF-TOKEN'];
         }
-
-        // ✅ Ajouter le token CSRF au FormData
         if (csrfToken) {
             formData.append('_token', csrfToken);
         }
 
         try {
-            // ✅ Ne pas définir Content-Type - axios le fera automatiquement
             const headers = {};
-
-            // Ajouter le token CSRF au header aussi (double sécurité)
             if (csrfToken) {
                 headers['X-CSRF-TOKEN'] = csrfToken;
             }
 
-            const res = await axios.post("/admin/inscriptions/pasteur", formData, {
-                headers: headers,
-            });
+            const res = await axios.post("/admin/inscriptions/pasteur", formData, { headers });
 
-            // Succès
             const message = res.data?.message || "Inscription soumise avec succès !";
             showSuccess(message);
 
@@ -1025,9 +998,8 @@ export default function RegisterFamille({
             setVillesSearchTerm("");
             setAdresseInputValue("");
             setSelectedRolesResponsable([]);
-            setSelectedMembresRoles(new Set());
+            setSelectedMembresRoles([]);
 
-            // Effacer les données sauvegardées après soumission réussie
             clearFormPersistedData('registerFamille_');
             localStorage.removeItem('registerWelcomeState');
         } catch (err) {
@@ -1039,9 +1011,6 @@ export default function RegisterFamille({
                 allErrorData: err?.response?.data ? JSON.stringify(err.response.data, null, 2) : 'N/A',
             });
 
-            /**
-             * Fonction pour traduire les messages d'erreur en français
-             */
             const translateErrorMessage = (msg) => {
                 const translations = {
                     'field is required': 'ce champ est obligatoire',
@@ -1058,7 +1027,6 @@ export default function RegisterFamille({
                     'The.*field has already been taken': 'est déjà utilisé dans le système',
                     'already registered': 'est déjà enregistré',
                 };
-
                 let translated = msg;
                 for (const [key, value] of Object.entries(translations)) {
                     const regex = new RegExp(key, 'gi');
@@ -1067,9 +1035,6 @@ export default function RegisterFamille({
                 return translated;
             };
 
-            /**
-             * Fonction pour traduire les noms de champs en français
-             */
             const translateFieldName = (field) => {
                 const fieldTranslations = {
                     'nom': 'Nom',
@@ -1109,13 +1074,10 @@ export default function RegisterFamille({
                     'classe': 'Classe',
                     'consentement': 'Consentement',
                 };
-
                 return fieldTranslations[field] || field;
             };
 
             const responseData = err?.response?.data || {};
-
-            // Récupérer TOUTES les sources d'erreurs possibles
             const apiErrors = responseData.errors || {};
             const apiMessage = responseData.message;
             const apiDetails = responseData.details;
@@ -1125,19 +1087,13 @@ export default function RegisterFamille({
             let errorCount = 0;
             let hasErrors = false;
 
-            // 1. Afficher les erreurs structurées (errors object)
             if (Object.keys(apiErrors).length > 0) {
                 hasErrors = true;
                 console.error('Erreurs structurées:', apiErrors);
 
-                const errorsByType = {
-                    responsable: [],
-                    famille: [],
-                    membres: []
-                };
+                const errorsByType = { responsable: [], famille: [], membres: [] };
 
                 Object.entries(apiErrors).forEach(([field, messages]) => {
-                    // Catégoriser par type
                     if (field.startsWith('responsable.')) {
                         errorsByType.responsable.push({ field, messages });
                     } else if (field.startsWith('famille.')) {
@@ -1147,7 +1103,6 @@ export default function RegisterFamille({
                     }
                 });
 
-                // Afficher les erreurs par section
                 if (errorsByType.famille.length > 0) {
                     errorDisplayMessage += "\n👨‍👩‍👧‍👦 INFORMATIONS DE LA FAMILLE:\n";
                     errorsByType.famille.forEach(({ field, messages }) => {
@@ -1198,7 +1153,6 @@ export default function RegisterFamille({
                     });
                 }
 
-                // Focus automatique sur le premier champ en erreur
                 const firstErrorField = Object.keys(apiErrors)[0];
                 if (firstErrorField && fieldRefs[firstErrorField] && fieldRefs[firstErrorField].current) {
                     fieldRefs[firstErrorField].current.focus();
@@ -1206,28 +1160,24 @@ export default function RegisterFamille({
                 }
             }
 
-            // 2. Afficher les détails si présents (cas Backend Laravel)
             if (apiDetails) {
                 hasErrors = true;
                 console.error('Détails d\'erreur:', apiDetails);
                 errorDisplayMessage += `\n❌ ${translateErrorMessage(apiDetails)}\n`;
             }
 
-            // 3. Afficher le message d'erreur général
             if (apiMessage && !hasErrors) {
                 hasErrors = true;
                 console.error('Message d\'erreur:', apiMessage);
                 errorDisplayMessage += `\n⚠️ ${translateErrorMessage(apiMessage)}\n`;
             }
 
-            // 4. Afficher l'erreur générale (error field)
             if (apiError && !hasErrors) {
                 hasErrors = true;
                 console.error('Erreur générale:', apiError);
                 errorDisplayMessage += `\n❌ ${translateErrorMessage(apiError)}\n`;
             }
 
-            // 5. Si rien d'autre, afficher le message d'erreur standard
             if (!hasErrors) {
                 errorDisplayMessage = "❌ Une erreur est survenue lors de la soumission.\n\nVeuillez vérifier vos informations et réessayer.";
                 if (err?.message && err.message !== 'Network Error') {
@@ -1235,7 +1185,6 @@ export default function RegisterFamille({
                 }
             }
 
-            // Ajouter un résumé au début
             if (errorCount > 0) {
                 errorDisplayMessage = `❌ ${errorCount} erreur(s) détectée(s)\n${errorDisplayMessage}`;
             }
@@ -1244,13 +1193,12 @@ export default function RegisterFamille({
             showError(errorDisplayMessage);
             setServerErrors(apiErrors);
 
-            // Essayer de revenir à une étape pertinente selon l'erreur
             if (errorDisplayMessage.includes('Membre')) {
-                setStep(3); // Aller à l'étape des membres
+                setStep(3);
             } else if (errorDisplayMessage.includes('Pasteur') || errorDisplayMessage.includes('responsable')) {
-                setStep(2); // Aller à l'étape du pasteur
+                setStep(2);
             } else if (errorDisplayMessage.includes('Famille') || errorDisplayMessage.includes('famille')) {
-                setStep(1); // Aller à l'étape de la famille
+                setStep(1);
             }
         } finally {
             setLoading(false);
@@ -1264,14 +1212,12 @@ export default function RegisterFamille({
         v.nom.toLowerCase().includes(villesSearchTerm.toLowerCase()),
     );
 
-    // Helper pour aller à l'étape suivante
     const goToNextStep = () => {
         if (validateStep(step)) {
             setStep(step + 1);
         }
     };
 
-    // Helper pour aller à l'étape précédente
     const goToPrevStep = () => {
         setStep(step - 1);
     };
@@ -1426,7 +1372,7 @@ export default function RegisterFamille({
             case 2:
                 return (
                     <div className="space-y-6 animate-fadeIn">
-                        {/* Photo Upload avec background complet - LARGEUR COMPLÈTE */}
+                        {/* Photo Upload */}
                         <div className="w-full p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-md">
                             <div className="flex flex-col items-center gap-3">
                                 <h3 className="text-sm font-bold text-gray-800">Photo de profil</h3>
@@ -1762,7 +1708,7 @@ export default function RegisterFamille({
                             </div>
                         )}
 
-                        {/* Champs Religieux - Section Complète */}
+                        {/* Champs Religieux */}
                         <div className="border-t pt-6 mt-6">
                             <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
                                 <Heart className="w-5 h-5 text-blue-600" />
@@ -1919,12 +1865,10 @@ export default function RegisterFamille({
                                 )}
                             </div>
                         </div>
-
                     </div>
                 );
 
             case 3:
-                // Étape conditionnelle: question "Ajouter des membres?"
                 if (hasMembersToAdd === null || hasMembersToAdd === false) {
                     return (
                         <div className="space-y-6 animate-fadeIn">
@@ -1938,7 +1882,6 @@ export default function RegisterFamille({
                                 <p className="text-gray-600">
                                     Vous pouvez ajouter des enfants, conjoints, parents ou autres membres de la famille.
                                 </p>
-
                                 <div className="flex gap-4 justify-center pt-4">
                                     <button
                                         type="button"
@@ -1960,7 +1903,6 @@ export default function RegisterFamille({
                     );
                 }
 
-                // Si l'utilisateur a choisi d'ajouter des membres, afficher le formulaire
                 if (hasMembersToAdd === true) {
                     return (
                         <div className="space-y-6 animate-fadeIn">
@@ -1974,799 +1916,707 @@ export default function RegisterFamille({
                                 </div>
                             )}
 
-                            {/* Form to add new member */}
+                            {/* Formulaire d'ajout de membre */}
                             <div className="p-6 bg-white rounded-xl border border-gray-200 shadow-sm space-y-6" data-member-form>
-                            {/* Photo Upload avec background complet - LARGEUR COMPLÈTE */}
-                            <div className="w-full p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-md">
-                                <div className="flex flex-col items-center gap-3">
-                                    <h3 className="text-sm font-bold text-gray-800">Photo du membre</h3>
-                                    <div className="relative">
-                                        <div className="w-20 h-20 rounded-full bg-white overflow-hidden border-3 border-blue-400 shadow-lg ring-3 ring-blue-100">
-                                            {membreTemp.photoPreview ? (
-                                                <img
-                                                    src={membreTemp.photoPreview}
-                                                    alt="profil"
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                                                    <Users className="w-10 h-10 text-gray-400" />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={(e) => handlePhotoChange(e, "membre")}
-                                        className="file:py-1 file:px-3 file:rounded file:bg-blue-600 file:text-white file:cursor-pointer file:font-semibold file:border-0 file:hover:bg-blue-700 file:transition-colors file:text-xs"
-                                    />
-                                    <p className="text-xs text-gray-600 text-center">
-                                        JPG, PNG (max 5MB)
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Identité: Nom, Prénom, Genre */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField label="Nom" icon={User} required>
-                                    <input
-                                        className={`${STYLES.input} uppercase`}
-                                        value={membreTemp.nom}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                nom: e.target.value,
-                                            })
-                                        }
-                                        placeholder="Nom de famille"
-                                    />
-                                    {errors["membre.nom"] && (
-                                        <p className="text-red-500 text-xs mt-1">
-                                            {errors["membre.nom"]}
-                                        </p>
-                                    )}
-                                </FormField>
-                                <FormField label="Prénom" icon={User} required>
-                                    <input
-                                        className={`${STYLES.input} capitalize`}
-                                        value={membreTemp.prenom}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                prenom: e.target.value,
-                                            })
-                                        }
-                                        placeholder="Prénom"
-                                    />
-                                    {errors["membre.prenom"] && (
-                                        <p className="text-red-500 text-xs mt-1">
-                                            {errors["membre.prenom"]}
-                                        </p>
-                                    )}
-                                </FormField>
-                            </div>
-
-                            {/* Genre et Date de naissance */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField label="Genre" icon={Users} required>
-                                    <select
-                                        className={STYLES.input}
-                                        value={membreTemp.genre}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                genre: e.target.value,
-                                            })
-                                        }
-                                    >
-                                        <option value="">Sélectionner...</option>
-                                        <option value="M">Masculin</option>
-                                        <option value="F">Féminin</option>
-                                    </select>
-                                    {errors["membre.genre"] && (
-                                        <p className="text-red-500 text-xs mt-1">
-                                            {errors["membre.genre"]}
-                                        </p>
-                                    )}
-                                </FormField>
-                                <FormField label="Date de naissance" icon={Calendar} required>
-                                    <input
-                                        type="date"
-                                        className={STYLES.input}
-                                        value={membreTemp.dateNaissance}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                dateNaissance: e.target.value,
-                                            })
-                                        }
-                                    />
-                                    {errors["membre.dateNaissance"] && (
-                                        <p className="text-red-500 text-xs mt-1">
-                                            {errors["membre.dateNaissance"]}
-                                        </p>
-                                    )}
-                                </FormField>
-                            </div>
-
-                            {/* Email et Téléphone */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField label="Email" icon={Mail}>
-                                    <input
-                                        type="email"
-                                        className={STYLES.input}
-                                        value={membreTemp.email}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                email: e.target.value,
-                                            })
-                                        }
-                                        placeholder="ex: jean.dupont@email.com"
-                                    />
-                                    {errors["membre.email"] && (
-                                        <p className="text-red-500 text-xs mt-1">
-                                            {errors["membre.email"]}
-                                        </p>
-                                    )}
-                                </FormField>
-                                <FormField
-                                    label="Téléphone"
-                                    icon={Phone}
-                                    hint="Ex: 0102030405 (optionnel)"
-                                >
-                                    <div className="flex">
-                                        <span className="bg-gray-100 border border-gray-300 border-r-0 rounded-l-lg px-3 flex items-center text-gray-600">
-                                            +225
-                                        </span>
-                                        <input
-                                            type="tel"
-                                            className="flex-1 h-12 border border-gray-300 rounded-r-lg px-4 outline-none"
-                                            value={membreTemp.telephone}
-                                            onChange={(e) =>
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    telephone: e.target.value,
-                                                })
-                                            }
-                                            placeholder="ex: 0102030405"
-                                            maxLength="10"
-                                        />
-                                    </div>
-                                    {errors["membre.telephone"] && (
-                                        <p className="text-red-500 text-xs mt-1">
-                                            {errors["membre.telephone"]}
-                                        </p>
-                                    )}
-                                </FormField>
-                            </div>
-                            {/* Fonction dans l'église et vide */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField label="Fonction dans l'église" icon={Users} hint="Sélectionnez une fonction">
-                                    <Select2Fonction
-                                        value={Array.from(selectedMembresRoles)}
-                                        onChange={(e) => {
-                                            // e.target.value est un array d'IDs
-                                            const newSet = new Set(e.target.value);
-                                            setSelectedMembresRoles(newSet);
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                fonction: e.target.value.join(","),
-                                            });
-                                        }}
-                                        options={churchRoles}
-                                        placeholder="Sélectionner des fonctions..."
-                                    />
-                                </FormField>
-                                <FormField label="Profession" icon={Briefcase} required>
-                                    <input
-                                        className={STYLES.input}
-                                        value={membreTemp.profession}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                profession: e.target.value,
-                                            })
-                                        }
-                                        placeholder="Ex: Enseignant, Infirmier..."
-                                    />
-                                    {getFieldError("membre.profession") && (
-                                        <p className="text-red-500 text-xs mt-1">
-                                            {getFieldError("membre.profession")}
-                                        </p>
-                                    )}
-                                </FormField>
-                            </div>
-                            {/* Lien de parenté et Statut marital */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField label="Lien de parenté" icon={Users} required hint="Relation avec le responsable">
-                                    <Select2Relation
-                                        value={membreTemp.relation}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                relation: e.target.value,
-                                            })
-                                        }
-                                        placeholder="Sélectionner un lien de parenté"
-                                    />
-                                    {errors["membre.relation"] && (
-                                        <p className="text-red-500 text-xs mt-1">
-                                            {errors["membre.relation"]}
-                                        </p>
-                                    )}
-                                </FormField>
-                                <FormField label="Fonction dans l'église" icon={Users} hint="Cliquez pour sélectionner">
-                                    <Select2Fonction
-                                        value={membreTemp.fonction_id ? [{ id: membreTemp.fonction_id, nom: membreTemp.fonction }] : []}
-                                        onChange={(e) => {
-                                            if (!e.target.value) {
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    fonction_id: null,
-                                                    fonction: "",
-                                                });
-                                            } else {
-                                                const selected = churchRoles.find(f => f.id == e.target.value);
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    fonction_id: e.target.value ? parseInt(e.target.value, 10) : null,
-                                                    fonction: selected ? selected.nom : "",
-                                                });
-                                            }
-                                        }}
-                                        options={churchRoles}
-                                        placeholder="Sélectionner une fonction (optionnel)..."
-                                    />
-                                </FormField>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-                                <FormField label="Statut marital" icon={Heart} required>
-                                    <select
-                                        className={STYLES.input}
-                                        value={membreTemp.statutMarital}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                statutMarital: e.target.value,
-                                            })
-                                        }
-                                    >
-                                        <option value="">Sélectionner...</option>
-                                        <option value="celibataire">Célibataire</option>
-                                        <option value="marie">Marié(e)</option>
-                                        <option value="divorce">Divorcé(e)</option>
-                                        <option value="veuf">Veuf(ve)</option>
-                                        <option value="dot">Dot</option>
-                                    </select>
-                                    {errors["membre.statutMarital"] && (
-                                        <p className="text-red-500 text-xs mt-1">
-                                            {errors["membre.statutMarital"]}
-                                        </p>
-                                    )}
-                                </FormField>
-                            </div>
-
-                            {membreTemp.statutMarital === "marie" && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-gray-200">
-                                    <FormField label="Date du mariage" icon={Calendar} required>
-                                        <input
-                                            type="date"
-                                            className={STYLES.input}
-                                            value={membreTemp.dateMariage}
-                                            onChange={(e) =>
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    dateMariage: e.target.value,
-                                                })
-                                            }
-                                        />
-                                        {errors["membre.dateMariage"] && (
-                                            <p className="text-red-500 text-xs mt-1">
-                                                {errors["membre.dateMariage"]}
-                                            </p>
-                                        )}
-                                    </FormField>
-                                    <FormField label="Lieu du mariage" icon={Building} required>
-                                        <input
-                                            className={STYLES.input}
-                                            value={membreTemp.lieuMariage}
-                                            onChange={(e) =>
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    lieuMariage: e.target.value,
-                                                })
-                                            }
-                                            placeholder="Ville, Pays..."
-                                        />
-                                        {errors["membre.lieuMariage"] && (
-                                            <p className="text-red-500 text-xs mt-1">
-                                                {errors["membre.lieuMariage"]}
-                                            </p>
-                                        )}
-                                    </FormField>
-                                </div>
-                            )}
-
-                            {membreTemp.statutMarital === "divorce" && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-gray-200">
-                                    <FormField label="Date du divorce" icon={Calendar} required>
-                                        <input
-                                            type="date"
-                                            className={STYLES.input}
-                                            value={membreTemp.dateDivorce}
-                                            onChange={(e) =>
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    dateDivorce: e.target.value,
-                                                })
-                                            }
-                                        />
-                                        {errors["membre.dateDivorce"] && (
-                                            <p className="text-red-500 text-xs mt-1">
-                                                {errors["membre.dateDivorce"]}
-                                            </p>
-                                        )}
-                                    </FormField>
-                                    <FormField label="Lieu du divorce" icon={Building} required>
-                                        <input
-                                            className={STYLES.input}
-                                            value={membreTemp.lieuDivorce}
-                                            onChange={(e) =>
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    lieuDivorce: e.target.value,
-                                                })
-                                            }
-                                            placeholder="Ville, Pays..."
-                                        />
-                                        {errors["membre.lieuDivorce"] && (
-                                            <p className="text-red-500 text-xs mt-1">
-                                                {errors["membre.lieuDivorce"]}
-                                            </p>
-                                        )}
-                                    </FormField>
-                                </div>
-                            )}
-
-                            {membreTemp.statutMarital === "veuf" && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-gray-200">
-                                    <FormField label="Date du décès" icon={Calendar} required>
-                                        <input
-                                            type="date"
-                                            className={STYLES.input}
-                                            value={membreTemp.dateDeces}
-                                            onChange={(e) =>
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    dateDeces: e.target.value,
-                                                })
-                                            }
-                                        />
-                                        {errors["membre.dateDeces"] && (
-                                            <p className="text-red-500 text-xs mt-1">
-                                                {errors["membre.dateDeces"]}
-                                            </p>
-                                        )}
-                                    </FormField>
-                                    <FormField label="Lieu du décès" icon={Building} required>
-                                        <input
-                                            className={STYLES.input}
-                                            value={membreTemp.lieuDeces}
-                                            onChange={(e) =>
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    lieuDeces: e.target.value,
-                                                })
-                                            }
-                                            placeholder="Ville, Pays..."
-                                        />
-                                        {errors["membre.lieuDeces"] && (
-                                            <p className="text-red-500 text-xs mt-1">
-                                                {errors["membre.lieuDeces"]}
-                                            </p>
-                                        )}
-                                    </FormField>
-                                </div>
-                            )}
-
-                            {membreTemp.statutMarital === "dot" && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-gray-200">
-                                    <FormField label="Date du dot" icon={Calendar} required>
-                                        <input
-                                            type="date"
-                                            className={STYLES.input}
-                                            value={membreTemp.dote || ""}
-                                            onChange={(e) =>
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    dote: e.target.value,
-                                                })
-                                            }
-                                        />
-                                        {errors["membre.dote"] && (
-                                            <p className="text-red-500 text-xs mt-1">
-                                                {errors["membre.dote"]}
-                                            </p>
-                                        )}
-                                    </FormField>
-                                    <FormField label="Lieu du dot" icon={Building} required>
-                                        <input
-                                            className={STYLES.input}
-                                            value={membreTemp.lieuDote || ""}
-                                            onChange={(e) =>
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    lieuDote: e.target.value,
-                                                })
-                                            }
-                                            placeholder="ex: Abidjan, Côte d'Ivoire"
-                                        />
-                                        {errors["membre.lieuDot"] && (
-                                            <p className="text-red-500 text-xs mt-1">
-                                                {errors["membre.lieuDot"]}
-                                            </p>
-                                        )}
-                                    </FormField>
-                                </div>
-                            )}
-
-                            {/* Informations Spirituelles */}
-                            <div className="border-t pt-6 mt-6">
-                                <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                    <Heart className="w-5 h-5 text-blue-600" />
-                                    Informations Religieuses
-                                </h3>
-
-                                {/* Baptism section */}
-                                <div className="space-y-3 mb-4">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <input
-                                        type="checkbox"
-                                        id="baptise"
-                                        className="h-5 w-5 text-blue-600 rounded"
-                                        checked={membreTemp.baptise}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                baptise: e.target.checked,
-                                            })
-                                        }
-                                    />
-                                    <label
-                                        htmlFor="baptise"
-                                        className="text-sm font-medium text-gray-700"
-                                    >
-                                        Cette personne est baptisée
-                                    </label>
-                                </div>
-
-                                {membreTemp.baptise && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-8">
-                                        <FormField label="Date de baptême">
-                                            <input
-                                                type="date"
-                                                className={STYLES.input}
-                                                value={membreTemp.dateBapteme || ""}
-                                                onChange={(e) =>
-                                                    setMembreTemp({
-                                                        ...membreTemp,
-                                                        dateBapteme:
-                                                            e.target.value,
-                                                    })
-                                                }
-                                            />
-                                        </FormField>
-                                        <FormField label="Lieu de baptême">
-                                            <input
-                                                className={STYLES.input}
-                                                value={
-                                                    membreTemp.lieuBapteme || ""
-                                                }
-                                                onChange={(e) =>
-                                                    setMembreTemp({
-                                                        ...membreTemp,
-                                                        lieuBapteme:
-                                                            e.target.value,
-                                                    })
-                                                }
-                                                placeholder="Église, Ville..."
-                                            />
-                                        </FormField>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Première Communion */}
-                            <div className="space-y-3 mb-4">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <input
-                                        type="checkbox"
-                                        id="premiereCommunion"
-                                        className="h-5 w-5 text-purple-600 rounded"
-                                        checked={membreTemp.premiereCommunion}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                premiereCommunion: e.target.checked,
-                                            })
-                                        }
-                                    />
-                                    <label
-                                        htmlFor="premiereCommunion"
-                                        className="text-sm font-medium text-gray-700"
-                                    >
-                                        Cette personne a fait sa première communion
-                                    </label>
-                                </div>
-
-                                {membreTemp.premiereCommunion && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-8">
-                                        <FormField label="Date de première communion">
-                                            <input
-                                                type="date"
-                                                className={STYLES.input}
-                                                value={membreTemp.datePremiereCommunion || ""}
-                                                onChange={(e) =>
-                                                    setMembreTemp({
-                                                        ...membreTemp,
-                                                        datePremiereCommunion: e.target.value,
-                                                    })
-                                                }
-                                            />
-                                        </FormField>
-                                        <FormField label="Lieu de première communion">
-                                            <input
-                                                className={STYLES.input}
-                                                value={membreTemp.lieuPremiereCommunion || ""}
-                                                onChange={(e) =>
-                                                    setMembreTemp({
-                                                        ...membreTemp,
-                                                        lieuPremiereCommunion: e.target.value,
-                                                    })
-                                                }
-                                                placeholder="Église, Ville..."
-                                            />
-                                        </FormField>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Mariage Religieux */}
-                            <div className="space-y-3">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <input
-                                        type="checkbox"
-                                        id="marieReligieusement"
-                                        className="h-5 w-5 text-pink-600 rounded"
-                                        checked={membreTemp.marieReligieusement}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                marieReligieusement: e.target.checked,
-                                            })
-                                        }
-                                    />
-                                    <label
-                                        htmlFor="marieReligieusement"
-                                        className="text-sm font-medium text-gray-700"
-                                    >
-                                        Cette personne a été mariée religieusement
-                                    </label>
-                                </div>
-
-                                {membreTemp.marieReligieusement && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-8">
-                                        <FormField label="Date du mariage religieux">
-                                            <input
-                                                type="date"
-                                                className={STYLES.input}
-                                                value={membreTemp.dateMariageReligieux || ""}
-                                                onChange={(e) =>
-                                                    setMembreTemp({
-                                                        ...membreTemp,
-                                                        dateMariageReligieux: e.target.value,
-                                                    })
-                                                }
-                                            />
-                                        </FormField>
-                                        <FormField label="Lieu du mariage religieux">
-                                            <input
-                                                className={STYLES.input}
-                                                value={membreTemp.lieuMariageReligieux || ""}
-                                                onChange={(e) =>
-                                                    setMembreTemp({
-                                                        ...membreTemp,
-                                                        lieuMariageReligieux: e.target.value,
-                                                    })
-                                                }
-                                                placeholder="Église, Ville..."
-                                            />
-                                        </FormField>
-                                    </div>
-                                )}
-                            </div>
-                            </div>
-
-                            {/* Add button */}
-                            <div className="flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={ajouterMembre}
-                                    className={`flex-1 ${STYLES.button.primary}`}
-                                >
-                                    Ajouter ce membre
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* List of added members */}
-                        <div className="border-t pt-6">
-                            <h4 className="text-lg font-semibold text-gray-800 mb-4">
-                                Membres ajoutés ({membres.length})
-                            </h4>
-
-                            {membres.length === 0 ? (
-                                <div className="text-center py-8 text-gray-400">
-                                    <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                                    <p>Aucun membre ajouté pour le moment</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {membres.map((m, idx) => (
-                                        <div
-                                            key={idx}
-                                            className="p-4 bg-gradient-to-r from-white to-blue-50 border border-blue-200 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300"
-                                        >
-                                            <div className="flex items-start justify-between gap-4">
-                                                {/* Photo and Identity */}
-                                                <div className="flex items-start gap-4 flex-1">
-                                                    <div className={STYLES.photoContainer}>
-                                                        {m.photoPreview ? (
-                                                            <img
-                                                                src={
-                                                                    m.photoPreview
-                                                                }
-                                                                alt="photo"
-                                                                className="w-full h-full object-cover"
-                                                            />
-                                                        ) : (
-                                                            <Users className="w-6 h-6 text-gray-400" />
-                                                        )}
+                                {/* Photo Upload */}
+                                <div className="w-full p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-md">
+                                    <div className="flex flex-col items-center gap-3">
+                                        <h3 className="text-sm font-bold text-gray-800">Photo du membre</h3>
+                                        <div className="relative">
+                                            <div className="w-20 h-20 rounded-full bg-white overflow-hidden border-3 border-blue-400 shadow-lg ring-3 ring-blue-100">
+                                                {membreTemp.photoPreview ? (
+                                                    <img
+                                                        src={membreTemp.photoPreview}
+                                                        alt="profil"
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                                                        <Users className="w-10 h-10 text-gray-400" />
                                                     </div>
-                                                    <div className="flex-1">
-                                                        <div className="font-bold text-gray-800">
-                                                            {m.prenom} {m.nom}
-                                                        </div>
-                                                        <div className="text-sm text-gray-600 space-y-1 mt-2">
-                                                            <div>
-                                                                <span className="font-medium">
-                                                                    Relation:
-                                                                </span>{" "}
-                                                                {m.relation} •{" "}
-                                                                {m.genre === "M"
-                                                                    ? "♂ Masculin"
-                                                                    : "♀ Féminin"}
-                                                            </div>
-                                                            <div>
-                                                                <span className="font-medium">
-                                                                    Email:
-                                                                </span>{" "}
-                                                                {m.email}
-                                                            </div>
-                                                            {m.telephone && (
-                                                                <div>
-                                                                    <span className="font-medium">
-                                                                        Téléphone:
-                                                                    </span>{" "}
-                                                                    {m.telephone}
-                                                                </div>
-                                                            )}
-                                                            <div>
-                                                                <span className="font-medium">
-                                                                    Né le:
-                                                                </span>{" "}
-                                                                {m.dateNaissance}
-                                                            </div>
-                                                            <div>
-                                                                <span className="font-medium">
-                                                                    Statut:
-                                                                </span>{" "}
-                                                                {m.statutMarital ===
-                                                                "celibataire"
-                                                                    ? "Célibataire"
-                                                                    : m.statutMarital ===
-                                                                      "marie"
-                                                                    ? "Marié(e)"
-                                                                    : m.statutMarital ===
-                                                                      "divorce"
-                                                                    ? "Divorcé(e)"
-                                                                    : "Veuf(ve)"}
-                                                            </div>
-                                                            {m.statutMarital ===
-                                                                "marie" && (
-                                                                <div className="text-xs text-blue-600">
-                                                                    Marié le{" "}
-                                                                    {
-                                                                        m.dateMariage
-                                                                    }{" "}
-                                                                    à{" "}
-                                                                    {m.lieuMariage}
-                                                                </div>
-                                                            )}
-                                                            {m.statutMarital ===
-                                                                "divorce" && (
-                                                                <div className="text-xs text-orange-600">
-                                                                    Divorcé le{" "}
-                                                                    {m.dateDivorce} à{" "}
-                                                                    {m.lieuDivorce}
-                                                                </div>
-                                                            )}
-                                                            {m.statutMarital ===
-                                                                "veuf" && (
-                                                                <div className="text-xs text-gray-600">
-                                                                    Décédé le{" "}
-                                                                    {m.dateDeces} à{" "}
-                                                                    {m.lieuDeces}
-                                                                </div>
-                                                            )}
-                                                            {m.baptise && (
-                                                                <div className="text-xs text-indigo-600">
-                                                                    Baptisé
-                                                                    {m.dateBapteme &&
-                                                                        ` le ${m.dateBapteme}`}
-                                                                    {m.lieuBapteme &&
-                                                                        ` à ${m.lieuBapteme}`}
-                                                                </div>
-                                                            )}
-                                                            {m.fonction && (
-                                                                <div className="text-xs text-blue-600">
-                                                                    <span className="font-medium">Fonction:</span> {m.fonction}
-                                                                </div>
-                                                            )}
-                                                            {m.profession && (
-                                                                <div className="text-xs text-gray-600">
-                                                                    <span className="font-medium">Profession:</span> {m.profession}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Delete button */}
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        supprimerMembre(idx)
-                                                    }
-                                                    className={STYLES.button.danger}
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                    Supprimer
-                                                </button>
+                                                )}
                                             </div>
                                         </div>
-                                    ))}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => handlePhotoChange(e, "membre")}
+                                            className="file:py-1 file:px-3 file:rounded file:bg-blue-600 file:text-white file:cursor-pointer file:font-semibold file:border-0 file:hover:bg-blue-700 file:transition-colors file:text-xs"
+                                        />
+                                        <p className="text-xs text-gray-600 text-center">
+                                            JPG, PNG (max 5MB)
+                                        </p>
+                                    </div>
                                 </div>
-                            )}
+
+                                {/* Identité */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField label="Nom" icon={User} required>
+                                        <input
+                                            className={`${STYLES.input} uppercase`}
+                                            value={membreTemp.nom}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    nom: e.target.value,
+                                                })
+                                            }
+                                            placeholder="Nom de famille"
+                                        />
+                                        {errors["membre.nom"] && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {errors["membre.nom"]}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                    <FormField label="Prénom" icon={User} required>
+                                        <input
+                                            className={`${STYLES.input} capitalize`}
+                                            value={membreTemp.prenom}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    prenom: e.target.value,
+                                                })
+                                            }
+                                            placeholder="Prénom"
+                                        />
+                                        {errors["membre.prenom"] && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {errors["membre.prenom"]}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                </div>
+
+                                {/* Genre et Date de naissance */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField label="Genre" icon={Users} required>
+                                        <select
+                                            className={STYLES.input}
+                                            value={membreTemp.genre}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    genre: e.target.value,
+                                                })
+                                            }
+                                        >
+                                            <option value="">Sélectionner...</option>
+                                            <option value="M">Masculin</option>
+                                            <option value="F">Féminin</option>
+                                        </select>
+                                        {errors["membre.genre"] && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {errors["membre.genre"]}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                    <FormField label="Date de naissance" icon={Calendar} required>
+                                        <input
+                                            type="date"
+                                            className={STYLES.input}
+                                            value={membreTemp.dateNaissance}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    dateNaissance: e.target.value,
+                                                })
+                                            }
+                                        />
+                                        {errors["membre.dateNaissance"] && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {errors["membre.dateNaissance"]}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                </div>
+
+                                {/* Email et Téléphone */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField label="Email" icon={Mail}>
+                                        <input
+                                            type="email"
+                                            className={STYLES.input}
+                                            value={membreTemp.email}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    email: e.target.value,
+                                                })
+                                            }
+                                            placeholder="ex: jean.dupont@email.com"
+                                        />
+                                        {errors["membre.email"] && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {errors["membre.email"]}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                    <FormField label="Téléphone" icon={Phone} hint="Ex: 0102030405 (optionnel)">
+                                        <div className="flex">
+                                            <span className="bg-gray-100 border border-gray-300 border-r-0 rounded-l-lg px-3 flex items-center text-gray-600">
+                                                +225
+                                            </span>
+                                            <input
+                                                type="tel"
+                                                className="flex-1 h-12 border border-gray-300 rounded-r-lg px-4 outline-none"
+                                                value={membreTemp.telephone}
+                                                onChange={(e) =>
+                                                    setMembreTemp({
+                                                        ...membreTemp,
+                                                        telephone: e.target.value,
+                                                    })
+                                                }
+                                                placeholder="ex: 0102030405"
+                                                maxLength="10"
+                                            />
+                                        </div>
+                                        {errors["membre.telephone"] && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {errors["membre.telephone"]}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                </div>
+
+                                {/* Fonction et Profession */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField label="Fonction dans l'église" icon={Users} hint="Sélectionnez une fonction">
+                                        <Select2Fonction
+                                            value={selectedMembresRoles}
+                                            onChange={(e) => {
+                                                setSelectedMembresRoles(e.target.value);
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    fonction: e.target.value.join(","),
+                                                });
+                                            }}
+                                            options={churchRoles}
+                                            placeholder="Sélectionner des fonctions..."
+                                        />
+                                    </FormField>
+                                    <FormField label="Profession" icon={Briefcase} required>
+                                        <input
+                                            className={STYLES.input}
+                                            value={membreTemp.profession}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    profession: e.target.value,
+                                                })
+                                            }
+                                            placeholder="Ex: Enseignant, Infirmier..."
+                                        />
+                                        {getFieldError("membre.profession") && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {getFieldError("membre.profession")}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                </div>
+
+                                {/* Lien de parenté et Statut marital */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField label="Lien de parenté" icon={Users} required hint="Relation avec le responsable">
+                                        <Select2Relation
+                                            value={membreTemp.relation}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    relation: e.target.value,
+                                                })
+                                            }
+                                            placeholder="Sélectionner un lien de parenté"
+                                        />
+                                        {errors["membre.relation"] && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {errors["membre.relation"]}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                    <FormField label="Statut marital" icon={Heart} required>
+                                        <select
+                                            className={STYLES.input}
+                                            value={membreTemp.statutMarital}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    statutMarital: e.target.value,
+                                                })
+                                            }
+                                        >
+                                            <option value="">Sélectionner...</option>
+                                            <option value="celibataire">Célibataire</option>
+                                            <option value="marie">Marié(e)</option>
+                                            <option value="divorce">Divorcé(e)</option>
+                                            <option value="veuf">Veuf(ve)</option>
+                                            <option value="dot">Dot</option>
+                                        </select>
+                                        {errors["membre.statutMarital"] && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {errors["membre.statutMarital"]}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                </div>
+
+                                {/* Champs conditionnels selon statut marital */}
+                                {membreTemp.statutMarital === "marie" && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-gray-200">
+                                        <FormField label="Date du mariage" icon={Calendar} required>
+                                            <input
+                                                type="date"
+                                                className={STYLES.input}
+                                                value={membreTemp.dateMariage}
+                                                onChange={(e) =>
+                                                    setMembreTemp({
+                                                        ...membreTemp,
+                                                        dateMariage: e.target.value,
+                                                    })
+                                                }
+                                            />
+                                            {errors["membre.dateMariage"] && (
+                                                <p className="text-red-500 text-xs mt-1">
+                                                    {errors["membre.dateMariage"]}
+                                                </p>
+                                            )}
+                                        </FormField>
+                                        <FormField label="Lieu du mariage" icon={Building} required>
+                                            <input
+                                                className={STYLES.input}
+                                                value={membreTemp.lieuMariage}
+                                                onChange={(e) =>
+                                                    setMembreTemp({
+                                                        ...membreTemp,
+                                                        lieuMariage: e.target.value,
+                                                    })
+                                                }
+                                                placeholder="Ville, Pays..."
+                                            />
+                                            {errors["membre.lieuMariage"] && (
+                                                <p className="text-red-500 text-xs mt-1">
+                                                    {errors["membre.lieuMariage"]}
+                                                </p>
+                                            )}
+                                        </FormField>
+                                    </div>
+                                )}
+
+                                {membreTemp.statutMarital === "divorce" && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-gray-200">
+                                        <FormField label="Date du divorce" icon={Calendar} required>
+                                            <input
+                                                type="date"
+                                                className={STYLES.input}
+                                                value={membreTemp.dateDivorce}
+                                                onChange={(e) =>
+                                                    setMembreTemp({
+                                                        ...membreTemp,
+                                                        dateDivorce: e.target.value,
+                                                    })
+                                                }
+                                            />
+                                            {errors["membre.dateDivorce"] && (
+                                                <p className="text-red-500 text-xs mt-1">
+                                                    {errors["membre.dateDivorce"]}
+                                                </p>
+                                            )}
+                                        </FormField>
+                                        <FormField label="Lieu du divorce" icon={Building} required>
+                                            <input
+                                                className={STYLES.input}
+                                                value={membreTemp.lieuDivorce}
+                                                onChange={(e) =>
+                                                    setMembreTemp({
+                                                        ...membreTemp,
+                                                        lieuDivorce: e.target.value,
+                                                    })
+                                                }
+                                                placeholder="Ville, Pays..."
+                                            />
+                                            {errors["membre.lieuDivorce"] && (
+                                                <p className="text-red-500 text-xs mt-1">
+                                                    {errors["membre.lieuDivorce"]}
+                                                </p>
+                                            )}
+                                        </FormField>
+                                    </div>
+                                )}
+
+                                {membreTemp.statutMarital === "veuf" && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-gray-200">
+                                        <FormField label="Date du décès" icon={Calendar} required>
+                                            <input
+                                                type="date"
+                                                className={STYLES.input}
+                                                value={membreTemp.dateDeces}
+                                                onChange={(e) =>
+                                                    setMembreTemp({
+                                                        ...membreTemp,
+                                                        dateDeces: e.target.value,
+                                                    })
+                                                }
+                                            />
+                                            {errors["membre.dateDeces"] && (
+                                                <p className="text-red-500 text-xs mt-1">
+                                                    {errors["membre.dateDeces"]}
+                                                </p>
+                                            )}
+                                        </FormField>
+                                        <FormField label="Lieu du décès" icon={Building} required>
+                                            <input
+                                                className={STYLES.input}
+                                                value={membreTemp.lieuDeces}
+                                                onChange={(e) =>
+                                                    setMembreTemp({
+                                                        ...membreTemp,
+                                                        lieuDeces: e.target.value,
+                                                    })
+                                                }
+                                                placeholder="Ville, Pays..."
+                                            />
+                                            {errors["membre.lieuDeces"] && (
+                                                <p className="text-red-500 text-xs mt-1">
+                                                    {errors["membre.lieuDeces"]}
+                                                </p>
+                                            )}
+                                        </FormField>
+                                    </div>
+                                )}
+
+                                {membreTemp.statutMarital === "dot" && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-gray-200">
+                                        <FormField label="Date du dot" icon={Calendar} required>
+                                            <input
+                                                type="date"
+                                                className={STYLES.input}
+                                                value={membreTemp.dote || ""}
+                                                onChange={(e) =>
+                                                    setMembreTemp({
+                                                        ...membreTemp,
+                                                        dote: e.target.value,
+                                                    })
+                                                }
+                                            />
+                                            {errors["membre.dote"] && (
+                                                <p className="text-red-500 text-xs mt-1">
+                                                    {errors["membre.dote"]}
+                                                </p>
+                                            )}
+                                        </FormField>
+                                        <FormField label="Lieu du dot" icon={Building} required>
+                                            <input
+                                                className={STYLES.input}
+                                                value={membreTemp.lieuDote || ""}
+                                                onChange={(e) =>
+                                                    setMembreTemp({
+                                                        ...membreTemp,
+                                                        lieuDote: e.target.value,
+                                                    })
+                                                }
+                                                placeholder="ex: Abidjan, Côte d'Ivoire"
+                                            />
+                                            {errors["membre.lieuDot"] && (
+                                                <p className="text-red-500 text-xs mt-1">
+                                                    {errors["membre.lieuDot"]}
+                                                </p>
+                                            )}
+                                        </FormField>
+                                    </div>
+                                )}
+
+                                {/* Informations Spirituelles */}
+                                <div className="border-t pt-6 mt-6">
+                                    <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                        <Heart className="w-5 h-5 text-blue-600" />
+                                        Informations Religieuses
+                                    </h3>
+
+                                    {/* Baptême */}
+                                    <div className="space-y-3 mb-4">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <input
+                                                type="checkbox"
+                                                id="baptise"
+                                                className="h-5 w-5 text-blue-600 rounded"
+                                                checked={membreTemp.baptise}
+                                                onChange={(e) =>
+                                                    setMembreTemp({
+                                                        ...membreTemp,
+                                                        baptise: e.target.checked,
+                                                    })
+                                                }
+                                            />
+                                            <label htmlFor="baptise" className="text-sm font-medium text-gray-700">
+                                                Cette personne est baptisée
+                                            </label>
+                                        </div>
+                                        {membreTemp.baptise && (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-8">
+                                                <FormField label="Date de baptême">
+                                                    <input
+                                                        type="date"
+                                                        className={STYLES.input}
+                                                        value={membreTemp.dateBapteme || ""}
+                                                        onChange={(e) =>
+                                                            setMembreTemp({
+                                                                ...membreTemp,
+                                                                dateBapteme: e.target.value,
+                                                            })
+                                                        }
+                                                    />
+                                                </FormField>
+                                                <FormField label="Lieu de baptême">
+                                                    <input
+                                                        className={STYLES.input}
+                                                        value={membreTemp.lieuBapteme || ""}
+                                                        onChange={(e) =>
+                                                            setMembreTemp({
+                                                                ...membreTemp,
+                                                                lieuBapteme: e.target.value,
+                                                            })
+                                                        }
+                                                        placeholder="Église, Ville..."
+                                                    />
+                                                </FormField>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Première Communion */}
+                                    <div className="space-y-3 mb-4">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <input
+                                                type="checkbox"
+                                                id="premiereCommunion"
+                                                className="h-5 w-5 text-purple-600 rounded"
+                                                checked={membreTemp.premiereCommunion}
+                                                onChange={(e) =>
+                                                    setMembreTemp({
+                                                        ...membreTemp,
+                                                        premiereCommunion: e.target.checked,
+                                                    })
+                                                }
+                                            />
+                                            <label htmlFor="premiereCommunion" className="text-sm font-medium text-gray-700">
+                                                Cette personne a fait sa première communion
+                                            </label>
+                                        </div>
+                                        {membreTemp.premiereCommunion && (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-8">
+                                                <FormField label="Date de première communion">
+                                                    <input
+                                                        type="date"
+                                                        className={STYLES.input}
+                                                        value={membreTemp.datePremiereCommunion || ""}
+                                                        onChange={(e) =>
+                                                            setMembreTemp({
+                                                                ...membreTemp,
+                                                                datePremiereCommunion: e.target.value,
+                                                            })
+                                                        }
+                                                    />
+                                                </FormField>
+                                                <FormField label="Lieu de première communion">
+                                                    <input
+                                                        className={STYLES.input}
+                                                        value={membreTemp.lieuPremiereCommunion || ""}
+                                                        onChange={(e) =>
+                                                            setMembreTemp({
+                                                                ...membreTemp,
+                                                                lieuPremiereCommunion: e.target.value,
+                                                            })
+                                                        }
+                                                        placeholder="Église, Ville..."
+                                                    />
+                                                </FormField>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Mariage Religieux */}
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <input
+                                                type="checkbox"
+                                                id="marieReligieusement"
+                                                className="h-5 w-5 text-pink-600 rounded"
+                                                checked={membreTemp.marieReligieusement}
+                                                onChange={(e) =>
+                                                    setMembreTemp({
+                                                        ...membreTemp,
+                                                        marieReligieusement: e.target.checked,
+                                                    })
+                                                }
+                                            />
+                                            <label htmlFor="marieReligieusement" className="text-sm font-medium text-gray-700">
+                                                Cette personne a été mariée religieusement
+                                            </label>
+                                        </div>
+                                        {membreTemp.marieReligieusement && (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-8">
+                                                <FormField label="Date du mariage religieux">
+                                                    <input
+                                                        type="date"
+                                                        className={STYLES.input}
+                                                        value={membreTemp.dateMariageReligieux || ""}
+                                                        onChange={(e) =>
+                                                            setMembreTemp({
+                                                                ...membreTemp,
+                                                                dateMariageReligieux: e.target.value,
+                                                            })
+                                                        }
+                                                    />
+                                                </FormField>
+                                                <FormField label="Lieu du mariage religieux">
+                                                    <input
+                                                        className={STYLES.input}
+                                                        value={membreTemp.lieuMariageReligieux || ""}
+                                                        onChange={(e) =>
+                                                            setMembreTemp({
+                                                                ...membreTemp,
+                                                                lieuMariageReligieux: e.target.value,
+                                                            })
+                                                        }
+                                                        placeholder="Église, Ville..."
+                                                    />
+                                                </FormField>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Bouton Ajouter */}
+                                <div className="flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={ajouterMembre}
+                                        className={`flex-1 ${STYLES.button.primary}`}
+                                    >
+                                        Ajouter ce membre
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Liste des membres ajoutés */}
+                            <div className="border-t pt-6">
+                                <h4 className="text-lg font-semibold text-gray-800 mb-4">
+                                    Membres ajoutés ({membres.length})
+                                </h4>
+                                {membres.length === 0 ? (
+                                    <div className="text-center py-8 text-gray-400">
+                                        <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                        <p>Aucun membre ajouté pour le moment</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {membres.map((m, idx) => (
+                                            <div
+                                                key={idx}
+                                                className="p-4 bg-gradient-to-r from-white to-blue-50 border border-blue-200 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300"
+                                            >
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div className="flex items-start gap-4 flex-1">
+                                                        <div className={STYLES.photoContainer}>
+                                                            {m.photoPreview ? (
+                                                                <img
+                                                                    src={m.photoPreview}
+                                                                    alt="photo"
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            ) : (
+                                                                <Users className="w-6 h-6 text-gray-400" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <div className="font-bold text-gray-800">
+                                                                {m.prenom} {m.nom}
+                                                            </div>
+                                                            <div className="text-sm text-gray-600 space-y-1 mt-2">
+                                                                <div>
+                                                                    <span className="font-medium">Relation:</span>{" "}
+                                                                    {m.relation} •{" "}
+                                                                    {m.genre === "M" ? "♂ Masculin" : "♀ Féminin"}
+                                                                </div>
+                                                                <div>
+                                                                    <span className="font-medium">Email:</span> {m.email}
+                                                                </div>
+                                                                {m.telephone && (
+                                                                    <div>
+                                                                        <span className="font-medium">Téléphone:</span> {m.telephone}
+                                                                    </div>
+                                                                )}
+                                                                <div>
+                                                                    <span className="font-medium">Né le:</span> {m.dateNaissance}
+                                                                </div>
+                                                                <div>
+                                                                    <span className="font-medium">Statut:</span>{" "}
+                                                                    {m.statutMarital === "celibataire"
+                                                                        ? "Célibataire"
+                                                                        : m.statutMarital === "marie"
+                                                                        ? "Marié(e)"
+                                                                        : m.statutMarital === "divorce"
+                                                                        ? "Divorcé(e)"
+                                                                        : "Veuf(ve)"}
+                                                                </div>
+                                                                {m.statutMarital === "marie" && (
+                                                                    <div className="text-xs text-blue-600">
+                                                                        Marié le {m.dateMariage} à {m.lieuMariage}
+                                                                    </div>
+                                                                )}
+                                                                {m.statutMarital === "divorce" && (
+                                                                    <div className="text-xs text-orange-600">
+                                                                        Divorcé le {m.dateDivorce} à {m.lieuDivorce}
+                                                                    </div>
+                                                                )}
+                                                                {m.statutMarital === "veuf" && (
+                                                                    <div className="text-xs text-gray-600">
+                                                                        Décédé le {m.dateDeces} à {m.lieuDeces}
+                                                                    </div>
+                                                                )}
+                                                                {m.baptise && (
+                                                                    <div className="text-xs text-indigo-600">
+                                                                        Baptisé
+                                                                        {m.dateBapteme && ` le ${m.dateBapteme}`}
+                                                                        {m.lieuBapteme && ` à ${m.lieuBapteme}`}
+                                                                    </div>
+                                                                )}
+                                                                {m.fonction && (
+                                                                    <div className="text-xs text-blue-600">
+                                                                        <span className="font-medium">Fonction:</span> {m.fonction}
+                                                                    </div>
+                                                                )}
+                                                                {m.profession && (
+                                                                    <div className="text-xs text-gray-600">
+                                                                        <span className="font-medium">Profession:</span> {m.profession}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => supprimerMembre(idx)}
+                                                        className={STYLES.button.danger}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                        Supprimer
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     );
                 }
-
-                // Si l'utilisateur a choisi de ne pas ajouter de membres, retourner null
-                // (l'étape sera sautée dans la navigation)
                 return null;
 
             case 4:
-                const villeSelected = villesDatabase.find(
-                    (v) => v.id == famille.ville,
-                );
-                const classeSelected = classesDatabase.find(
-                    (c) => c.id == famille.classe_id,
-                );
+                const villeSelected = villesDatabase.find((v) => v.id == famille.ville);
+                const classeSelected = classesDatabase.find((c) => c.id == famille.classe_id);
                 return (
                     <div className="space-y-6 animate-fadeIn">
                         <h3 className="text-xl font-bold text-gray-800 text-center mb-4">
@@ -2774,85 +2624,39 @@ export default function RegisterFamille({
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                                <h4 className="font-semibold text-blue-800 mb-2">
-                                    Famille
-                                </h4>
+                                <h4 className="font-semibold text-blue-800 mb-2">Famille</h4>
                                 <ul className="text-sm space-y-1 text-gray-700">
-                                    <li>
-                                        <strong>Nom:</strong> {famille.nom}
-                                    </li>
-                                    <li>
-                                        <strong>Ville:</strong>{" "}
-                                        {villeSelected
-                                            ? villeSelected.nom
-                                            : famille.ville}
-                                    </li>
-                                    <li>
-                                        <strong>Quartier:</strong>{" "}
-                                        {famille.quartier}
-                                    </li>
-                                    <li>
-                                        <strong>Adresse:</strong>{" "}
-                                        {famille.adresse}
-                                    </li>
-                                    <li>
-                                        <strong>Tel:</strong>{" "}
-                                        {famille.telephone}
-                                    </li>
-                                    <li>
-                                        <strong>Classe:</strong>{" "}
-                                        {classeSelected
-                                            ? classeSelected.nom
-                                            : "Non sélectionnée"}
-                                    </li>
+                                    <li><strong>Nom:</strong> {famille.nom}</li>
+                                    <li><strong>Ville:</strong> {villeSelected ? villeSelected.nom : famille.ville}</li>
+                                    <li><strong>Quartier:</strong> {famille.quartier}</li>
+                                    <li><strong>Adresse:</strong> {famille.adresse}</li>
+                                    <li><strong>Tel:</strong> {famille.telephone}</li>
+                                    <li><strong>Classe:</strong> {classeSelected ? classeSelected.nom : "Non sélectionnée"}</li>
                                 </ul>
                             </div>
                             <div className="p-4 bg-green-50 rounded-lg border border-green-100">
-                                <h4 className="font-semibold text-green-800 mb-2">
-                                    Responsable
-                                </h4>
+                                <h4 className="font-semibold text-green-800 mb-2">Responsable</h4>
                                 <ul className="text-sm space-y-1 text-gray-700">
-                                    <li>
-                                        <strong>Nom:</strong>{" "}
-                                        {responsable.prenom} {responsable.nom}
-                                    </li>
-                                    <li>
-                                        <strong>Email:</strong>{" "}
-                                        {responsable.email}
-                                    </li>
-                                    <li>
-                                        <strong>Tel:</strong> {responsable.tel}
-                                    </li>
-                                    <li>
-                                        <strong>Profession:</strong>{" "}
-                                        {responsable.profession}
-                                    </li>
+                                    <li><strong>Nom:</strong> {responsable.prenom} {responsable.nom}</li>
+                                    <li><strong>Email:</strong> {responsable.email}</li>
+                                    <li><strong>Tel:</strong> {responsable.tel}</li>
+                                    <li><strong>Profession:</strong> {responsable.profession}</li>
                                 </ul>
                             </div>
                         </div>
                         <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
                             <h4 className="font-semibold text-yellow-800 mb-2 flex items-center gap-2">
-                                <Users className="w-4 h-4" /> Membres de la
-                                famille ({membres.length})
+                                <Users className="w-4 h-4" /> Membres de la famille ({membres.length})
                             </h4>
                             {membres.length === 0 ? (
-                                <p className="text-gray-500">
-                                    Aucun membre ajouté
-                                </p>
+                                <p className="text-gray-500">Aucun membre ajouté</p>
                             ) : (
                                 <ul className="space-y-2">
                                     {membres.map((m, idx) => (
-                                        <li
-                                            key={idx}
-                                            className="flex items-center gap-3"
-                                        >
+                                        <li key={idx} className="flex items-center gap-3">
                                             <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                                                 {m.photoPreview ? (
-                                                    <img
-                                                        src={m.photoPreview}
-                                                        alt="photo"
-                                                        className="w-full h-full object-cover"
-                                                    />
+                                                    <img src={m.photoPreview} alt="photo" className="w-full h-full object-cover" />
                                                 ) : (
                                                     <span className="text-xs font-bold">
                                                         {m.prenom?.[0]}
@@ -2860,27 +2664,13 @@ export default function RegisterFamille({
                                                     </span>
                                                 )}
                                             </div>
-                                            <span className="font-medium">
-                                                {m.prenom} {m.nom}
-                                            </span>
+                                            <span className="font-medium">{m.prenom} {m.nom}</span>
+                                            <span className="text-xs text-gray-500">{m.relation}</span>
                                             <span className="text-xs text-gray-500">
-                                                {m.relation}
+                                                {m.genre === "M" ? "Masculin" : m.genre === "F" ? "Féminin" : ""}
                                             </span>
-                                            <span className="text-xs text-gray-500">
-                                                {m.genre === "M"
-                                                    ? "Masculin"
-                                                    : m.genre === "F"
-                                                      ? "Féminin"
-                                                      : ""}
-                                            </span>
-                                            <span className="text-xs text-gray-500">
-                                                {m.dateNaissance}
-                                            </span>
-                                            {m.baptise && (
-                                                <span className="text-xs text-blue-600">
-                                                    Baptisé
-                                                </span>
-                                            )}
+                                            <span className="text-xs text-gray-500">{m.dateNaissance}</span>
+                                            {m.baptise && <span className="text-xs text-blue-600">Baptisé</span>}
                                         </li>
                                     ))}
                                 </ul>
@@ -2891,20 +2681,17 @@ export default function RegisterFamille({
                                 <input
                                     type="checkbox"
                                     checked={consentement}
-                                    onChange={(e) =>
-                                        setConsentement(e.target.checked)
-                                    }
+                                    onChange={(e) => setConsentement(e.target.checked)}
                                     className="mt-1 w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-gray-600">
-                                    J'atteste l'exactitude de ces informations
-                                    et accepte la politique de confidentialité
-                                    de l'église.
+                                    J'atteste l'exactitude de ces informations et accepte la politique de confidentialité de l'église.
                                 </span>
                             </label>
                         </div>
                     </div>
                 );
+
             default:
                 return null;
         }
@@ -2914,7 +2701,6 @@ export default function RegisterFamille({
         <>
             <ToastContainer toasts={toasts} removeToast={removeToast} />
             <div className="min-h-screen py-10 px-4" style={{ background: "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)" }}>
-                {/* Header avec lien retour */}
                 <div className="max-w-4xl mx-auto mb-6 flex justify-between items-center">
                     <Link
                         href="/admin/inscriptions/type-selection"
@@ -2927,138 +2713,131 @@ export default function RegisterFamille({
                         type="button"
                         onClick={() => {
                             if (window.confirm('Êtes-vous sûr de vouloir effacer toutes les données du formulaire ?')) {
-                                // Reset all state
-                            setStep(1);
-                            setErrors({});
-                            setFamille({
-                                nom: "",
-                                adresse: "",
-                                quartier: "",
-                                ville: "",
-                                telephone: "",
-                                telephone2: "",
-                                classe_id: null,
-                            });
-                            setResponsable({
-                                nom: "",
-                                prenom: "",
-                                email: "",
-                                tel: "",
-                                telephone2: "",
-                                dateNaissance: "",
-                                genre: "",
-                                lienParente: "",
-                                profession: "",
-                                fonction: "",
-                                statutMarital: "",
-                                dateMariage: "",
-                                lieuMariage: "",
-                                dateDivorce: "",
-                                lieuDivorce: "",
-                                dateDeces: "",
-                                lieuDeces: "",
-                                baptise: false,
-                                dateBapteme: "",
-                                lieuBapteme: "",
-                                premiereCommunion: false,
-                                datePremiereCommunion: "",
-                                lieuPremiereCommunion: "",
-                                marieReligieusement: false,
-                                dateMariageReligieux: "",
-                                lieuMariageReligieux: "",
-                                photo: null,
-                                photoPreview: null,
-                            });
-                            setMembres([]);
-                            setMembreTemp({
-                                nom: "",
-                                prenom: "",
-                                email: "",
-                                telephone: "",
-                                relation: "",
-                                genre: "",
-                                dateNaissance: "",
-                                statutMarital: "",
-                                dateMariage: "",
-                                lieuMariage: "",
-                                dateDivorce: "",
-                                lieuDivorce: "",
-                                dateDeces: "",
-                                lieuDeces: "",
-                                dote: "",
-                                lieuDote: "",
-                                lienParente: "",
-                                baptise: false,
-                                dateBapteme: "",
-                                lieuBapteme: "",
-                                premiereCommunion: false,
-                                datePremiereCommunion: "",
-                                lieuPremiereCommunion: "",
-                                marieReligieusement: false,
-                                dateMariageReligieux: "",
-                                lieuMariageReligieux: "",
-                                fonction: "",
-                                profession: "",
-                                photo: null,
-                                photoPreview: null,
-                            });
-                            setConsentement(false);
-                            setSelectedCity(null);
-                            setClassesSearchTerm("");
-                            setVillesSearchTerm("");
-                            setAdresseInputValue("");
-                            setSelectedRolesResponsable([]);
-                            setSelectedMembresRoles(new Set());
-                            setHasMembersToAdd(null);
-
-                            // Clear persistent data
-                            clearFormPersistedData('registerPasteur_');
-                        }
-                    }}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
-                >
-                    Effacer le formulaire
-                </button>
-            </div>
-
-            <div className="max-w-4xl mx-auto">
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-white">
-                        Inscription Famille Pasteur
-                    </h1>
-                    <p className="text-yellow-100">
-                        Suivez les étapes pour enregistrer votre famille
-                    </p>
+                                setStep(1);
+                                setErrors({});
+                                setFamille({
+                                    nom: "",
+                                    adresse: "",
+                                    quartier: "",
+                                    ville: "",
+                                    telephone: "",
+                                    telephone2: "",
+                                    classe_id: null,
+                                });
+                                setResponsable({
+                                    nom: "",
+                                    prenom: "",
+                                    email: "",
+                                    tel: "",
+                                    telephone2: "",
+                                    dateNaissance: "",
+                                    genre: "",
+                                    lienParente: "",
+                                    profession: "",
+                                    fonction: "",
+                                    statutMarital: "",
+                                    dateMariage: "",
+                                    lieuMariage: "",
+                                    dateDivorce: "",
+                                    lieuDivorce: "",
+                                    dateDeces: "",
+                                    lieuDeces: "",
+                                    baptise: false,
+                                    dateBapteme: "",
+                                    lieuBapteme: "",
+                                    premiereCommunion: false,
+                                    datePremiereCommunion: "",
+                                    lieuPremiereCommunion: "",
+                                    marieReligieusement: false,
+                                    dateMariageReligieux: "",
+                                    lieuMariageReligieux: "",
+                                    photo: null,
+                                    photoPreview: null,
+                                });
+                                setMembres([]);
+                                setMembreTemp({
+                                    nom: "",
+                                    prenom: "",
+                                    email: "",
+                                    telephone: "",
+                                    relation: "",
+                                    genre: "",
+                                    dateNaissance: "",
+                                    statutMarital: "",
+                                    dateMariage: "",
+                                    lieuMariage: "",
+                                    dateDivorce: "",
+                                    lieuDivorce: "",
+                                    dateDeces: "",
+                                    lieuDeces: "",
+                                    dote: "",
+                                    lieuDote: "",
+                                    lienParente: "",
+                                    baptise: false,
+                                    dateBapteme: "",
+                                    lieuBapteme: "",
+                                    premiereCommunion: false,
+                                    datePremiereCommunion: "",
+                                    lieuPremiereCommunion: "",
+                                    marieReligieusement: false,
+                                    dateMariageReligieux: "",
+                                    lieuMariageReligieux: "",
+                                    fonction: "",
+                                    profession: "",
+                                    photo: null,
+                                    photoPreview: null,
+                                });
+                                setConsentement(false);
+                                setSelectedCity(null);
+                                setClassesSearchTerm("");
+                                setVillesSearchTerm("");
+                                setAdresseInputValue("");
+                                setSelectedRolesResponsable([]);
+                                setSelectedMembresRoles([]);
+                                setHasMembersToAdd(null);
+                                clearFormPersistedData('registerPasteur_');
+                            }
+                        }}
+                        className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
+                    >
+                        Effacer le formulaire
+                    </button>
                 </div>
 
-                <div className="bg-white shadow-xl rounded-2xl overflow-hidden">
-                    <FormStepper
-                        currentStep={step}
-                        totalSteps={totalSteps}
-                        labels={labels}
-                        onStepClick={setStep}
-                    />
+                <div className="max-w-4xl mx-auto">
+                    <div className="text-center mb-8">
+                        <h1 className="text-3xl font-bold text-white">
+                            Inscription Famille Pasteur
+                        </h1>
+                        <p className="text-yellow-100">
+                            Suivez les étapes pour enregistrer votre famille
+                        </p>
+                    </div>
 
-                    <div className="p-6 md:p-10">
-                        {renderStepForm()}
+                    <div className="bg-white shadow-xl rounded-2xl overflow-hidden">
+                        <FormStepper
+                            currentStep={step}
+                            totalSteps={totalSteps}
+                            labels={labels}
+                            onStepClick={setStep}
+                        />
 
-                        <div
-                            className={`flex mt-8 gap-4 ${step === 1 ? "justify-end" : "justify-between"}`}
-                        >
-                            {step > 1 && (
-                                <button
-                                    type="button"
-                                    onClick={goToPrevStep}
-                                    className={`${STYLES.button.secondary} flex items-center gap-2`}
-                                >
-                                    <ArrowLeft className="w-4 h-4" />
-                                    <span>Retour</span>
-                                </button>
-                            )}
+                        <div className="p-6 md:p-10">
+                            {renderStepForm()}
 
-                            {/* Step 3: logique conditionnelle */}
-                            {step === 3 ? (
-                                <>
+                            <div className={`flex mt-8 gap-4 ${step === 1 ? "justify-end" : "justify-between"}`}>
+                                {step > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={goToPrevStep}
+                                        className={`${STYLES.button.secondary} flex items-center gap-2`}
+                                    >
+                                        <ArrowLeft className="w-4 h-4" />
+                                        <span>Retour</span>
+                                    </button>
+                                )}
+
+                                {step === 3 ? (
                                     <button
                                         type="button"
                                         onClick={() => setStep(4)}
@@ -3068,42 +2847,32 @@ export default function RegisterFamille({
                                         <span>Continuer</span>
                                         <ArrowRight className="w-4 h-4" />
                                     </button>
-                                </>
-                            ) : step < totalSteps ? (
-                                // Boutons standard pour les autres steps
-                                <button
-                                    type="button"
-                                    onClick={goToNextStep}
-                                    className={`${STYLES.button.primary} ml-auto flex items-center gap-2`}
-                                >
-                                    <span>Continuer</span>
-                                    <ArrowRight className="w-4 h-4" />
-                                </button>
-                            ) : null}
+                                ) : step < totalSteps ? (
+                                    <button
+                                        type="button"
+                                        onClick={goToNextStep}
+                                        className={`${STYLES.button.primary} ml-auto flex items-center gap-2`}
+                                    >
+                                        <span>Continuer</span>
+                                        <ArrowRight className="w-4 h-4" />
+                                    </button>
+                                ) : null}
 
-                            {/* Bouton Soumettre au step 4 */}
-                            {step === 4 && (
-                                <button
-                                    type="button"
-                                    onClick={handleSubmit}
-                                    disabled={loading || !consentement}
-                                    className={`${STYLES.button.primary} ml-auto disabled:opacity-60 disabled:cursor-not-allowed disabled:transform disabled:hover:scale-100`}
-                                >
-                                    {loading ? (
-                                        "Envoi..."
-                                    ) : (
-                                        <>
-                                            <Send className="w-4 h-4" />{" "}
-                                            Soumettre
-                                        </>
-                                    )}
-                                </button>
-                            )}
+                                {step === 4 && (
+                                    <button
+                                        type="button"
+                                        onClick={handleSubmit}
+                                        disabled={loading || !consentement}
+                                        className={`${STYLES.button.primary} ml-auto disabled:opacity-60 disabled:cursor-not-allowed disabled:transform disabled:hover:scale-100`}
+                                    >
+                                        {loading ? "Envoi..." : <><Send className="w-4 h-4" /> Soumettre</>}
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
         </>
     );
 }

@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
+import html2pdf from 'html2pdf.js';
 import axios from "axios";
 import { Link } from "@inertiajs/react";
 
@@ -73,6 +74,87 @@ const ANNONCE_TYPES = [
     },
 ];
 
+// Fonction pour obtenir les champs dynamiques de la fiche d'acte
+function getDetailFields(acte) {
+    const type = acte.type_acte;
+    const details = acte.details || {};
+    const membre = acte.membre || {};
+
+    const typeLabel = "Type d'acte";
+    const typeValue = prettyType(type);
+
+    let field1Label, field1Value;
+    switch (type) {
+        case 'mariage':
+            field1Label = "Nom du couple";
+            field1Value = [details.conjoint_1, details.conjoint_2].filter(Boolean).join(' et ') || '—';
+            break;
+        case 'bapteme':
+        case 'premiere_communion':
+        case 'bapteme_premiere_communion':
+        case 'naissance':
+            field1Label = "Nom de l'enfant";
+            field1Value = details.nom_enfant || (membre.prenom + ' ' + membre.nom) || '—';
+            break;
+        case 'confirmation':
+            field1Label = "Confirmand";
+            field1Value = details.confirmand || (membre.prenom + ' ' + membre.nom) || '—';
+            break;
+        case 'deces':
+            field1Label = "Nom du défunt";
+            field1Value = details.nom_defunt || (membre.prenom + ' ' + membre.nom) || '—';
+            break;
+        default:
+            field1Label = "Personne concernée";
+            field1Value = (membre.prenom + ' ' + membre.nom) || '—';
+    }
+
+    let field2Label, field2Value;
+    switch (type) {
+        case 'mariage':
+            field2Label = "Date du mariage";
+            field2Value = details.date || '—';
+            break;
+        case 'bapteme':
+            field2Label = "Date du baptême";
+            field2Value = details.date || '—';
+            break;
+        case 'premiere_communion':
+            field2Label = "Date de la communion";
+            field2Value = details.date || '—';
+            break;
+        case 'bapteme_premiere_communion':
+            field2Label = "Date de l'acte";
+            field2Value = details.date || '—';
+            break;
+        case 'naissance':
+            field2Label = "Date de naissance";
+            field2Value = details.date_naissance || '—';
+            break;
+        case 'confirmation':
+            field2Label = "Date de confirmation";
+            field2Value = details.date || '—';
+            break;
+        case 'deces':
+            field2Label = "Date du décès";
+            field2Value = details.date_deces || '—';
+            break;
+        default:
+            field2Label = "Date";
+            field2Value = acte.date_souhaitee || details.date || '—';
+    }
+
+    const field3Label = "Lieu";
+    const field3Value = details.lieu || '—';
+
+    return [
+        { label: typeLabel, value: typeValue },
+        { label: field1Label, value: field1Value },
+        { label: field2Label, value: field2Value },
+        { label: field3Label, value: field3Value },
+    ];
+}
+
 export default function Index({
     actes = [],
     familyMembers = [],
@@ -107,15 +189,14 @@ export default function Index({
     const [acteProcessing, setActeProcessing] = useState(false);
     /* ── ANNONCES state ── */
     const [localAnnonces, setLocalAnnonces] = useState(rawAnnonces);
-    const [annoncesSubTab, setAnnoncesSubTab] = useState("pending"); // pending | done | mine
+    const [annoncesSubTab, setAnnoncesSubTab] = useState("pending");
     const [annoncesPage, setAnnoncesPage] = useState(1);
     const [selectedAnnonce, setSelectedAnnonce] = useState(null);
     const [annonceModal, setAnnonceModal] = useState(null);
     const [annonceComment, setAnnonceComment] = useState("");
     const [annonceProcessing, setAnnonceProcessing] = useState(false);
     const [annSelectedIds, setAnnSelectedIds] = useState(() => new Set());
-    const [myAnnonceCreator, setMyAnnonceCreator] = useState(null); // Track who is creating annonces
-    // création d'annonces par le conducteur
+    const [myAnnonceCreator, setMyAnnonceCreator] = useState(null);
     const [annonceForm, setAnnonceForm] = useState({
         type_annonce: "",
         membre_id: familyMembers[0]?.id || "",
@@ -238,7 +319,6 @@ export default function Index({
         });
     }, [localAnnonces, quickFilter, searchNeedle]);
 
-    // Helper pour identifier les annonces créées par le conducteur
     const isMyAnnonce = (ann) => {
         if (!myAnnonceCreator) return false;
         return (
@@ -300,15 +380,12 @@ export default function Index({
         setHistoriquePage(1);
         setAnnoncesPage(1);
     }, [quickFilter, searchTerm]);
-    // Sync localAnnonces with rawAnnonces when props change (e.g. page reload)
     useEffect(() => {
         setLocalAnnonces(rawAnnonces);
     }, [rawAnnonces]);
 
-    // Detect conductor's own annonces on initial load
     useEffect(() => {
         if (!myAnnonceCreator && rawAnnonces.length > 0) {
-            // Look for an annonce created by a conductor (not a responsable)
             const conductorAnnonce = rawAnnonces.find(
                 (a) => a.createur?.role === "conducteur" || a.createur?.fonction?.nom?.toLowerCase().includes("conducteur")
             );
@@ -328,6 +405,31 @@ export default function Index({
                 prev.classe_id,
         }));
     }, [familyMembers, classes]);
+
+    /* ── ÉTAT POUR LA GÉNÉRATION PDF ── */
+    const [currentPrintItem, setCurrentPrintItem] = useState(null);
+    const printRef = useRef();
+
+    useEffect(() => {
+        if (currentPrintItem) {
+            setTimeout(() => {
+                if (printRef.current) {
+                    html2pdf()
+                        .from(printRef.current)
+                        .set({
+                            margin: [0.5, 1.5, 0.5, 1.5], // marges latérales de 1.5 cm
+                            filename: `Fiche_${currentPrintItem.id}.pdf`,
+                            image: { type: 'jpeg', quality: 0.98 },
+                            html2canvas: { scale: 2, letterRendering: true },
+                            jsPDF: { unit: 'cm', format: 'a4', orientation: 'portrait' }
+                        })
+                        .save()
+                        .then(() => setCurrentPrintItem(null));
+                }
+            }, 300);
+        }
+    }, [currentPrintItem]);
+
     /* ── HELPERS ── */
     const showToast = (msg) => {
         setToast(msg);
@@ -547,7 +649,6 @@ export default function Index({
         setSelectedAnnonce(null);
         setAnnonceComment("");
         setAnnonceModal(null);
-        // reset creation state
         setAnnonceStep(1);
         setAnnonceForm({
             type_annonce: "",
@@ -586,7 +687,6 @@ export default function Index({
                 motif_rejet: commentaire,
             });
         }
-        // fallback : valider
         return axios.post(`/conducteur/annonces/${id}/valider`, {
             note: commentaire,
         });
@@ -612,7 +712,6 @@ export default function Index({
                         : a,
                 ),
             );
-            // Sync with localActes
             setLocalActes((prev) =>
                 prev.map((a) =>
                     a.id === selectedAnnonce.id
@@ -654,7 +753,6 @@ export default function Index({
                         : a,
                 ),
             );
-            // Sync with localActes
             setLocalActes((prev) =>
                 prev.map((a) =>
                     ids.includes(a.id)
@@ -704,7 +802,6 @@ export default function Index({
                         : a,
                 ),
             );
-            // Sync with localActes
             setLocalActes((prev) =>
                 prev.map((a) =>
                     ids.includes(a.id)
@@ -725,7 +822,6 @@ export default function Index({
         }
     };
 
-    // création d'une annonce
     const submitAnnonce = async () => {
         if (!annonceForm.type_annonce || !annonceForm.message.trim()) {
             showToast("Veuillez remplir tous les champs obligatoires.");
@@ -748,7 +844,6 @@ export default function Index({
                 statut: "SOUMISE",
                 created_at: new Date().toISOString(),
             };
-            // Track the creator of this annonce for filtering later
             if (!myAnnonceCreator && newA.createur) {
                 setMyAnnonceCreator(newA.createur);
             }
@@ -812,6 +907,7 @@ export default function Index({
                             </svg>
                             Créer un acte
                         </button>
+                        {/* BOUTON IMPRIMER PDF SUPPRIMÉ */}
                     </div>
 
                     {/* ALERT BANNERS */}
@@ -1028,7 +1124,6 @@ export default function Index({
                                 </span>
                             )}
                             </button>
-                            {/* ★ ONGLET ANNONCES ★ */}
                             <button
                                 className={`tab tab-ann ${tab === "annonces" ? "active" : ""}`}
                                 onClick={() => setTab("annonces")}
@@ -1641,7 +1736,6 @@ export default function Index({
                     {/* ══════════ ★★★ ONGLET ANNONCES ★★★ ══════════ */}
                     {tab === "annonces" && (
                         <div className="ann-tab-root">
-                            {/* Bannière héro */}
                             <div className="ann-hero">
                                 <div className="ann-hero-left">
                                     <div className="ann-hero-pulse">
@@ -1671,7 +1765,6 @@ export default function Index({
                                         </div>
                                     </div>
                                 </div>
-                                {/* Mini stats */}
                                 <div className="ann-hero-stats">
                                 <div className="ann-mini-stat ann-mini-orange">
                                     <div className="ann-mini-n">
@@ -1733,13 +1826,10 @@ export default function Index({
                             </div>
                             </div>
 
-                            {/* Corps : liste + sidebar */}
                             <div className="grid-3-1">
-                                {/* COLONNE PRINCIPALE */}
                                 <div className="panel">
                                     <div className="panel-head">
                                         <div>
-                                            {/* Sous-tabs À traiter / Traitées */}
                                             <div className="ann-subtabs">
                                                 <button
                                                     className={`ann-subtab ${annoncesSubTab === "pending" ? "active" : ""}`}
@@ -1965,7 +2055,6 @@ export default function Index({
                                                     key={ann.id}
                                                     className={`ann-item ${isPending ? "ann-item-pending" : ""}`}
                                                 >
-                                                    {/* Checkbox groupée (seulement pour pending et onglet "À traiter") */}
                                                     {isPending &&
                                                         annoncesSubTab ===
                                                             "pending" && (
@@ -1988,14 +2077,12 @@ export default function Index({
                                                                 />
                                                             </label>
                                                         )}
-                                                    {/* Icône type */}
                                                     <div
                                                         className={`ann-type-icon aicon-${typeInfo?.color || "green"}`}
                                                     >
                                                         {typeInfo?.emoji ||
                                                             "📢"}
                                                     </div>
-                                                    {/* Corps annonce */}
                                                     <div
                                                         className="ann-item-body"
                                                         onClick={() =>
@@ -2062,7 +2149,6 @@ export default function Index({
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    {/* Actions droite */}
                                                     <div className="ann-item-right">
                                                         {isPending && (
                                                             <span className="badge badge-soumise">
@@ -2225,7 +2311,6 @@ export default function Index({
                                     </div>
                                 </div>
 
-                                {/* COLONNE LATÉRALE */}
                                 <div
                                     style={{
                                         display: "flex",
@@ -2233,7 +2318,6 @@ export default function Index({
                                         gap: 16,
                                     }}
                                 >
-                                    {/* Circuit annonces */}
                                     <div className="panel panel-side">
                                         <div className="panel-head">
                                             <div className="panel-title">
@@ -2331,7 +2415,6 @@ export default function Index({
                                         </div>
                                     </div>
 
-                                    {/* Répartition par type */}
                                     <div className="panel panel-side">
                                         <div className="panel-head">
                                             <div className="panel-title">
@@ -2347,9 +2430,9 @@ export default function Index({
                                                         strokeLinecap="round"
                                                         strokeLinejoin="round"
                                                         d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                                                    />
-                                                </svg>
-                                                Par type
+                                                />
+                                            </svg>
+                                            Par type
                                             </div>
                                         </div>
                                         <div
@@ -2775,7 +2858,10 @@ export default function Index({
             {/* ══════════ MODAL ACTES ══════════ */}
             {modal && (
                 <div className="modal-overlay open" onClick={closeModal}>
-                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+                    <div
+                        className={`modal ${modal === "detail" ? "modal-detail" : ""}`}
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="modal-head">
                             <div className="modal-head-left">
                                 {modal === "create" ? (
@@ -2841,7 +2927,7 @@ export default function Index({
                                 <div>
                                     <div className="modal-title">
                                         {modal === "detail"
-                                            ? "Détail de la demande"
+                                            ? "Fiche de demande d'acte"
                                             : modal === "approve"
                                                 ? "Valider et transmettre"
                                                 : modal === "refuse"
@@ -2877,161 +2963,84 @@ export default function Index({
                         </div>
                         <div className="modal-body">
                             {modal === "detail" && selected && (
-                                <>
-                                    <div className="modal-info-row">
-                                        <span className="modal-info-key">
-                                            Référence
-                                        </span>
-                                        <span className="modal-info-val mono">
-                                            {selected?.reference || "—"}
-                                        </span>
+                                <div className="fiche-a4">
+                                    {/* En-tête avec logo */}
+                                    <header className="fiche-header">
+                                        <div className="fiche-logo">
+                                            <img
+                                                src="/images/image.png"
+                                                alt="Logo Jubilé"
+                                                className="w-full h-full object-contain"
+                                            />
+                                        </div>
+                                        <div className="fiche-church-info">
+                                            <div className="fiche-church-name">Eglise Méthodiste de Côte d’Ivoire</div>
+                                            <div className="fiche-district-name">District Abidjan Nord</div>
+                                            <div className="fiche-temple-name">Temple du Jubilé de Cocody</div>
+                                        </div>
+                                    </header>
+
+                                    <div className="fiche-main-title">
+                                        <h2>Fiche d'Acte Liturgique</h2>
                                     </div>
-                                    <div className="modal-info-row">
-                                        <span className="modal-info-key">
-                                            Type d'acte
-                                        </span>
-                                        <span className="modal-info-val">
-                                            {prettyType(selected?.type_acte)}
-                                        </span>
-                                    </div>
-                                    <div className="modal-info-row">
-                                        <span className="modal-info-key">
-                                            Membre
-                                        </span>
-                                        <span className="modal-info-val">
-                                            {selected?.membre?.prenom}{" "}
-                                            {selected?.membre?.nom}
-                                        </span>
-                                    </div>
-                                    <div className="modal-info-row">
-                                        <span className="modal-info-key">
-                                            Date souhaitée
-                                        </span>
-                                        <span className="modal-info-val">
-                                            {formatDate(
-                                                selected?.date_souhaitee,
-                                            )}
-                                        </span>
-                                    </div>
-                                    <div className="modal-info-row no-border">
-                                        <span className="modal-info-key">
-                                            Statut
-                                        </span>
-                                        <span className="modal-info-val">
-                                            <span className={`badge ${
-                                                selected?.statut === "SOUMISE" ? "badge-soumise" :
-                                                selected?.statut === "TRANSMISE_AU_PASTEUR" ? "badge-transmis" :
-                                                ["VALIDEE", "PUBLIEE"].includes(selected?.statut) ? "badge-valide" :
-                                                selected?.statut?.includes("REFUSEE") ? "badge-refuse" : "badge-transmis"
-                                            }`}>
-                                                <span className="badge-dot" />
-                                                {prettyStatut(selected?.statut)}
+
+                                    <div className="fiche-section">
+                                        {/* Champs sur une seule ligne avec libellé et valeur */}
+                                        <div className="fiche-field-row">
+                                            <span className="fiche-label">DEMANDEUR :</span>
+                                            <span className="fiche-value">
+                                                {selected.membre?.prenom} {selected.membre?.nom}
                                             </span>
-                                        </span>
+                                        </div>
+                                        <div className="fiche-field-row">
+                                            <span className="fiche-label">FAMILLE :</span>
+                                            <span className="fiche-value">
+                                                {selected.membre?.nom || '—'}
+                                            </span>
+                                        </div>
+                                        <div className="fiche-field-row">
+                                            <span className="fiche-label">CLASSE :</span>
+                                            <span className="fiche-value">
+                                                {selected.classe?.nom || '—'}
+                                            </span>
+                                        </div>
+                                        <div className="fiche-field-row">
+                                            <span className="fiche-label">DATE D'ANNONCE :</span>
+                                            <span className="fiche-value">
+                                                {selected.created_at ? formatDate(selected.created_at) : '—'}
+                                            </span>
+                                        </div>
+                                        <div className="fiche-field-row">
+                                            <span className="fiche-label">HEURE :</span>
+                                            <span className="fiche-value">
+                                                {selected.created_at ? formatTime(selected.created_at) : '—'}
+                                            </span>
+                                        </div>
+
+                                        {/* Texte de demande */}
+                                        <div 
+                                            className="fiche-plain-text"
+                                            dangerouslySetInnerHTML={{ __html: generateRequestTextHTML(selected) }}
+                                        />
+
+                                        {/* Citations bibliques en miniature */}
+                                        <div className="fiche-quotes-mini">
+                                            <p>Psaume 65 : 3 « O toi qui écoutes la prière ! Tous les hommes viendront à toi. »</p>
+                                            <p>Jean 14 : 13-14 « …tout ce que vous demanderez en mon nom, je le ferai afin que le Père soit glorifié dans le Fils. Si vous demandez quelque chose en mon nom, je le ferai. »</p>
+                                        </div>
                                     </div>
-                                    {selected?.statut === "SOUMISE" && (
-                                        <div className="modal-actions-inline">
-                                            <button
-                                                className="btn-modal btn-modal-gold"
-                                                onClick={() => setModal("approve")}
-                                            >
-                                                <svg
-                                                    width="13"
-                                                    height="13"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                    strokeWidth="2.5"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        d="M5 13l4 4L19 7"
-                                                    />
-                                                </svg>
-                                                Valider & transmettre
-                                            </button>
-                                            <button
-                                                className="btn-modal btn-modal-red"
-                                                onClick={() => setModal("refuse")}
-                                            >
-                                                <svg
-                                                    width="13"
-                                                    height="13"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                    strokeWidth="2.5"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        d="M6 18L18 6M6 6l12 12"
-                                                    />
-                                                </svg>
-                                                Refuser
-                                            </button>
-                                        </div>
-                                    )}
-                                    {["VALIDEE", "PUBLIEE"].includes(selected?.statut) && (
-                                        <div style={{ marginTop: 16 }}>
-                                            <button
-                                                style={{
-                                                    width: "100%",
-                                                    padding: "10px 14px",
-                                                    backgroundColor: "#3b82f6",
-                                                    color: "#fff",
-                                                    border: "none",
-                                                    borderRadius: 6,
-                                                    fontSize: 13,
-                                                    fontWeight: 600,
-                                                    cursor: "pointer",
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    justifyContent: "center",
-                                                    gap: 8,
-                                                    transition: "background 0.2s"
-                                                }}
-                                                onMouseEnter={(e) => e.target.style.backgroundColor = "#2563eb"}
-                                                onMouseLeave={(e) => e.target.style.backgroundColor = "#3b82f6"}
-                                                onClick={() => {
-                                                    window.location.href = `/conducteur/liturgie/${selected.id}/fiche`;
-                                                }}
-                                            >
-                                                <svg
-                                                    width="13"
-                                                    height="13"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                    strokeWidth="2"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                                    />
-                                                </svg>
-                                                Télécharger la fiche
-                                            </button>
-                                        </div>
-                                    )}
-                                </>
+                                </div>
                             )}
                             {modal === "approve" && (
                                 <div className="modal-field">
                                     <label className="modal-label">
                                         Commentaire pour le Pasteur{" "}
-                                        <span className="modal-optional">
-                                            (optionnel)
-                                        </span>
+                                        <span className="modal-optional">(optionnel)</span>
                                     </label>
                                     <textarea
                                         className="modal-textarea"
                                         value={commentaire}
-                                        onChange={(e) =>
-                                            setCommentaire(e.target.value)
-                                        }
+                                        onChange={(e) => setCommentaire(e.target.value)}
                                         placeholder="Ajoutez un commentaire ou des précisions pour le pasteur…"
                                     />
                                 </div>
@@ -3040,16 +3049,12 @@ export default function Index({
                                 <div className="modal-field">
                                     <label className="modal-label">
                                         Motif du refus{" "}
-                                        <span className="modal-required">
-                                            *
-                                        </span>
+                                        <span className="modal-required">*</span>
                                     </label>
                                     <textarea
                                         className="modal-textarea"
                                         value={commentaire}
-                                        onChange={(e) =>
-                                            setCommentaire(e.target.value)
-                                        }
+                                        onChange={(e) => setCommentaire(e.target.value)}
                                         placeholder="Expliquez la raison du refus (champ obligatoire)…"
                                     />
                                 </div>
@@ -3069,14 +3074,9 @@ export default function Index({
                                                     }))
                                                 }
                                             >
-                                                <option value="">
-                                                    — Sélectionner —
-                                                </option>
+                                                <option value="">— Sélectionner —</option>
                                                 {ACTE_TYPES.map((type) => (
-                                                    <option
-                                                        key={type.value}
-                                                        value={type.value}
-                                                    >
+                                                    <option key={type.value} value={type.value}>
                                                         {type.label}
                                                     </option>
                                                 ))}
@@ -3093,20 +3093,12 @@ export default function Index({
                                                     }))
                                                 }
                                             >
-                                                <option value="">
-                                                    — Sélectionner un membre —
-                                                </option>
-                                                {familyMembers.map(
-                                                    (member) => (
-                                                        <option
-                                                            key={member.id}
-                                                            value={member.id}
-                                                        >
-                                                            {member.prenom}{" "}
-                                                            {member.nom}
-                                                        </option>
-                                                    ),
-                                                )}
+                                                <option value="">— Sélectionner un membre —</option>
+                                                {familyMembers.map((member) => (
+                                                    <option key={member.id} value={member.id}>
+                                                        {member.prenom} {member.nom}
+                                                    </option>
+                                                ))}
                                             </select>
                                         </Field>
                                         <Field label="Date souhaitée" required>
@@ -3117,8 +3109,7 @@ export default function Index({
                                                 onChange={(e) =>
                                                     setCreateForm((f) => ({
                                                         ...f,
-                                                        date_souhaitee:
-                                                            e.target.value,
+                                                        date_souhaitee: e.target.value,
                                                     }))
                                                 }
                                             />
@@ -3142,27 +3133,19 @@ export default function Index({
                                                 {requiredActeFields.map((field) => (
                                                     <Field
                                                         key={field}
-                                                        label={
-                                                            ACTE_DETAIL_LABELS[field] || field
-                                                        }
+                                                        label={ACTE_DETAIL_LABELS[field] || field}
                                                         required
                                                     >
                                                         <input
                                                             className="modal-input"
-                                                            type={
-                                                                ACTE_DETAIL_INPUT_TYPES[field] ||
-                                                                "text"
-                                                            }
-                                                            value={
-                                                                createForm.details?.[field] || ""
-                                                            }
+                                                            type={ACTE_DETAIL_INPUT_TYPES[field] || "text"}
+                                                            value={createForm.details?.[field] || ""}
                                                             onChange={(e) =>
                                                                 setCreateForm((f) => ({
                                                                     ...f,
                                                                     details: {
                                                                         ...(f.details || {}),
-                                                                        [field]:
-                                                                            e.target.value,
+                                                                        [field]: e.target.value,
                                                                     },
                                                                 }))
                                                             }
@@ -3176,10 +3159,7 @@ export default function Index({
                             )}
                         </div>
                         <div className="modal-foot">
-                            <button
-                                className="btn-modal btn-modal-ghost"
-                                onClick={closeModal}
-                            >
+                            <button className="btn-modal btn-modal-ghost" onClick={closeModal}>
                                 Annuler
                             </button>
 
@@ -3187,9 +3167,7 @@ export default function Index({
                                 <button
                                     className="btn-modal btn-modal-gold"
                                     disabled={processing}
-                                    onClick={() =>
-                                        submitTransition("TRANSMISE_AU_PASTEUR")
-                                    }
+                                    onClick={() => submitTransition("TRANSMISE_AU_PASTEUR")}
                                 >
                                     <svg
                                         width="13"
@@ -3205,27 +3183,18 @@ export default function Index({
                                             d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
                                         />
                                     </svg>
-                                    {processing
-                                        ? "Transmission..."
-                                        : "Transmettre au pasteur"}
+                                    {processing ? "Transmission..." : "Transmettre au pasteur"}
                                 </button>
                             )}
                             {modal === "refuse" && (
                                 <button
                                     className="btn-modal btn-modal-red"
                                     disabled={processing}
-                                    onClick={() =>
-                                        submitTransition(
-                                            "REFUSEE_PAR_CONDUCTEUR",
-                                        )
-                                    }
+                                    onClick={() => submitTransition("REFUSEE_PAR_CONDUCTEUR")}
                                 >
-                                    {processing
-                                        ? "Traitement..."
-                                        : "Confirmer le refus"}
+                                    {processing ? "Traitement..." : "Confirmer le refus"}
                                 </button>
                             )}
-
                             {modal === "create" && (
                                 <button
                                     className="btn-modal btn-msubmit acte-submit"
@@ -3254,6 +3223,19 @@ export default function Index({
                                     ) : (
                                         <>+ Créer l'acte</>
                                     )}
+                                </button>
+                            )}
+
+                            {modal === "detail" && (
+                                <button
+                                    className="btn-modal btn-modal-blue"
+                                    onClick={() => setCurrentPrintItem(selected)}
+                                    disabled={currentPrintItem !== null}
+                                >
+                                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    Télécharger PDF
                                 </button>
                             )}
                         </div>
@@ -3494,7 +3476,7 @@ export default function Index({
             {annonceModal && selectedAnnonce && (
                 <div className="modal-overlay open" onClick={closeAnnonceModal}>
                     <div
-                        className="modal modal-ann"
+                        className={`modal modal-ann ${annonceModal === "detail" ? "modal-detail" : ""}`}
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="modal-head">
@@ -3504,11 +3486,7 @@ export default function Index({
                                 >
                                     {annonceModal === "detail" && (
                                         <span style={{ fontSize: 20 }}>
-                                            {ANNONCE_TYPES.find(
-                                                (t) =>
-                                                    t.value ===
-                                                    selectedAnnonce.type_annonce,
-                                            )?.emoji || "📢"}
+                                            {ANNONCE_TYPES.find((t) => t.value === selectedAnnonce.type_annonce)?.emoji || "📢"}
                                         </span>
                                     )}
                                     {annonceModal === "approve" && (
@@ -3546,427 +3524,189 @@ export default function Index({
                                 </div>
                                 <div>
                                     <div className="modal-title">
-                                        {annonceModal === "detail"
-                                            ? "Détail de l'annonce"
-                                            : annonceModal === "approve"
-                                              ? "Transmettre au pasteur"
-                                              : "Refuser l'annonce"}
+                                        {annonceModal === "detail" ? "Fiche d'annonce" : annonceModal === "approve" ? "Transmettre au pasteur" : "Refuser l'annonce"}
                                     </div>
-                                    <div
-                                        style={{
-                                            fontSize: 12,
-                                            fontWeight: 600,
-                                            color: "#64748b",
-                                            marginTop: 2,
-                                        }}
-                                    >
-                                        Type :{" "}
-                                        {ANNONCE_TYPES.find(
-                                            (t) =>
-                                                t.value ===
-                                                selectedAnnonce.type_annonce,
-                                        )?.label || selectedAnnonce.type_annonce}
+                                    <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b", marginTop: 2 }}>
+                                        Type : {ANNONCE_TYPES.find((t) => t.value === selectedAnnonce.type_annonce)?.label || selectedAnnonce.type_annonce}
                                     </div>
                                 </div>
                             </div>
-                            <button
-                                className="modal-close"
-                                onClick={closeAnnonceModal}
-                            >
-                                <svg
-                                    width="14"
-                                    height="14"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    strokeWidth="2.5"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
+                            <button className="modal-close" onClick={closeAnnonceModal}>
+                                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             </button>
                         </div>
                         <div className="modal-body">
-                            {/* Informations principales */}
-                            <div className="ann-modal-preview">
-                                <div className="modal-info-row">
-                                    <span className="modal-info-key">
-                                        Type d'annonce
-                                    </span>
-                                    <span className="modal-info-val">
-                                        {ANNONCE_TYPES.find(
-                                            (t) =>
-                                                t.value ===
-                                                selectedAnnonce.type_annonce,
-                                        )?.emoji || "📢"}{" "}
-                                        {ANNONCE_TYPES.find(
-                                            (t) =>
-                                                t.value ===
-                                                selectedAnnonce.type_annonce,
-                                        )?.label || selectedAnnonce.type_annonce}
-                                    </span>
-                                </div>
-                                
-                                {(selectedAnnonce.createur?.prenom || selectedAnnonce.createur?.nom) && (
-                                    <div className="modal-info-row">
-                                        <span className="modal-info-key">
-                                            Créée par
-                                        </span>
-                                        <span className="modal-info-val">
-                                            {[selectedAnnonce.createur?.prenom, selectedAnnonce.createur?.nom].filter(Boolean).join(" ")}
-                                        </span>
-                                    </div>
-                                )}
-                                
-                                {selectedAnnonce.nom_concerne && (
-                                    <div className="modal-info-row">
-                                        <span className="modal-info-key">
-                                            Concerné(e)
-                                        </span>
-                                        <span className="modal-info-val">
-                                            {selectedAnnonce.nom_concerne}
-                                        </span>
-                                    </div>
-                                )}
-                                
-                                {selectedAnnonce.classe?.nom && (
-                                    <div className="modal-info-row">
-                                        <span className="modal-info-key">
-                                            Classe
-                                        </span>
-                                        <span className="modal-info-val">
-                                            🏠 {selectedAnnonce.classe.nom}
-                                        </span>
-                                    </div>
-                                )}
-                                
-                                <div className="modal-info-row">
-                                    <span className="modal-info-key">
-                                        Statut
-                                    </span>
-                                    <span className="modal-info-val" style={{ 
-                                        fontWeight: 700,
-                                        color: selectedAnnonce.statut === "SOUMISE" ? "#7c3aed" : 
-                                               selectedAnnonce.statut === "TRANSMISE_AU_PASTEUR" ? "#2563eb" :
-                                               ["VALIDEE", "PUBLIEE"].includes(selectedAnnonce.statut) ? "#16a34a" : "#dc2626"
-                                    }}>
-                                        {prettyStatut(selectedAnnonce.statut)}
-                                    </span>
-                                </div>
-                                
-                                <div className="modal-info-row">
-                                    <span className="modal-info-key">
-                                        Soumise le
-                                    </span>
-                                    <span className="modal-info-val">
-                                        {formatDateTime(selectedAnnonce.created_at)}
-                                    </span>
-                                </div>
-                                
-                                {selectedAnnonce.date_annonce && (
-                                    <div className="modal-info-row">
-                                        <span className="modal-info-key">
-                                            Date événement
-                                        </span>
-                                        <span className="modal-info-val">
-                                            📅 {formatDate(selectedAnnonce.date_annonce)}
-                                        </span>
-                                    </div>
-                                )}
-                                
-                                {selectedAnnonce.updated_at && selectedAnnonce.updated_at !== selectedAnnonce.created_at && (
-                                    <div className="modal-info-row no-border">
-                                        <span className="modal-info-key">
-                                            Dernière modif.
-                                        </span>
-                                        <span className="modal-info-val">
-                                            {formatDateTime(selectedAnnonce.updated_at)}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-                            
-                            {/* Message */}
-                            <div style={{ margin: "18px 0 8px" }}>
-                                <label className="modal-label">Message de l'annonce</label>
-                            </div>
-                            <div className="ann-modal-msg">
-                                {selectedAnnonce.message || selectedAnnonce.details?.contenu || "Aucun message"}
-                            </div>
-                            
-                            {/* Circuit de validation */}
-                            {selectedAnnonce.statut === "SOUMISE" && (
-                                <div style={{ 
-                                    marginTop: 16, 
-                                    padding: "12px 14px",
-                                    background: "rgba(124,58,237,.05)",
-                                    border: "1px solid rgba(124,58,237,.15)",
-                                    borderRadius: 8,
-                                    fontSize: 12,
-                                    color: "#7c3aed",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 8
-                                }}>
-                                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <span>Circuit : <strong>Conducteur</strong> → <strong>Pasteur</strong> → <strong>Publication</strong></span>
-                                </div>
-                            )}
-                            
-                            {selectedAnnonce.statut === "TRANSMISE_AU_PASTEUR" && (
-                                <div style={{ 
-                                    marginTop: 16, 
-                                    padding: "12px 14px",
-                                    background: "rgba(37,99,235,.05)",
-                                    border: "1px solid rgba(37,99,235,.15)",
-                                    borderRadius: 8,
-                                    fontSize: 12,
-                                    color: "#2563eb",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 8
-                                }}>
-                                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <span>En attente de validation par le <strong>Pasteur</strong></span>
-                                </div>
-                            )}
-                            
-                            {/* Bouton télécharger fiche pour TRANSMISE_AU_PASTEUR */}
-                            {selectedAnnonce.statut === "TRANSMISE_AU_PASTEUR" && (
-                                <div style={{ marginTop: 16 }}>
-                                    <button
-                                        style={{
-                                            width: "100%",
-                                            padding: "10px 14px",
-                                            backgroundColor: "#3b82f6",
-                                            color: "#fff",
-                                            border: "none",
-                                            borderRadius: 6,
-                                            fontSize: 13,
-                                            fontWeight: 600,
-                                            cursor: "pointer",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            gap: 8,
-                                            transition: "background 0.2s"
-                                        }}
-                                        onMouseEnter={(e) => e.target.style.backgroundColor = "#2563eb"}
-                                        onMouseLeave={(e) => e.target.style.backgroundColor = "#3b82f6"}
-                                        onClick={() => {
-                                            window.location.href = `/conducteur/annonces/${selectedAnnonce.id}/fiche`;
-                                        }}
-                                    >
-                                        <svg
-                                            width="13"
-                                            height="13"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            {annonceModal === "detail" && (
+                                <div className="fiche-a4">
+                                    <header className="fiche-header">
+                                        <div className="fiche-logo">
+                                            <img
+                                                src="/images/image.png"
+                                                alt="Logo Jubilé"
+                                                className="w-full h-full object-contain"
                                             />
-                                        </svg>
-                                        Télécharger la fiche
-                                    </button>
-                                </div>
-                            )}
-                            
-                            {["VALIDEE", "PUBLIEE"].includes(selectedAnnonce.statut) && (
-                                <div style={{ 
-                                    marginTop: 16, 
-                                    padding: "12px 14px",
-                                    background: "rgba(22,163,74,.05)",
-                                    border: "1px solid rgba(22,163,74,.15)",
-                                    borderRadius: 8,
-                                    fontSize: 12,
-                                    color: "#16a34a",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 8,
-                                    fontWeight: 600
-                                }}>
-                                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <span>Annonce validée et publiée</span>
-                                </div>
-                            )}
-                            
-                            {(selectedAnnonce.statut?.startsWith("REFUSEE")) && selectedAnnonce.commentaire_refus && (
-                                <div style={{ 
-                                    marginTop: 16, 
-                                    padding: "12px 14px",
-                                    background: "rgba(220,38,38,.05)",
-                                    border: "1px solid rgba(220,38,38,.15)",
-                                    borderLeft: "3px solid #dc2626",
-                                    borderRadius: 8,
-                                    fontSize: 12.5,
-                                    color: "#dc2626"
-                                }}>
-                                    <div style={{ fontWeight: 700, marginBottom: 6 }}>Motif du refus :</div>
-                                    <div style={{ color: "#991b1b" }}>{selectedAnnonce.commentaire_refus}</div>
-                                </div>
-                            )}
+                                        </div>
+                                        <div className="fiche-church-info">
+                                            <div className="fiche-church-name">Eglise Méthodiste de Côte d’Ivoire</div>
+                                            <div className="fiche-district-name">District Abidjan Nord</div>
+                                            <div className="fiche-temple-name">Temple du Jubilé de Cocody</div>
+                                        </div>
+                                    </header>
 
-                            {/* Boutons d'action dans le détail */}
-                            {annonceModal === "detail" &&
-                                selectedAnnonce.statut === "SOUMISE" && (
-                                    <div
-                                        className="modal-actions-inline"
-                                        style={{ marginTop: 18 }}
-                                    >
-                                        <button
-                                            className="btn-modal btn-modal-violet"
-                                            onClick={() =>
-                                                setAnnonceModal("approve")
-                                            }
-                                        >
-                                            <svg
-                                                width="13"
-                                                height="13"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                strokeWidth="2.5"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                                                />
-                                            </svg>
-                                            Transmettre au pasteur
-                                        </button>
-                                        <button
-                                            className="btn-modal btn-modal-red"
-                                            onClick={() =>
-                                                setAnnonceModal("refuse")
-                                            }
-                                        >
-                                            <svg
-                                                width="13"
-                                                height="13"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                strokeWidth="2.5"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M6 18L18 6M6 6l12 12"
-                                                />
-                                            </svg>
-                                            Refuser
-                                        </button>
+                                    <div className="fiche-main-title">
+                                        <h2>Fiche d'Annonce</h2>
                                     </div>
-                                )}
 
-                            {/* Formulaires commentaire */}
+                                    <div className="fiche-section">
+                                        <div className="fiche-info-grid">
+                                            <span className="fiche-label">Type</span>
+                                            <span className="fiche-value">
+                                                {ANNONCE_TYPES.find(t => t.value === selectedAnnonce.type_annonce)?.emoji}{' '}
+                                                {ANNONCE_TYPES.find(t => t.value === selectedAnnonce.type_annonce)?.label || selectedAnnonce.type_annonce}
+                                            </span>
+                                        </div>
+                                        {selectedAnnonce.createur && (
+                                            <div className="fiche-info-grid">
+                                                <span className="fiche-label">Créée par</span>
+                                                <span className="fiche-value">{selectedAnnonce.createur.prenom} {selectedAnnonce.createur.nom}</span>
+                                            </div>
+                                        )}
+                                        {selectedAnnonce.nom_concerne && (
+                                            <div className="fiche-info-grid">
+                                                <span className="fiche-label">Concerné(e)</span>
+                                                <span className="fiche-value">{selectedAnnonce.nom_concerne}</span>
+                                            </div>
+                                        )}
+                                        {selectedAnnonce.classe?.nom && (
+                                            <div className="fiche-info-grid">
+                                                <span className="fiche-label">Classe</span>
+                                                <span className="fiche-value">{selectedAnnonce.classe.nom}</span>
+                                            </div>
+                                        )}
+                                        <div className="fiche-info-grid">
+                                            <span className="fiche-label">Statut</span>
+                                            <span className="fiche-value">{prettyStatut(selectedAnnonce.statut)}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="fiche-section">
+                                        <div className="fiche-info-grid">
+                                            <span className="fiche-label">Soumise le</span>
+                                            <span className="fiche-value">{formatDateTime(selectedAnnonce.created_at)}</span>
+                                        </div>
+                                        {selectedAnnonce.date_annonce && (
+                                            <div className="fiche-info-grid">
+                                                <span className="fiche-label">Événement</span>
+                                                <span className="fiche-value">{formatDate(selectedAnnonce.date_annonce)}</span>
+                                            </div>
+                                        )}
+                                        {selectedAnnonce.date_publication && (
+                                            <div className="fiche-info-grid">
+                                                <span className="fiche-label">Publication</span>
+                                                <span className="fiche-value">{formatDate(selectedAnnonce.date_publication)}</span>
+                                            </div>
+                                        )}
+                                        {selectedAnnonce.date_expiration && (
+                                            <div className="fiche-info-grid">
+                                                <span className="fiche-label">Expiration</span>
+                                                <span className="fiche-value">{formatDate(selectedAnnonce.date_expiration)}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="fiche-quote-box">
+                                        <div className="fiche-validation-header">CONTENU</div>
+                                        <p className="fiche-description-text">
+                                            {selectedAnnonce.message || selectedAnnonce.details?.contenu || "Aucun message"}
+                                        </p>
+                                    </div>
+
+                                    {selectedAnnonce.statut?.startsWith("REFUSEE") && selectedAnnonce.commentaire_refus && (
+                                        <div className="fiche-section" style={{ marginTop: '20px' }}>
+                                            <div className="fiche-section-title">Motif du refus</div>
+                                            <div className="fiche-message" style={{ color: '#b91c1c' }}>
+                                                {selectedAnnonce.commentaire_refus}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <footer className="fiche-footer">
+                                        <div className="fiche-conductor-info">
+                                            <strong>Conducteur de la Classe :</strong><br />
+                                            {selectedAnnonce.classe?.conducteur || '—'}
+                                        </div>
+                                        <div className="fiche-signature-block">
+                                            <div className="fiche-signature-line">Bureau des Conducteurs / Pasteur</div>
+                                        </div>
+                                    </footer>
+                                </div>
+                            )}
                             {annonceModal === "approve" && (
-                                <div
-                                    className="modal-field"
-                                    style={{ marginTop: 16 }}
-                                >
+                                <div className="modal-field" style={{ marginTop: 16 }}>
                                     <label className="modal-label">
                                         Commentaire pour le pasteur{" "}
-                                        <span className="modal-optional">
-                                            (optionnel)
-                                        </span>
+                                        <span className="modal-optional">(optionnel)</span>
                                     </label>
                                     <textarea
                                         className="modal-textarea"
                                         value={annonceComment}
-                                        onChange={(e) =>
-                                            setAnnonceComment(e.target.value)
-                                        }
+                                        onChange={(e) => setAnnonceComment(e.target.value)}
                                         placeholder="Ajoutez une remarque ou un contexte pour le pasteur…"
                                     />
                                 </div>
                             )}
                             {annonceModal === "refuse" && (
-                                <div
-                                    className="modal-field"
-                                    style={{ marginTop: 16 }}
-                                >
+                                <div className="modal-field" style={{ marginTop: 16 }}>
                                     <label className="modal-label">
                                         Motif du refus{" "}
-                                        <span className="modal-required">
-                                            *
-                                        </span>
+                                        <span className="modal-required">*</span>
                                     </label>
                                     <textarea
                                         className="modal-textarea"
                                         value={annonceComment}
-                                        onChange={(e) =>
-                                            setAnnonceComment(e.target.value)
-                                        }
+                                        onChange={(e) => setAnnonceComment(e.target.value)}
                                         placeholder="Expliquez pourquoi cette annonce est refusée…"
                                     />
                                 </div>
                             )}
                         </div>
                         <div className="modal-foot">
-                            <button
-                                className="btn-modal btn-modal-ghost"
-                                onClick={closeAnnonceModal}
-                            >
+                            <button className="btn-modal btn-modal-ghost" onClick={closeAnnonceModal}>
                                 Fermer
                             </button>
                             {annonceModal === "approve" && (
                                 <button
                                     className="btn-modal btn-modal-violet"
                                     disabled={annonceProcessing}
-                                    onClick={() =>
-                                        submitAnnonceTransition(
-                                            "TRANSMISE_AU_PASTEUR",
-                                        )
-                                    }
+                                    onClick={() => submitAnnonceTransition("TRANSMISE_AU_PASTEUR")}
                                 >
-                                    <svg
-                                        width="13"
-                                        height="13"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                                        />
+                                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                                     </svg>
-                                    {annonceProcessing
-                                        ? "Envoi..."
-                                        : "Transmettre au pasteur"}
+                                    {annonceProcessing ? "Envoi..." : "Transmettre au pasteur"}
                                 </button>
                             )}
                             {annonceModal === "refuse" && (
                                 <button
                                     className="btn-modal btn-modal-red"
                                     disabled={annonceProcessing}
-                                    onClick={() =>
-                                        submitAnnonceTransition(
-                                            "REFUSEE_PAR_CONDUCTEUR",
-                                        )
-                                    }
+                                    onClick={() => submitAnnonceTransition("REFUSEE_PAR_CONDUCTEUR")}
                                 >
-                                    {annonceProcessing
-                                        ? "Traitement..."
-                                        : "Confirmer le refus"}
+                                    {annonceProcessing ? "Traitement..." : "Confirmer le refus"}
+                                </button>
+                            )}
+                            {annonceModal === "detail" && (
+                                <button
+                                    className="btn-modal btn-modal-blue"
+                                    onClick={() => setCurrentPrintItem(selectedAnnonce)}
+                                    disabled={currentPrintItem !== null}
+                                >
+                                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    Télécharger PDF
                                 </button>
                             )}
                         </div>
@@ -3974,11 +3714,195 @@ export default function Index({
                 </div>
             )}
 
-            {/* TOAST */}
             {toast && <div className="toast">{toast}</div>}
+
+            {/* Composant imprimable caché */}
+            {currentPrintItem && (
+                <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+                    {currentPrintItem.type_acte ? (
+                        <PrintableActeFiche ref={printRef} acte={currentPrintItem} />
+                    ) : (
+                        <PrintableAnnonceFiche ref={printRef} annonce={currentPrintItem} />
+                    )}
+                </div>
+            )}
         </div>
     );
 }
+
+/* ========== COMPOSANTS IMPRIMABLES (BLUE DESIGN) ========== */
+const PrintableActeFiche = React.forwardRef(({ acte }, ref) => {
+    const fields = getDetailFields(acte);
+    return (
+        <div ref={ref} className="fiche-a4">
+            <header className="fiche-header">
+                <div className="fiche-logo">
+                 <img
+                    src="/images/image.png"
+                    alt="Logo Jubilé"
+                    className="w-full h-full object-contain"
+                />
+                </div>
+                <div className="fiche-church-info">
+                    <div className="fiche-church-name">Eglise Méthodiste de Côte d’Ivoire</div>
+                    <div className="fiche-district-name">District Abidjan Nord</div>
+                    <div className="fiche-temple-name">Temple du Jubilé de Cocody</div>
+                </div>
+            </header>
+
+            <div className="fiche-main-title">
+                <h2>Fiche d'Acte Liturgique</h2>
+            </div>
+
+            <div className="fiche-section">
+                <div className="fiche-field-row">
+                    <span className="fiche-label">DEMANDEUR :</span>
+                    <span className="fiche-value">
+                        {acte.membre?.prenom} {acte.membre?.nom}
+                    </span>
+                </div>
+                <div className="fiche-field-row">
+                    <span className="fiche-label">FAMILLE :</span>
+                    <span className="fiche-value">
+                        {acte.membre?.nom || '—'}
+                    </span>
+                </div>
+                <div className="fiche-field-row">
+                    <span className="fiche-label">CLASSE :</span>
+                    <span className="fiche-value">
+                        {acte.classe?.nom || '—'}
+                    </span>
+                </div>
+                <div className="fiche-field-row">
+                    <span className="fiche-label">DATE D'ANNONCE :</span>
+                    <span className="fiche-value">
+                        {acte.created_at ? formatDate(acte.created_at) : '—'}
+                    </span>
+                </div>
+                <div className="fiche-field-row">
+                    <span className="fiche-label">HEURE :</span>
+                    <span className="fiche-value">
+                        {acte.created_at ? formatTime(acte.created_at) : '—'}
+                    </span>
+                </div>
+
+                {/* Texte de demande */}
+                <div 
+                    className="fiche-plain-text"
+                    dangerouslySetInnerHTML={{ __html: generateRequestTextHTML(acte) }}
+                />
+
+                {/* Citations bibliques en miniature */}
+                <div className="fiche-quotes-mini">
+                    <p>Psaume 65 : 3 « O toi qui écoutes la prière ! Tous les hommes viendront à toi. »</p>
+                    <p>Jean 14 : 13-14 « …tout ce que vous demanderez en mon nom, je le ferai afin que le Père soit glorifié dans le Fils. Si vous demandez quelque chose en mon nom, je le ferai. »</p>
+                </div>
+            </div>
+        </div>
+    );
+});
+
+const PrintableAnnonceFiche = React.forwardRef(({ annonce }, ref) => (
+    <div ref={ref} className="fiche-a4">
+        <header className="fiche-header">
+            <div className="fiche-logo">
+             <img
+                src="/images/image.png"
+                alt="Logo Jubilé"
+                className="w-full h-full object-contain"
+            />
+            </div>
+            <div className="fiche-church-info">
+                <div className="fiche-church-name">Eglise Méthodiste de Côte d’Ivoire</div>
+                <div className="fiche-district-name">District Abidjan Nord</div>
+                <div className="fiche-temple-name">Temple du Jubilé de Cocody</div>
+            </div>
+        </header>
+
+        <div className="fiche-main-title">
+            <h2>Fiche d'Annonce</h2>
+        </div>
+
+        <div className="fiche-section">
+            <div className="fiche-info-grid">
+                <span className="fiche-label">Type</span>
+                <span className="fiche-value">
+                    {ANNONCE_TYPES.find(t => t.value === annonce.type_annonce)?.emoji}{' '}
+                    {ANNONCE_TYPES.find(t => t.value === annonce.type_annonce)?.label || annonce.type_annonce}
+                </span>
+            </div>
+            {annonce.createur && (
+                <div className="fiche-info-grid">
+                    <span className="fiche-label">Créée par</span>
+                    <span className="fiche-value">{annonce.createur.prenom} {annonce.createur.nom}</span>
+                </div>
+            )}
+            {annonce.nom_concerne && (
+                <div className="fiche-info-grid">
+                    <span className="fiche-label">Concerné(e)</span>
+                    <span className="fiche-value">{annonce.nom_concerne}</span>
+                </div>
+            )}
+            {annonce.classe?.nom && (
+                <div className="fiche-info-grid">
+                    <span className="fiche-label">Classe</span>
+                    <span className="fiche-value">{annonce.classe.nom}</span>
+                </div>
+            )}
+            <div className="fiche-info-grid">
+                <span className="fiche-label">Statut</span>
+                <span className="fiche-value">{prettyStatut(annonce.statut)}</span>
+            </div>
+        </div>
+        
+        <div className="fiche-section">
+             <div className="fiche-info-grid">
+                <span className="fiche-label">Soumise le</span>
+                <span className="fiche-value">{formatDateTime(annonce.created_at)}</span>
+            </div>
+            {annonce.date_annonce && (
+                <div className="fiche-info-grid">
+                    <span className="fiche-label">Événement</span>
+                    <span className="fiche-value">{formatDate(annonce.date_annonce)}</span>
+                </div>
+            )}
+            {annonce.date_publication && (
+                <div className="fiche-info-grid">
+                    <span className="fiche-label">Publication</span>
+                    <span className="fiche-value">{formatDate(annonce.date_publication)}</span>
+                </div>
+            )}
+            {annonce.date_expiration && (
+                <div className="fiche-info-grid">
+                    <span className="fiche-label">Expiration</span>
+                    <span className="fiche-value">{formatDate(annonce.date_expiration)}</span>
+                </div>
+            )}
+        </div>
+        
+        <div className="fiche-quote-box">
+            <div className="fiche-validation-header">CONTENU</div>
+            <p className="fiche-description-text">{annonce.message || annonce.details?.contenu || "Aucun message"}</p>
+        </div>
+
+        {annonce.statut?.startsWith("REFUSEE") && annonce.commentaire_refus && (
+            <div className="fiche-section" style={{ marginTop: '20px' }}>
+                <div className="fiche-section-title">Motif du refus</div>
+                <div className="fiche-message" style={{ color: '#b91c1c' }}>{annonce.commentaire_refus}</div>
+            </div>
+        )}
+
+        <footer className="fiche-footer">
+            <div className="fiche-conductor-info">
+                <strong>Conducteur de la Classe :</strong><br />
+                {annonce.classe?.conducteur || '—'}
+            </div>
+            <div className="fiche-signature-block">
+                <div className="fiche-signature-line">Bureau des Conducteurs / Pasteur</div>
+            </div>
+        </footer>
+    </div>
+));
 
 /* ════════ HELPERS ════════ */
 function prettyType(type) {
@@ -4041,12 +3965,62 @@ function formatDate(value) {
     if (Number.isNaN(d.getTime())) return value;
     return d.toLocaleDateString("fr-FR");
 }
-
+function formatTime(value) {
+    if (!value) return "—";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    return d.toLocaleTimeString("fr-FR", { hour: '2-digit', minute: '2-digit' });
+}
+function formatLongDate(value) {
+    if (!value) return "—";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    return d.toLocaleDateString('fr-FR', options);
+}
+function formatLongTime(value) {
+    if (!value) return "—";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    const hours = d.getHours().toString().padStart(2, '0');
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    return `${hours}h${minutes}`;
+}
 function formatDateTime(value) {
     if (!value) return "—";
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return value;
     return d.toLocaleDateString("fr-FR") + " à " + d.toLocaleTimeString("fr-FR", { hour: '2-digit', minute: '2-digit' });
+}
+function generateRequestTextHTML(acte) {
+    const type = prettyType(acte.type_acte);
+    const personne = acte.membre ? `${acte.membre.prenom} ${acte.membre.nom}` : '—';
+    const dateLong = acte.date_souhaitee ? formatLongDate(acte.date_souhaitee) : '—';
+    const heureLong = acte.date_souhaitee ? formatLongTime(acte.date_souhaitee) : '—';
+    const lieu = acte.details?.lieu || '—';
+    const ville = 'Abidjan';
+    const conducteur = acte.classe?.conducteur || '—';
+
+    return `
+        <p><strong>Objet : <strong><em>${type}</em></strong></strong></p>
+        <p>Madame(s) / Monsieur(s) les Responsables de la communauté,</p>
+        <p>Par la présente, je viens respectueusement solliciter auprès de la communauté l’annonce de <strong><em>${type}</em></strong> concernant <strong><em>${personne}</em></strong>.</p>
+        <p>Nous souhaiterions que cette annonce soit faite auprès de la communauté afin d’informer les fidèles et de les inviter à s’associer à cet événement par leur présence et leurs prières. Pour le : <strong><em>${dateLong}</em></strong> à <strong><em>${heureLong}</em></strong> à <strong><em>${lieu}</em></strong>.</p>
+        <p>Dans l’attente d’une suite favorable à notre demande, nous vous prions d’agréer, Madame(s) / Monsieur(s) les Responsables, l’expression de nos salutations respectueuses et fraternelles en Christ.</p>
+        <p>Fait à : <strong><em>${ville}</em></strong>.</p>
+        <div class="fiche-conductor-row">
+            <div class="fiche-conductor-left">
+                <strong class="fiche-conductor-title">Conducteur de la Classe :</strong>
+            </div>
+            <div class="fiche-conductor-right">
+                <strong class="fiche-conductor-title">Bureau des Conducteurs / Pasteur</strong>
+            </div>
+        </div>
+        <div class="fiche-conductor-name">
+            <span><strong><em>${conducteur}</em></strong></span>
+            <span></span>
+        </div>
+    `;
 }
 
 function Field({ label, required, children }) {
@@ -4060,7 +4034,6 @@ function Field({ label, required, children }) {
         </div>
     );
 }
-
 function RecapRow({ label, value }) {
     return (
         <div className="ann-recap-row">
@@ -4069,14 +4042,12 @@ function RecapRow({ label, value }) {
         </div>
     );
 }
-
 function getPlaceholder(type) {
     const placeholders = {
         priere: "Ex : Nous sollicitons les prières de la communauté pour la guérison de…",
         grace: "Ex : La famille Kouassi rend grâce à Dieu pour la naissance de…",
         deces: "Ex : La famille a la douleur de vous annoncer le rappel à Dieu de…",
-        felicitations:
-            "Ex : Nous félicitons chaleureusement les époux… pour leur union sacrée.",
+        felicitations: "Ex : Nous félicitons chaleureusement les époux… pour leur union sacrée.",
         generale: "Rédigez votre annonce à destination de l'assemblée…",
     };
     return placeholders[type] || "Rédigez votre message…";
@@ -4084,7 +4055,11 @@ function getPlaceholder(type) {
 
 /* ════════ STYLES ════════ */
 const styles = `
+/* === POLICES GOOGLE FONTS POUR LA FICHE === */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@0,400;0,700;1,400&family=Playfair+Display:ital,wght@1,400&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+/* === STYLES GÉNÉRAUX DE L'APP (EXISTANTS) === */
 *{box-sizing:border-box}
 .conductor-page{
   --grad:linear-gradient(135deg,#6B46C1 0%,#1E40AF 50%,#B6C01A 100%);
@@ -4103,7 +4078,7 @@ const styles = `
 .conductor-page::before{content:"";position:fixed;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,0.1) 1px,transparent 1px);background-size:28px 28px;pointer-events:none;z-index:0;}
 .conductor-page::after{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 0% 0%,rgba(139,92,246,0.12),transparent 50%),radial-gradient(ellipse 60% 40% at 100% 100%,rgba(182,192,26,0.1),transparent 50%);pointer-events:none;z-index:0;}
 .main{min-height:100vh;position:relative;z-index:1}
-.page-content{padding:28px 38px;max-width:1400px}
+.page-content{padding:28px 38px;max-width:1400px;margin-left:auto;margin-right:auto;}
 
 /* ── TOP ── */
 .top-actions{display:flex;align-items:center;gap:16px;margin-bottom:24px}
@@ -4112,7 +4087,6 @@ const styles = `
 .page-heading{flex:1}.page-title{font-size:22px;font-weight:700;color:white;text-shadow:0 1px 3px rgba(0,0,0,.2);line-height:1.2;}
 .btn-create{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:var(--gold);color:#1a1a00;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px var(--gold-glow);transition:all .2s;}
 .btn-create:hover{transform:translateY(-1px);box-shadow:0 8px 20px var(--gold-glow)}
-
 /* ── ALERTS ── */
 .alerts-row{display:flex;gap:8px;margin-bottom:22px}
 .alert-banner{display:flex;align-items:center;justify-content:space-between;gap:14px;border-radius:10px;padding:13px 18px;color:white;}
@@ -4217,8 +4191,6 @@ const styles = `
    ★ ONGLET ANNONCES
 ════════════════════════════════════ */
 .ann-tab-root{display:flex;flex-direction:column;gap:16px}
-
-/* Héro bannière */
 .ann-hero{
   display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;
   background:linear-gradient(135deg,rgba(91,63,175,.2) 0%,rgba(30,64,175,.18) 60%,rgba(182,192,26,.1) 100%);
@@ -4260,15 +4232,11 @@ const styles = `
 .asb-step.active .asb-dot{background:rgba(91,63,175,.12);border-color:#5B3FAF;color:#5B3FAF;}
 .asb-step.active{color:#5B3FAF;}
 .ann-type-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
-
-/* Sous-tabs À traiter / Traitées */
 .ann-subtabs{display:inline-flex;gap:3px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:9px;padding:3px;}
 .ann-subtab{padding:7px 16px;border-radius:7px;font-size:12.5px;font-weight:700;color:var(--text3);background:none;border:none;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:7px;}
 .ann-subtab:hover{color:var(--text);background:rgba(255,255,255,.4)}.ann-subtab.active{background:var(--surface);color:var(--violet);box-shadow:0 1px 6px rgba(91,63,175,.15)}
 .ann-subtab-badge{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:800;background:var(--orange);color:white}
 .ann-subtab-badge-done{background:var(--green-dim);color:var(--green);border:1px solid rgba(22,163,74,.25)}
-
-/* Items annonces */
 .ann-item{display:flex;align-items:flex-start;gap:14px;padding:16px 24px;border-bottom:1px solid var(--border);transition:background .15s;}
 .ann-item:last-child{border-bottom:none}.ann-item:hover{background:rgba(255,255,255,.5)}
 .ann-item-pending{border-left:3px solid var(--violet);background:rgba(91,63,175,.02)}
@@ -4284,23 +4252,16 @@ const styles = `
 .ann-chip-class{background:var(--violet-dim);color:var(--violet);border-color:rgba(91,63,175,.2)}
 .ann-date{font-size:10.5px;color:var(--text3)}
 .ann-item-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;min-width:120px}
-.
-
-/* Stat sidebar annonces */
 .ann-stat-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(30,41,59,.06)}.ann-stat-row:last-child{border-bottom:none}
 .ann-stat-emoji{font-size:18px;width:24px;text-align:center;flex-shrink:0}
 .ann-stat-info{flex:1;min-width:0}.ann-stat-name{font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:5px}
 .ann-stat-bar{height:4px;background:rgba(30,41,59,.08);border-radius:6px;overflow:hidden}.ann-stat-fill{height:100%;border-radius:6px;transition:width .6s}
 .asfill-violet{background:var(--violet)}.asfill-gold{background:var(--gold)}.asfill-slate{background:#909090}.asfill-orange{background:var(--orange)}.asfill-green{background:var(--green)}
 .ann-stat-cnt{font-size:15px;font-weight:800;color:var(--text);width:22px;text-align:right}
-
-/* ── TIMELINE ── */
 .timeline-item{display:flex;gap:14px;padding:14px 24px;border-bottom:1px solid var(--border);align-items:flex-start}.timeline-item:last-child{border-bottom:none}
 .timeline-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}.timeline-dot.green{background:var(--green)}.timeline-dot.gold{background:var(--gold)}.timeline-dot.red{background:var(--red)}
 .timeline-content{flex:1}.timeline-action{font-size:13px;font-weight:600;color:var(--text)}.timeline-detail{font-size:11.5px;color:var(--text3);margin-top:2px}
 .timeline-time{font-size:10.5px;color:var(--text3);white-space:nowrap;padding-top:2px}
-
-/* ── STATS ── */
 .stats-types{padding:20px 24px;display:flex;flex-direction:column;gap:16px}
 .stat-type-row{display:flex;align-items:center;gap:12px}.stat-type-icon{width:36px;height:36px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;}
 .stat-type-icon.blue{background:var(--blue-dim)}.stat-type-icon.red{background:var(--red-dim)}.stat-type-icon.gold{background:var(--gold-dim)}.stat-type-icon.orange{background:var(--orange-dim)}
@@ -4312,11 +4273,10 @@ const styles = `
 .rate-rows{display:flex;flex-direction:column;gap:8px}.rate-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,.4);border-radius:8px}.rate-row.total-row{border-top:1px solid var(--border);margin-top:4px;padding-top:12px;background:rgba(255,255,255,.6)}
 .rate-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.rate-dot.green{background:var(--green)}.rate-dot.gold{background:var(--gold)}.rate-dot.orange{background:var(--orange)}.rate-dot.blue{background:var(--blue)}
 .rate-name{flex:1;font-size:12.5px;color:var(--text2);font-weight:500}.rate-val{font-size:14px;font-weight:800;color:var(--text)}
-
-/* ── MODALS ── */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(8px);padding:16px;overflow-y:auto;}
 .modal-overlay.open{display:flex}
 .modal{background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.8);border-radius:16px;width:100%;max-width:500px;margin:auto;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.25);animation:modalIn .3s cubic-bezier(.34,1.56,.64,1) both;}
+.modal.modal-detail { max-width: 900px; }
 .acte-head-icon{width:44px;height:44px;background:rgba(16,185,129,.15);border-radius:12px;color:#047857;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;flex-shrink:0;border:1px solid rgba(16,185,129,.5);}
 .acte-form-root{background:#f8fafc;border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:18px;margin-top:8px;box-shadow:0 8px 24px rgba(15,23,42,.08);}
 .acte-form{display:flex;flex-direction:column;gap:18px;}
@@ -4325,6 +4285,7 @@ const styles = `
 .acte-submit:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 20px rgba(16,185,129,.45);}
 .acte-submit:disabled{opacity:.6;cursor:not-allowed;box-shadow:none;}
 .modal-ann{max-width:560px}
+.modal-ann.modal-detail { max-width: 900px; }
 @keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
 .modal-head{padding:20px 24px;border-bottom:1px solid rgba(0,0,0,.07);display:flex;align-items:center;justify-content:space-between;}
 .modal-head-left{display:flex;align-items:center;gap:12px}
@@ -4352,7 +4313,270 @@ const styles = `
 .btn-modal-red{background:var(--red);color:white}.btn-modal-red:hover{background:#b91c1c;transform:translateY(-1px)}
 .btn-modal-green{background:var(--green);color:white}.btn-modal-green:hover{background:#15803d;transform:translateY(-1px)}
 .btn-modal-violet{background:var(--violet);color:white;box-shadow:0 2px 8px var(--violet-glow)}.btn-modal-violet:hover{background:#4C34A0;transform:translateY(-1px);box-shadow:0 6px 16px var(--violet-glow)}
+.btn-modal-blue{background:#3b82f6;color:white;box-shadow:0 2px 8px rgba(59,130,246,0.3);}
+.btn-modal-blue:hover{background:#2563eb;transform:translateY(-1px);}
 .btn-modal:disabled{opacity:.5;cursor:not-allowed;transform:none !important}
+
+/* ===================================== */
+/* STYLES FICHE A4 - NOUVEAU DESIGN BLEU */
+/* ===================================== */
+.fiche-a4 {
+  background: #ffffff;
+  width: 100%;
+  padding: 0;
+  color: #000000;
+  font-family: 'Lato', sans-serif;
+}
+
+/* HEADER */
+.fiche-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 20px;
+  margin-bottom: 40px;
+  border-bottom: 2px solid #003366;
+  padding-bottom: 20px;
+}
+
+.fiche-logo {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.fiche-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.fiche-church-info {
+  text-align: left;
+  font-family: 'Cinzel', serif;
+  color: #000;
+}
+.fiche-church-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #003366;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 5px;
+}
+.fiche-district-name {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #333;
+  margin-bottom: 8px;
+}
+.fiche-temple-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 17px;
+  font-style: italic;
+  font-weight: 600;
+}
+
+/* TITRE PRINCIPAL */
+.fiche-main-title {
+  text-align: center;
+  margin-bottom: 35px;
+}
+.fiche-main-title h2 {
+  font-family: 'Cinzel', serif;
+  font-size: 22px;
+  color: #000;
+  text-transform: uppercase;
+  border: 1px solid #000;
+  padding: 10px 20px;
+  display: inline-block;
+  min-width: 60%;
+}
+
+/* SECTIONS */
+.fiche-section {
+  margin-bottom: 30px;
+}
+
+.fiche-field-row {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
+.fiche-field-row .fiche-label {
+  font-weight: 700;
+  color: #003366;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  width: 140px;
+  flex-shrink: 0;
+}
+.fiche-field-row .fiche-value {
+  font-size: 15px;
+  line-height: 1.5;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 2px;
+  flex: 1;
+}
+
+.fiche-info-grid {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+.fiche-label {
+  font-weight: 700;
+  color: #003366;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  padding-top: 2px;
+}
+.fiche-value {
+  font-size: 15px;
+  line-height: 1.5;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 2px;
+}
+.fiche-value.no-border {
+  border-bottom: none;
+}
+.fiche-highlight {
+  font-weight: 700;
+  color: #003366;
+  text-transform: uppercase;
+  font-size: 16px;
+}
+
+/* TEXTE DE DEMANDE */
+.fiche-plain-text {
+  margin: 30px 0;
+  font-family: 'Lato', sans-serif;
+  font-size: 14px;
+  line-height: 1.8;
+  color: #1e1e1e;
+}
+.fiche-plain-text p {
+  margin: 0 0 12px 0;
+}
+.fiche-plain-text p:last-child {
+  margin-bottom: 0;
+}
+.fiche-plain-text strong {
+  font-weight: 700;
+}
+
+/* Lignes conducteur */
+.fiche-conductor-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 20px;
+  margin-bottom: 5px;
+}
+.fiche-conductor-left, .fiche-conductor-right {
+  font-weight: bold;
+}
+.fiche-conductor-title {
+  text-decoration: underline;
+}
+.fiche-conductor-name {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 35mm;
+  font-size: 14px;
+}
+
+/* CITATIONS EN MINIATURE */
+.fiche-quotes-mini {
+  margin-top: 20px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #003366;
+  line-height: 1.5;
+  border-top: 2px solid #003366;
+  border-bottom: 2px solid #003366;
+  padding: 10px;
+  text-align: center;
+  background: #ffffff;
+  border-radius: 5px;
+  font-style: normal;
+}
+.fiche-quotes-mini p {
+  margin: 5px 0;
+}
+
+.fiche-quote-box {
+  background-color: transparent;
+  border-left: 3px solid #003366;
+  padding: 15px 20px;
+  margin: 30px 0;
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 15px;
+  color: #333;
+}
+.fiche-quote-ref {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #003366;
+  font-weight: bold;
+  font-style: normal;
+  text-align: right;
+}
+
+.fiche-footer {
+  margin-top: 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-top: 20px;
+  border-top: 1px solid #000;
+}
+.fiche-conductor-info {
+  font-size: 13px;
+  color: #000;
+}
+.fiche-signature-block {
+  text-align: center;
+  width: 220px;
+}
+.fiche-signature-line {
+  border-top: 1px solid #000;
+  margin-top: 60px;
+  padding-top: 5px;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #000;
+  letter-spacing: 1px;
+}
+
+@media (max-width: 600px) {
+  .fiche-field-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .fiche-field-row .fiche-label {
+    width: auto;
+  }
+  .fiche-conductor-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .fiche-a4 { padding: 30px 20px; }
+  .fiche-info-grid { grid-template-columns: 1fr; gap: 5px; }
+  .fiche-label { margin-bottom: 2px; }
+  .fiche-footer { flex-direction: column; align-items: center; gap: 30px; }
+}
 
 /* announcement form styles */
 .ann-field{display:flex;flex-direction:column;gap:8px}.ann-label{font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#5C5748}.ann-req{color:#C06040}
@@ -4384,7 +4608,151 @@ const styles = `
 .toast{position:fixed;right:24px;bottom:24px;background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.8);border-left:4px solid var(--green);color:var(--text);padding:13px 18px;border-radius:11px;z-index:220;font-size:13px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.15);backdrop-filter:blur(8px);animation:toastIn .35s cubic-bezier(.34,1.56,.64,1) both;}
 @keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
+/* ===================================== */
+/* STYLES D'IMPRESSION POUR FORMAT A4   */
+/* ===================================== */
+@media print {
+  * {
+    background: transparent !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .btn-back,
+  .btn-create,
+  .btn-bulk,
+  .item-actions,
+  .bulk-check,
+  .quick-tools,
+  .tab-bar,
+  .modal-overlay,
+  .toast,
+  .alert-action,
+  .btn-cta-ann,
+  .ann-hero-pulse,
+  .ann-mini-stat,
+  .ann-subtabs,
+  .btn-pdf,
+  .btn-create-side,
+  .btn-view,
+  .btn-approve,
+  .btn-refuse,
+  .pager-btn,
+  .modal-foot,
+  .modal-close,
+  .panel-actions button:not(.panel-count-badge) {
+    display: none !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 1.5cm;
+  }
+
+  body {
+    font-family: 'Times New Roman', serif;
+    font-size: 11pt;
+    line-height: 1.4;
+    background: white;
+  }
+
+  .conductor-page {
+    background: white;
+    min-height: auto;
+  }
+
+  .page-content {
+    padding: 0;
+    max-width: 100%;
+  }
+
+  .panel,
+  .kpi-card,
+  .alert-banner,
+  .demande-item,
+  .ann-item,
+  .timeline-item,
+  .panel-side {
+    border: 1px solid #aaa !important;
+    margin-bottom: 0.3cm;
+    page-break-inside: avoid;
+    background: white !important;
+    border-radius: 0;
+  }
+
+  .panel-head {
+    border-bottom: 1px solid #aaa;
+    background: #f5f5f5 !important;
+  }
+
+  .badge {
+    border: 1px solid black !important;
+    background: none !important;
+    color: black !important;
+  }
+
+  .badge-dot {
+    display: none;
+  }
+
+  .badge-soumise,
+  .badge-transmis,
+  .badge-valide,
+  .badge-refuse {
+    background: none !important;
+    color: black !important;
+  }
+
+  .page-content::before {
+    content: "Gestion des demandes - Impression du " counter(page);
+    display: block;
+    text-align: right;
+    font-size: 9pt;
+    color: #444;
+    margin-bottom: 0.5cm;
+  }
+
+  h1, h2, h3, h4 {
+    page-break-after: avoid;
+  }
+
+  img, svg {
+    max-width: 100% !important;
+  }
+
+  .panel-head,
+  .panel-body,
+  .demande-item,
+  .ann-item {
+    padding: 0.3cm 0.4cm;
+  }
+
+  .panel-title {
+    font-size: 14pt;
+    font-weight: bold;
+  }
+
+  .demande-name,
+  .ann-item-type {
+    font-size: 12pt;
+  }
+
+  .demande-type,
+  .ann-item-msg,
+  .modal-info-key,
+  .modal-info-val {
+    font-size: 10pt;
+  }
+
+  .timeline-dot {
+    display: none;
+  }
+}
+
 @media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}.grid-3-1,.grid-2{grid-template-columns:1fr}}
 @media(max-width:768px){.page-content{padding:18px}.kpi-row{grid-template-columns:1fr 1fr}.tab-toolbar{align-items:stretch}.tab-bar{width:100%;overflow-x:auto;margin-bottom:0}.quick-tools{width:100%;justify-content:flex-start}.quick-dropdown{width:100%;min-width:0}.quick-search{width:100%;min-width:0}.top-actions{flex-wrap:wrap}.page-heading{order:-1;width:100%}.ann-hero{flex-direction:column;align-items:flex-start}.ann-hero-stats{width:100%}.ann-item-right{min-width:auto}}
 @media(max-width:500px){.kpi-row{grid-template-columns:1fr}}
 `;
+

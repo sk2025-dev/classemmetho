@@ -4362,7 +4362,7 @@ const styles = `
 .pastor-page::before{content:'';position:fixed;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,0.07) 1px,transparent 1px);background-size:28px 28px;pointer-events:none;z-index:0}
 .pastor-page::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 10% 10%,rgba(124,111,205,0.1),transparent 55%),radial-gradient(ellipse 50% 40% at 90% 90%,rgba(182,192,26,0.08),transparent 50%);pointer-events:none;z-index:0}
 .main{position:relative;z-index:1;min-height:100vh}
-.content{padding:28px 38px;max-width:1400px}
+.content{padding:28px 38px;max-width:1400px;margin-left:auto;margin-right:auto;}
 
 /* ════════════════════════════════════
    ★ HERO HEADER — Titre Validation

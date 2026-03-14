@@ -13,6 +13,8 @@ use App\Http\Controllers\ResponsableFamille\InscriptionsController as Responsabl
 use App\Http\Controllers\ResponsableFamille\MemberController as ResponsableFamilleMemberController;
 use App\Http\Controllers\Pasteur\DashboardController as PasteurDashboardController;
 use App\Http\Controllers\MembreFamille\DashboardController as MembreFamilleDashboardController;
+use App\Http\Controllers\MembreFamille\MemberController as MembreFamilleMemberController;
+use App\Http\Controllers\MembreFamille\AnnonceController as MembreFamilleAnnonceController;
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\Profile\ChangePasswordController;
 use App\Http\Controllers\Admin\AdministrationController;
@@ -23,6 +25,7 @@ use App\Http\Controllers\Admin\NotificationsController;
 use App\Http\Controllers\Admin\AnnonceController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\LiturgieController as AdminLiturgieController;
+use App\Http\Controllers\Admin\ActesLiturgiqueController;
 use App\Http\Controllers\ExcelImportController;
 use App\Http\Controllers\MembreFamille\FamilyController as MembreFamilleFamilyController;
 use App\Http\Controllers\MembreFamille\ProfileController as MembreFamilleProfileController;
@@ -63,9 +66,9 @@ Route::get('/login', function () {
 
 Route::post('/login', [\App\Http\Controllers\Auth\LoginController::class, 'login'])->name('login.attempt');
 
-// Routes authentifiÃ©es
+// Routes authentifiées
 Route::middleware(['auth'])->group(function () {
-    // Route de dÃ©connexion
+    // Route de déconnexion
     Route::post('/logout', [\App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
     // Profil utilisateur
     Route::get('/profile', [\App\Http\Controllers\Profile\ProfileController::class, 'show'])->name('profile.show');
@@ -74,7 +77,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/profile/password', [\App\Http\Controllers\Profile\ProfileController::class, 'changePassword'])->name('profile.password');
     Route::post('/profile/signature', [\App\Http\Controllers\Profile\ProfileController::class, 'updateSignature'])->name('profile.signature');
 
-    // Route gÃ©nÃ©rique /dashboard redirige selon le rÃ´le connectÃ©
+    // Route générique /dashboard redirige selon le rôle connecté
     Route::get('/dashboard', function () {
         $user = Auth::user();
         if (!$user) return redirect()->route('login');
@@ -96,7 +99,7 @@ Route::middleware(['auth'])->group(function () {
     })->name('dashboard');
 });
 
-// Routes d'inscription personnalisÃ©es
+// Routes d'inscription personnalisées
 Route::get('/register/famille', function () {
     return Inertia::render('ResponsableFamille/RegisterFamille');
 })->name('register.famille');
@@ -119,7 +122,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
         ->middleware('verified');
 });
 
-// Routes authentifiÃ©es
+// Routes authentifiées
 Route::middleware(['auth'])->group(function () {
     // Tableau de bord Admin
     Route::middleware('role:admin')->group(function () {
@@ -127,9 +130,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/inscriptions', [\App\Http\Controllers\Admin\InscriptionsController::class, 'index'])->name('admin.inscriptions');
         Route::get('/admin/inscriptions/{id}/approval-log', [\App\Http\Controllers\Admin\InscriptionApprovalController::class, 'approvalLog'])->name('admin.inscriptions.approval_log');
         Route::get('/admin/inscriptions/type-selection', [\App\Http\Controllers\Admin\InscriptionsController::class, 'typeSelection'])->name('admin.inscriptions.type-selection');
-        // Route pour importer via Excel (Admin - AuthentifiÃ©)
+        // Route pour importer via Excel (Admin - Authentifié)
         Route::post('/admin/inscriptions/import-excel', [ExcelImportController::class, 'import'])->name('admin.inscriptions.import-excel');
-        // Routes pour crÃ©er inscriptions directement
+        // Routes pour créer inscriptions directement
         Route::get('/admin/inscriptions/famille/create', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'createFamilyForm'])->name('admin.inscriptions.famille.create');
         Route::get('/admin/inscriptions/conducteur/create', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'createConductorForm'])->name('admin.inscriptions.conducteur.create');
         Route::get('/admin/inscriptions/pasteur/create', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'createPastorForm'])->name('admin.inscriptions.pasteur.create');
@@ -150,17 +153,8 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('/admin/notifications', [\App\Http\Controllers\Admin\NotificationsController::class, 'index'])->name('admin.notifications');
         Route::get('/admin/notifications/{id}', [\App\Http\Controllers\Admin\NotificationsController::class, 'show'])->name('admin.notifications.show');
-
-        // Routes module Actes Liturgiques (Admin)
-        Route::get('/admin/liturgie', [AdminLiturgieController::class, 'index'])->name('admin.liturgie.index');
-        Route::post('/admin/liturgie', [AdminLiturgieController::class, 'store'])->name('admin.liturgie.store');
-        Route::put('/admin/liturgie/{id}', [AdminLiturgieController::class, 'update'])->name('admin.liturgie.update');
-        Route::post('/admin/liturgie/{id}/transition', [AdminLiturgieController::class, 'transition'])->name('admin.liturgie.transition');
-        Route::delete('/admin/liturgie/{id}', [AdminLiturgieController::class, 'destroy'])->name('admin.liturgie.destroy');
-
-
         // --- Tableau de bord complet (Votre AdministrationController) ---
-        // J'utilise 'administration' comme nom de route pour Ã©viter conflit avec 'dashboard'
+        // J'utilise 'administration' comme nom de route pour éviter conflit avec 'dashboard'
         Route::get('/administration', [AdministrationController::class, 'index'])->name('administration');
 
         // --- Actions Legacy (Approve/Reject) ---
@@ -183,16 +177,36 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/admin/membres/{id}', [AdministrationController::class, 'destroyMembre'])->name('admin.membres.destroy');
         Route::patch('/admin/membres/{id}/status', [UserManagementController::class, 'updateStatus'])->name('admin.membres.status');
 
-        // Routes pour les dÃ©tails
+        // Routes pour les détails
         Route::get('/inscriptions/{id}', [AdministrationController::class, 'getInscriptionDetails'])
             ->name('admin.inscriptions.details');
         Route::get('/actes/{id}', [AdministrationController::class, 'getActeDetails'])
             ->name('admin.actes.details');
 
-        // Route pour mettre Ã jour le statut
+        // Route pour mettre à jour le statut
         Route::put('/status/{id}/{type}', [AdministrationController::class, 'updateStatus'])
             ->name('admin.updateStatus');
+
+        Route::get('/admin/liturgie', [AdminLiturgieController::class, 'index'])->name('admin.liturgie.index');
+        Route::get('/admin/liturgie/nouvelle', [AdminLiturgieController::class, 'create'])->name('admin.liturgie.create');
+        Route::get('/admin/liturgie/nouvelle/formulaire', [AdminLiturgieController::class, 'createForm'])->name('admin.liturgie.form');
+        Route::post('/admin/liturgie', [AdminLiturgieController::class, 'store'])->name('admin.liturgie.store');
+        Route::get('/admin/liturgie/{id}/certificat', [AdminLiturgieController::class, 'certificat'])->name('admin.liturgie.certificat');
+        Route::get('/admin/liturgie/{id}/fiche', [AdminLiturgieController::class, 'fiche'])->name('admin.liturgie.fiche');
+
+        // Annonces
+        Route::get('/admin/annonces', [AnnonceController::class, 'index'])->name('admin.annonces.index');
+        Route::get('/admin/annonces/create', [AnnonceController::class, 'create'])->name('admin.annonces.create');
+        Route::post('/admin/annonces', [AnnonceController::class, 'store'])->name('admin.annonces.store');
+        Route::get('/admin/annonces/{id}', [AnnonceController::class, 'show'])->name('admin.annonces.show');
+        Route::get('/admin/annonces/{id}/fiche', [AnnonceController::class, 'fiche'])->name('admin.annonces.fiche');
+        Route::get('/admin/annonces/{id}/edit', [AnnonceController::class, 'edit'])->name('admin.annonces.edit');
+        Route::put('/admin/annonces/{id}', [AnnonceController::class, 'update'])->name('admin.annonces.update');
+        Route::delete('/admin/annonces/{id}', [AnnonceController::class, 'destroy'])->name('admin.annonces.destroy');
     });
+
+    Route::get('/admin/actesLiturgique', [\App\Http\Controllers\Admin\ActesLiturgiqueController::class, 'index'])->name('admin.actesLiturgique');
+    
 
     // Tableau de bord Conducteur
     Route::middleware('role:conducteur')->group(function () {
@@ -208,11 +222,11 @@ Route::middleware(['auth'])->group(function () {
         })->name('conducteur.register');
         Route::post('/conducteur/register', [RegisterMemberController::class, 'store'])->name('conducteur.register.store');
 
-        // Formulaire de crÃ©ation de membre/responsable de famille
+        // Formulaire de création de membre/responsable de famille
         Route::get('/conducteur/members/create', [RegisterMemberController::class, 'create'])->name('conducteur.members.create');
         Route::post('/conducteur/members', [RegisterMemberController::class, 'store'])->name('conducteur.members.store');
 
-        // Endpoint simplifiÃ© pour ajouter rapidement un simple membre
+        // Endpoint simplifié pour ajouter rapidement un simple membre
         Route::post('/conducteur/quick-member', [QuickMemberController::class, 'store'])->name('conducteur.quick_member.store');
 
         Route::put('/conducteur/members/{memberId}', [ConducteurInscriptionsController::class, 'update'])->name('conducteur.members.update');
@@ -224,7 +238,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/conducteur/inscriptions/{inscriptionId}', [ConducteurInscriptionsController::class, 'updateInscription'])->name('conducteur.inscriptions.update');
         Route::delete('/conducteur/inscriptions/{memberId}', [ConducteurInscriptionsController::class, 'destroy'])->name('conducteur.inscriptions.destroy');
 
-        // Endpoint: rÃ©cupÃ©rer/crÃ©er UserSacrement pour un utilisateur
+        // Endpoint: récupérer/créer UserSacrement pour un utilisateur
         Route::get('/users/{id}/sacrements', [\App\Http\Controllers\UserSacrementController::class, 'show'])->name('users.sacrements');
 
         // Routes module Actes Liturgiques (Conducteur)
@@ -272,9 +286,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/responsable-famille/annonces/{id}/edit', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'edit'])->name('responsable_famille.annonces.edit');
         Route::put('/responsable-famille/annonces/{id}', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'update'])->name('responsable_famille.annonces.update');
         Route::delete('/responsable-famille/annonces/{id}', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'destroy'])->name('responsable_famille.annonces.destroy');
-
-        // Props Inertia dans le contrôleur
-
     });
 
     // Tableau de bord Pasteur
@@ -284,7 +295,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/pasteur/inscriptions', [\App\Http\Controllers\Pasteur\InscriptionsController::class, 'index'])
             ->name('pasteur.inscriptions');
 
-        // Routes pasteur pour gÃ©rer sa famille et ses membres
+        // Routes pasteur pour gérer sa famille et ses membres
         Route::get('/pasteur/family/edit', [\App\Http\Controllers\Pasteur\FamilyController::class, 'edit'])->name('pasteur.family.edit');
         Route::post('/pasteur/family/update', [\App\Http\Controllers\Pasteur\FamilyController::class, 'update'])->name('pasteur.family.update');
         Route::get('/pasteur/members/create', [\App\Http\Controllers\Pasteur\MemberController::class, 'create'])->name('pasteur.members.create');
@@ -308,18 +319,73 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/pasteur/annonces/{id}/archiver', [\App\Http\Controllers\Pasteur\AnnonceController::class, 'archiver'])->name('pasteur.annonces.archiver');
     });
 
-    // Tableau de bord Membre de Famille
+    // Tableau de bord Membre de Famille (Routes complètes alignées sur ResponsableFamille)
     Route::middleware(['auth', 'role:membre_famille'])->group(function () {
-        Route::get('/membre-famille/dashboard', [MembreFamilleDashboardController::class, 'index'])->name('membre_famille.dashboard');
-        Route::get('/membre-famille/inscriptions', [\App\Http\Controllers\MembreFamille\InscriptionsController::class, 'index'])->name('membre_famille.inscriptions');
-        Route::get('/membre-famille/family', [MembreFamilleFamilyController::class, 'index'])->name('membre_famille.family');
-        Route::get('/membre-famille/profile/edit', [MembreFamilleProfileController::class, 'edit'])->name('membre_famille.profile.edit');
-        Route::put('/membre-famille/profile/update', [MembreFamilleProfileController::class, 'update'])->name('membre_famille.profile.update');
-        Route::get('/membre-famille/liturgie', [MembreFamilleLiturgieController::class, 'index'])->name('membre_famille.liturgie.index');
-        Route::post('/membre-famille/liturgie', [MembreFamilleLiturgieController::class, 'store'])->name('membre_famille.liturgie.store');
-        Route::get('/membre-famille/liturgie/{id}/certificat', [MembreFamilleLiturgieController::class, 'certificat'])->name('membre_famille.liturgie.certificat');
-        Route::post('/membre-famille/annonces', [\App\Http\Controllers\MembreFamille\AnnonceController::class, 'store'])->name('membre_famille.annonces.store');
-        Route::get('/membre-famille/annonces/{id}/fiche', [\App\Http\Controllers\MembreFamille\AnnonceController::class, 'fiche'])->name('membre_famille.annonces.fiche');
+        // Dashboard
+        Route::get('/membre-famille/dashboard', [MembreFamilleDashboardController::class, 'index'])
+            ->name('membre_famille.dashboard');
+
+        // Inscriptions
+        Route::get('/membre-famille/inscriptions', [\App\Http\Controllers\MembreFamille\InscriptionsController::class, 'index'])
+            ->name('membre_famille.inscriptions');
+
+        // Gestion de la famille
+        Route::get('/membre-famille/family/edit', [MembreFamilleFamilyController::class, 'edit'])
+            ->name('membre_famille.family.edit');
+        Route::post('/membre-famille/family/update', [MembreFamilleFamilyController::class, 'update'])
+            ->name('membre_famille.family.update');
+        Route::get('/membre-famille/family', [MembreFamilleFamilyController::class, 'index'])
+            ->name('membre_famille.family');
+
+        // Gestion des membres
+        Route::get('/membre-famille/members/create', [MembreFamilleMemberController::class, 'create'])
+            ->name('membre_famille.members.create');
+        Route::post('/membre-famille/members/store', [MembreFamilleMemberController::class, 'store'])
+            ->name('membre_famille.members.store');
+        Route::get('/membre-famille/members/{id}', [MembreFamilleMemberController::class, 'show'])
+            ->name('membre_famille.members.show');
+        Route::get('/membre-famille/members/{id}/edit', [MembreFamilleMemberController::class, 'edit'])
+            ->name('membre_famille.members.edit');
+        Route::put('/membre-famille/members/{id}', [MembreFamilleMemberController::class, 'update'])
+            ->name('membre_famille.members.update');
+
+        // Profil
+        Route::get('/membre-famille/profile/edit', [MembreFamilleProfileController::class, 'edit'])
+            ->name('membre_famille.profile.edit');
+        Route::put('/membre-famille/profile/update', [MembreFamilleProfileController::class, 'update'])
+            ->name('membre_famille.profile.update');
+
+        // Liturgie
+        Route::get('/membre-famille/liturgie', [MembreFamilleLiturgieController::class, 'index'])
+            ->name('membre_famille.liturgie.index');
+        Route::get('/membre-famille/liturgie/nouvelle', [MembreFamilleLiturgieController::class, 'create'])
+            ->name('membre_famille.liturgie.create');
+        Route::get('/membre-famille/liturgie/nouvelle/formulaire', [MembreFamilleLiturgieController::class, 'createForm'])
+            ->name('membre_famille.liturgie.form');
+        Route::post('/membre-famille/liturgie', [MembreFamilleLiturgieController::class, 'store'])
+            ->name('membre_famille.liturgie.store');
+        Route::get('/membre-famille/liturgie/{id}/certificat', [MembreFamilleLiturgieController::class, 'certificat'])
+            ->name('membre_famille.liturgie.certificat');
+        Route::get('/membre-famille/liturgie/{id}/fiche', [MembreFamilleLiturgieController::class, 'fiche'])
+            ->name('membre_famille.liturgie.fiche');
+
+        // Annonces
+        Route::get('/membre-famille/annonces', [MembreFamilleAnnonceController::class, 'index'])
+            ->name('membre_famille.annonces.index');
+        Route::get('/membre-famille/annonces/create', [MembreFamilleAnnonceController::class, 'create'])
+            ->name('membre_famille.annonces.create');
+        Route::post('/membre-famille/annonces', [MembreFamilleAnnonceController::class, 'store'])
+            ->name('membre_famille.annonces.store');
+        Route::get('/membre-famille/annonces/{id}', [MembreFamilleAnnonceController::class, 'show'])
+            ->name('membre_famille.annonces.show');
+        Route::get('/membre-famille/annonces/{id}/fiche', [MembreFamilleAnnonceController::class, 'fiche'])
+            ->name('membre_famille.annonces.fiche');
+        Route::get('/membre-famille/annonces/{id}/edit', [MembreFamilleAnnonceController::class, 'edit'])
+            ->name('membre_famille.annonces.edit');
+        Route::put('/membre-famille/annonces/{id}', [MembreFamilleAnnonceController::class, 'update'])
+            ->name('membre_famille.annonces.update');
+        Route::delete('/membre-famille/annonces/{id}', [MembreFamilleAnnonceController::class, 'destroy'])
+            ->name('membre_famille.annonces.destroy');
     });
 
     // Route pour changer le mot de passe

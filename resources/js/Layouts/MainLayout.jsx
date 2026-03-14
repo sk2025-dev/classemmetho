@@ -1,7 +1,105 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link, router, usePage } from "@inertiajs/react";
 import GoodbyeLoader from "../Components/GoodbyeLoader";
 import { getPhotoUrl } from "../Helpers/PhotoHelper";
+
+// --- STYLES ET COULEURS POUR LA BARRE D'INFO ---
+const INFO_COLORS = {
+  background: '#8B0000',   // Rouge foncé
+  label: '#0000FF',        // Bleu
+  text: '#FFFFFF',         // Blanc
+  labelText: '#FFFFFF'
+};
+
+const INFO_STYLES = {
+  container: {
+    display: 'flex',
+    height: '40px',
+    backgroundColor: INFO_COLORS.background,
+    alignItems: 'center',
+    overflow: 'hidden',
+    fontFamily: 'sans-serif',
+    width: '100%',
+  },
+  label: {
+    backgroundColor: INFO_COLORS.label,
+    color: INFO_COLORS.labelText,
+    padding: '0 15px',
+    height: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    fontWeight: 'bold',
+    fontSize: '14px',
+    textTransform: 'uppercase',
+    flexShrink: 0,
+    zIndex: 2
+  },
+  contentWrapper: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    paddingLeft: '20px',
+    overflow: 'hidden',
+    whiteSpace: 'nowrap'
+  },
+  text: {
+    color: INFO_COLORS.text,
+    fontSize: '14px'
+  }
+};
+
+// --- COMPOSANT BARRE D'INFO (FLASH INFOS) ---
+const FlashInfoBar = ({ messages, label }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    // Si 0 ou 1 message, pas besoin d'intervalle
+    if (!messages || messages.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % messages.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [messages]);
+
+  if (!messages || messages.length === 0) return null;
+  
+  const currentMessage = messages[currentIndex];
+
+  return (
+    <div style={INFO_STYLES.container}>
+      <div style={INFO_STYLES.label}>
+        {label}
+      </div>
+      <div style={INFO_STYLES.contentWrapper}>
+        <span 
+            // La clé change pour forcer React à rejouer l'animation
+            key={currentMessage.id || currentMessage.text} 
+            style={INFO_STYLES.text} 
+            className="slide-in-top"
+        >
+            {currentMessage.text}
+        </span>
+      </div>
+      {/* 
+          CORRECTION ICI : Utilisation d'une balise <style> standard 
+          au lieu de <style jsx> pour garantir que le CSS soit lu 
+          sans avoir besoin de la librairie styled-jsx.
+      */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes slideInFromTop {
+            0% { transform: translateY(-100%); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+          }
+          .slide-in-top {
+            animation: slideInFromTop 0.6s ease-out forwards;
+          }
+        `
+      }} />
+    </div>
+  );
+};
 
 // Header professionnel et minimaliste
 function AppHeader({ auth, onLogout }) {
@@ -339,47 +437,25 @@ export default function MainLayout({ children, auth }) {
         ? flashAnnouncements
         : [];
 
-    const formatTypeLabel = (type) => {
-        const labels = {
-            priere: "Demande de priere",
-            grace: "Action de grace",
-            deces: "Avis de deces",
-            felicitations: "Felicitations",
-            generale: "Annonce generale",
-            annonce: "Annonce",
-            annonce_liturgique: "Annonce liturgique",
-        };
-        return labels[type] || "Annonce";
-    };
+    // Utilisation de useMemo pour stabiliser les données du Ticker
+    const flashInfoMessages = useMemo(() => {
+        const msgs = announcements.map((annonce, index) => {
+            const id = annonce.id || `annonce-${index}`;
+            const text = annonce.details?.titre || annonce.details?.contenu || "Annonce disponible";
+            return { id, text };
+        });
 
-    const getAnnonceTitle = (annonce) => {
-        const details = annonce?.details;
-        if (typeof details === "string") {
-            return details;
+        if (msgs.length === 0) {
+            return [{ id: 'default', text: "Bienvenue sur la plateforme Jubilé" }];
         }
-        return (
-            details?.titre ||
-            details?.contenu ||
-            details?.message ||
-            "Annonce"
-        );
-    };
-
-    const getAnnonceContent = (annonce) => {
-        const details = annonce?.details;
-        if (typeof details === "string") {
-            return "";
-        }
-        return details?.contenu || details?.message || "";
-    };
+        return msgs;
+    }, [announcements]);
 
     const handleLogout = () => {
-        // Afficher le loader d'au revoir
         setShowGoodbyeLoader(true);
     };
 
     const handleGoodbyeAnimationComplete = () => {
-        // Effectuer la déconnexion après l'animation
         router.post("/logout");
     };
 
@@ -396,65 +472,9 @@ export default function MainLayout({ children, auth }) {
         >
             <AppHeader auth={auth} onLogout={handleLogout} />
 
-            {announcements.length > 0 && (
-                <section className="w-full">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-3">
-                        <div className="rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 shadow-sm">
-                            <div className="flex items-start gap-3">
-                                <div className="mt-0.5 text-amber-600">
-                                    <svg
-                                        className="w-5 h-5"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M13 16h-1v-4h-1m1-4h.01M12 6a9 9 0 110 18 9 9 0 010-18z"
-                                        />
-                                    </svg>
-                                </div>
-                                <div className="flex-1">
-                                    <div className="text-sm font-semibold text-amber-900">
-                                        Annonces
-                                    </div>
-                                    <div className="mt-2 space-y-2">
-                                        {announcements.slice(0, 3).map((annonce) => {
-                                            const title = getAnnonceTitle(annonce);
-                                            const content = getAnnonceContent(annonce);
+            {/* BARRE D'INFO FLASH CONSERVÉE */}
+            <FlashInfoBar messages={flashInfoMessages} label="Actualités" />
 
-                                            return (
-                                                <div
-                                                    key={annonce.id}
-                                                    className="text-sm text-amber-900"
-                                                >
-                                                    <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 mr-2">
-                                                        {formatTypeLabel(
-                                                            annonce.type_acte,
-                                                        )}
-                                                    </span>
-                                                    <span className="font-medium">
-                                                        {title}
-                                                    </span>
-                                                    {content && content !== title ? (
-                                                        <div className="text-amber-800/90">
-                                                            {content}
-                                                        </div>
-                                                    ) : null}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            )}
-
-            {/* Loader de déconnexion */}
             {showGoodbyeLoader && (
                 <GoodbyeLoader
                     userName={

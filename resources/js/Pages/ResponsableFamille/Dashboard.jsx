@@ -177,8 +177,6 @@ export default function Dashboard({ role, pendingInscriptions, auth, familyStats
                 overflowX: "hidden",
             }}
         >
-            {/* Barre d'infos Flash */}
-            <VerticalTicker messages={flashMessages} interval={4000} label="Flash Infos" />
             {/* MAIN CONTENT */}
             <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
                 <div className="mb-10">
