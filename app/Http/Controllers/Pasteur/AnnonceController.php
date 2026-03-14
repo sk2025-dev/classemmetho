@@ -16,26 +16,23 @@ class AnnonceController extends Controller
     {
         $user = Auth::user();
 
-        // Annonces liturgiques en attente de validation du pasteur
+        // Annonces en attente de validation du pasteur
         $enAttente = ActeLiturgique::with(['createur', 'family', 'conducteur', 'membre'])
             ->annonces()
-            ->where('type_acte', ActeLiturgique::TYPE_ANNOUNCE_LITURGIQUE)
             ->where('statut', ActeLiturgique::STATUT_TRANSMISE_AU_PASTEUR)
             ->orderBy('updated_at', 'desc')
             ->paginate(10, ['*'], 'enAttente_page');
 
-        // Annonces liturgiques validées en attente de publication
+        // Annonces validées en attente de publication (legacy)
         $validees = ActeLiturgique::with(['createur', 'family', 'conducteur', 'pasteur', 'membre'])
             ->annonces()
-            ->where('type_acte', ActeLiturgique::TYPE_ANNOUNCE_LITURGIQUE)
             ->where('statut', ActeLiturgique::STATUT_VALIDEE)
             ->orderBy('updated_at', 'desc')
             ->paginate(10, ['*'], 'validees_page');
 
-        // Historique des annonces liturgiques traitées
+        // Historique des annonces traitées
         $historique = ActeLiturgique::with(['createur', 'family', 'conducteur', 'pasteur', 'publieePar', 'membre'])
             ->annonces()
-            ->where('type_acte', ActeLiturgique::TYPE_ANNOUNCE_LITURGIQUE)
             ->whereIn('statut', [
                 ActeLiturgique::STATUT_REFUSEE_PAR_PASTEUR,
                 ActeLiturgique::STATUT_PUBLIEE,
@@ -130,16 +127,19 @@ class AnnonceController extends Controller
             ], 403);
         }
 
+        // Validation pastorale + publication immédiate
         $acte->update([
-            'statut' => ActeLiturgique::STATUT_VALIDEE,
+            'statut' => ActeLiturgique::STATUT_PUBLIEE,
             'pasteur_id' => $user->id,
             'note_pastorale' => $request->input('note', null),
+            'date_publication' => $acte->date_publication ?? now(),
+            'publiee_par' => $user->id,
             'updated_by' => $user->id,
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Annonce validée avec succès.',
+            'message' => 'Annonce validée et publiée avec succès.',
         ]);
     }
 

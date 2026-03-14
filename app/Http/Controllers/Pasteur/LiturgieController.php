@@ -10,6 +10,7 @@ use App\Models\ActeLiturgiqueHistorique;
 use App\Models\User;
 use App\Services\ActeLiturgiqueService;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -24,12 +25,32 @@ class LiturgieController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+        $annonceTypes = [
+            ActeLiturgique::TYPE_ANNOUNCE,
+            ActeLiturgique::TYPE_ANNOUNCE_LITURGIQUE,
+            ActeLiturgique::TYPE_PRIERE,
+            ActeLiturgique::TYPE_GRACE,
+            ActeLiturgique::TYPE_FELICITATIONS,
+            ActeLiturgique::TYPE_GENERALE,
+        ];
+
         $actes = ActeLiturgique::with(['membre', 'classe', 'family', 'historiques.acteur'])
             ->where('statut', 'TRANSMISE_AU_PASTEUR')
+            ->where(function ($q) {
+                $q->where('est_annonce', false)
+                    ->orWhereNull('est_annonce');
+            })
+            ->whereNotIn('type_acte', $annonceTypes)
             ->latest()
             ->paginate(10, ['*'], 'actes_page');
 
         $historique = ActeLiturgiqueHistorique::with(['acte.membre', 'acte.classe', 'acte.family'])
+            ->whereHas('acte', function ($q) use ($annonceTypes) {
+                $q->where(function ($sub) {
+                    $sub->where('est_annonce', false)
+                        ->orWhereNull('est_annonce');
+                })->whereNotIn('type_acte', $annonceTypes);
+            })
             ->where('acteur_id', $user->id)
             ->whereIn('statut_nouveau', ['VALIDEE', 'REFUSEE_PAR_PASTEUR', 'CELEBRE', 'TERMINE'])
             ->latest()
@@ -150,12 +171,19 @@ class LiturgieController extends Controller
         $user = Auth::user();
         $acte = ActeLiturgique::findOrFail($id);
 
-        $updated = $this->service->transitionStatut(
-            $acte,
-            $request->string('statut')->toString(),
-            $user,
-            $request->input('commentaire')
-        );
+        try {
+            $updated = $this->service->transitionStatut(
+                $acte,
+                $request->string('statut')->toString(),
+                $user,
+                $request->input('commentaire')
+            );
+        } catch (InvalidArgumentException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,

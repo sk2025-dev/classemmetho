@@ -860,18 +860,17 @@ export default function Index({
             if (statut === "VALIDEE") {
                 const validatedAnnonce = {
                     ...activeAnnonce,
-                    statut: "VALIDEE",
+                    statut: "PUBLIEE",
                     note_pastorale: annCommentaire,
+                    date_publication: new Date().toISOString(),
                     validated_at: new Date().toISOString(),
                 };
                 setAnnonces((prev) =>
                     prev.filter((a) => a.id !== activeAnnonce.id),
                 );
                 setAnnoncesHistorique((prev) => [validatedAnnonce, ...prev]);
-                setActiveAnnonce(validatedAnnonce);
-                setAnnCommentaire("");
-                setAnnModal("publish_choice");
-                notify("Annonce validée. Publier maintenant ?");
+                closeAnnModal();
+                notify("Annonce validée et publiée.");
                 return;
             }
 

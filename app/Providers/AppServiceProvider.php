@@ -74,6 +74,11 @@ class AppServiceProvider extends ServiceProvider
                 }
 
                 $query = ActeLiturgique::annonces()
+                    ->with([
+                        'family:id,nom',
+                        'createur:id,prenom,nom',
+                        'membre:id,prenom,nom',
+                    ])
                     ->publiees()
                     ->where(function ($q) {
                         $q->whereNull('date_publication')
@@ -86,25 +91,19 @@ class AppServiceProvider extends ServiceProvider
                     ->orderBy('est_principale', 'desc')
                     ->orderBy('date_publication', 'desc');
 
-                if ($user->family_id) {
+                // Meme logique de visibilite que les pages Index Annonce:
+                // - membre_famille / responsable_famille: annonces de leur famille + annonces publiques
+                // - autres roles (conducteur, pasteur, admin): flux global paroissial
+                if (in_array($user->role, ['membre_famille', 'responsable_famille'], true) && $user->family_id) {
                     $query->where(function ($q) use ($user) {
                         $q->where('family_id', $user->family_id)
                             ->orWhereNull('family_id');
                     });
-                } else {
-                    $query->whereNull('family_id');
                 }
 
                 return $query
                     ->limit(5)
-                    ->get([
-                        'id',
-                        'type_acte',
-                        'details',
-                        'date_publication',
-                        'family_id',
-                        'est_principale',
-                    ]);
+                    ->get();
             },
         ]);
     }

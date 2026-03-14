@@ -2,354 +2,418 @@
 use App\Models\ActeLiturgique;
 use Carbon\Carbon;
 
-$details = $acte->details ?? [];
-$createur = $acte->createur ?? $acte->membre ?? null;
-$nomComplet = trim(($createur->prenom ?? '') . ' ' . ($createur->nom ?? '')) ?: '—';
-$telephone = $createur->telephone ?? $createur->telephone2 ?? '—';
-$classe = $createur->classe?->nom ?? $acte->classe?->nom ?? '—';
-$famille = $createur->family?->nom ?? ($acte->family?->nom ?? '—');
-$typeActe = ActeLiturgique::getTypeOptions()[$acte->type_acte] ?? ucfirst(str_replace('_', ' ', $acte->type_acte ?? '—'));
-$nomConcerne = $details['nom_defunt'] ?? data_get($details, 'nom_concerne') ?? $details['nom_concerne'] ?? '—';
-$dateDeces = $details['date_deces'] ?? $details['date_du_deces'] ?? null;
-$dateDecesFormatted = $dateDeces ? Carbon::parse($dateDeces)->format('d/m/Y') : '—';
-$lieuSepulture = $details['lieu_deces'] ?? $details['lieu_sepulture'] ?? $details['lieu_s'] ?? '—';
-$corps = trim($details['contenu'] ?? $acte->message ?? '') ?: 'Pas de corps de demande renseigné.';
-$reference = $acte->reference ?? '—';
-$dateEmission = optional($acte->updated_at)->format('d/m/Y') ?? Carbon::now()->format('d/m/Y');
+$details      = $acte->details ?? [];
+$createur     = $acte->createur ?? $acte->membre ?? null;
+$nomComplet   = trim(($createur->prenom ?? '') . ' ' . ($createur->nom ?? '')) ?: '—';
+$telephone    = $createur->telephone ?? $createur->telephone2 ?? '—';
+$classe       = $createur->classe?->nom ?? $acte->classe?->nom ?? 'Non définie';
+$famille      = $createur->family?->nom ?? ($acte->family?->nom ?? 'Famille inconnue');
+$conducteur   = $acte->conducteur ?? $acte->classe?->conducteur ?? null;
+$pasteur      = $acte->pasteur ?? null;
+$nomConducteur = $conducteur
+    ? trim(($conducteur->prenom ?? '') . ' ' . ($conducteur->nom ?? ''))
+    : 'Conducteur non renseigné';
+$nomPasteur   = $pasteur
+    ? trim(($pasteur->prenom ?? '') . ' ' . ($pasteur->nom ?? ''))
+    : 'Pasteur non renseigné';
 
-// Helper pour afficher valeur vide ou réelle
-$empty = fn($v, $label = 'Non renseigné') =>
-    $v !== '—' ? '<span style="font-size:12.5px;font-weight:700;color:#1a1e2e;">' . e($v) . '</span>'
-               : '<span style="font-size:11px;font-weight:400;color:#bbb;font-style:italic;">' . $label . '</span>';
+$typeActe     = ActeLiturgique::getTypeOptions()[$acte->type_acte] ?? ucfirst(str_replace('_', ' ', $acte->type_acte ?? '—'));
+$objet        = $details['objet'] ?? $details['titre'] ?? $typeActe;
+
+// Date & heure de l'annonce
+$_dateCarbon      = $acte->date_souhaitee ? Carbon::parse($acte->date_souhaitee) : null;
+$dateAnnonce      = $_dateCarbon ? $_dateCarbon->format('d/m/Y') : now()->format('d/m/Y');
+$dateAnnonceTexte = $_dateCarbon
+    ? $_dateCarbon->locale('fr')->isoFormat('dddd D MMMM YYYY')
+    : now()->locale('fr')->isoFormat('dddd D MMMM YYYY');
+$heureAnnonce = $details['heure'] ?? ($_dateCarbon ? $_dateCarbon->format('H\hi') : '—');
+$lieuAnnonce  = $details['lieu'] ?? $details['lieu_deces'] ?? '—';
+
+// Nom de la personne concernée
+$nomConcerne  = $details['nom_concerne'] ?? $details['nom_defunt'] ?? $nomComplet;
+
+// Corps libre ou message
+$corpsLibre   = trim($details['contenu'] ?? $acte->message ?? '');
+
+$reference    = $acte->reference ?? '—';
+$dateEmission = optional($acte->created_at)->format('d/m/Y') ?? now()->format('d/m/Y');
+
+$toSignatureDataUri = function (?string $signaturePath): ?string {
+    if (empty($signaturePath) || !is_string($signaturePath)) {
+        return null;
+    }
+
+    if (str_starts_with($signaturePath, 'data:image/')) {
+        return $signaturePath;
+    }
+
+    $fullPath = storage_path('app/public/' . ltrim($signaturePath, '/'));
+    if (!is_file($fullPath)) {
+        return null;
+    }
+
+    $raw = @file_get_contents($fullPath);
+    if ($raw === false) {
+        return null;
+    }
+
+    $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION) ?: 'png');
+    $mime = match ($ext) {
+        'jpg', 'jpeg' => 'image/jpeg',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+        default => 'image/png',
+    };
+
+    return 'data:' . $mime . ';base64,' . base64_encode($raw);
+};
+
+$signatureConducteurDataUri = $signatureConducteurDataUri ?? $toSignatureDataUri($conducteur->signature_path ?? null);
+$signaturePasteurDataUri = $signaturePasteurDataUri ?? $toSignatureDataUri($pasteur->signature_path ?? null);
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Fiche {{ $typeActe }} — {{ $reference }}</title>
+    <title>Fiche Annonce — {{ $reference }}</title>
     <style>
-        @page { size: A4 portrait; margin: 0; }
+        @page {
+            size: A4 portrait;
+            margin: 0;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: DejaVu Sans, Arial, sans-serif;
-            font-size: 11px;
-            color: #1a1e2e;
+            font-size: 11.5px;
+            color: #111;
             background: #fff;
             -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
-        .page { width: 210mm; min-height: 297mm; background: #fff; }
-
-        .f-lbl {
-            display: block;
-            font-size: 8px; font-weight: 700;
-            letter-spacing: 1px; text-transform: uppercase;
-            color: #6B46C188; margin-bottom: 2px;
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            background: #fff;
+            padding: 0;
         }
-        .f-val { font-size: 12.5px; font-weight: 700; color: #1a1e2e; line-height: 1.3; }
-        .f-empty { font-size: 11px; font-weight: 400; color: #bbb; font-style: italic; }
+
+        /* ── Ligne horizontale standard ── */
+        .hr {
+            width: 100%;
+            height: 1px;
+            background: #222;
+            font-size: 0;
+            line-height: 0;
+        }
+        .hr-light {
+            width: 100%;
+            height: 1px;
+            background: #ccc;
+            font-size: 0;
+            line-height: 0;
+        }
+
+        /* ── Champs avec ligne de soulignement ── */
+        .field-row td {
+            padding: 7px 0 3px 0;
+            vertical-align: bottom;
+            border-bottom: 1px solid #333;
+        }
+        .field-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #111;
+            white-space: nowrap;
+            padding-right: 10px !important;
+            border-bottom: none !important;
+        }
+        .field-value {
+            font-size: 12px;
+            color: #111;
+            width: 100%;
+        }
+
+        /* ── Corps lettre ── */
+        .body-text {
+            font-size: 11.5px;
+            line-height: 1.85;
+            color: #111;
+            text-align: justify;
+        }
+
+        /* ── Signatures ── */
+        .sig-label {
+            font-size: 10.5px;
+            font-weight: 700;
+            text-decoration: underline;
+            color: #111;
+            margin-bottom: 28px;
+        }
+        .sig-name {
+            font-size: 12px;
+            font-weight: 700;
+            color: #111;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
 <div class="page">
 
-<table width="100%" cellpadding="0" cellspacing="0" style="min-height:297mm;">
-<tr>
-
-  {{-- ══ BANDE LATÉRALE (3 segments de couleur) ══ --}}
-  <td width="7" style="padding:0;vertical-align:top;">
-    <div style="height:99mm;background:#6B46C1;font-size:0;"></div>
-    <div style="height:99mm;background:#1E40AF;font-size:0;"></div>
-    <div style="height:99mm;background:#B6C01A;font-size:0;"></div>
-  </td>
-
-  {{-- ══ CONTENU ══ --}}
-  <td style="padding:0;vertical-align:top;">
-
-    {{-- ▓▓ HEADER ▓▓ --}}
+    {{-- ══════════════════════════════════
+         EN-TÊTE INSTITUTIONNEL
+    ══════════════════════════════════ --}}
     <table width="100%" cellpadding="0" cellspacing="0"
-           style="padding:24px 38px 0 40px;border-bottom:1px solid #e8e9f5;">
-      <tr>
-        {{-- Logo --}}
-        <td width="70" style="vertical-align:middle;padding-right:14px;padding-bottom:18px;">
-          <div style="width:64px;height:64px;border:2px solid #6B46C135;border-radius:12px;background:#f3f0ff;display:flex;align-items:center;justify-content:center;overflow:hidden;">
-            @if(!empty($logoDataUri))
-              <img src="{{ $logoDataUri }}" width="60" height="60"
-                   style="object-fit:contain;border-radius:10px;">
-            @elseif(file_exists(public_path('images/logo.png')))
-              <img src="{{ asset('images/logo.png') }}" width="60" height="60"
-                   style="object-fit:contain;border-radius:10px;">
-            @else
-              <span style="font-size:8px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#6B46C1;line-height:1.5;display:inline-block;margin-top:14px;">LOGO<br>EMJC</span>
-            @endif
-          </div>
-        </td>
-        {{-- Nom église --}}
-        <td style="vertical-align:middle;padding-bottom:18px;">
-          <div style="font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:#6B46C1;line-height:1.2;margin-bottom:2px;">
-            Église Méthodiste
-          </div>
-          <div style="font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:#1E40AF;line-height:1.2;margin-bottom:5px;">
-            Jubilé de Cocody
-          </div>
-          <div style="font-size:9px;color:#9098b4;font-style:italic;">
-            Quartier Cocody, Abidjan &middot; Côte d'Ivoire &middot; +225 07 48 30 01 11
-          </div>
-        </td>
-        {{-- Réf + date --}}
-        <td style="vertical-align:middle;text-align:right;padding-bottom:18px;white-space:nowrap;">
-          <div style="display:inline-block;background:#f3f0ff;border:1.5px solid #d6ccf0;border-radius:7px;padding:5px 12px;font-size:9px;font-weight:700;color:#6B46C1;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:6px;">
-            {{ $reference }}
-          </div>
-          <br>
-          <span style="font-size:10px;color:#9098b4;">Émis le {{ $dateEmission }}</span>
-        </td>
-      </tr>
-    </table>
+           style="padding: 28px 45px 12px 45px;">
+        <tr valign="top">
 
-    {{-- Ligne tricolore --}}
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td width="33%" height="3" style="background:#6B46C1;font-size:0;line-height:0;">&nbsp;</td>
-        <td width="33%" height="3" style="background:#1E40AF;font-size:0;line-height:0;">&nbsp;</td>
-        <td width="34%" height="3" style="background:#B6C01A;font-size:0;line-height:0;">&nbsp;</td>
-      </tr>
-    </table>
-
-    {{-- ▓▓ BANDEAU TITRE ▓▓ --}}
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td style="background:#6B46C1;padding:20px 0 20px 40px;vertical-align:middle;">
-          <div style="font-size:8px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.55);margin-bottom:6px;">
-            &#8212; Document officiel &middot; GesParoisse
-          </div>
-          <div style="font-size:20px;font-weight:800;color:#fff;letter-spacing:1.5px;text-transform:uppercase;line-height:1.1;">
-            Fiche de Demande Liturgique
-          </div>
-        </td>
-        <td style="background:#1E40AF;padding:20px 38px 20px 24px;vertical-align:middle;text-align:right;white-space:nowrap;width:185px;">
-          <div style="font-size:8px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.55);margin-bottom:8px;">
-            Type d'acte
-          </div>
-          <div style="display:inline-block;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.3);border-radius:20px;padding:6px 16px;font-size:11px;font-weight:800;color:#fff;letter-spacing:2px;text-transform:uppercase;">
-            {{ strtoupper($typeActe) }}
-          </div>
-        </td>
-      </tr>
-    </table>
-
-    {{-- ▓▓ BODY ▓▓ --}}
-    <table width="100%" cellpadding="0" cellspacing="0" style="padding:20px 38px 20px 40px;">
-      <tr><td>
-
-        {{-- Label section Informations --}}
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:10px;">
-          <tr>
-            <td width="4" height="16" style="background:#6B46C1;border-radius:2px;font-size:0;">&nbsp;</td>
-            <td width="9">&nbsp;</td>
-            <td style="font-size:8.5px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#6B46C1;white-space:nowrap;vertical-align:middle;">
-              Informations
-            </td>
-            <td style="border-bottom:1px solid #6B46C128;">&nbsp;</td>
-          </tr>
-        </table>
-
-        {{-- ── Deux cartes ── --}}
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
-          <tr valign="top">
-
-            {{-- Carte Demandeur --}}
-            <td width="49%" style="border:1px solid #d6ccf0;border-radius:10px;overflow:hidden;vertical-align:top;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="background:#6B46C1;padding:10px 15px;border-radius:9px 9px 0 0;">
-                    <table cellpadding="0" cellspacing="0"><tr>
-                      <td width="24" style="vertical-align:middle;">
-                        <div style="width:20px;height:20px;background:rgba(255,255,255,0.18);border-radius:5px;text-align:center;padding-top:3px;font-size:9px;font-weight:800;color:rgba(255,255,255,0.9);">ID</div>
-                      </td>
-                      <td style="padding-left:8px;font-size:8.5px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.9);vertical-align:middle;">
-                        Demandeur
-                      </td>
-                    </tr></table>
-                  </td>
-                </tr>
-              </table>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f0ff;padding:2px 15px 6px;">
-                <tr><td style="padding:8px 0;border-bottom:1px solid #6B46C115;">
-                  <span class="f-lbl">Nom &amp; Prénom</span>
-                  <span class="f-val">{{ $nomComplet !== '—' ? $nomComplet : '' }}</span>
-                  @if($nomComplet === '—')<span class="f-empty">Non renseigné</span>@endif
-                </td></tr>
-                <tr><td style="padding:8px 0;border-bottom:1px solid #6B46C115;">
-                  <span class="f-lbl">Téléphone</span>
-                  <span class="f-val">{{ $telephone !== '—' ? $telephone : '' }}</span>
-                  @if($telephone === '—')<span class="f-empty">Non renseigné</span>@endif
-                </td></tr>
-                <tr><td style="padding:8px 0;border-bottom:1px solid #6B46C115;">
-                  <span class="f-lbl">Classe</span>
-                  <span class="f-val">{{ $classe !== '—' ? $classe : '' }}</span>
-                  @if($classe === '—')<span class="f-empty">Non renseignée</span>@endif
-                </td></tr>
-                <tr><td style="padding:8px 0;">
-                  <span class="f-lbl">Famille</span>
-                  <span class="f-val">{{ $famille !== '—' ? $famille : '' }}</span>
-                  @if($famille === '—')<span class="f-empty">Non renseignée</span>@endif
-                </td></tr>
-              </table>
-            </td>
-
-            <td width="2%">&nbsp;</td>
-
-            {{-- Carte Détails --}}
-            <td width="49%" style="border:1px solid #c7d5f5;border-radius:10px;overflow:hidden;vertical-align:top;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="background:#1E40AF;padding:10px 15px;border-radius:9px 9px 0 0;">
-                    <table cellpadding="0" cellspacing="0"><tr>
-                      <td width="24" style="vertical-align:middle;">
-                        <div style="width:20px;height:20px;background:rgba(255,255,255,0.18);border-radius:5px;text-align:center;padding-top:3px;font-size:9px;font-weight:800;color:rgba(255,255,255,0.9);">AC</div>
-                      </td>
-                      <td style="padding-left:8px;font-size:8.5px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.9);vertical-align:middle;">
-                        Détails de la demande
-                      </td>
-                    </tr></table>
-                  </td>
-                </tr>
-              </table>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#eff4ff;padding:2px 15px 6px;">
-                <tr><td style="padding:8px 0;border-bottom:1px solid #1E40AF18;">
-                  <span style="display:block;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1E40AF88;margin-bottom:2px;">Type d'acte</span>
-                  <span class="f-val">{{ strtoupper($typeActe) }}</span>
-                </td></tr>
-                <tr><td style="padding:8px 0;border-bottom:1px solid #1E40AF18;">
-                  <span style="display:block;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1E40AF88;margin-bottom:2px;">Nom du défunt / Concerné</span>
-                  @if($nomConcerne !== '—')
-                    <span class="f-val">{{ $nomConcerne }}</span>
-                  @else
-                    <span class="f-empty">Non renseigné</span>
-                  @endif
-                </td></tr>
-                <tr><td style="padding:8px 0;border-bottom:1px solid #1E40AF18;">
-                  <span style="display:block;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1E40AF88;margin-bottom:2px;">Date du décès</span>
-                  @if($dateDecesFormatted !== '—')
-                    <span class="f-val">{{ $dateDecesFormatted }}</span>
-                  @else
-                    <span class="f-empty">Non renseignée</span>
-                  @endif
-                </td></tr>
-                <tr><td style="padding:8px 0;">
-                  <span style="display:block;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1E40AF88;margin-bottom:2px;">Lieu de sépulture</span>
-                  @if($lieuSepulture !== '—')
-                    <span class="f-val">{{ $lieuSepulture }}</span>
-                  @else
-                    <span class="f-empty">Non renseigné</span>
-                  @endif
-                </td></tr>
-              </table>
-            </td>
-
-          </tr>
-        </table>
-
-        {{-- Label Corps --}}
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:9px;">
-          <tr>
-            <td width="4" height="16" style="background:#6B46C1;border-radius:2px;font-size:0;">&nbsp;</td>
-            <td width="9">&nbsp;</td>
-            <td style="font-size:8.5px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#6B46C1;white-space:nowrap;vertical-align:middle;">
-              Corps de la demande
-            </td>
-            <td style="border-bottom:1px solid #6B46C128;">&nbsp;</td>
-          </tr>
-        </table>
-
-        {{-- Corps box --}}
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
-          <tr>
-            <td width="5" style="background:#6B46C1;border-radius:3px 0 0 3px;font-size:0;">&nbsp;</td>
-            <td style="background:#f3f0ff;border:1px solid #d6ccf0;border-left:none;border-radius:0 9px 9px 0;padding:16px 20px;">
-              <span style="font-size:12.5px;line-height:1.9;color:#2a2e42;font-style:italic;display:block;text-align:justify;">
-                {{ $corps }}
-              </span>
-            </td>
-          </tr>
-        </table>
-
-        {{-- Label Signatures --}}
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:9px;">
-          <tr>
-            <td width="4" height="16" style="background:#6B46C1;border-radius:2px;font-size:0;">&nbsp;</td>
-            <td width="9">&nbsp;</td>
-            <td style="font-size:8.5px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#6B46C1;white-space:nowrap;vertical-align:middle;">
-              Signatures &amp; Visas
-            </td>
-            <td style="border-bottom:1px solid #6B46C128;">&nbsp;</td>
-          </tr>
-        </table>
-
-        {{-- Zone signatures --}}
-        <table width="100%" cellpadding="0" cellspacing="0">
-          <tr>
-            <td width="48%" style="text-align:center;padding:10px 14px 0 0;border-right:1px dashed #6B46C135;vertical-align:top;">
-              <div style="font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#6B46C180;margin-bottom:8px;">
-                Signature du demandeur
-              </div>
-              <div style="min-height:40px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;">
-                @if(!empty($signatureDemandeurDataUri))
-                  <img src="{{ $signatureDemandeurDataUri }}" style="max-width:140px;max-height:45px;object-fit:contain;" alt="Signature Demandeur">
+            {{-- Logo --}}
+            <td width="72" style="padding-right: 16px; vertical-align: top; padding-top: 4px;">
+                @if(!empty($logoDataUri))
+                    <img src="{{ $logoDataUri }}" width="64" height="64"
+                         style="border-radius: 6px;">
+                @elseif(file_exists(public_path('images/logo.png')))
+                    <img src="{{ public_path('images/logo.png') }}" width="64" height="64"
+                         style="border-radius: 6px;">
+                @else
+                    <div style="width:64px;height:64px;border:1px solid #ccc;
+                                border-radius:6px;text-align:center;padding-top:20px;
+                                font-size:7px;font-weight:800;color:#333;">
+                        LOGO
+                    </div>
                 @endif
-              </div>
-              <div style="height:1px;background:#6B46C150;margin-bottom:7px;"></div>
-              <div style="font-size:9.5px;font-weight:600;color:#6b7280;">{{ $nomComplet }}</div>
             </td>
-            <td width="4%">&nbsp;</td>
-            <td width="48%" style="text-align:center;padding:10px 0 0 14px;vertical-align:top;">
-              <div style="font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#6B46C180;margin-bottom:8px;">
-                Visa &amp; Cachet du Pasteur
-              </div>
-              <div style="min-height:40px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;">
+
+            {{-- Identité église --}}
+            <td style="vertical-align: top;">
+                <div style="font-size: 17px; font-weight: 900; text-transform: uppercase;
+                            letter-spacing: 0.5px; color: #0F1E40; line-height: 1.2;
+                            margin-bottom: 3px;">
+                    Eglise Méthodiste de Côte d'Ivoire
+                </div>
+                <div style="font-size: 10px; font-weight: 600; text-transform: uppercase;
+                            letter-spacing: 1px; color: #555; margin-bottom: 2px;">
+                    District Abidjan Nord
+                </div>
+                <div style="font-size: 13px; font-weight: 700; font-style: italic;
+                            color: #1E40AF; margin-top: 4px;">
+                    Temple du Jubilé de Cocody
+                </div>
+            </td>
+
+            {{-- Référence discrète --}}
+            <td style="vertical-align: top; text-align: right; white-space: nowrap;">
+                <div style="font-size: 8.5px; color: #888; margin-bottom: 3px;">
+                    Réf : {{ $reference }}
+                </div>
+                <div style="font-size: 8.5px; color: #888;">
+                    Abidjan, le {{ $dateEmission }}
+                </div>
+            </td>
+
+        </tr>
+    </table>
+
+    {{-- Ligne séparatrice épaisse --}}
+    <div style="margin: 0 45px;">
+        <div class="hr"></div>
+    </div>
+
+    {{-- ══════════════════════════════════
+         TITRE ENCADRÉ CENTRÉ
+    ══════════════════════════════════ --}}
+    <table width="100%" cellpadding="0" cellspacing="0"
+           style="padding: 22px 45px 18px 45px;">
+        <tr>
+            <td style="text-align: center;">
+                <table cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+                    <tr>
+                        <td style="border: 1.5px solid #333; padding: 10px 40px;">
+                            <span style="font-size: 15px; font-weight: 700;
+                                         text-transform: uppercase; letter-spacing: 1.5px;
+                                         color: #111; font-family: DejaVu Sans, Arial, sans-serif;">
+                                Fiche d'Acte Liturgique
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    {{-- ══════════════════════════════════
+         CHAMPS INFORMATIFS
+    ══════════════════════════════════ --}}
+    <table width="100%" cellpadding="0" cellspacing="0"
+           style="padding: 0 45px 6px 45px;">
+
+        {{-- DEMANDEUR --}}
+        <tr class="field-row">
+            <td class="field-label">Demandeur :</td>
+            <td class="field-value">{{ $nomComplet }}</td>
+        </tr>
+
+        {{-- Espacement --}}
+        <tr><td colspan="2" style="height: 6px;"></td></tr>
+
+        {{-- FAMILLE --}}
+        <tr class="field-row">
+            <td class="field-label">Famille :</td>
+            <td class="field-value">{{ $famille }}</td>
+        </tr>
+
+        <tr><td colspan="2" style="height: 6px;"></td></tr>
+
+        {{-- CLASSE --}}
+        <tr class="field-row">
+            <td class="field-label">Classe :</td>
+            <td class="field-value">{{ $classe }}</td>
+        </tr>
+
+        <tr><td colspan="2" style="height: 6px;"></td></tr>
+
+        {{-- DATE SOUHAITEE --}}
+        <tr class="field-row">
+            <td class="field-label">Date souhaitée :</td>
+            <td class="field-value">
+                {{ $dateAnnonce }}
+                @if($dateAnnonceTexte !== '—')
+                    &nbsp;—&nbsp;{{ ucfirst($dateAnnonceTexte) }}
+                @endif
+            </td>
+        </tr>
+
+        <tr><td colspan="2" style="height: 6px;"></td></tr>
+
+        {{-- HEURE --}}
+        <tr class="field-row">
+            <td class="field-label">Heure :</td>
+            <td class="field-value">{{ $heureAnnonce }}</td>
+        </tr>
+
+    </table>
+
+    {{-- ══════════════════════════════════
+         CORPS DE LA LETTRE
+    ══════════════════════════════════ --}}
+    <table width="100%" cellpadding="0" cellspacing="0"
+           style="padding: 22px 45px 0 45px;">
+        <tr>
+            <td>
+                {{-- Objet --}}
+                <div style="font-size: 12px; font-weight: 700; margin-bottom: 14px;">
+                    <span style="font-weight: 700;">Objet : </span>{{ $objet }}
+                </div>
+
+                {{-- Formule d'appel --}}
+                <div class="body-text" style="margin-bottom: 12px;">
+                    Madame(s) / Monsieur(s) les Responsables de la communauté,
+                </div>
+
+                @if(!empty($corpsLibre))
+                    {{-- Corps libre saisi par l'utilisateur --}}
+                    <div class="body-text" style="margin-bottom: 12px;">
+                        {{ $corpsLibre }}
+                    </div>
+                @else
+                    {{-- Corps généré automatiquement --}}
+                    <div class="body-text" style="margin-bottom: 12px;">
+                        Par la présente, je viens respectueusement solliciter auprès de votre communauté
+                        l'annonce de <strong>{{ $objet }}</strong> concernant
+                        <strong>{{ $nomConcerne }}</strong>.
+                    </div>
+
+                    <div class="body-text" style="margin-bottom: 12px;">
+                        Nous souhaiterions que cette annonce soit faite auprès de la communauté afin
+                        d'informer les fidèles et de les inviter à s'associer à cet événement par leur
+                        présence et leurs prières. Pour le :
+                        <strong>{{ $dateAnnonceTexte }} à {{ $heureAnnonce }}</strong>
+                        @if($lieuAnnonce !== '—') à <strong>{{ $lieuAnnonce }}</strong>@endif.
+                    </div>
+                @endif
+
+                {{-- Formule de politesse --}}
+                <div class="body-text" style="margin-bottom: 12px;">
+                    Dans l'attente d'une suite favorable à notre demande, nous vous prions d'agréer,
+                    Madame(s) / Monsieur(s) les Responsables, l'expression de nos salutations
+                    respectueuses et fraternelles en Christ.
+                </div>
+
+                <div class="body-text" style="margin-bottom: 0;">
+                    Fait à : Abidjan.
+                </div>
+
+            </td>
+        </tr>
+    </table>
+
+    {{-- ══════════════════════════════════
+         SIGNATURES
+    ══════════════════════════════════ --}}
+    <table width="100%" cellpadding="0" cellspacing="0"
+           style="padding: 30px 45px 0 45px;">
+        <tr valign="top">
+
+            {{-- Signature Conducteur --}}
+            <td width="48%" style="text-align: left;">
+                <div class="sig-label">Conducteur de la Classe :</div>
+
+                {{-- Espace signature --}}
+                @if(!empty($signatureConducteurDataUri))
+                    <img src="{{ $signatureConducteurDataUri }}"
+                         style="max-width: 150px; max-height: 45px; display: block; margin-bottom: 6px;">
+                @else
+                    <div style="height: 45px;"></div>
+                @endif
+
+                <div class="sig-name">{{ $nomConducteur }}</div>
+            </td>
+
+            {{-- Signature Pasteur / Bureau --}}
+            <td width="4%"></td>
+            <td width="48%" style="text-align: right;">
+                <div class="sig-label">Bureau des Conducteurs / Pasteur</div>
+
                 @if(!empty($signaturePasteurDataUri))
-                  <img src="{{ $signaturePasteurDataUri }}" style="max-width:140px;max-height:45px;object-fit:contain;" alt="Signature Pasteur">
+                    <img src="{{ $signaturePasteurDataUri }}"
+                         style="max-width: 150px; max-height: 45px;
+                                display: block; margin: 0 0 6px auto;">
+                @else
+                    <div style="height: 45px;"></div>
                 @endif
-              </div>
-              <div style="height:1px;background:#6B46C150;margin-bottom:7px;"></div>
-              <div style="font-size:9.5px;font-weight:600;color:#6b7280;">Pasteur responsable</div>
+
+                <div class="sig-name">{{ $nomPasteur }}</div>
             </td>
-          </tr>
-        </table>
 
-      </td></tr>
+        </tr>
     </table>
 
-    {{-- ▓▓ FOOTER ▓▓ --}}
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td width="33%" height="4" style="background:#6B46C1;font-size:0;line-height:0;">&nbsp;</td>
-        <td width="33%" height="4" style="background:#1E40AF;font-size:0;line-height:0;">&nbsp;</td>
-        <td width="34%" height="4" style="background:#B6C01A;font-size:0;line-height:0;">&nbsp;</td>
-      </tr>
-    </table>
+    {{-- ══════════════════════════════════
+         FOOTER — VERSETS BIBLIQUES
+    ══════════════════════════════════ --}}
     <table width="100%" cellpadding="0" cellspacing="0"
-           style="background:#f3f0ff;border-top:1px solid #d6ccf0;padding:12px 38px 12px 40px;">
-      <tr>
-        <td style="vertical-align:middle;">
-          <div style="font-size:8.5px;color:#9098b4;line-height:1.75;">
-            Fiche générée automatiquement &middot; Système GesParoisse<br>
-            Église Méthodiste Jubilé de Cocody &middot; Tél : +225 07 48 30 01 11
-          </div>
-        </td>
-        <td style="vertical-align:middle;text-align:right;white-space:nowrap;">
-          <span style="display:inline-block;background:#fff;border:1.5px solid #6B46C140;border-radius:20px;padding:5px 15px;font-size:8.5px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#6B46C1;">
-            &#x25cf;&nbsp; Acte validé
-          </span>
-        </td>
-      </tr>
+           style="padding: 30px 45px 0 45px; margin-top: auto;">
+        <tr>
+            <td>
+                <div class="hr"></div>
+                <div style="text-align: center; padding: 10px 20px 0 20px;">
+                    <div style="font-size: 9px; font-style: italic; color: #333;
+                                line-height: 1.7; margin-bottom: 4px;">
+                        Psaume 65 : 3 &laquo; O toi qui écoutes la prière ! Tous les hommes viendront à toi. &raquo;
+                    </div>
+                    <div style="font-size: 9px; font-style: italic; color: #333; line-height: 1.7;">
+                        Jean 14 : 13-14 &laquo; ...tout ce que vous demanderez en mon nom, je le ferai afin que le Père
+                        soit glorifié dans le Fils. Si vous demandez quelque chose en mon nom, je le ferai. &raquo;
+                    </div>
+                </div>
+            </td>
+        </tr>
     </table>
-
-  </td>
-</tr>
-</table>
 
 </div>
 </body>

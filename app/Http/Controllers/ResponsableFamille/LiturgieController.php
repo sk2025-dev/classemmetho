@@ -44,8 +44,8 @@ class LiturgieController extends Controller
             ->latest()
             ->get();
 
-        // Load annonces from paroisse (validated and published announcements)
-        $annoncesParoisse = ActeLiturgique::whereIn('statut', ['VALIDEE', 'PUBLIEE'])
+        // Load annonces from paroisse (published only)
+        $annoncesParoisse = ActeLiturgique::where('statut', 'PUBLIEE')
             ->whereNotNull('details->titre')
             ->where('est_annonce', true)
             ->with(['membre', 'createur'])

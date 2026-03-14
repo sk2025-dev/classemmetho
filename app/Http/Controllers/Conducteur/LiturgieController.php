@@ -134,12 +134,18 @@ class LiturgieController extends Controller
             abort(422, "Le certificat est disponible uniquement apres l'acte effectue.");
         }
 
+        $pasteurSignature = $acte->pasteur?->signature_path && Storage::disk('public')->exists($acte->pasteur->signature_path)
+            ? Storage::disk('public')->path($acte->pasteur->signature_path)
+            : null;
         $conducteurSignature = $acte->conducteur?->signature_path && Storage::disk('public')->exists($acte->conducteur->signature_path)
             ? Storage::disk('public')->path($acte->conducteur->signature_path)
             : null;
-        $signaturePath = $conducteurSignature;
-        $signatureName = trim(($acte->conducteur->prenom ?? '') . ' ' . ($acte->conducteur->nom ?? '')) ?: null;
-        $signatureRole = 'Conducteur';
+
+        $signaturePath = $pasteurSignature ?: $conducteurSignature;
+        $signatureName = $pasteurSignature
+            ? (trim(($acte->pasteur->prenom ?? '') . ' ' . ($acte->pasteur->nom ?? '')) ?: null)
+            : (trim(($acte->conducteur->prenom ?? '') . ' ' . ($acte->conducteur->nom ?? '')) ?: null);
+        $signatureRole = $pasteurSignature ? 'Pasteur Principal' : 'Conducteur';
 
         $qrUrl = $acte->reference
             ? url('/certificat/verification/' . $acte->reference)

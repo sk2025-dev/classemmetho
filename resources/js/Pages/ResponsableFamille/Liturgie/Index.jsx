@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "@inertiajs/react";
 import { ArrowLeft, Download } from "lucide-react";
 import axios from "axios";
+import { resolveMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
 
 /* ── CONSTANTS ── */
 const IN_PROGRESS = [
@@ -334,14 +335,9 @@ export default function Index({
                         <ArrowLeft size={16} /> Retour
                     </Link>
                     <div style={{ display: "flex", gap: 8 }}>
-                        <button
-                            type="button"
+                        <Link
+                            href="/responsable-famille/liturgie/nouvelle"
                             className="btn-annonce-top"
-                            onClick={() => {
-                                setActiveTab("annonces");
-                                setAnnTab("mes");
-                                openAnnonce();
-                            }}
                         >
                             <svg
                                 width="15"
@@ -357,8 +353,8 @@ export default function Index({
                                     d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
                                 />
                             </svg>
-                            Faire une annonce
-                        </button>
+                            Faire une nouvelle demande d'acte
+                        </Link>
                         <button
                             type="button"
                             className="btn-terra"
@@ -778,12 +774,22 @@ export default function Index({
                                     const count = localActes.filter(
                                         (a) => a.membre_id === member.id,
                                     ).length;
+                                    const memberPhotoUrl =
+                                        resolveMemberPhotoUrl(member);
                                     return (
                                         <div key={member.id} className="mbr">
                                             <div className="mbr-av">
-                                                {initials(
-                                                    member.prenom,
-                                                    member.nom,
+                                                {memberPhotoUrl ? (
+                                                    <img
+                                                        src={memberPhotoUrl}
+                                                        alt={`${member.prenom || ""} ${member.nom || ""}`.trim()}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    initials(
+                                                        member.prenom,
+                                                        member.nom,
+                                                    )
                                                 )}
                                             </div>
                                             <div>
@@ -2322,10 +2328,12 @@ function AnnonceDotTrack({ statut, expanded }) {
         { key: "SOUMISE", label: "Soumise", icon: "📝" },
         { key: "EN_ATTENTE_CONDUCTEUR", label: "Conducteur", icon: "📋" },
         { key: "TRANSMISE_AU_PASTEUR", label: "Pasteur", icon: "✝" },
-        { key: "VALIDEE", label: "Publié", icon: "🌍" },
+        { key: "PUBLIEE", label: "Publié", icon: "🌍" },
     ];
     const isRefuse = String(statut).startsWith("REFUSEE");
-    const idx = steps.findIndex((s) => s.key === statut);
+    const effectiveStatus =
+        statut === "VALIDEE" || statut === "ARCHIVEE" ? "PUBLIEE" : statut;
+    const idx = steps.findIndex((s) => s.key === effectiveStatus);
     const activeIdx = isRefuse
         ? statut === "REFUSEE_PAR_CONDUCTEUR"
             ? 1
@@ -2516,7 +2524,8 @@ function annStatutLabel(s) {
         SOUMISE: "Soumise — en attente du conducteur",
         EN_ATTENTE_CONDUCTEUR: "En attente du conducteur",
         TRANSMISE_AU_PASTEUR: "Transmise au pasteur",
-        VALIDEE: "Validée et publiée",
+        VALIDEE: "Validée par le pasteur",
+        PUBLIEE: "Publiée par le pasteur",
         CELEBRE: "Publiée",
         TERMINE: "Terminée",
         REFUSEE_PAR_CONDUCTEUR: "Refusée par le conducteur",

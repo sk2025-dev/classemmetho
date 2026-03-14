@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Link, router, usePage } from "@inertiajs/react";
 import GoodbyeLoader from "../Components/GoodbyeLoader";
-import { getAvatarUrl } from "@/Helpers/PhotoUrlHelper";
+import ProfilePhoto from "@/Components/ProfilePhoto";
+import VerticalTicker from "@/Components/VerticalTicker";
 
 // Header professionnel et minimaliste
 function AppHeader({ auth, onLogout }) {
@@ -99,10 +100,10 @@ function AppHeader({ auth, onLogout }) {
                             >
                                 {/* Avatar */}
                                 <div className="w-9 h-9 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 text-sm font-medium overflow-hidden">
-                                    <img
-                                        src={getAvatarUrl(auth?.user)}
-                                        alt={auth?.user?.prenom || 'Profil'}
-                                        className="w-full h-full object-cover"
+                                    <ProfilePhoto
+                                        user={auth?.user}
+                                        size="lg"
+                                        className="w-full h-full"
                                     />
                                 </div>
 
@@ -140,13 +141,13 @@ function AppHeader({ auth, onLogout }) {
                                     {/* En-tête du profil */}
                                     <div className="p-4 border-b border-gray-100">
                                         <div className="flex items-start gap-3">
-                                            <div className="w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center text-white font-medium overflow-hidden flex-shrink-0">
-                                                <img
-                                                    src={getAvatarUrl(auth?.user)}
-                                                    alt={auth?.user?.prenom || 'Profil'}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            </div>
+                                                <div className="w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center text-white font-medium overflow-hidden flex-shrink-0">
+                                                    <ProfilePhoto
+                                                        user={auth?.user}
+                                                        size="2xl"
+                                                        className="w-full h-full"
+                                                    />
+                                                </div>
                                             <div className="flex-1 min-w-0">
                                                 <h3 className="font-semibold text-gray-900 truncate">
                                                     {auth?.user?.prenom &&
@@ -305,19 +306,6 @@ export default function MainLayout({ children, auth }) {
         ? flashAnnouncements
         : [];
 
-    const formatTypeLabel = (type) => {
-        const labels = {
-            priere: "Demande de priere",
-            grace: "Action de grace",
-            deces: "Avis de deces",
-            felicitations: "Felicitations",
-            generale: "Annonce generale",
-            annonce: "Annonce",
-            annonce_liturgique: "Annonce liturgique",
-        };
-        return labels[type] || "Annonce";
-    };
-
     const getAnnonceTitle = (annonce) => {
         const details = annonce?.details;
         if (typeof details === "string") {
@@ -334,10 +322,104 @@ export default function MainLayout({ children, auth }) {
     const getAnnonceContent = (annonce) => {
         const details = annonce?.details;
         if (typeof details === "string") {
-            return "";
+            return details;
         }
         return details?.contenu || details?.message || "";
     };
+
+    const getConcernedPerson = (annonce) => {
+        const details = annonce?.details;
+        const fromDetails =
+            details?.nom_concerne ||
+            details?.nom_defunt ||
+            details?.personne_concernee ||
+            "";
+        if (fromDetails && String(fromDetails).trim()) {
+            return String(fromDetails).trim();
+        }
+
+        const membreName = [annonce?.membre?.prenom, annonce?.membre?.nom]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+        return membreName;
+    };
+
+    const buildFlashSentence = (annonce) => {
+        const familyName = annonce?.family?.nom?.trim();
+        const source = familyName
+            ? `Famille ${familyName.toUpperCase()}`
+            : "Une famille de la paroisse";
+        const type = String(annonce?.type_acte || "").toLowerCase();
+        const title = getAnnonceTitle(annonce);
+        const content = getAnnonceContent(annonce);
+        const person = getConcernedPerson(annonce);
+        const normalizedTitle = String(title || "").trim();
+        const normalizedContent = String(content || "").trim();
+        const isGenericTitle =
+            normalizedTitle === "" ||
+            /^annonce$/i.test(normalizedTitle) ||
+            /^annonce\s+generale$/i.test(normalizedTitle);
+        const isGenericContent =
+            normalizedContent === "" ||
+            /^annonce$/i.test(normalizedContent) ||
+            /^annonce\s+generale$/i.test(normalizedContent);
+
+        const motif = !isGenericContent
+            ? normalizedContent
+            : !isGenericTitle
+              ? normalizedTitle
+              : "";
+
+        if (type === "deces" || type === "funerailles") {
+            if (person) {
+                return `${source} annonce le deces de ${person}.`;
+            }
+            return `${source} annonce le deces d'un membre de famille.`;
+        }
+
+        if (type === "grace" || type === "remerciement") {
+            if (motif) {
+                return `${source} demande une action de grace pour ${motif}.`;
+            }
+            return `${source} demande une action de grace.`;
+        }
+
+        if (type === "mariage") {
+            if (person) {
+                return `${source} annonce un mariage pour ${person}.`;
+            }
+            return `${source} annonce un mariage.`;
+        }
+
+        if (type === "priere") {
+            if (motif) {
+                return `${source} demande une priere pour ${motif}.`;
+            }
+            return `${source} demande une priere communautaire.`;
+        }
+
+        if (type === "naissance") {
+            if (person) {
+                return `${source} annonce une naissance: ${person}.`;
+            }
+            return `${source} annonce une naissance dans sa famille.`;
+        }
+
+        if (motif) {
+            return `${source} annonce: ${motif}`;
+        }
+        return `${source} a publie une annonce.`;
+    };
+
+    const tickerMessages = announcements
+        .map((annonce) => {
+            return {
+                id: annonce.id,
+                text: buildFlashSentence(annonce),
+            };
+        })
+        .filter((message) => message.text);
 
     const handleLogout = () => {
         // Afficher le loader d'au revoir
@@ -362,61 +444,13 @@ export default function MainLayout({ children, auth }) {
         >
             <AppHeader auth={auth} onLogout={handleLogout} />
 
-            {announcements.length > 0 && (
-                <section className="w-full">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-3">
-                        <div className="rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 shadow-sm">
-                            <div className="flex items-start gap-3">
-                                <div className="mt-0.5 text-amber-600">
-                                    <svg
-                                        className="w-5 h-5"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M13 16h-1v-4h-1m1-4h.01M12 6a9 9 0 110 18 9 9 0 010-18z"
-                                        />
-                                    </svg>
-                                </div>
-                                <div className="flex-1">
-                                    <div className="text-sm font-semibold text-amber-900">
-                                        Annonces
-                                    </div>
-                                    <div className="mt-2 space-y-2">
-                                        {announcements.slice(0, 3).map((annonce) => {
-                                            const title = getAnnonceTitle(annonce);
-                                            const content = getAnnonceContent(annonce);
-
-                                            return (
-                                                <div
-                                                    key={annonce.id}
-                                                    className="text-sm text-amber-900"
-                                                >
-                                                    <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 mr-2">
-                                                        {formatTypeLabel(
-                                                            annonce.type_acte,
-                                                        )}
-                                                    </span>
-                                                    <span className="font-medium">
-                                                        {title}
-                                                    </span>
-                                                    {content && content !== title ? (
-                                                        <div className="text-amber-800/90">
-                                                            {content}
-                                                        </div>
-                                                    ) : null}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            {tickerMessages.length > 0 && (
+                <section className="w-full sticky top-16 z-40">
+                    <VerticalTicker
+                        messages={tickerMessages}
+                        interval={4000}
+                        label="Flash Infos"
+                    />
                 </section>
             )}
 
