@@ -260,7 +260,7 @@ class LiturgieController extends Controller
         }
 
         try {
-            $qr = \Endroid\QrCode\QrCode::create($payload);
+            $qr = new \Endroid\QrCode\QrCode(data: $payload);
             $writer = new \Endroid\QrCode\Writer\PngWriter();
             $result = $writer->write($qr);
             return $result->getDataUri();

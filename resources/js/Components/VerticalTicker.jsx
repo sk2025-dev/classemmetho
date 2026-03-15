@@ -114,7 +114,7 @@ export default function VerticalTicker({
                 }
 
                 .vertical-ticker-message {
-                    animation: slideInFromTop .45s ease-out;
+                    animation: slideInFromTop 0.45s ease-out;
                 }
             `}</style>
 
@@ -137,9 +137,15 @@ export default function VerticalTicker({
 
 export function App() {
     const messages = [
-        { id: 1, text: "Annonce publiée: Culte d'action de grâce ce dimanche à 9h." },
+        {
+            id: 1,
+            text: "Annonce publiée: Culte d'action de grâce ce dimanche à 9h.",
+        },
         { id: 2, text: "Annonce publiée: Veillée de prière vendredi à 19h30." },
-        { id: 3, text: "Annonce publiée: Réunion des responsables après le culte." },
+        {
+            id: 3,
+            text: "Annonce publiée: Réunion des responsables après le culte.",
+        },
     ];
 
     return (

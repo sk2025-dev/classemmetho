@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Pasteur;
 
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -18,9 +19,7 @@ use Inertia\Inertia;
 
 class LiturgieController extends Controller
 {
-    public function __construct(private ActeLiturgiqueService $service)
-    {
-    }
+    public function __construct(private ActeLiturgiqueService $service) {}
 
     public function index(Request $request)
     {
@@ -220,10 +219,10 @@ class LiturgieController extends Controller
             : url('/certificat/verification/' . $acte->id);
         $qrDataUri = $this->buildQrDataUri($qrUrl);
         if (empty($qrDataUri)) {
-            $remote = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data='.urlencode($qrUrl);
+            $remote = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' . urlencode($qrUrl);
             $img = @file_get_contents($remote);
             if ($img !== false) {
-                $qrDataUri = 'data:image/png;base64,'.base64_encode($img);
+                $qrDataUri = 'data:image/png;base64,' . base64_encode($img);
             } else {
                 $qrDataUri = null;
             }
@@ -254,7 +253,7 @@ class LiturgieController extends Controller
         }
 
         try {
-            $qr = \Endroid\QrCode\QrCode::create($payload);
+            $qr = new \Endroid\QrCode\QrCode(data: $payload);
             $writer = new \Endroid\QrCode\Writer\PngWriter();
             $result = $writer->write($qr);
             return $result->getDataUri();

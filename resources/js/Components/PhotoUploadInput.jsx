@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Upload, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Upload, Trash2 } from "lucide-react";
 
 /**
  * Composant pour uploader une photo de profil
@@ -7,36 +7,55 @@ import { Upload, Trash2 } from 'lucide-react';
  * @param {string} initialPhotoUrl - URL initiale de la photo si elle existe
  * @param {string} size - Taille de l'aperçu: 'sm' (20), 'md' (24), 'lg' (32)
  */
-export default function PhotoUploadInput({ onPhotoSelected, initialPhotoUrl = null, size = 'md' }) {
+export default function PhotoUploadInput({
+    onPhotoSelected,
+    onUploadStateChange,
+    initialPhotoUrl = null,
+    size = "md",
+}) {
     const [preview, setPreview] = useState(initialPhotoUrl);
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [error, setError] = useState("");
 
     const sizeMap = {
-        sm: 'w-20 h-20',
-        md: 'w-24 h-24',
-        lg: 'w-32 h-32',
+        sm: "w-20 h-20",
+        md: "w-24 h-24",
+        lg: "w-32 h-32",
     };
 
     const sizeClass = sizeMap[size] || sizeMap.md;
+
+    useEffect(() => {
+        setPreview((currentPreview) => {
+            if (
+                currentPreview &&
+                currentPreview.startsWith("blob:") &&
+                currentPreview !== initialPhotoUrl
+            ) {
+                URL.revokeObjectURL(currentPreview);
+            }
+
+            return initialPhotoUrl;
+        });
+    }, [initialPhotoUrl]);
 
     const handleFileSelect = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         // Validation locale
-        if (!file.type.startsWith('image/')) {
-            setError('Veuillez sélectionner une image');
+        if (!file.type.startsWith("image/")) {
+            setError("Veuillez sélectionner une image");
             return;
         }
 
         if (file.size > 5 * 1024 * 1024) {
-            setError('La photo ne doit pas dépasser 5MB');
+            setError("La photo ne doit pas dépasser 5MB");
             return;
         }
 
         // Revoke previous object URL to free memory
-        if (preview && preview.startsWith('blob:')) {
+        if (preview && preview.startsWith("blob:")) {
             URL.revokeObjectURL(preview);
         }
 
@@ -46,31 +65,51 @@ export default function PhotoUploadInput({ onPhotoSelected, initialPhotoUrl = nu
 
         // Uploader la photo
         setIsLoading(true);
-        setError('');
+        setError("");
+        if (onUploadStateChange) {
+            onUploadStateChange(true);
+        }
 
         const formData = new FormData();
-        formData.append('photo', file);
+        formData.append("photo", file);
+
+        const csrfToken =
+            document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute("content") ||
+            window.axios?.defaults?.headers?.common?.["X-CSRF-TOKEN"];
 
         try {
             // Essayer d'abord la route publique pour l'inscription
             // Si l'utilisateur est authentifié, ce sera quand même accepté
-            const response = await fetch('/api/photo/upload-inscription', {
-                method: 'POST',
+            const response = await fetch("/api/photo/upload-inscription", {
+                method: "POST",
                 body: formData,
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
+                    "X-Requested-With": "XMLHttpRequest",
+                    ...(csrfToken ? { "X-CSRF-TOKEN": csrfToken } : {}),
                 },
             });
 
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Erreur lors de l\'upload');
+                throw new Error(data.error || "Erreur lors de l'upload");
             }
+
+            if (objectUrl) {
+                URL.revokeObjectURL(objectUrl);
+            }
+
+            const relativePhotoUrl = data.path
+                ? `/storage/${String(data.path).replace(/^\/+/, "")}`
+                : data.photo_url || null;
+
+            setPreview(relativePhotoUrl);
 
             // Callback avec l'URL de la photo
             if (onPhotoSelected) {
-                onPhotoSelected(data.photo_url);
+                onPhotoSelected(relativePhotoUrl);
             }
         } catch (err) {
             setError(err.message);
@@ -79,12 +118,15 @@ export default function PhotoUploadInput({ onPhotoSelected, initialPhotoUrl = nu
             setPreview(initialPhotoUrl); // Restore previous preview
         } finally {
             setIsLoading(false);
+            if (onUploadStateChange) {
+                onUploadStateChange(false);
+            }
         }
     };
 
     const handleRemove = () => {
         setPreview(null);
-        setError('');
+        setError("");
         if (onPhotoSelected) {
             onPhotoSelected(null);
         }
@@ -93,7 +135,7 @@ export default function PhotoUploadInput({ onPhotoSelected, initialPhotoUrl = nu
     // Cleanup blob URL on unmount
     useEffect(() => {
         return () => {
-            if (preview && preview.startsWith('blob:')) {
+            if (preview && preview.startsWith("blob:")) {
                 URL.revokeObjectURL(preview);
             }
         };
@@ -103,7 +145,9 @@ export default function PhotoUploadInput({ onPhotoSelected, initialPhotoUrl = nu
         <div className="flex flex-col items-center gap-4">
             {/* Aperçu */}
             {preview ? (
-                <div className={`${sizeClass} rounded-xl overflow-hidden border-2 border-blue-300 shadow-lg relative group`}>
+                <div
+                    className={`${sizeClass} rounded-xl overflow-hidden border-2 border-blue-300 shadow-lg relative group`}
+                >
                     <img
                         src={preview}
                         alt="Preview"
@@ -119,7 +163,9 @@ export default function PhotoUploadInput({ onPhotoSelected, initialPhotoUrl = nu
                     </button>
                 </div>
             ) : (
-                <div className={`${sizeClass} rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 border-2 border-dashed border-blue-300 flex items-center justify-center`}>
+                <div
+                    className={`${sizeClass} rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 border-2 border-dashed border-blue-300 flex items-center justify-center`}
+                >
                     <Upload size={32} className="text-blue-400" />
                 </div>
             )}
@@ -133,12 +179,14 @@ export default function PhotoUploadInput({ onPhotoSelected, initialPhotoUrl = nu
                     disabled={isLoading}
                     className="hidden"
                 />
-                <span className={`inline-block px-4 py-2 rounded-lg font-semibold transition-all ${
-                    isLoading
-                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                        : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                }`}>
-                    {isLoading ? 'Chargement...' : 'Choisir une photo'}
+                <span
+                    className={`inline-block px-4 py-2 rounded-lg font-semibold transition-all ${
+                        isLoading
+                            ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                            : "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
+                    }`}
+                >
+                    {isLoading ? "Chargement..." : "Choisir une photo"}
                 </span>
             </label>
 

@@ -808,9 +808,16 @@ export default function RegisterConducteur({
             }
 
             if (k === "photo") {
-                // Ne pas envoyer les photos vides, mais vérifier que c'est un File
-                if (v instanceof File) {
-                    formData.append(`responsable[photo]`, v);
+                // Accepter File ou URL déjà uploadée (et ignorer blob: local preview)
+                const photoValue = v || responsable.photoPreview || null;
+                if (photoValue instanceof File) {
+                    formData.append(`responsable[photo]`, photoValue);
+                } else if (
+                    typeof photoValue === "string" &&
+                    photoValue &&
+                    !photoValue.startsWith("blob:")
+                ) {
+                    formData.append(`responsable[photo]`, photoValue);
                 }
             } else {
                 let valueToSend = v ?? "";
@@ -838,9 +845,16 @@ export default function RegisterConducteur({
                     }
 
                     if (k === "photo") {
-                        // Ne pas envoyer les photos vides, mais vérifier que c'est un File
-                        if (v instanceof File) {
-                            formData.append(`membres[${i}][photo]`, v);
+                        // Accepter File ou URL déjà uploadée (et ignorer blob: local preview)
+                        const photoValue = v || m.photoPreview || null;
+                        if (photoValue instanceof File) {
+                            formData.append(`membres[${i}][photo]`, photoValue);
+                        } else if (
+                            typeof photoValue === "string" &&
+                            photoValue &&
+                            !photoValue.startsWith("blob:")
+                        ) {
+                            formData.append(`membres[${i}][photo]`, photoValue);
                         }
                     } else {
                         let valueToSend = v ?? "";

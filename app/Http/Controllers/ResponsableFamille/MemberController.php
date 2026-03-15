@@ -31,7 +31,8 @@ class MemberController extends Controller
 
         // Ajouter l'information de responsable
         $member->is_responsable = $member->id === $member->family->responsable_id;
-        $member->profile_photo_url = PhotoHelper::getPhotoUrl($member->photo_path, $member->prenom, $member->nom);
+        $member->profile_photo_url = $member->profile_photo_url
+            ?: PhotoHelper::getPhotoUrl($member->photo_path, $member->prenom, $member->nom);
 
         return Inertia::render('ResponsableFamille/Members/ShowMember', [
             'member' => $member,
@@ -149,6 +150,7 @@ class MemberController extends Controller
             'ville_id' => $family->ville_id,
             'fonction_id' => $validated['fonction_id'] ?? null,
             'photo_path' => $photoPath,
+            'profile_photo_url' => $photoPath ? '/storage/' . ltrim($photoPath, '/') : null,
         ]);
 
         // Create sacrament record for this user
@@ -207,7 +209,8 @@ class MemberController extends Controller
         $fonctions = Fonction::select('id', 'nom', 'description')
             ->orderBy('nom')
             ->get();
-        $member->profile_photo_url = PhotoHelper::getPhotoUrl($member->photo_path, $member->prenom, $member->nom);
+        $member->profile_photo_url = $member->profile_photo_url
+            ?: PhotoHelper::getPhotoUrl($member->photo_path, $member->prenom, $member->nom);
 
         return Inertia::render('ResponsableFamille/Members/EditMember', [
             'member' => $member,
@@ -291,6 +294,9 @@ class MemberController extends Controller
             'fonction_id' => $validated['fonction_id'] ?? $member->fonction_id,
             'relation' => $validated['relation'] ?? $member->relation,
             'photo_path' => $validated['photo_path'] ?? $member->photo_path,
+            'profile_photo_url' => isset($validated['photo_path'])
+                ? '/storage/' . ltrim($validated['photo_path'], '/')
+                : $member->profile_photo_url,
         ]);
 
         // Enregistrer les modifications dans l'audit

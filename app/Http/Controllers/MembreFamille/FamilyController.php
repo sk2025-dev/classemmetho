@@ -71,7 +71,7 @@ class FamilyController extends Controller
                     'is_responsable' => $m->id === $family->responsable_id,
                     'is_current_user' => $m->id === $user->id,
                     'photo_path' => $m->photo_path,
-                    'profile_photo_url' => PhotoHelper::getPhotoUrl($m->photo_path, $m->prenom, $m->nom),
+                    'profile_photo_url' => $m->profile_photo_url ?: PhotoHelper::getPhotoUrl($m->photo_path, $m->prenom, $m->nom),
                 ];
             })->values();
         }

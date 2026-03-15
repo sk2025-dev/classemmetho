@@ -82,7 +82,14 @@ const Icon = ({ name, className }) => {
     );
 };
 
-export default function Dashboard({ role, pendingInscriptions, auth, familyStats, familyData, validatedActesCount = 0 }) {
+export default function Dashboard({
+    role,
+    pendingInscriptions,
+    auth,
+    familyStats,
+    familyData,
+    validatedActesCount = 0,
+}) {
     const menuItems = [
         {
             title: "Inscriptions",
@@ -174,13 +181,25 @@ export default function Dashboard({ role, pendingInscriptions, auth, familyStats
                         Espace Responsable de Famille
                     </h2>
                     {familyStats && Object.keys(familyStats).length > 0 ? (
-                        <p className="mb-8 text-lg" style={{ color: "#EEE00F" }}>
-                            Famille: <span className="font-bold">{familyStats.familyName}</span> - Classe Méthodiste: <span className="font-bold">{familyData?.classe_name || familyStats.className}</span>
+                        <p
+                            className="mb-8 text-lg"
+                            style={{ color: "#EEE00F" }}
+                        >
+                            Famille:{" "}
+                            <span className="font-bold">
+                                {familyStats.familyName}
+                            </span>{" "}
+                            - Classe Méthodiste:{" "}
+                            <span className="font-bold">
+                                {familyData?.classe_name ||
+                                    familyStats.className}
+                            </span>
                         </p>
                     ) : (
                         <div className="animated-text-container">
                             <p className="animated-text">
-                                Bienvenue sur la plateforme de gestion des classes méthodistes du Jubilé
+                                Bienvenue sur la plateforme de gestion des
+                                classes méthodistes du Jubilé
                             </p>
                         </div>
                     )}
@@ -228,11 +247,12 @@ export default function Dashboard({ role, pendingInscriptions, auth, familyStats
                                             <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
                                         </span>
                                     )}
-                                {item.icon === "liturgique" && validatedActesCount > 0 && (
-                                    <span className="absolute top-4 right-4 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold">
-                                        {validatedActesCount}
-                                    </span>
-                                )}
+                                {item.icon === "liturgique" &&
+                                    validatedActesCount > 0 && (
+                                        <span className="absolute top-4 right-4 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                                            {validatedActesCount}
+                                        </span>
+                                    )}
                             </div>
                         </Link>
                     ))}

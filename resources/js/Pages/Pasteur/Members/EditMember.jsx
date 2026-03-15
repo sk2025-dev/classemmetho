@@ -22,6 +22,7 @@ import {
     Users,
     Briefcase,
 } from "lucide-react";
+import { resolveMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
 
 // Fonction utilitaire pour formater les dates ISO en yyyy-MM-dd
 const formatDateForInput = (dateString) => {
@@ -127,6 +128,7 @@ export default function EditMember({ member, family }) {
     const [fonctionsState, setFonctionsState] = useState([]);
     const [loading, setLoading] = useState(false);
     const currentDataRef = useRef(null);
+    const initialPhotoUrl = resolveMemberPhotoUrl(member) || null;
 
     // Préparer les sacrements existants (maintenant c'est un objet unique)
     const sacrements = member.sacrements || {};
@@ -147,9 +149,7 @@ export default function EditMember({ member, family }) {
         fonction_id: member.fonction_id || "",
         relation: member.relation || "",
         photo: null,
-        photoPreview: member.photo_path
-            ? `/storage/${member.photo_path}`
-            : null,
+        photoPreview: initialPhotoUrl,
         originalPhotoPath: member.photo_path || null,
         baptise: sacrements.baptise || false,
         date_bapteme: formatDateForInput(sacrements.bapteme_date),
@@ -185,9 +185,7 @@ export default function EditMember({ member, family }) {
             fonction_id: member.fonction_id || "",
             relation: member.relation || "",
             photo: null,
-            photoPreview: member.photo_path
-                ? `/storage/${member.photo_path}`
-                : null,
+            photoPreview: resolveMemberPhotoUrl(member) || null,
             originalPhotoPath: member.photo_path || null,
             baptise: currentSacrements.baptise || false,
             date_bapteme: formatDateForInput(currentSacrements.bapteme_date),

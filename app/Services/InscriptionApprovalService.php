@@ -151,6 +151,7 @@ class InscriptionApprovalService
             'profession' => $responsableProfession,
             'fonction_id' => $responsableData['fonction'] ?? null,
             'photo_path' => $inscription->photo_path,
+            'profile_photo_url' => $inscription->profile_photo_url,
             'identifier' => User::generateIdentifier(
                 (string) ($responsableNom ?? ''),
                 (string) ($responsablePrenom ?? ''),
@@ -194,6 +195,7 @@ class InscriptionApprovalService
                     'profession' => $membreData['profession'] ?? null,
                     'fonction_id' => $membreData['fonction'] ?? null,
                     'photo_path' => $membreData['photo_path'] ?? ($membreData['photo'] ?? null),
+                    'profile_photo_url' => $membreData['photo_url'] ?? null,
                     'identifier' => User::generateIdentifier($membreData['nom'] ?? '', $membreData['prenom'] ?? '', $membreData['dateNaissance'] ?? null),
                     'password' => bcrypt('11111'),
                     'role' => 'membre_famille',
@@ -272,6 +274,7 @@ class InscriptionApprovalService
             'profession' => $responsableProfession,
             'fonction_id' => $responsableData['fonction'] ?? null,
             'photo_path' => $inscription->photo_path,
+            'profile_photo_url' => $inscription->profile_photo_url,
             'identifier' => User::generateIdentifier(
                 (string) ($responsableNom ?? ''),
                 (string) ($responsablePrenom ?? ''),
@@ -314,6 +317,7 @@ class InscriptionApprovalService
                     'profession' => $membreData['profession'] ?? null,
                     'fonction_id' => $membreData['fonction'] ?? null,
                     'photo_path' => $membreData['photo_path'] ?? ($membreData['photo'] ?? null),
+                    'profile_photo_url' => $membreData['photo_url'] ?? null,
                     'identifier' => User::generateIdentifier($membreData['nom'] ?? '', $membreData['prenom'] ?? '', $membreData['dateNaissance'] ?? null),
                     'password' => bcrypt('11111'),
                     'role' => 'membre_famille',

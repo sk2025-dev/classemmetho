@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\FamilleController;
 use App\Http\Controllers\Api\VilleController;
 use App\Http\Controllers\Api\FonctionController;
 use App\Http\Controllers\Api\PhotoUploadController;
+use App\Http\Controllers\PhotoController;
 use App\Http\Controllers\API\MemberController;
 use App\Http\Controllers\AuthenticatedRegistrationController;
 use App\Http\Controllers\AddressController;
@@ -21,6 +22,9 @@ Route::get('/fonctions', [FonctionController::class, 'index']);
 
 // Route publique pour uploader des photos lors de l'inscription (avant authentification)
 Route::post('/photo/upload-inscription', [PhotoUploadController::class, 'uploadInscriptionPhoto']);
+
+// Route API standard documentée pour upload photo (authentifié)
+Route::middleware(['auth:web'])->post('/photo/upload', [PhotoController::class, 'upload']);
 
 // Routes d'adresses avec rate limiting
 Route::middleware(['throttle:60,1'])->group(function () {
@@ -46,6 +50,9 @@ Route::middleware(['auth:web'])->group(function () {
     // Upload et suppression de photos de profil
     Route::post('/profile/photo/upload', [PhotoUploadController::class, 'uploadProfilePhoto']);
     Route::delete('/profile/photo/delete', [PhotoUploadController::class, 'deleteProfilePhoto']);
+
+    // Route API standard documentée pour suppression photo
+    Route::delete('/photo/delete', [PhotoController::class, 'delete']);
 });
 
 // Inclure les routes d'approbation des inscriptions

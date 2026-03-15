@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\PhotoHelper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\TrackModifications;
@@ -133,5 +134,17 @@ class Inscription extends Model
                 }
             }
         });
+    }
+
+    /**
+     * Retourne l'URL de photo du responsable persistée, sinon la calcule depuis photo_path.
+     */
+    public function getProfilePhotoUrlAttribute($value)
+    {
+        return $value ?: PhotoHelper::getPhotoUrl(
+            $this->attributes['photo_path'] ?? null,
+            $this->attributes['responsable_prenom'] ?? null,
+            $this->attributes['responsable_nom'] ?? null
+        );
     }
 }

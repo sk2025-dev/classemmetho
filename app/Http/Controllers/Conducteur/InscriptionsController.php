@@ -259,8 +259,11 @@ class InscriptionsController extends Controller
                             'raison_rejet' => $insc->raison_rejet,
                             'created_at' => $insc->created_at,
                             'updated_at' => $insc->updated_at,
-                            'profile_photo_url' => PhotoHelper::getPhotoUrl(
-                                $insc->photo_path ?? ($insc->photo_data ?? null),
+                            'profile_photo_url' => $insc->profile_photo_url ?: PhotoHelper::getPhotoUrl(
+                                $insc->photo_path
+                                    ?? $insc->data['responsable']['photo_path']
+                                    ?? $insc->data['responsable']['photo_url']
+                                    ?? ($insc->photo_data ?? null),
                                 $insc->responsable_prenom ?? ($insc->data['responsable']['prenom'] ?? null),
                                 $insc->responsable_nom ?? ($insc->data['responsable']['nom'] ?? null)
                             ),
@@ -338,7 +341,7 @@ class InscriptionsController extends Controller
                         'role' => $member->role,
                         'status' => $this->normalizeUserStatus($member->statut ?? $member->status ?? null),
                         'famille_id' => $member->family_id,
-                        'profile_photo_url' => PhotoHelper::getPhotoUrl($member->photo_path, $member->prenom, $member->nom),
+                        'profile_photo_url' => $member->profile_photo_url ?: PhotoHelper::getPhotoUrl($member->photo_path, $member->prenom, $member->nom),
                         'date_naissance' => $member->date_naissance,
                         'profession' => $member->profession,
                         'fonction_professionnelle' => $member->profession,
@@ -386,12 +389,24 @@ class InscriptionsController extends Controller
                                 'prenom' => $family->responsable->prenom ?? '',
                                 'email' => $family->responsable->email ?? '',
                                 'phone' => $family->responsable->telephone ?? '',
+                                'profile_photo_url' => $family->responsable->profile_photo_url
+                                    ?: PhotoHelper::getPhotoUrl(
+                                        $family->responsable->photo_path ?? null,
+                                        $family->responsable->prenom ?? null,
+                                        $family->responsable->nom ?? null
+                                    ),
                             ],
                             'members' => $family->users->map(function ($user) use ($family) {
                                 return [
                                     'id' => $user->id,
                                     'nom' => $user->nom ?? '',
                                     'prenom' => $user->prenom ?? '',
+                                    'profile_photo_url' => $user->profile_photo_url
+                                        ?: PhotoHelper::getPhotoUrl(
+                                            $user->photo_path ?? null,
+                                            $user->prenom ?? null,
+                                            $user->nom ?? null
+                                        ),
                                     'email' => $user->email ?? '',
                                     'phone' => $user->telephone ?? '',
                                     'role' => $user->role ?? 'membre',

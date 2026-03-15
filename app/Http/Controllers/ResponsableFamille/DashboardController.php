@@ -65,6 +65,32 @@ class DashboardController extends Controller
             'familyStats' => $familyStats,
             'familyData' => $familyData,
             'validatedActesCount' => $validatedActesCount,
+            'flashAnnouncements' => $this->buildFlashAnnouncements(),
         ]);
+    }
+
+    private function buildFlashAnnouncements()
+    {
+        return ActeLiturgique::query()
+            ->where('est_annonce', true)
+            ->whereNotNull('pasteur_id')
+            ->whereIn('statut', [ActeLiturgique::STATUT_VALIDEE, ActeLiturgique::STATUT_PUBLIEE])
+            ->orderByDesc('date_publication')
+            ->orderByDesc('updated_at')
+            ->limit(12)
+            ->get()
+            ->map(function (ActeLiturgique $annonce) {
+                $text = trim((string) ($annonce->details['contenu'] ?? $annonce->message ?? ''));
+
+                if ($text === '') {
+                    $text = 'Annonce paroissiale publiee.';
+                }
+
+                return [
+                    'id' => $annonce->id,
+                    'text' => $text,
+                ];
+            })
+            ->values();
     }
 }

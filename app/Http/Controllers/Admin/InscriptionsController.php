@@ -23,7 +23,7 @@ class InscriptionsController extends Controller
             $data = $fullInscription->data ?? [];
 
             // Déterminer le libellé du type
-            $createdByLabel = match($inscription->type) {
+            $createdByLabel = match ($inscription->type) {
                 'famille' => 'Famille (Responsable)',
                 'individuel' => 'Individuel',
                 'pasteur' => 'Pasteur',
@@ -83,11 +83,15 @@ class InscriptionsController extends Controller
                 'classe' => $classe,
                 'ville' => $villeName,
                 'created_at' => $inscription->created_at->format('d/m/Y H:i'),
-                'profile_photo_url' => PhotoHelper::getPhotoUrl(
-                    $fullInscription->photo_path ?? null,
-                    $displayPrenom,
-                    $displayNom
-                ),
+                'profile_photo_url' => $fullInscription->profile_photo_url
+                    ?: PhotoHelper::getPhotoUrl(
+                        $fullInscription->photo_path
+                            ?? $data['responsable']['photo_path']
+                            ?? $data['responsable']['photo_url']
+                            ?? null,
+                        $displayPrenom,
+                        $displayNom
+                    ),
                 'photo_data' => $fullInscription->photo_data, // Garder pour compatibilité
                 'data' => $data,
             ];

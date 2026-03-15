@@ -73,7 +73,7 @@ class InscriptionsController extends Controller
                         'classe_name' => $member->classe?->nom ?? 'N/A',
                         'relation' => $member->relation,
                         'is_responsable' => $member->role === 'responsable_famille',
-                        'profile_photo_url' => PhotoHelper::getPhotoUrl($member->photo_path, $member->prenom, $member->nom),
+                        'profile_photo_url' => $member->profile_photo_url ?: PhotoHelper::getPhotoUrl($member->photo_path, $member->prenom, $member->nom),
                     ];
                 })->toArray();
 

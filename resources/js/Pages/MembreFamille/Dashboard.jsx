@@ -167,8 +167,8 @@ export default function Dashboard({ role, pendingInscriptions, auth }) {
                 overflowX: "hidden",
             }}
         >
-                {/* MAIN CONTENT */}
-                <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+            {/* MAIN CONTENT */}
+            <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
                 <div className="mb-10">
                     <h2 className="dashboard-title">
                         Espace Membre de Famille

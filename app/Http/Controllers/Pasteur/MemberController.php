@@ -261,6 +261,9 @@ class MemberController extends Controller
             'fonction_id' => $validated['fonction_id'] ?? $member->fonction_id,
             'relation' => $validated['relation'] ?? $member->relation,
             'photo_path' => $validated['photo_path'] ?? $member->photo_path,
+            'profile_photo_url' => isset($validated['photo_path'])
+                ? '/storage/' . ltrim($validated['photo_path'], '/')
+                : $member->profile_photo_url,
         ]);
 
         // Mettre à jour les sacrements

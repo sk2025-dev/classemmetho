@@ -1040,8 +1040,15 @@ export default function RegisterFamille({
         responsableFields.forEach((k) => {
             const v = responsable[k];
             if (k === "photo") {
-                if (v && responsable.photoPreview) {
-                    formData.append(`responsable[photo]`, v);
+                const photoValue = v || responsable.photoPreview || null;
+                if (photoValue instanceof File) {
+                    formData.append(`responsable[photo]`, photoValue);
+                } else if (
+                    typeof photoValue === "string" &&
+                    photoValue &&
+                    !photoValue.startsWith("blob:")
+                ) {
+                    formData.append(`responsable[photo]`, photoValue);
                 }
             } else if (v !== null && v !== undefined && v !== "") {
                 let valueToSend = v;
@@ -1103,8 +1110,15 @@ export default function RegisterFamille({
                 membreFields.forEach((k) => {
                     const v = m[k];
                     if (k === "photo") {
-                        if (v && m.photoPreview) {
-                            formData.append(`membres[${i}][photo]`, v);
+                        const photoValue = v || m.photoPreview || null;
+                        if (photoValue instanceof File) {
+                            formData.append(`membres[${i}][photo]`, photoValue);
+                        } else if (
+                            typeof photoValue === "string" &&
+                            photoValue &&
+                            !photoValue.startsWith("blob:")
+                        ) {
+                            formData.append(`membres[${i}][photo]`, photoValue);
                         }
                     } else if (v !== null && v !== undefined && v !== "") {
                         let valueToSend = v;

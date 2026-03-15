@@ -203,6 +203,13 @@ class InscriptionApprovalController extends Controller
         $responsableDateNaissance = $inscription->responsable_date_naissance
             ?? ($inscription->data['responsable']['dateNaissance'] ?? null)
             ?? $inscription->date_naissance;
+        $responsablePhotoPath = $this->resolvePhotoPathFromValues([
+            $inscription->photo_path,
+            $inscription->profile_photo_url,
+            $inscription->data['responsable']['photo_path'] ?? null,
+            $inscription->data['responsable']['photo_url'] ?? null,
+            $inscription->data['responsable']['photo'] ?? null,
+        ]);
 
         // VÃ©rifier si un utilisateur avec cet email existe dÃ©jÃ 
         $existingUser = $responsableEmail
@@ -210,7 +217,11 @@ class InscriptionApprovalController extends Controller
             : null;
         if ($existingUser) {
             // Lier l'utilisateur existant Ã  la famille
-            $existingUser->update(['family_id' => $family->id]);
+            $updatePayload = ['family_id' => $family->id];
+            if (empty($existingUser->photo_path) && !empty($responsablePhotoPath)) {
+                $updatePayload['photo_path'] = $responsablePhotoPath;
+            }
+            $existingUser->update($updatePayload);
             return $existingUser;
         }
 
@@ -238,6 +249,7 @@ class InscriptionApprovalController extends Controller
             'telephone2' => $responsableTel2,
             'genre' => $inscription->data['responsable']['genre'] ?? 'M',
             'date_naissance' => $responsableDateNaissance,
+            'photo_path' => $responsablePhotoPath,
             'family_id' => $family->id,
             'classe_id' => $family->classe_id,
             'role' => $role,
@@ -273,6 +285,11 @@ class InscriptionApprovalController extends Controller
 
         foreach ($membres as $membre) {
             $providedEmail = $membre['email'] ?? null;
+            $memberPhotoPath = $this->resolvePhotoPathFromValues([
+                $membre['photo_path'] ?? null,
+                $membre['photo_url'] ?? null,
+                $membre['photo'] ?? null,
+            ]);
             $existingMember = null;
 
             if (!empty($providedEmail)) {
@@ -286,7 +303,11 @@ class InscriptionApprovalController extends Controller
 
             if ($existingMember && $existingMember->family_id !== $family->id) {
                 // Lier au mÃªme utilisateur existant
-                $existingMember->update(['family_id' => $family->id]);
+                $updatePayload = ['family_id' => $family->id];
+                if (empty($existingMember->photo_path) && !empty($memberPhotoPath)) {
+                    $updatePayload['photo_path'] = $memberPhotoPath;
+                }
+                $existingMember->update($updatePayload);
                 continue;
             }
 
@@ -315,6 +336,7 @@ class InscriptionApprovalController extends Controller
                 'telephone' => $membre['telephone'] ?? null,
                 'genre' => $membre['genre'] ?? 'M',
                 'date_naissance' => $membre['dateNaissance'] ?? null,
+                'photo_path' => $memberPhotoPath,
                 'family_id' => $family->id,
                 'classe_id' => $family->classe_id,
                 'role' => 'membre_famille',
@@ -375,6 +397,56 @@ class InscriptionApprovalController extends Controller
         }
 
         return $email;
+    }
+
+    /**
+     * Normalize first available photo value to DB relative path.
+     */
+    private function resolvePhotoPathFromValues(array $candidates): ?string
+    {
+        foreach ($candidates as $value) {
+            if (!is_string($value) || trim($value) === '') {
+                continue;
+            }
+
+            $resolved = $this->resolvePhotoPath((string) $value);
+            if (!empty($resolved)) {
+                return $resolved;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Convert absolute/public storage URLs to relative DB photo path.
+     */
+    private function resolvePhotoPath(string $photo): ?string
+    {
+        $photo = trim($photo);
+        if ($photo === '') {
+            return null;
+        }
+
+        if (!str_contains($photo, '://') && !str_starts_with($photo, '/storage/') && !str_starts_with($photo, 'storage/')) {
+            return ltrim($photo, '/');
+        }
+
+        if (str_starts_with($photo, '/storage/')) {
+            return ltrim(substr($photo, strlen('/storage/')), '/');
+        }
+
+        if (str_starts_with($photo, 'storage/')) {
+            return ltrim(substr($photo, strlen('storage/')), '/');
+        }
+
+        $parsed = parse_url($photo);
+        if (isset($parsed['path']) && str_contains($parsed['path'], '/storage/')) {
+            $relative = substr($parsed['path'], strpos($parsed['path'], '/storage/') + strlen('/storage/'));
+            return ltrim($relative, '/');
+        }
+
+        return null;
     }
 
     /**

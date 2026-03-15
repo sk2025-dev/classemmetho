@@ -54,9 +54,9 @@ export default function DecesForm({
     useEffect(() => {
         if (form.membre_id && form.membre_id !== "autre") {
             const selectedMember = familyMembers.find(
-                (m) => String(m.id) === String(form.membre_id)
+                (m) => String(m.id) === String(form.membre_id),
             );
-            
+
             if (selectedMember) {
                 setForm((prev) => ({
                     ...prev,
@@ -65,10 +65,13 @@ export default function DecesForm({
                         ...prev.details,
                         nom_defunt: selectedMember.nom || "",
                         prenom_defunt: selectedMember.prenom || "",
-                        date_naissance_defunt: selectedMember.date_naissance || "",
+                        date_naissance_defunt:
+                            selectedMember.date_naissance || "",
                         genre_defunt: selectedMember.genre || "",
                         def_classe: selectedMember.classe?.nom || "",
-                        def_baptise: selectedMember.sacrements?.baptise ? "oui" : "non",
+                        def_baptise: selectedMember.sacrements?.baptise
+                            ? "oui"
+                            : "non",
                         def_membre: "membre_actif",
                         dec_lien: "lui-meme",
                         lien_familial: "lui-meme",
@@ -95,25 +98,22 @@ export default function DecesForm({
         }
     }, [form.membre_id, familyMembers]);
 
-    const recap = useMemo(
-        () => {
-            let lienText = form.details.dec_lien || "-";
-            if (lienText === "lui-meme") {
-                lienText = "Le membre lui-même / elle-même";
-            }
-            
-            return {
-                lien: lienText,
-                defunt:
-                    `${form.details.prenom_defunt || ""} ${form.details.nom_defunt || ""}`.trim() ||
-                    "-",
-                ddec: form.details.date_deces || "-",
-                lieu: form.details.lieu_deces || "-",
-                membre: form.details.def_membre || "-",
-            };
-        },
-        [form.details],
-    );
+    const recap = useMemo(() => {
+        let lienText = form.details.dec_lien || "-";
+        if (lienText === "lui-meme") {
+            lienText = "Le membre lui-même / elle-même";
+        }
+
+        return {
+            lien: lienText,
+            defunt:
+                `${form.details.prenom_defunt || ""} ${form.details.nom_defunt || ""}`.trim() ||
+                "-",
+            ddec: form.details.date_deces || "-",
+            lieu: form.details.lieu_deces || "-",
+            membre: form.details.def_membre || "-",
+        };
+    }, [form.details]);
 
     const setDetail = (key, value) =>
         setForm((prev) => ({
@@ -123,19 +123,19 @@ export default function DecesForm({
     const next = () => {
         if (step === 1) {
             const nextErrors = {};
-            
+
             // Si "Autre membre" est sélectionné, "dec_lien" est requis
             if (form.membre_id === "autre" && !form.details.dec_lien) {
                 nextErrors["details.dec_lien"] = "Champ requis.";
             }
-            
+
             if (!form.details.nom_defunt)
                 nextErrors["details.nom_defunt"] = "Champ requis.";
             if (!form.details.prenom_defunt)
                 nextErrors["details.prenom_defunt"] = "Champ requis.";
             if (!form.details.date_deces)
                 nextErrors["details.date_deces"] = "Champ requis.";
-            
+
             if (Object.keys(nextErrors).length)
                 return setErrors((prev) => ({ ...prev, ...nextErrors }));
         }
@@ -153,12 +153,13 @@ export default function DecesForm({
 
         const payload = new FormData();
         payload.append("type_acte", "deces");
-        
+
         // Si "autre" est sélectionné, utiliser le premier membre de la famille comme déclarant
-        const membreIdToSend = form.membre_id === "autre" 
-            ? (familyMembers[0]?.id || "") 
-            : form.membre_id;
-        
+        const membreIdToSend =
+            form.membre_id === "autre"
+                ? familyMembers[0]?.id || ""
+                : form.membre_id;
+
         payload.append("membre_id", membreIdToSend || "");
         payload.append("classe_id", form.classe_id || "");
         payload.append(
@@ -186,7 +187,10 @@ export default function DecesForm({
         if (form.programme_piece) {
             payload.append("programme_file", form.programme_piece);
         }
-        payload.append("details[declarant_lien]", form.details.dec_lien || "lui-meme");
+        payload.append(
+            "details[declarant_lien]",
+            form.details.dec_lien || "lui-meme",
+        );
 
         try {
             const res = await axios.post(submitUrl, payload, {
@@ -218,7 +222,7 @@ export default function DecesForm({
         setStep(1);
         setErrors({});
         setSuccessMsg("");
-        
+
         // Réinitialiser le formulaire au membre par défaut
         setForm({
             membre_id: defaultMemberId,
@@ -275,33 +279,34 @@ export default function DecesForm({
                         <>
                             <div className="h-[3px] bg-gradient-to-r from-transparent via-slate-500 to-transparent" />
                             <div className="grid grid-cols-3 bg-slate-50 border-b border-slate-200">
-                                {["Soumis", "Validation Conducteur", "Validation Pasteur"].map(
-                                    (label, idx) => {
-                                        const sn = idx + 1;
-                                        const active = step === sn;
-                                        const done = step > sn;
-                                        return (
-                                            <div
-                                                key={label}
-                                                className={`text-center py-3 text-[10px] uppercase tracking-wider font-bold border-b-2 ${
-                                                    active
-                                                        ? "text-slate-700 border-slate-600"
-                                                        : done
-                                                          ? "text-amber-700 border-amber-600"
-                                                          : "text-slate-400 border-transparent"
-                                                }`}
-                                            >
-                                                {label}
-                                            </div>
-                                        );
-                                    },
-                                )}
+                                {[
+                                    "Soumis",
+                                    "Validation Conducteur",
+                                    "Validation Pasteur",
+                                ].map((label, idx) => {
+                                    const sn = idx + 1;
+                                    const active = step === sn;
+                                    const done = step > sn;
+                                    return (
+                                        <div
+                                            key={label}
+                                            className={`text-center py-3 text-[10px] uppercase tracking-wider font-bold border-b-2 ${
+                                                active
+                                                    ? "text-slate-700 border-slate-600"
+                                                    : done
+                                                      ? "text-amber-700 border-amber-600"
+                                                      : "text-slate-400 border-transparent"
+                                            }`}
+                                        >
+                                            {label}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </>
                     )}
 
                     <form onSubmit={submit} className="p-6 md:p-10">
-
                         {!success && step === 1 && (
                             <section>
                                 <div className="mb-6">
@@ -309,11 +314,15 @@ export default function DecesForm({
                                         Informations du défunt / de la défunte
                                     </h2>
                                     <p className="text-sm text-slate-500 mb-4">
-                                        Sélectionnez le membre concerné. Si la personne décédée n'est pas inscrite, choisissez "Autre membre".
+                                        Sélectionnez le membre concerné. Si la
+                                        personne décédée n'est pas inscrite,
+                                        choisissez "Autre membre".
                                     </p>
                                 </div>
                                 <div className="bg-slate-50 border border-slate-200 rounded-sm p-4 text-sm text-slate-700 mb-6">
-                                    L'église vous présente ses sincères condoléances et vous accompagne dans cette épreuve.
+                                    L'église vous présente ses sincères
+                                    condoléances et vous accompagne dans cette
+                                    épreuve.
                                 </div>
 
                                 {/* Sélection du membre concerné */}
@@ -335,11 +344,12 @@ export default function DecesForm({
                                                 </option>
                                             ))}
                                             <option value="autre">
-                                                ➕ Autre membre / Personne non inscrite
+                                                ➕ Autre membre / Personne non
+                                                inscrite
                                             </option>
                                         </select>
                                         <p className="text-xs text-slate-500 mt-1.5">
-                                            {form.membre_id === "autre" 
+                                            {form.membre_id === "autre"
                                                 ? "Vous pouvez saisir les informations d'une personne non inscrite"
                                                 : "Les informations du membre sélectionné seront utilisées"}
                                         </p>
@@ -347,45 +357,69 @@ export default function DecesForm({
                                 </div>
 
                                 {/* Si membre inscrit : afficher les infos en lecture seule */}
-                                {form.membre_id && form.membre_id !== "autre" && (
-                                    <>
-                                        <div className="bg-blue-50 border border-blue-200 rounded-sm p-4 mb-6">
-                                            <p className="text-sm text-blue-800 font-medium mb-2">
-                                                ✓ Informations du membre préremplies automatiquement
-                                            </p>
-                                            <p className="text-xs text-blue-700">
-                                                Les informations ci-dessous proviennent du profil du membre. 
-                                                Si vous souhaitez déclarer une autre personne, sélectionnez "Autre membre".
-                                            </p>
-                                        </div>
-
-                                        {/* Résumé des infos pré-remplies */}
-                                        <div className="bg-white border border-blue-200 rounded-sm p-4 mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <p className="text-xs font-semibold text-slate-500 uppercase">Identité pré-remplie</p>
-                                                <p className="text-sm text-slate-800">
-                                                    {form.details.prenom_defunt} {form.details.nom_defunt}
+                                {form.membre_id &&
+                                    form.membre_id !== "autre" && (
+                                        <>
+                                            <div className="bg-blue-50 border border-blue-200 rounded-sm p-4 mb-6">
+                                                <p className="text-sm text-blue-800 font-medium mb-2">
+                                                    ✓ Informations du membre
+                                                    préremplies automatiquement
+                                                </p>
+                                                <p className="text-xs text-blue-700">
+                                                    Les informations ci-dessous
+                                                    proviennent du profil du
+                                                    membre. Si vous souhaitez
+                                                    déclarer une autre personne,
+                                                    sélectionnez "Autre membre".
                                                 </p>
                                             </div>
-                                            {form.details.genre_defunt && (
+
+                                            {/* Résumé des infos pré-remplies */}
+                                            <div className="bg-white border border-blue-200 rounded-sm p-4 mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div className="space-y-2">
-                                                    <p className="text-xs font-semibold text-slate-500 uppercase">Sexe</p>
+                                                    <p className="text-xs font-semibold text-slate-500 uppercase">
+                                                        Identité pré-remplie
+                                                    </p>
                                                     <p className="text-sm text-slate-800">
-                                                        {form.details.genre_defunt}
+                                                        {
+                                                            form.details
+                                                                .prenom_defunt
+                                                        }{" "}
+                                                        {
+                                                            form.details
+                                                                .nom_defunt
+                                                        }
                                                     </p>
                                                 </div>
-                                            )}
-                                            {form.details.def_classe && (
-                                                <div className="space-y-2">
-                                                    <p className="text-xs font-semibold text-slate-500 uppercase">Classe</p>
-                                                    <p className="text-sm text-slate-800">
-                                                        {form.details.def_classe}
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </>
-                                )}
+                                                {form.details.genre_defunt && (
+                                                    <div className="space-y-2">
+                                                        <p className="text-xs font-semibold text-slate-500 uppercase">
+                                                            Sexe
+                                                        </p>
+                                                        <p className="text-sm text-slate-800">
+                                                            {
+                                                                form.details
+                                                                    .genre_defunt
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                )}
+                                                {form.details.def_classe && (
+                                                    <div className="space-y-2">
+                                                        <p className="text-xs font-semibold text-slate-500 uppercase">
+                                                            Classe
+                                                        </p>
+                                                        <p className="text-sm text-slate-800">
+                                                            {
+                                                                form.details
+                                                                    .def_classe
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
 
                                 {/* Si Autre membre : afficher le champ lien */}
                                 {form.membre_id === "autre" && (
@@ -394,11 +428,19 @@ export default function DecesForm({
                                             <select
                                                 value={form.details.dec_lien}
                                                 onChange={(e) => {
-                                                    setDetail("dec_lien", e.target.value);
-                                                    setDetail("lien_familial", e.target.value);
+                                                    setDetail(
+                                                        "dec_lien",
+                                                        e.target.value,
+                                                    );
+                                                    setDetail(
+                                                        "lien_familial",
+                                                        e.target.value,
+                                                    );
                                                 }}
                                             >
-                                                <option value="">Choisir</option>
+                                                <option value="">
+                                                    Choisir
+                                                </option>
                                                 <option value="conjoint">
                                                     Epoux / Epouse
                                                 </option>
@@ -422,7 +464,9 @@ export default function DecesForm({
                                                 </option>
                                             </select>
                                             {errors["details.dec_lien"] && (
-                                                <Err>{errors["details.dec_lien"]}</Err>
+                                                <Err>
+                                                    {errors["details.dec_lien"]}
+                                                </Err>
                                             )}
                                         </Field>
                                     </div>
@@ -433,27 +477,51 @@ export default function DecesForm({
                                         <input
                                             value={form.details.nom_defunt}
                                             onChange={(e) =>
-                                                setDetail("nom_defunt", e.target.value)
+                                                setDetail(
+                                                    "nom_defunt",
+                                                    e.target.value,
+                                                )
                                             }
-                                            readOnly={form.membre_id !== "autre"}
-                                            className={form.membre_id !== "autre" ? "bg-slate-100" : ""}
+                                            readOnly={
+                                                form.membre_id !== "autre"
+                                            }
+                                            className={
+                                                form.membre_id !== "autre"
+                                                    ? "bg-slate-100"
+                                                    : ""
+                                            }
                                         />
                                         {errors["details.nom_defunt"] && (
-                                            <Err>{errors["details.nom_defunt"]}</Err>
+                                            <Err>
+                                                {errors["details.nom_defunt"]}
+                                            </Err>
                                         )}
                                     </Field>
                                     <Field label="Prenoms *">
                                         <input
                                             value={form.details.prenom_defunt}
                                             onChange={(e) =>
-                                                setDetail("prenom_defunt", e.target.value)
+                                                setDetail(
+                                                    "prenom_defunt",
+                                                    e.target.value,
+                                                )
                                             }
-                                            readOnly={form.membre_id !== "autre"}
-                                            className={form.membre_id !== "autre" ? "bg-slate-100" : ""}
+                                            readOnly={
+                                                form.membre_id !== "autre"
+                                            }
+                                            className={
+                                                form.membre_id !== "autre"
+                                                    ? "bg-slate-100"
+                                                    : ""
+                                            }
                                         />
                                         {errors["details.prenom_defunt"] && (
                                             <Err>
-                                                {errors["details.prenom_defunt"]}
+                                                {
+                                                    errors[
+                                                        "details.prenom_defunt"
+                                                    ]
+                                                }
                                             </Err>
                                         )}
                                     </Field>
@@ -465,18 +533,26 @@ export default function DecesForm({
                                             max={today}
                                             value={form.details.date_deces}
                                             onChange={(e) =>
-                                                setDetail("date_deces", e.target.value)
+                                                setDetail(
+                                                    "date_deces",
+                                                    e.target.value,
+                                                )
                                             }
                                         />
                                         {errors["details.date_deces"] && (
-                                            <Err>{errors["details.date_deces"]}</Err>
+                                            <Err>
+                                                {errors["details.date_deces"]}
+                                            </Err>
                                         )}
                                     </Field>
                                     <Field label="Lieu du deces">
                                         <input
                                             value={form.details.lieu_deces}
                                             onChange={(e) =>
-                                                setDetail("lieu_deces", e.target.value)
+                                                setDetail(
+                                                    "lieu_deces",
+                                                    e.target.value,
+                                                )
                                             }
                                         />
                                     </Field>
@@ -487,33 +563,56 @@ export default function DecesForm({
                                     <>
                                         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded">
                                             <p className="text-xs text-amber-800">
-                                                ℹ️ Complétez les informations de la personne décédée
+                                                ℹ️ Complétez les informations de
+                                                la personne décédée
                                             </p>
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                             <Field label="Sexe">
                                                 <select
-                                                    value={form.details.genre_defunt}
+                                                    value={
+                                                        form.details
+                                                            .genre_defunt
+                                                    }
                                                     onChange={(e) =>
-                                                        setDetail("genre_defunt", e.target.value)
+                                                        setDetail(
+                                                            "genre_defunt",
+                                                            e.target.value,
+                                                        )
                                                     }
                                                 >
-                                                    <option value="">Choisir</option>
-                                                    <option value="Masculin">Masculin</option>
-                                                    <option value="Feminin">Feminin</option>
+                                                    <option value="">
+                                                        Choisir
+                                                    </option>
+                                                    <option value="Masculin">
+                                                        Masculin
+                                                    </option>
+                                                    <option value="Feminin">
+                                                        Feminin
+                                                    </option>
                                                 </select>
                                             </Field>
                                             <Field label="Classe d'appartenance">
                                                 <select
-                                                    value={form.details.def_classe}
+                                                    value={
+                                                        form.details.def_classe
+                                                    }
                                                     onChange={(e) =>
-                                                        setDetail("def_classe", e.target.value)
+                                                        setDetail(
+                                                            "def_classe",
+                                                            e.target.value,
+                                                        )
                                                     }
                                                 >
-                                                    <option value="">Choisir</option>
+                                                    <option value="">
+                                                        Choisir
+                                                    </option>
                                                     {classes.map((c) => (
-                                                        <option key={c.id} value={c.nom}>
+                                                        <option
+                                                            key={c.id}
+                                                            value={c.nom}
+                                                        >
                                                             {c.nom}
                                                         </option>
                                                     ))}
@@ -527,62 +626,106 @@ export default function DecesForm({
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                             <Field label="Etait membre de l'eglise ?">
                                                 <select
-                                                    value={form.details.def_membre}
+                                                    value={
+                                                        form.details.def_membre
+                                                    }
                                                     onChange={(e) =>
-                                                        setDetail("def_membre", e.target.value)
+                                                        setDetail(
+                                                            "def_membre",
+                                                            e.target.value,
+                                                        )
                                                     }
                                                 >
-                                                    <option value="">Choisir</option>
+                                                    <option value="">
+                                                        Choisir
+                                                    </option>
                                                     <option value="membre_actif">
                                                         Oui, membre actif
                                                     </option>
                                                     <option value="membre_longue_date">
-                                                        Oui, membre de longue date
+                                                        Oui, membre de longue
+                                                        date
                                                     </option>
                                                     <option value="ami">
                                                         Ami(e) de l'eglise
                                                     </option>
-                                                    <option value="non_membre">Non membre</option>
+                                                    <option value="non_membre">
+                                                        Non membre
+                                                    </option>
                                                 </select>
                                             </Field>
                                             <Field label="A recu le bapteme ?">
                                                 <select
-                                                    value={form.details.def_baptise}
+                                                    value={
+                                                        form.details.def_baptise
+                                                    }
                                                     onChange={(e) =>
-                                                        setDetail("def_baptise", e.target.value)
+                                                        setDetail(
+                                                            "def_baptise",
+                                                            e.target.value,
+                                                        )
                                                     }
                                                 >
-                                                    <option value="">Choisir</option>
+                                                    <option value="">
+                                                        Choisir
+                                                    </option>
                                                     <option value="Oui cette eglise">
                                                         Oui - dans cette eglise
                                                     </option>
                                                     <option value="Oui autre eglise">
                                                         Oui - autre eglise
                                                     </option>
-                                                    <option value="Non">Non</option>
-                                                    <option value="Inconnu">Inconnu</option>
+                                                    <option value="Non">
+                                                        Non
+                                                    </option>
+                                                    <option value="Inconnu">
+                                                        Inconnu
+                                                    </option>
                                                 </select>
                                             </Field>
                                         </div>
 
                                         <Field label="Lien familial">
                                             <select
-                                                value={form.details.lien_familial}
+                                                value={
+                                                    form.details.lien_familial
+                                                }
                                                 onChange={(e) =>
-                                                    setDetail("lien_familial", e.target.value)
+                                                    setDetail(
+                                                        "lien_familial",
+                                                        e.target.value,
+                                                    )
                                                 }
                                             >
-                                                <option value="">Choisir</option>
-                                                <option value="conjoint">Conjoint(e)</option>
-                                                <option value="parent">Parent</option>
-                                                <option value="enfant">Enfant</option>
+                                                <option value="">
+                                                    Choisir
+                                                </option>
+                                                <option value="conjoint">
+                                                    Conjoint(e)
+                                                </option>
+                                                <option value="parent">
+                                                    Parent
+                                                </option>
+                                                <option value="enfant">
+                                                    Enfant
+                                                </option>
                                                 <option value="frere_soeur">
                                                     Frere / Soeur
                                                 </option>
-                                                <option value="autre">Autre</option>
+                                                <option value="autre">
+                                                    Autre
+                                                </option>
                                             </select>
-                                            {errors["details.lien_familial"] && (
-                                                <Err>{errors["details.lien_familial"]}</Err>
+                                            {errors[
+                                                "details.lien_familial"
+                                            ] && (
+                                                <Err>
+                                                    {
+                                                        errors[
+                                                            "details.lien_familial"
+                                                        ]
+                                                    }
+                                                </Err>
                                             )}
                                         </Field>
                                     </>
@@ -612,8 +755,8 @@ export default function DecesForm({
                                                 setForm((prev) => ({
                                                     ...prev,
                                                     programme_piece:
-                                                        (e.target.files || [])[0] ||
-                                                        null,
+                                                        (e.target.files ||
+                                                            [])[0] || null,
                                                 }))
                                             }
                                         />
@@ -655,10 +798,7 @@ export default function DecesForm({
                                     />
                                 </RecapCard>
                                 <RecapCard title="Obseques">
-                                    <RecapRow
-                                        k="Statut"
-                                        v="SOUMISE"
-                                    />
+                                    <RecapRow k="Statut" v="SOUMISE" />
                                 </RecapCard>
                                 {errors.submit && <Err>{errors.submit}</Err>}
                                 <div className="flex justify-between gap-3 mt-8 pt-5 border-t border-slate-200">
@@ -672,7 +812,7 @@ export default function DecesForm({
                                     <button
                                         type="submit"
                                         disabled={processing}
-                                        className={`btn-main ${processing ? 'btn-green' : ''}`}
+                                        className={`btn-main ${processing ? "btn-green" : ""}`}
                                     >
                                         {processing
                                             ? "Soumission..."
@@ -691,21 +831,40 @@ export default function DecesForm({
                                     Declaration transmise au conducteur
                                 </h2>
                                 <p className="text-slate-600 max-w-md mx-auto mb-6">
-                                    Votre declaration a ete soumise avec succes. Elle sera validee par le conducteur, puis par le pasteur.
+                                    Votre declaration a ete soumise avec succes.
+                                    Elle sera validee par le conducteur, puis
+                                    par le pasteur.
                                 </p>
                                 <div className="bg-blue-50 border border-blue-200 rounded-sm p-4 mb-6 text-left max-w-md mx-auto">
-                                    <p className="text-sm font-semibold text-blue-900 mb-3">Processus de validation:</p>
+                                    <p className="text-sm font-semibold text-blue-900 mb-3">
+                                        Processus de validation:
+                                    </p>
                                     <ul className="text-sm text-blue-800 space-y-2">
-                                        <li>✓ <strong>Soumis</strong> - Votre declaration</li>
-                                        <li>⏳ <strong>Validation Conducteur</strong> - En attente</li>
-                                        <li>⏳ <strong>Validation Pasteur</strong> - En attente</li>
+                                        <li>
+                                            ✓ <strong>Soumis</strong> - Votre
+                                            declaration
+                                        </li>
+                                        <li>
+                                            ⏳{" "}
+                                            <strong>
+                                                Validation Conducteur
+                                            </strong>{" "}
+                                            - En attente
+                                        </li>
+                                        <li>
+                                            ⏳{" "}
+                                            <strong>Validation Pasteur</strong>{" "}
+                                            - En attente
+                                        </li>
                                     </ul>
                                     <p className="text-xs text-blue-700 mt-3 italic">
-                                        Des le pasteur validera, vous recevrez une notification avec le certificat PDF.
+                                        Des le pasteur validera, vous recevrez
+                                        une notification avec le certificat PDF.
                                     </p>
                                 </div>
                                 <p className="text-sm italic text-slate-500 mt-4">
-                                    "L'Eternel est proche de ceux qui ont le coeur brise." - Psaume 34.19
+                                    "L'Eternel est proche de ceux qui ont le
+                                    coeur brise." - Psaume 34.19
                                 </p>
                                 {successMsg && (
                                     <p className="text-sm text-slate-700 mt-3">

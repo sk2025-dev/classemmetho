@@ -27,6 +27,13 @@ export default function ProfileShow({ user }) {
   })
   const [signaturePreview, setSignaturePreview] = useState(user.signature_url || '')
   const toast = useToast()
+  const profileLabel = user.name || user.identifier || 'Profil'
+  const profileInitials = profileLabel
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || 'P'
 
   const handleProfileSubmit = (e) => {
     e.preventDefault()
@@ -74,8 +81,23 @@ export default function ProfileShow({ user }) {
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">Mon Profil</h1>
-          <p className="text-gray-600 mt-2">Gerez vos informations personnelles et vos acces de securite</p>
+          <div className="flex items-center gap-4">
+            <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-blue-100 bg-gray-100 flex items-center justify-center text-xl font-semibold text-gray-600">
+              {user.profile_photo_url ? (
+                <img
+                  src={user.profile_photo_url}
+                  alt={profileLabel}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span>{profileInitials}</span>
+              )}
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800">Mon Profil</h1>
+              <p className="text-gray-600 mt-2">Gerez vos informations personnelles et vos acces de securite</p>
+            </div>
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-md mb-6">

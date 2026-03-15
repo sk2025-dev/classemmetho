@@ -18,8 +18,10 @@ import {
     CheckCircle2,
     Gift,
 } from "lucide-react";
+import { resolveMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
 
 export default function ShowMember({ member, family, auth }) {
+    const memberPhotoUrl = resolveMemberPhotoUrl(member);
     // --- Logique inchangée ---
     const formatDate = (date) => {
         if (!date) return "—";
@@ -174,9 +176,9 @@ export default function ShowMember({ member, family, auth }) {
                             <div className="flex-shrink-0 relative group">
                                 <div className="absolute -inset-1 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-[2rem] blur opacity-25 group-hover:opacity-50 transition duration-500"></div>
                                 <div className="relative w-36 h-36 md:w-44 md:h-44 rounded-[1.8rem] bg-gray-100 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center">
-                                    {member.photo_path ? (
+                                    {memberPhotoUrl ? (
                                         <img
-                                            src={`/storage/${member.photo_path}`}
+                                            src={memberPhotoUrl}
                                             alt={`${member.prenom} ${member.nom}`}
                                             className="w-full h-full object-cover"
                                         />

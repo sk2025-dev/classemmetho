@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "@inertiajs/react";
 import { ArrowLeft, Download } from "lucide-react";
 import axios from "axios";
+import { resolveMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
 
 /* ── CONSTANTS ── */
 const IN_PROGRESS = [
@@ -686,12 +687,22 @@ export default function Index({
                                     const count = localActes.filter(
                                         (a) => a.membre_id === member.id,
                                     ).length;
+                                    const memberPhotoUrl =
+                                        resolveMemberPhotoUrl(member);
                                     return (
                                         <div key={member.id} className="mbr">
                                             <div className="mbr-av">
-                                                {initials(
-                                                    member.prenom,
-                                                    member.nom,
+                                                {memberPhotoUrl ? (
+                                                    <img
+                                                        src={memberPhotoUrl}
+                                                        alt={`${member.prenom || ""} ${member.nom || ""}`.trim()}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    initials(
+                                                        member.prenom,
+                                                        member.nom,
+                                                    )
                                                 )}
                                             </div>
                                             <div>

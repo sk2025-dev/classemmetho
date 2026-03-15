@@ -8,6 +8,7 @@ import {
     User, Mail, Phone, Heart, Calendar, MapPin,
     Award, Gift, BookOpen, ChevronDown, ChevronUp, Check, X, Users, Briefcase
 } from "lucide-react";
+import { resolveMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
 
 // --- CSS GLOBAL (identique à celui de la page utilisateur) ---
 const GLOBAL_STYLES = `
@@ -286,8 +287,8 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
                     {/* PROFIL HEADER AMÉLIORÉ */}
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex items-start gap-6">
                         <div className="relative shrink-0">
-                            {displayData.photo_path || displayData.photo ? (
-                                <img src={displayData.photo_path || displayData.photo} alt={displayData.nom} className="w-36 h-36 rounded-full object-cover border-4 border-white shadow-lg ring-2 ring-blue-100" />
+                            {resolveMemberPhotoUrl(displayData) ? (
+                                <img src={resolveMemberPhotoUrl(displayData)} alt={displayData.nom} className="w-36 h-36 rounded-full object-cover border-4 border-white shadow-lg ring-2 ring-blue-100" />
                             ) : (
                                 <div className="w-36 h-36 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center border-4 border-white shadow-lg ring-2 ring-blue-100">
                                     <User className="w-16 h-16 text-gray-400" />
@@ -492,7 +493,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
     } : null;
 
     const [formData, setFormData] = useState(safeMemberData || {});
-    const [photoPreview, setPhotoPreview] = useState(safeMemberData?.photo || null);
+    const [photoPreview, setPhotoPreview] = useState(resolveMemberPhotoUrl(safeMemberData) || null);
     const [fonctions, setFonctions] = useState([]);
 
     useEffect(() => {
@@ -528,7 +529,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                             profession: freshData.profession || '',
                             fonction_id: freshData.fonction_id || '',
                             relation: freshData.relation || '',
-                            photo: freshData.photo_path || null,
+                            photo: resolveMemberPhotoUrl(freshData) || null,
                             statut_marital: freshData.statut_marital || 'Célibataire',
                             date_mariage: freshData.date_mariage || '',
                             lieu_mariage: freshData.lieu_mariage || '',
@@ -544,13 +545,13 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                             ...freshData  // Préserver les champs additionnels
                         };
                         setFormData(mappedData);
-                        setPhotoPreview(freshData.photo_path);
+                        setPhotoPreview(resolveMemberPhotoUrl(freshData));
                     }
                 } catch (error) {
                     console.error('Erreur lors du chargement des données:', error);
                     // Fallback aux données passées en props
                     setFormData(safeMemberData || memberData);
-                    setPhotoPreview(memberData.photo_path || memberData.photo);
+                    setPhotoPreview(resolveMemberPhotoUrl(memberData));
                 }
             };
             loadMemberData();
@@ -1079,7 +1080,7 @@ const ClasseDetailsModal = ({ isOpen, onClose, classe, familles = [], membres = 
                                         <tr key={idx} className="hover:bg-white/90 transition-all duration-200">
                                             <td className="px-3 py-3 whitespace-nowrap text-sm font-bold text-gray-800 text-center">{idx + 1}</td>
                                             <td className="px-3 py-3 whitespace-nowrap text-center">
-                                                {m.photo ? <img src={m.photo} className="w-10 h-10 rounded-full mx-auto object-cover border-2 border-white shadow-sm" alt="p" /> : <div className="w-10 h-10 rounded-full bg-gray-200 mx-auto flex items-center justify-center text-xs text-gray-500">{m.prenom?.[0]}{m.nom?.[0]}</div>}
+                                                {resolveMemberPhotoUrl(m) ? <img src={resolveMemberPhotoUrl(m)} className="w-10 h-10 rounded-full mx-auto object-cover border-2 border-white shadow-sm" alt="p" /> : <div className="w-10 h-10 rounded-full bg-gray-200 mx-auto flex items-center justify-center text-xs text-gray-500">{m.prenom?.[0]}{m.nom?.[0]}</div>}
                                             </td>
                                             <td className="px-3 py-3 whitespace-nowrap text-sm font-bold text-gray-800 text-center">{m.nom || "-"}</td>
                                             <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700 text-center">{m.prenom || "-"}</td>

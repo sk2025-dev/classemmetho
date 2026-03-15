@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Helpers\PhotoHelper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -299,5 +300,17 @@ class User extends Authenticatable
     public function getNameAttribute()
     {
         return $this->nom . ' ' . $this->prenom;
+    }
+
+    /**
+     * Retourne l'URL de photo de profil persistée, sinon la calcule depuis photo_path.
+     */
+    public function getProfilePhotoUrlAttribute($value)
+    {
+        return $value ?: PhotoHelper::getPhotoUrl(
+            $this->attributes['photo_path'] ?? null,
+            $this->attributes['prenom'] ?? null,
+            $this->attributes['nom'] ?? null
+        );
     }
 }

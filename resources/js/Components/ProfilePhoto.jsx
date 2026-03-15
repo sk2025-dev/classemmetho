@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getAvatarUrl, isValidPhotoUrl } from '../Helpers/PhotoUrlHelper';
+import { resolveMemberPhotoUrl } from '../Helpers/PhotoHelper';
 
 /**
  * Composant universel pour afficher une photo de profil ou avatar avec initiales
@@ -38,15 +38,20 @@ export default function ProfilePhoto({
     const sizeClass = sizeMap[size] || sizeMap['md'];
     const roundedClass = rounded ? 'rounded-full' : 'rounded-lg';
     
-    // Obtenir l'URL avec fallback avatar avec initiales
-    const photoUrl = getAvatarUrl(user);
+    // Résoudre la vraie photo; fallback local vers initiales en cas d'absence/erreur
+    const photoUrl = resolveMemberPhotoUrl(user);
+    const hasValidPhotoUrl =
+        typeof photoUrl === 'string' &&
+        photoUrl.trim() !== '' &&
+        photoUrl.trim().toLowerCase() !== 'null' &&
+        photoUrl.trim().toLowerCase() !== 'undefined';
 
     return (
         <div
             className={`${sizeClass} ${roundedClass} overflow-hidden bg-gray-200 flex items-center justify-center ${className}`}
             title={alt}
         >
-            {photoUrl && isValidPhotoUrl(photoUrl) && !imageError ? (
+            {hasValidPhotoUrl && !imageError ? (
                 <img
                     src={photoUrl}
                     alt={alt}

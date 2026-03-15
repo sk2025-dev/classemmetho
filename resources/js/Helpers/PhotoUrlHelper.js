@@ -14,6 +14,11 @@ export function normalizePhotoUrl(photoPath) {
     }
 
     const trimmed = photoPath.trim();
+    const lowered = trimmed.toLowerCase();
+
+    if (!trimmed || lowered === 'null' || lowered === 'undefined') {
+        return null;
+    }
 
     // Déjà une URL complète (http:// ou https://)
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
@@ -22,6 +27,11 @@ export function normalizePhotoUrl(photoPath) {
 
     // Déjà un chemin web absolu
     if (trimmed.startsWith('/storage/')) {
+        return trimmed;
+    }
+
+    // Tout autre chemin absolu web est déjà exploitable (/images/..., /assets/...)
+    if (trimmed.startsWith('/')) {
         return trimmed;
     }
 
@@ -66,73 +76,12 @@ export function getMemberPhotoUrl(member) {
     return null;
 }
 
-/**
- * Générer une URL d'avatar (photo ou initiales générées)
- * Utilise le service UI Avatars si pas de photo
- * @param {object|null} member - Objet membre/utilisateur avec prenom, nom, photo
- * @param {object} options - Options: size (défaut 128), background (défaut random)
- * @returns {string} URL de la photo ou avatar généré
- */
-export function getAvatarUrl(member, options = {}) {
+export function getAvatarUrl(member) {
     if (!member) {
-        return getDefaultAvatar('?', options);
+        return null;
     }
 
-    // Essayer d'obtenir la photo
-    const photoUrl = getMemberPhotoUrl(member);
-    if (photoUrl) return photoUrl;
-
-    // Générer avatar avec initiales
-    const prenom = member.prenom || member.name || '';
-    const nom = member.nom || '';
-    
-    const prenomPart = prenom.trim().split(' ')[0] || '';
-    const nomPart = nom.trim().split(' ')[0] || '';
-    
-    const initials = (prenomPart[0] || '') + (nomPart[0] || '');
-    
-    return getDefaultAvatar(initials || '?', options);
-}
-
-/**
- * Générer URL d'avatar par défaut avec initiales
- * @param {string} initials - Initiales (1-2 caractères)
- * @param {object} options - Options de personnalisation
- * @returns {string} URL du service UI Avatars
- */
-function getDefaultAvatar(initials, options = {}) {
-    const size = options.size || 128;
-    const background = options.background || getColorFromInitials(initials);
-    const color = options.color || 'fff';
-
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=${encodeURIComponent(background)}&color=${color}&bold=true&size=${size}`;
-}
-
-/**
- * Obtenir une couleur déterministe basée sur les initiales
- * @param {string} initials - Initiales
- * @returns {string} Code couleur hex sans le #
- */
-function getColorFromInitials(initials) {
-    const colors = [
-        'FF6B6B', // Rouge
-        '4ECDC4', // Teal
-        '45B7D1', // Bleu
-        'FFA07A', // Saumon
-        '98D8C8', // Menthe
-        'F7DC6F', // Or
-        'BB8FCE', // Violet
-        '85C1E2', // Bleu ciel
-        'F8B88B', // Pêche
-        'D7BDE2', // Lavande
-    ];
-
-    if (!initials || initials.length === 0) {
-        return colors[0];
-    }
-
-    const index = initials.charCodeAt(0) % colors.length;
-    return colors[index];
+    return getMemberPhotoUrl(member);
 }
 
 /**

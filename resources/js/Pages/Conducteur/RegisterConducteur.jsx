@@ -398,6 +398,9 @@ export default function RegisterConducteur({
         "registerConducteur_hasMembersToAdd",
         null,
     );
+    const [isResponsablePhotoUploading, setIsResponsablePhotoUploading] =
+        useState(false);
+    const [isMemberPhotoUploading, setIsMemberPhotoUploading] = useState(false);
 
     // Reset the question choice on component mount so each new registration
     // starts with the undecided state (null) instead of reusing previous answer.
@@ -533,8 +536,11 @@ export default function RegisterConducteur({
 
         if (!membreTemp.nom) newErrors["membre.nom"] = "Nom requis";
         if (!membreTemp.prenom) newErrors["membre.prenom"] = "Prénom requis";
-        if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email))
+        if (!membreTemp.email) {
+            newErrors["membre.email"] = "Email requis";
+        } else if (!/^\S+@\S+\.\S+$/.test(membreTemp.email)) {
             newErrors["membre.email"] = "Adresse email invalide";
+        }
         if (!membreTemp.relation)
             newErrors["membre.relation"] = "Relation requise";
         if (!membreTemp.dateNaissance)
@@ -582,11 +588,31 @@ export default function RegisterConducteur({
             return;
         }
 
+        if (isMemberPhotoUploading) {
+            showWarning(
+                "Veuillez attendre la fin de l'upload de la photo du membre avant d'ajouter ce membre.",
+            );
+            return;
+        }
+
+        const normalizedMemberPhoto = normalizePhotoValue(
+            membreTemp.photo,
+            membreTemp.photoPreview,
+        );
+        const normalizedMember = {
+            ...membreTemp,
+            photo: normalizedMemberPhoto,
+            photoPreview:
+                typeof normalizedMemberPhoto === "string"
+                    ? normalizedMemberPhoto
+                    : membreTemp.photoPreview,
+        };
+
         // Vérifier si on édite un membre ou on en ajoute un nouveau
         if (editingMemberIndex !== null) {
             // Mettre à jour le membre existant
             const updatedMembres = [...membres];
-            updatedMembres[editingMemberIndex] = { ...membreTemp };
+            updatedMembres[editingMemberIndex] = normalizedMember;
             setMembres(updatedMembres);
             showSuccess("✅ Membre modifié avec succès !");
 
@@ -594,7 +620,7 @@ export default function RegisterConducteur({
             setEditingMemberIndex(null);
         } else {
             // Ajouter le nouveau membre
-            setMembres([...membres, { ...membreTemp }]);
+            setMembres([...membres, normalizedMember]);
             showSuccess("✅ Membre ajouté avec succès !");
         }
 
@@ -753,6 +779,50 @@ export default function RegisterConducteur({
         }));
     };
 
+    const normalizePhotoValue = (value, fallback = null) => {
+        const candidate = value ?? fallback;
+
+        if (!candidate) {
+            return null;
+        }
+
+        if (candidate instanceof File) {
+            return candidate;
+        }
+
+        if (typeof candidate === "string") {
+            const normalized = candidate.trim();
+
+            if (
+                !normalized ||
+                normalized.startsWith("blob:") ||
+                normalized === "[object Object]"
+            ) {
+                return null;
+            }
+
+            return normalized;
+        }
+
+        if (Array.isArray(candidate)) {
+            return normalizePhotoValue(candidate[0] ?? null, fallback);
+        }
+
+        if (typeof candidate === "object") {
+            return normalizePhotoValue(
+                candidate.photo_url ??
+                    candidate.photoUrl ??
+                    candidate.url ??
+                    candidate.path ??
+                    candidate.value ??
+                    null,
+                fallback,
+            );
+        }
+
+        return null;
+    };
+
     const handleSubmit = async (e) => {
         if (e) e.preventDefault();
 
@@ -769,9 +839,20 @@ export default function RegisterConducteur({
             return;
         }
 
+        if (isResponsablePhotoUploading || isMemberPhotoUploading) {
+            showWarning(
+                "Veuillez attendre la fin de l'upload des photos avant de soumettre le formulaire.",
+            );
+            return;
+        }
+
         setLoading(true);
 
         const formData = new FormData();
+        const responsablePhotoToSend = normalizePhotoValue(
+            responsable.photo,
+            responsable.photoPreview,
+        );
 
         // --- 1. Famille (avec nettoyage téléphone) ---
         Object.entries(famille).forEach(([k, v]) => {
@@ -799,18 +880,22 @@ export default function RegisterConducteur({
         // --- 2. Responsable (envoyer sous forme d'objet) ---
         Object.entries(responsable).forEach(([k, v]) => {
             if (k === "photoPreview") return;
+            if (k === "photo") {
+                if (responsablePhotoToSend) {
+                    formData.append(
+                        `responsable[photo]`,
+                        responsablePhotoToSend,
+                    );
+                }
+                return;
+            }
             // Les booléens doivent être envoyés comme '1' ou '0'
             let valueToSend = typeof v === "boolean" ? (v ? "1" : "0") : v;
             // Nettoyage téléphone
             if ((k === "tel" || k === "telephone2") && valueToSend) {
                 valueToSend = valueToSend.toString().replace(/^225/, "");
             }
-            // Photo
-            if (k === "photo" && valueToSend) {
-                formData.append(`responsable[photo]`, valueToSend);
-            } else {
-                formData.append(`responsable[${k}]`, valueToSend ?? "");
-            }
+            formData.append(`responsable[${k}]`, valueToSend ?? "");
         });
 
         // --- 2bis. Champs religieux dans spirituel ---
@@ -834,9 +919,18 @@ export default function RegisterConducteur({
         // --- 3. Membres ---
         if (membres.length > 0) {
             membres.forEach((m, i) => {
+                const memberPhotoToSend = normalizePhotoValue(
+                    m.photo,
+                    m.photoPreview,
+                );
                 Object.entries(m).forEach(([k, v]) => {
-                    if (k === "photo" && v) {
-                        formData.append(`membres[${i}][photo]`, v);
+                    if (k === "photo") {
+                        if (memberPhotoToSend) {
+                            formData.append(
+                                `membres[${i}][photo]`,
+                                memberPhotoToSend,
+                            );
+                        }
                     } else if (k !== "photoPreview") {
                         // Nettoyer le téléphone si présent
                         let valueToSend = v;
@@ -1214,12 +1308,15 @@ export default function RegisterConducteur({
                                 <PhotoUploadInput
                                     size="md"
                                     initialPhotoUrl={responsable.photoPreview}
+                                    onUploadStateChange={
+                                        setIsResponsablePhotoUploading
+                                    }
                                     onPhotoSelected={(photoUrl) => {
-                                        setResponsable({
-                                            ...responsable,
+                                        setResponsable((prev) => ({
+                                            ...prev,
                                             photo: photoUrl,
                                             photoPreview: photoUrl,
-                                        });
+                                        }));
                                     }}
                                 />
                             </div>
@@ -1951,13 +2048,18 @@ export default function RegisterConducteur({
                                             </div>
                                             <PhotoUploadInput
                                                 size="md"
-                                                initialPhotoUrl={membreTemp.photoPreview}
+                                                initialPhotoUrl={
+                                                    membreTemp.photoPreview
+                                                }
+                                                onUploadStateChange={
+                                                    setIsMemberPhotoUploading
+                                                }
                                                 onPhotoSelected={(photoUrl) => {
-                                                    setMembreTemp({
-                                                        ...membreTemp,
+                                                    setMembreTemp((prev) => ({
+                                                        ...prev,
                                                         photo: photoUrl,
                                                         photoPreview: photoUrl,
-                                                    });
+                                                    }));
                                                 }}
                                             />
                                         </div>

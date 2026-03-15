@@ -108,6 +108,7 @@ Route::get('/register/conducteur', function () {
 
 // Endpoint pour soumettre le formulaire d'inscription
 Route::post('/register', [RegistrationController::class, 'store'])->name('register.store');
+Route::post('/register/family', [RegistrationController::class, 'store'])->name('register.family');
 Route::post('/register/conducteur', [RegistrationController::class, 'storeConductor'])->name('register.conductor');
 
 // Admin routes for inscriptions approval - avec protection CSRF explicite

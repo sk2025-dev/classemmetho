@@ -82,7 +82,14 @@ const Icon = ({ name, className }) => {
     );
 };
 
-export default function Dashboard({ role, pendingInscriptions, auth, familyStats, familyData }) {
+export default function Dashboard({
+    role,
+    pendingInscriptions = 0,
+    pendingLiturgieCount = 0,
+    auth,
+    familyStats,
+    familyData,
+}) {
     const menuItems = [
         {
             title: "Inscriptions",
@@ -170,17 +177,27 @@ export default function Dashboard({ role, pendingInscriptions, auth, familyStats
             {/* MAIN CONTENT */}
             <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
                 <div className="mb-10">
-                    <h2 className="dashboard-title">
-                        Espace Pasteur
-                    </h2>
+                    <h2 className="dashboard-title">Espace Pasteur</h2>
                     {familyStats && Object.keys(familyStats).length > 0 ? (
-                        <p className="mb-8 text-lg" style={{ color: "#EEE00F" }}>
-                            Famille: <span className="font-bold">{familyStats.familyName}</span> - Classe Méthodiste: <span className="font-bold">{familyData?.classe_name || familyStats.className}</span>
+                        <p
+                            className="mb-8 text-lg"
+                            style={{ color: "#EEE00F" }}
+                        >
+                            Famille:{" "}
+                            <span className="font-bold">
+                                {familyStats.familyName}
+                            </span>{" "}
+                            - Classe Méthodiste:{" "}
+                            <span className="font-bold">
+                                {familyData?.classe_name ||
+                                    familyStats.className}
+                            </span>
                         </p>
                     ) : (
                         <div className="animated-text-container">
                             <p className="animated-text">
-                                Bienvenue sur la plateforme de gestion des classes méthodistes du Jubilé
+                                Bienvenue sur la plateforme de gestion des
+                                classes méthodistes du Jubilé
                             </p>
                         </div>
                     )}
@@ -226,6 +243,12 @@ export default function Dashboard({ role, pendingInscriptions, auth, familyStats
                                         <span className="absolute top-4 right-4 flex h-3 w-3">
                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                                             <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                        </span>
+                                    )}
+                                {item.icon === "liturgique" &&
+                                    pendingLiturgieCount > 0 && (
+                                        <span className="absolute top-4 right-4 inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold shadow">
+                                            {pendingLiturgieCount}
                                         </span>
                                     )}
                             </div>

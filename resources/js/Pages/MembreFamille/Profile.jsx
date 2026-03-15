@@ -7,6 +7,7 @@ import {
     ArrowLeft, User, Mail, Phone, Heart, Calendar, MapPin,
     Award, Gift, BookOpen, ChevronDown, ChevronUp, Check, X, Users, Briefcase
 } from "lucide-react";
+import { resolveMemberPhotoUrl } from "../../Helpers/PhotoHelper";
 
 // Fonction utilitaire pour formater les dates ISO en yyyy-MM-dd
 const formatDateForInput = (dateString) => {
@@ -89,6 +90,7 @@ const SacrementSection = ({ title, icon: Icon, color, checked, onChange, childre
 export default function Profile({ member, family, fonctions }) {
     const [loading, setLoading] = useState(false);
     const currentDataRef = useRef(null);
+    const initialPhotoUrl = resolveMemberPhotoUrl(member) || null;
 
     // Préparer les sacrements existants
     const sacrements = member.sacrements || {};
@@ -109,7 +111,7 @@ export default function Profile({ member, family, fonctions }) {
         fonction_id: member.fonction_id || "",
         relation: member.relation || "",
         photo: null,
-        photoPreview: member.photo_path ? `/storage/${member.photo_path}` : null,
+        photoPreview: initialPhotoUrl,
         originalPhotoPath: member.photo_path || null,
         baptise: sacrements.baptise || false,
         date_bapteme: formatDateForInput(sacrements.bapteme_date),
@@ -130,7 +132,7 @@ export default function Profile({ member, family, fonctions }) {
                 return;
             }
             const preview = URL.createObjectURL(file);
-            if (data.photoPreview && !data.photoPreview.startsWith('/storage/')) {
+            if (data.photoPreview && data.photoPreview.startsWith("blob:")) {
                 URL.revokeObjectURL(data.photoPreview);
             }
             setData({ ...data, photo: file, photoPreview: preview });

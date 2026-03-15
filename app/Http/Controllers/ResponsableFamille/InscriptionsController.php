@@ -64,7 +64,7 @@ class InscriptionsController extends Controller
                     'ville' => $m->ville?->nom,
                     'profession' => $m->profession,
                 ]);
-                
+
                 return [
                     'id' => $m->id,
                     'nom' => $m->nom,
@@ -81,7 +81,7 @@ class InscriptionsController extends Controller
                     'classe_name' => $m->classe?->nom ?? 'N/A',
                     'role' => $m->id === $family->responsable_id ? 'responsable_famille' : 'membre',
                     'is_responsable' => $m->id === $family->responsable_id,
-                    'profile_photo_url' => PhotoHelper::getPhotoUrl($m->photo_path, $m->prenom, $m->nom),
+                    'profile_photo_url' => $m->profile_photo_url ?: PhotoHelper::getPhotoUrl($m->photo_path, $m->prenom, $m->nom),
                 ];
             })->values();
         }

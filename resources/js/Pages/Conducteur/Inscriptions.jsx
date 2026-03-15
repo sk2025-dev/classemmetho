@@ -5,9 +5,41 @@ import Select from "react-select";
 import Select2Family from "../../Components/Select2Family";
 import Select2Fonction from "../../Components/Select2Fonction";
 import Select2Relation from "../../Components/Select2Relation";
-import { Eye, Edit, Pencil, Power, Trash2, User, Users, Plus, Check, X, Clock, UserCheck, UserX, CheckCircle, Mail, Phone, Heart, Calendar, MapPin, Award, Gift, BookOpen, ChevronDown, ChevronUp, Briefcase, ArrowLeft, FileText, Ban, ToggleLeft, ToggleRight } from "lucide-react";
+import {
+    Eye,
+    Edit,
+    Pencil,
+    Power,
+    Trash2,
+    User,
+    Users,
+    Plus,
+    Check,
+    X,
+    Clock,
+    UserCheck,
+    UserX,
+    CheckCircle,
+    Mail,
+    Phone,
+    Heart,
+    Calendar,
+    MapPin,
+    Award,
+    Gift,
+    BookOpen,
+    ChevronDown,
+    ChevronUp,
+    Briefcase,
+    ArrowLeft,
+    FileText,
+    Ban,
+    ToggleLeft,
+    ToggleRight,
+} from "lucide-react";
 import DeleteConfirmationModal from "../../Components/DeleteConfirmationModal";
 import { normalizePhotoUrl } from "@/Helpers/PhotoUrlHelper";
+import ProfilePhoto from "@/Components/ProfilePhoto";
 
 // Mapping des icônes Lucide pour usage dans les composants
 const lucideIcons = {
@@ -25,14 +57,22 @@ const lucideIcons = {
 };
 
 // --- Pagination Component ---
-const PaginationControls = ({ currentPage, totalPages, onPrevious, onNext, itemsCount, itemsPerPage }) => {
+const PaginationControls = ({
+    currentPage,
+    totalPages,
+    onPrevious,
+    onNext,
+    itemsCount,
+    itemsPerPage,
+}) => {
     const startItem = (currentPage - 1) * itemsPerPage + 1;
     const endItem = Math.min(currentPage * itemsPerPage, itemsCount);
 
     return (
         <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center text-sm text-slate-600">
             <span>
-                Affichage de {startItem} à {endItem} sur {itemsCount} résultat(s)
+                Affichage de {startItem} à {endItem} sur {itemsCount}{" "}
+                résultat(s)
             </span>
             <div className="flex items-center gap-2">
                 <button
@@ -78,7 +118,14 @@ const FormField = ({ label, children, icon: Icon, required }) => (
 );
 
 // Sous-composant pour les sections de Sacrements (Accordéon)
-const SacrementSection = ({ title, icon: Icon, color, checked, onChange, children }) => {
+const SacrementSection = ({
+    title,
+    icon: Icon,
+    color,
+    checked,
+    onChange,
+    children,
+}) => {
     const [isOpen, setIsOpen] = useState(checked);
 
     // Ouvrir automatiquement si coché
@@ -104,9 +151,15 @@ const SacrementSection = ({ title, icon: Icon, color, checked, onChange, childre
                         className={`w-5 h-5 rounded border-gray-300 text-${color}-600 focus:ring-${color}-500 cursor-pointer`}
                     />
                     <Icon className={`w-5 h-5 text-${color}-600`} />
-                    <span className="font-semibold text-gray-700 select-none">{title}</span>
+                    <span className="font-semibold text-gray-700 select-none">
+                        {title}
+                    </span>
                 </div>
-                {isOpen ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                {isOpen ? (
+                    <ChevronUp className="w-5 h-5 text-gray-400" />
+                ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                )}
             </div>
 
             {isOpen && (
@@ -143,7 +196,8 @@ export default function Inscriptions({
 
         if (typeof value === "string") {
             const trimmed = value.trim();
-            const alreadyFormatted = /^\d{2}\/\d{2}\/\d{4}( \d{2}:\d{2})?$/.test(trimmed);
+            const alreadyFormatted =
+                /^\d{2}\/\d{2}\/\d{4}( \d{2}:\d{2})?$/.test(trimmed);
             if (alreadyFormatted) {
                 return trimmed.split(" ")[0];
             }
@@ -158,7 +212,8 @@ export default function Inscriptions({
     };
 
     const { flash, auth } = usePage().props;
-    const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+    const [showSuccessNotification, setShowSuccessNotification] =
+        useState(false);
     const [successTitle, setSuccessTitle] = useState("Inscription validée !");
     const [successSubtitle, setSuccessSubtitle] = useState(
         "Connectez-vous pour commencer.",
@@ -221,17 +276,17 @@ export default function Inscriptions({
 
     // === DEBUG: Affichage des inscriptions reçues ===
     useEffect(() => {
-        console.log('DEBUG - Inscriptions reçues du backend:', {
+        console.log("DEBUG - Inscriptions reçues du backend:", {
             nombre_inscriptions: (inscriptions || []).length,
             inscriptions: inscriptions || [],
-            details: (inscriptions || []).map(insc => ({
+            details: (inscriptions || []).map((insc) => ({
                 id: insc.id,
                 nom: insc.nom,
                 prenom: insc.prenom,
                 type: insc.type,
                 status: insc.status,
                 email: insc.email,
-            }))
+            })),
         });
     }, [inscriptions]);
 
@@ -304,7 +359,10 @@ export default function Inscriptions({
     const autoSaveTimeoutRef = useRef(null);
 
     // État pour la notification de sauvegarde
-    const [saveNotification, setSaveNotification] = useState({ show: false, message: '' });
+    const [saveNotification, setSaveNotification] = useState({
+        show: false,
+        message: "",
+    });
 
     // Fonction pour formater les dates ISO en format yyyy-MM-dd pour les inputs HTML
     const formatDateForInput = (dateString) => {
@@ -322,8 +380,8 @@ export default function Inscriptions({
         if (Number.isNaN(date.getTime())) return "";
 
         const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
     };
 
@@ -331,10 +389,13 @@ export default function Inscriptions({
     useEffect(() => {
         const fetchFonctions = async () => {
             try {
-                const res = await axios.get('/api/fonctions');
+                const res = await axios.get("/api/fonctions");
                 setFonctions(res.data);
             } catch (error) {
-                console.error('Erreur lors du chargement des fonctions:', error);
+                console.error(
+                    "Erreur lors du chargement des fonctions:",
+                    error,
+                );
             }
         };
         fetchFonctions();
@@ -355,9 +416,7 @@ export default function Inscriptions({
             email: insc.email,
             phone: insc.telephone,
             date_naissance:
-                insc.date_naissance ||
-                insc.responsable_date_naissance ||
-                null,
+                insc.date_naissance || insc.responsable_date_naissance || null,
             role: insc.role || "membre",
             // CORRECTION: Mapper les statuts d'inscription correctement
             // en_attente -> pending
@@ -378,7 +437,9 @@ export default function Inscriptions({
             conducteur_approved: insc.conducteur_approved,
             conducteur_name: insc.conducteur_name,
             raison_rejet: insc.raison_rejet,
-            profile_photo_url: normalizePhotoUrl(insc.profile_photo_url || insc.photo_path || insc.photo || null),
+            profile_photo_url: normalizePhotoUrl(
+                insc.profile_photo_url || insc.photo_path || insc.photo || null,
+            ),
             fonction_professionnelle: insc.fonction_professionnelle || null,
             created_at: insc.created_at || null,
             updated_at: insc.updated_at || insc.created_at || null,
@@ -399,14 +460,23 @@ export default function Inscriptions({
         date_naissance: member.date_naissance || null,
         role: member.role || "membre",
         status: (() => {
-            const rawStatus = String(member.status ?? member.statut ?? "").toLowerCase();
-            if (rawStatus === "inactive" || rawStatus === "inactif") return "inactif";
-            if (rawStatus === "decede" || rawStatus === "deceased") return "decede";
+            const rawStatus = String(
+                member.status ?? member.statut ?? "",
+            ).toLowerCase();
+            if (rawStatus === "inactive" || rawStatus === "inactif")
+                return "inactif";
+            if (rawStatus === "decede" || rawStatus === "deceased")
+                return "decede";
             return "actif";
         })(),
         famille_id: member.famille_id || member.family_id || null,
         responsable_famille: member.responsable_famille || false,
-        profile_photo_url: normalizePhotoUrl(member.profile_photo_url || member.photo_path || member.photo || null),
+        profile_photo_url: normalizePhotoUrl(
+            member.profile_photo_url ||
+                member.photo_path ||
+                member.photo ||
+                null,
+        ),
         fonction_professionnelle: member.fonction_professionnelle || null,
         created_at: member.created_at || null,
         updated_at: member.updated_at || member.created_at || null,
@@ -430,8 +500,9 @@ export default function Inscriptions({
 
     // Pour les onglets inscription (pending, approved, rejected): afficher uniquement les inscriptions
     // Pour l'onglet membres: afficher uniquement les membres
-    const filteredItems = (activeTab === "members" ? membersOnly : inscriptionsOnly).filter((item) => {
-
+    const filteredItems = (
+        activeTab === "members" ? membersOnly : inscriptionsOnly
+    ).filter((item) => {
         const searchLower = filters.search.toLowerCase();
         const matchesSearch =
             item.nom?.toLowerCase().includes(searchLower) ||
@@ -440,27 +511,42 @@ export default function Inscriptions({
 
         // Filtres spécifiques aux membres
         if (activeTab === "members") {
-            const matchesStatus = filters.status === "all" || item.status === filters.status;
-            const matchesRole = filters.role === "all" || item.role === filters.role;
+            const matchesStatus =
+                filters.status === "all" || item.status === filters.status;
+            const matchesRole =
+                filters.role === "all" || item.role === filters.role;
 
             // Filtre par famille
             let matchesFamily = true;
-            if (filters.familyFilter !== "" && filters.familyFilter !== "no_family") {
+            if (
+                filters.familyFilter !== "" &&
+                filters.familyFilter !== "no_family"
+            ) {
                 const targetFamilyId = String(filters.familyFilter);
-                const itemFamilyId = item.famille_id ?? item.family_id ?? item.familyId ?? null;
+                const itemFamilyId =
+                    item.famille_id ?? item.family_id ?? item.familyId ?? null;
 
-                if (itemFamilyId !== null && String(itemFamilyId) === targetFamilyId) {
+                if (
+                    itemFamilyId !== null &&
+                    String(itemFamilyId) === targetFamilyId
+                ) {
                     matchesFamily = true;
                 } else {
                     // Fallback: retrouver la famille via la liste agrégée
                     const memberFamily = familiesList.find(
-                        (f) => f.members && f.members.some((m) => m.id === item.id)
+                        (f) =>
+                            f.members &&
+                            f.members.some((m) => m.id === item.id),
                     );
-                    matchesFamily = !!memberFamily && String(memberFamily.familyId) === targetFamilyId;
+                    matchesFamily =
+                        !!memberFamily &&
+                        String(memberFamily.familyId) === targetFamilyId;
                 }
             }
 
-            return matchesSearch && matchesStatus && matchesRole && matchesFamily;
+            return (
+                matchesSearch && matchesStatus && matchesRole && matchesFamily
+            );
         }
 
         // Filtre par onglet pour les inscriptions
@@ -482,11 +568,17 @@ export default function Inscriptions({
 
     // --- CALCUL DES STATISTIQUES DEPUIS LES VRAIES DONNÉES ---
     useEffect(() => {
-        const pending = inscriptionsOnly.filter(item => item.status === "pending").length;
-        const approved = inscriptionsOnly.filter(item => item.status === "approved").length; // Changement
-        const rejected = inscriptionsOnly.filter(item => item.status === "rejected").length;
+        const pending = inscriptionsOnly.filter(
+            (item) => item.status === "pending",
+        ).length;
+        const approved = inscriptionsOnly.filter(
+            (item) => item.status === "approved",
+        ).length; // Changement
+        const rejected = inscriptionsOnly.filter(
+            (item) => item.status === "rejected",
+        ).length;
 
-        console.log('DEBUG - Stats calculées:', {
+        console.log("DEBUG - Stats calculées:", {
             pending,
             approved,
             rejected,
@@ -505,15 +597,20 @@ export default function Inscriptions({
 
     // === DEBUG DÉTAILLÉ ===
     useEffect(() => {
-        console.log('DEBUG COMPLET - Inscriptions vs Members:', {
+        console.log("DEBUG COMPLET - Inscriptions vs Members:", {
             inscriptions_count: inscriptionsOnly.length,
             inscriptions_par_status: {
-                pending: inscriptionsOnly.filter(i => i.status === "pending").length,
-                approved: inscriptionsOnly.filter(i => i.status === "approved").length,
-                rejected: inscriptionsOnly.filter(i => i.status === "rejected").length,
+                pending: inscriptionsOnly.filter((i) => i.status === "pending")
+                    .length,
+                approved: inscriptionsOnly.filter(
+                    (i) => i.status === "approved",
+                ).length,
+                rejected: inscriptionsOnly.filter(
+                    (i) => i.status === "rejected",
+                ).length,
             },
             members_count: membersOnly.length,
-            members_details: membersOnly.map(m => ({
+            members_details: membersOnly.map((m) => ({
                 id: m.id,
                 nom: `${m.nom} ${m.prenom}`,
                 status: m.status,
@@ -523,7 +620,14 @@ export default function Inscriptions({
         });
     }, [inscriptionsOnly, membersOnly, filteredItems, activeTab]);
     const resetFilters = () => {
-        setFilters({ search: "", status: "all", role: "all", viewMode: "all", familyFilter: "", displayMode: "list" });
+        setFilters({
+            search: "",
+            status: "all",
+            role: "all",
+            viewMode: "all",
+            familyFilter: "",
+            displayMode: "list",
+        });
     };
 
     const switchTab = (tab) => {
@@ -534,13 +638,28 @@ export default function Inscriptions({
 
     // Reset pagination to page 1 when activeTab changes
     useEffect(() => {
-        setPagination({ pending: 1, approved: 1, rejected: 1, members: 1, families: 1 });
+        setPagination({
+            pending: 1,
+            approved: 1,
+            rejected: 1,
+            members: 1,
+            families: 1,
+        });
     }, [activeTab]);
 
     // Reset pagination to page 1 when filters change within current tab
     useEffect(() => {
-        const tabKey = activeTab === "pending" ? "pending" : activeTab === "approved" ? "approved" : activeTab === "rejected" ? "rejected" : activeTab === "members" ? "members" : "families";
-        setPagination(prev => ({ ...prev, [tabKey]: 1 }));
+        const tabKey =
+            activeTab === "pending"
+                ? "pending"
+                : activeTab === "approved"
+                  ? "approved"
+                  : activeTab === "rejected"
+                    ? "rejected"
+                    : activeTab === "members"
+                      ? "members"
+                      : "families";
+        setPagination((prev) => ({ ...prev, [tabKey]: 1 }));
     }, [filters]);
 
     // --- ACTIONS ---
@@ -646,7 +765,12 @@ export default function Inscriptions({
         setSelectedInscription({
             ...(item.raw || {}),
             created_at: item.created_at || item.raw?.created_at || null,
-            updated_at: item.updated_at || item.raw?.updated_at || item.created_at || item.raw?.created_at || null,
+            updated_at:
+                item.updated_at ||
+                item.raw?.updated_at ||
+                item.created_at ||
+                item.raw?.created_at ||
+                null,
         });
         setShowDetailModal(true);
     };
@@ -665,18 +789,18 @@ export default function Inscriptions({
         const rawBase =
             item?.raw && typeof item.raw === "object" ? item.raw : {};
         const createdAt =
-            item?.created_at
-            ?? rawBase?.created_at
-            ?? knownMember?.created_at
-            ?? knownMember?.raw?.created_at
-            ?? null;
+            item?.created_at ??
+            rawBase?.created_at ??
+            knownMember?.created_at ??
+            knownMember?.raw?.created_at ??
+            null;
         const updatedAt =
-            item?.updated_at
-            ?? rawBase?.updated_at
-            ?? knownMember?.updated_at
-            ?? knownMember?.raw?.updated_at
-            ?? createdAt
-            ?? null;
+            item?.updated_at ??
+            rawBase?.updated_at ??
+            knownMember?.updated_at ??
+            knownMember?.raw?.updated_at ??
+            createdAt ??
+            null;
 
         return {
             ...(knownMember?.raw || {}),
@@ -703,7 +827,9 @@ export default function Inscriptions({
         String(value).toLowerCase() === "true";
 
     const normalizeStatutMarital = (rawValue, sacrements = null) => {
-        const value = String(rawValue ?? "").trim().toLowerCase();
+        const value = String(rawValue ?? "")
+            .trim()
+            .toLowerCase();
         if (!value && sacrements) {
             if (toBool(sacrements.est_marie)) return "Marié(e)";
             if (toBool(sacrements.est_divorce)) return "Divorcé(e)";
@@ -712,11 +838,14 @@ export default function Inscriptions({
             return "";
         }
 
-        if (["marie", "marié", "mariée", "marié(e)"].includes(value)) return "Marié(e)";
-        if (["divorce", "divorcé", "divorcée", "divorcé(e)"].includes(value)) return "Divorcé(e)";
+        if (["marie", "marié", "mariée", "marié(e)"].includes(value))
+            return "Marié(e)";
+        if (["divorce", "divorcé", "divorcée", "divorcé(e)"].includes(value))
+            return "Divorcé(e)";
         if (["veuf", "veuve", "veuf(ve)"].includes(value)) return "Veuf(ve)";
         if (["dote", "doté", "dotée", "doté(e)"].includes(value)) return "Dote";
-        if (["celibataire", "célibataire"].includes(value)) return "Célibataire";
+        if (["celibataire", "célibataire"].includes(value))
+            return "Célibataire";
 
         return rawValue || "";
     };
@@ -725,7 +854,7 @@ export default function Inscriptions({
         const sac = member.sacrements || {};
         const statutMarital = normalizeStatutMarital(
             member.statut_marital ?? member.raw?.statut_marital,
-            sac
+            sac,
         );
 
         return {
@@ -735,67 +864,91 @@ export default function Inscriptions({
             telephone: member.phone || member.telephone || "",
             genre: member.genre || "",
             date_naissance: formatDateForInput(member.date_naissance) || "",
-            profession: member.profession || member.fonction_professionnelle || "",
+            profession:
+                member.profession || member.fonction_professionnelle || "",
             fonction_id: String(
-                member.fonction_id
-                ?? member.raw?.fonction_id
-                ?? member.fonction?.id
-                ?? member.raw?.fonction?.id
-                ?? ""
+                member.fonction_id ??
+                    member.raw?.fonction_id ??
+                    member.fonction?.id ??
+                    member.raw?.fonction?.id ??
+                    "",
             ),
-            relation: member.relation ?? member.lien_parental ?? member.family_relation ?? "",
+            relation:
+                member.relation ??
+                member.lien_parental ??
+                member.family_relation ??
+                "",
             statut_marital: statutMarital,
             date_mariage: formatDateForInput(
-                member.date_mariage
-                ?? member.mariage_civil_date
-                ?? sac.mariage_civil_date
-                ?? member.date_divorce
-                ?? sac.divorce_date
-                ?? member.date_dot
-                ?? sac.dot_date
-                ?? member.date_deces_conjoint
-                ?? sac.deces_conjoint_date
-                ?? ""
+                member.date_mariage ??
+                    member.mariage_civil_date ??
+                    sac.mariage_civil_date ??
+                    member.date_divorce ??
+                    sac.divorce_date ??
+                    member.date_dot ??
+                    sac.dot_date ??
+                    member.date_deces_conjoint ??
+                    sac.deces_conjoint_date ??
+                    "",
             ),
-            lieu_mariage: member.lieu_mariage
-                ?? member.mariage_civil_lieu
-                ?? sac.mariage_civil_lieu
-                ?? member.lieu_divorce
-                ?? sac.divorce_lieu
-                ?? member.lieu_dot
-                ?? sac.dot_lieu
-                ?? member.lieu_deces_conjoint
-                ?? sac.deces_conjoint_lieu
-                ?? "",
-            date_divorce: formatDateForInput(member.date_divorce ?? sac.divorce_date ?? ""),
+            lieu_mariage:
+                member.lieu_mariage ??
+                member.mariage_civil_lieu ??
+                sac.mariage_civil_lieu ??
+                member.lieu_divorce ??
+                sac.divorce_lieu ??
+                member.lieu_dot ??
+                sac.dot_lieu ??
+                member.lieu_deces_conjoint ??
+                sac.deces_conjoint_lieu ??
+                "",
+            date_divorce: formatDateForInput(
+                member.date_divorce ?? sac.divorce_date ?? "",
+            ),
             baptise: toBool(member.baptise) || toBool(sac.baptise),
             date_bapteme: formatDateForInput(
-                member.date_bapteme ?? member.bapteme_date ?? sac.bapteme_date ?? ""
+                member.date_bapteme ??
+                    member.bapteme_date ??
+                    sac.bapteme_date ??
+                    "",
             ),
-            lieu_bapteme: member.lieu_bapteme ?? member.bapteme_lieu ?? sac.bapteme_lieu ?? "",
-            premiere_communion: toBool(member.premiere_communion) || toBool(sac.premiere_communion),
+            lieu_bapteme:
+                member.lieu_bapteme ??
+                member.bapteme_lieu ??
+                sac.bapteme_lieu ??
+                "",
+            premiere_communion:
+                toBool(member.premiere_communion) ||
+                toBool(sac.premiere_communion),
             date_premiere_communion: formatDateForInput(
-                member.date_premiere_communion
-                ?? member.premiere_communion_date
-                ?? sac.premiere_communion_date
-                ?? ""
+                member.date_premiere_communion ??
+                    member.premiere_communion_date ??
+                    sac.premiere_communion_date ??
+                    "",
             ),
-            lieu_premiere_communion: member.lieu_premiere_communion
-                ?? member.premiere_communion_lieu
-                ?? sac.premiere_communion_lieu
-                ?? "",
-            marie_religieusement: toBool(member.marie_religieusement) || toBool(sac.marie_religieusement),
+            lieu_premiere_communion:
+                member.lieu_premiere_communion ??
+                member.premiere_communion_lieu ??
+                sac.premiere_communion_lieu ??
+                "",
+            marie_religieusement:
+                toBool(member.marie_religieusement) ||
+                toBool(sac.marie_religieusement),
             date_mariage_religieux: formatDateForInput(
-                member.date_mariage_religieux
-                ?? member.mariage_religieux_date
-                ?? sac.mariage_religieux_date
-                ?? ""
+                member.date_mariage_religieux ??
+                    member.mariage_religieux_date ??
+                    sac.mariage_religieux_date ??
+                    "",
             ),
-            lieu_mariage_religieux: member.lieu_mariage_religieux
-                ?? member.mariage_religieux_lieu
-                ?? sac.mariage_religieux_lieu
-                ?? "",
-            role: item.role === "inscription" ? "membre" : (member.role || "membre"),
+            lieu_mariage_religieux:
+                member.lieu_mariage_religieux ??
+                member.mariage_religieux_lieu ??
+                sac.mariage_religieux_lieu ??
+                "",
+            role:
+                item.role === "inscription"
+                    ? "membre"
+                    : member.role || "membre",
             status: member.status || "actif",
             photo: null,
             photoPreview: member.profile_photo_url || null,
@@ -817,7 +970,7 @@ export default function Inscriptions({
     };
 
     const openEditModal = async (item) => {
-        console.log('DEBUG OPEN EDIT MODAL - item reçu:', item);
+        console.log("DEBUG OPEN EDIT MODAL - item reçu:", item);
         setModalMode("edit");
         setShowDetailModal(false);
         setShowMemberModal(false);
@@ -838,24 +991,51 @@ export default function Inscriptions({
                     const enrichedMember = {
                         ...member,
                         sacrements: res.data.sacrements || null,
-                        statut_marital: member.statut_marital || res.data.statut_marital || null,
+                        statut_marital:
+                            member.statut_marital ||
+                            res.data.statut_marital ||
+                            null,
                         relation: member.relation || res.data.relation || null,
-                        fonction_id: member.fonction_id || res.data.fonction_id || null,
+                        fonction_id:
+                            member.fonction_id || res.data.fonction_id || null,
                     };
                     setSelectedMember(enrichedMember);
                     setData(buildFormDataFromMember(enrichedMember, item));
                 }
             } catch (e) {
-                console.error('Erreur récupération sacrements utilisateur:', e);
+                console.error("Erreur récupération sacrements utilisateur:", e);
             }
         }
 
-        console.log('DEBUG OPEN EDIT MODAL - member trouvé (après fusion):', member);
-        console.log('DEBUG - Toutes les clés du member:', Object.keys(member));
-        console.log('DEBUG - statut_marital:', member.statut_marital, 'type:', typeof member.statut_marital);
-        console.log('DEBUG - relation:', member.relation, 'type:', typeof member.relation);
-        console.log('DEBUG - fonction_id:', member.fonction_id, 'type:', typeof member.fonction_id);
-        console.log('DEBUG - genre:', member.genre, 'type:', typeof member.genre);
+        console.log(
+            "DEBUG OPEN EDIT MODAL - member trouvé (après fusion):",
+            member,
+        );
+        console.log("DEBUG - Toutes les clés du member:", Object.keys(member));
+        console.log(
+            "DEBUG - statut_marital:",
+            member.statut_marital,
+            "type:",
+            typeof member.statut_marital,
+        );
+        console.log(
+            "DEBUG - relation:",
+            member.relation,
+            "type:",
+            typeof member.relation,
+        );
+        console.log(
+            "DEBUG - fonction_id:",
+            member.fonction_id,
+            "type:",
+            typeof member.fonction_id,
+        );
+        console.log(
+            "DEBUG - genre:",
+            member.genre,
+            "type:",
+            typeof member.genre,
+        );
     };
 
     // Fonction pour sauvegarder automatiquement en mode édition
@@ -864,32 +1044,58 @@ export default function Inscriptions({
             const formData = new FormData();
             Object.entries(memberData).forEach(([key, value]) => {
                 if (key === "photo" && value) {
-                    formData.append(key, value);
+                    // N'envoyer le champ photo que si c'est un vrai fichier.
+                    if (value instanceof File || value instanceof Blob) {
+                        formData.append(key, value);
+                    } else if (typeof value === "string") {
+                        // Cas d'une photo déjà uploadée (URL /storage/...) via un autre flux.
+                        formData.append("profile_photo_url", value);
+                    }
                 } else if (key !== "photoPreview") {
-                    const valueToSend = typeof value === 'boolean' ? (value ? '1' : '0') : (value ?? "");
+                    const valueToSend =
+                        typeof value === "boolean"
+                            ? value
+                                ? "1"
+                                : "0"
+                            : (value ?? "");
                     formData.append(key, valueToSend);
                 }
             });
 
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const csrfToken = document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute("content");
             if (csrfToken) {
-                formData.append('_token', csrfToken);
+                formData.append("_token", csrfToken);
             }
 
-            console.log('AUTO-SAVE - Envoi des données pour membre', memberId);
-            console.log('AUTO-SAVE - FormData entries:', Array.from(formData.entries()));
+            console.log("AUTO-SAVE - Envoi des données pour membre", memberId);
+            console.log(
+                "AUTO-SAVE - FormData entries:",
+                Array.from(formData.entries()),
+            );
 
-            const response = await axios.put(`/conducteur/members/${memberId}`, formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
+            const response = await axios.put(
+                `/conducteur/members/${memberId}`,
+                formData,
+                {
+                    headers: { "Content-Type": "multipart/form-data" },
+                },
+            );
 
-            console.log('AUTO-SAVE - Réponse du serveur:', response.data);
+            console.log("AUTO-SAVE - Réponse du serveur:", response.data);
 
             // Afficher la notification de sauvegarde
-            setSaveNotification({ show: true, message: '✓ Sauvegardé' });
-            setTimeout(() => setSaveNotification({ show: false, message: '' }), 2000);
+            setSaveNotification({ show: true, message: "✓ Sauvegardé" });
+            setTimeout(
+                () => setSaveNotification({ show: false, message: "" }),
+                2000,
+            );
         } catch (err) {
-            console.error('AUTO-SAVE - Erreur:', err.response?.data || err.message);
+            console.error(
+                "AUTO-SAVE - Erreur:",
+                err.response?.data || err.message,
+            );
         }
     };
 
@@ -920,62 +1126,90 @@ export default function Inscriptions({
         if (modalMode === "create") {
             // Créer un nouveau membre - code existant
             const conducteur = auth?.user;
-            const currentFamily = familiesList.find(f => f.familyId === userFamilyId);
+            const currentFamily = familiesList.find(
+                (f) => f.familyId === userFamilyId,
+            );
 
             console.log("Conducteur (user connecté):", conducteur);
             console.log("Famille actuelle:", currentFamily);
 
             if (!conducteur) {
-                alert("Erreur: Conducteur non trouvé. Veuillez vous reconnecter.");
+                alert(
+                    "Erreur: Conducteur non trouvé. Veuillez vous reconnecter.",
+                );
                 return;
             }
 
             const formData = new FormData();
             Object.entries(data).forEach(([key, value]) => {
                 if (key === "photo" && value) {
-                    formData.append(key, value);
+                    // N'envoyer le champ photo que si c'est un vrai fichier.
+                    if (value instanceof File || value instanceof Blob) {
+                        formData.append(key, value);
+                    } else if (typeof value === "string") {
+                        // Cas d'une photo déjà uploadée (URL /storage/...) via un autre flux.
+                        formData.append("profile_photo_url", value);
+                    }
                 } else if (key !== "photoPreview") {
-                    const valueToSend = typeof value === 'boolean' ? (value ? '1' : '0') : (value ?? "");
+                    const valueToSend =
+                        typeof value === "boolean"
+                            ? value
+                                ? "1"
+                                : "0"
+                            : (value ?? "");
                     formData.append(key, valueToSend);
                 }
             });
 
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const csrfToken = document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute("content");
             if (csrfToken) {
-                formData.append('_token', csrfToken);
+                formData.append("_token", csrfToken);
             }
 
-            console.log("FormData envoyé à /conducteur/quick-member:", Array.from(formData.entries()));
+            console.log(
+                "FormData envoyé à /conducteur/quick-member:",
+                Array.from(formData.entries()),
+            );
 
-            axios.post("/conducteur/quick-member", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            }).then((response) => {
-                console.log("Succès!", response.data);
-                setShowModal(false);
-                router.reload();
-            }).catch((err) => {
-                console.error("Erreur complète:", err);
-                console.log("Response data:", err?.response?.data);
+            axios
+                .post("/conducteur/quick-member", formData, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                })
+                .then((response) => {
+                    console.log("Succès!", response.data);
+                    setShowModal(false);
+                    router.reload();
+                })
+                .catch((err) => {
+                    console.error("Erreur complète:", err);
+                    console.log("Response data:", err?.response?.data);
 
-                const apiErrors = err?.response?.data?.errors;
-                const message = err?.response?.data?.message;
+                    const apiErrors = err?.response?.data?.errors;
+                    const message = err?.response?.data?.message;
 
-                console.log("Erreurs API:", apiErrors);
+                    console.log("Erreurs API:", apiErrors);
 
-                if (apiErrors && Object.keys(apiErrors).length > 0) {
-                    const errorMessages = Object.entries(apiErrors)
-                        .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
-                        .join('\n');
-                    alert(`Erreurs de validation:\n${errorMessages}`);
-                } else if (message) {
-                    alert(`Erreur: ${message}`);
-                } else {
-                    alert(`Erreur: Vérifiez les données saisies. Consultez la console pour plus de détails.`);
-                }
-            });
+                    if (apiErrors && Object.keys(apiErrors).length > 0) {
+                        const errorMessages = Object.entries(apiErrors)
+                            .map(
+                                ([field, messages]) =>
+                                    `${field}: ${Array.isArray(messages) ? messages.join(", ") : messages}`,
+                            )
+                            .join("\n");
+                        alert(`Erreurs de validation:\n${errorMessages}`);
+                    } else if (message) {
+                        alert(`Erreur: ${message}`);
+                    } else {
+                        alert(
+                            `Erreur: Vérifiez les données saisies. Consultez la console pour plus de détails.`,
+                        );
+                    }
+                });
         } else {
             // Mode édition: fermer le modal simplement (auto-save gère la sauvegarde)
-            console.log('FERMETURE DU MODAL - Mode édition');
+            console.log("FERMETURE DU MODAL - Mode édition");
             setShowModal(false);
         }
     };
@@ -983,15 +1217,24 @@ export default function Inscriptions({
     const validateMember = async (id) => {
         setToggleProcessing(true);
         try {
-            const response = await axios.put(`/conducteur/members/${id}/validate`, {});
+            const response = await axios.put(
+                `/conducteur/members/${id}/validate`,
+                {},
+            );
             if (response?.data?.success) {
-                triggerSuccessNotification("Membre activé", "Le statut a été mis à jour.");
+                triggerSuccessNotification(
+                    "Membre activé",
+                    "Le statut a été mis à jour.",
+                );
                 router.reload({ only: ["members"] });
             } else {
                 alert("Erreur lors de l'activation du membre.");
             }
         } catch (error) {
-            const message = error?.response?.data?.error || error?.response?.data?.message || "Erreur lors de l'activation du membre.";
+            const message =
+                error?.response?.data?.error ||
+                error?.response?.data?.message ||
+                "Erreur lors de l'activation du membre.";
             alert(message);
         } finally {
             setToggleProcessing(false);
@@ -1001,15 +1244,24 @@ export default function Inscriptions({
     const rejectMember = async (id) => {
         setToggleProcessing(true);
         try {
-            const response = await axios.put(`/conducteur/members/${id}/reject`, {});
+            const response = await axios.put(
+                `/conducteur/members/${id}/reject`,
+                {},
+            );
             if (response?.data?.success) {
-                triggerSuccessNotification("Membre désactivé", "Le statut a été mis à jour.");
+                triggerSuccessNotification(
+                    "Membre désactivé",
+                    "Le statut a été mis à jour.",
+                );
                 router.reload({ only: ["members"] });
             } else {
                 alert("Erreur lors de la désactivation du membre.");
             }
         } catch (error) {
-            const message = error?.response?.data?.error || error?.response?.data?.message || "Erreur lors de la désactivation du membre.";
+            const message =
+                error?.response?.data?.error ||
+                error?.response?.data?.message ||
+                "Erreur lors de la désactivation du membre.";
             alert(message);
         } finally {
             setToggleProcessing(false);
@@ -1041,7 +1293,9 @@ export default function Inscriptions({
                         <Check className="w-5 h-5" />
                     </span>
                     <div className="text-emerald-700 font-medium">
-                        <div className="text-sm font-semibold">{successTitle}</div>
+                        <div className="text-sm font-semibold">
+                            {successTitle}
+                        </div>
                         {successSubtitle ? (
                             <div className="text-xs">{successSubtitle}</div>
                         ) : null}
@@ -1082,8 +1336,7 @@ export default function Inscriptions({
                             href="/conducteur/members/create"
                             className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition transform hover:scale-[1.02] flex items-center gap-2"
                         >
-                            <Plus className="w-5 h-5" /> Inscrire un
-                            membre
+                            <Plus className="w-5 h-5" /> Inscrire un membre
                         </Link>
                     </div>
 
@@ -1193,7 +1446,11 @@ export default function Inscriptions({
                                         })
                                     }
                                     className="block w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-inner"
-                                    placeholder={activeTab === "members" ? "Rechercher par nom, prénom, email..." : "Rechercher un membre..."}
+                                    placeholder={
+                                        activeTab === "members"
+                                            ? "Rechercher par nom, prénom, email..."
+                                            : "Rechercher un membre..."
+                                    }
                                 />
                             </div>
 
@@ -1225,10 +1482,18 @@ export default function Inscriptions({
                                         }
                                         className="px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition min-w-[160px]"
                                     >
-                                        <option value="all">Tous les rôles</option>
-                                        <option value="responsable_famille">Responsable</option>
-                                        <option value="membre_famille">Membre</option>
-                                        <option value="conducteur">Conducteur</option>
+                                        <option value="all">
+                                            Tous les rôles
+                                        </option>
+                                        <option value="responsable_famille">
+                                            Responsable
+                                        </option>
+                                        <option value="membre_famille">
+                                            Membre
+                                        </option>
+                                        <option value="conducteur">
+                                            Conducteur
+                                        </option>
                                         <option value="autre">Autre</option>
                                     </select>
 
@@ -1243,7 +1508,9 @@ export default function Inscriptions({
                                         }
                                         className="px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition min-w-[160px]"
                                     >
-                                        <option value="all">Tous les statuts</option>
+                                        <option value="all">
+                                            Tous les statuts
+                                        </option>
                                         <option value="actif">Actif</option>
                                         <option value="inactif">Inactif</option>
                                     </select>
@@ -1255,7 +1522,8 @@ export default function Inscriptions({
                                             onChange={(e) =>
                                                 setFilters({
                                                     ...filters,
-                                                    familyFilter: e.target.value,
+                                                    familyFilter:
+                                                        e.target.value,
                                                 })
                                             }
                                             options={familiesList}
@@ -1283,218 +1551,369 @@ export default function Inscriptions({
                         (() => {
                             // Filtrer les familles pour n'afficher que celle du conducteur si userFamilyId est disponible
                             const filteredFamiliesList = userFamilyId
-                                ? familiesList.filter(family => family.familyId === userFamilyId)
+                                ? familiesList.filter(
+                                      (family) =>
+                                          family.familyId === userFamilyId,
+                                  )
                                 : familiesList;
 
                             return (
-                        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left">
-                                    <thead className="bg-blue-600 text-white border-b border-slate-200">
-                                        <tr>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                #
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                Nom complet
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                Famille
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                Rôle
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                Email
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                Téléphone
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                Statut
-                                            </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider text-right">
-                                                Actions
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {(() => {
-
-                                            // Collecter tous les membres des familles filtrées
-                                            let allMembers = [];
-                                            filteredFamiliesList.forEach(family => {
-                                                // Ajouter le responsable
-                                                if (family.responsable) {
-                                                    allMembers.push({
-                                                        ...family.responsable,
-                                                        famille_nom: family.nom || family.responsable.nom,
-                                                        is_responsable: true,
-                                                    });
-                                                }
-                                                // Ajouter les autres membres
-                                                if (family.members && family.members.length > 0) {
-                                                    family.members.forEach(member => {
-                                                        // Ne pas ajouter deux fois le responsable
-                                                        if (member.id !== family.responsable?.id) {
-                                                            allMembers.push({
-                                                                ...member,
-                                                                famille_nom: family.nom || family.responsable?.nom || "Famille",
-                                                            });
-                                                        }
-                                                    });
-                                                }
-                                            });
-
-                                            if (allMembers.length === 0) {
-                                                return (
-                                                    <tr>
-                                                        <td colSpan="8" className="p-12 text-center text-slate-500">
-                                                            <Users className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-                                                            <p className="text-lg font-semibold">
-                                                                Aucun membre de famille trouvé
-                                                            </p>
-                                                            <p className="text-sm">
-                                                                Les membres des familles apparaîtront ici
-                                                            </p>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            }
-
-                                            // Pagination for families tab
-                                            const totalPagesFamilies = Math.ceil(allMembers.length / ITEMS_PER_PAGE);
-                                            const currentPageFamilies = pagination.families;
-                                            const startIndex = (currentPageFamilies - 1) * ITEMS_PER_PAGE;
-                                            const endIndex = startIndex + ITEMS_PER_PAGE;
-                                            const paginatedMembers = allMembers.slice(startIndex, endIndex);
-
-                                            return paginatedMembers.map((member, idx) => (
-                                                <tr key={member.id || idx} className="hover:bg-slate-50 transition">
-                                                    <td className="p-5 text-slate-500 font-mono text-xs">
-                                                        {idx + 1}
-                                                    </td>
-                                                    <td className="p-5">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 overflow-hidden">
-                                                                {member.profile_photo_url ? (
-                                                                    <img
-                                                                        src={member.profile_photo_url}
-                                                                        alt={`${member.prenom} ${member.nom}`}
-                                                                        className="w-full h-full object-cover"
-                                                                    />
-                                                                ) : (
-                                                                    <>
-                                                                        {(member.prenom || member.first_name || member.firstName || "")?.[0]}{(member.nom || member.last_name || member.lastName || "")?.[0]}
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                            <div>
-                                                                <div className="font-semibold text-slate-900">
-                                                                    {member.prenom || member.first_name || member.firstName} {member.nom || member.last_name || member.lastName}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-5 text-slate-600">
-                                                        <div className="flex items-center gap-2">
-                                                            <Users className="w-4 h-4 text-blue-500" />
-                                                            <span>{member.famille_nom || "Famille"}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-5">
-                                                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                                            member.is_responsable || member.responsable_famille || member.is_family_responsible
-                                                                ? "bg-blue-100 text-blue-700"
-                                                                : member.role === "conducteur"
-                                                                ? "bg-purple-100 text-purple-700"
-                                                                : "bg-green-100 text-green-700"
-                                                        }`}>
-                                                            {member.is_responsable || member.responsable_famille || member.is_family_responsible
-                                                                ? "Responsable"
-                                                                : member.role === "conducteur"
-                                                                ? "Conducteur"
-                                                                : member.role || "Membre"}
-                                                        </span>
-                                                    </td>
-                                                    <td className="p-5 text-slate-600">
-                                                        {member.email || "N/A"}
-                                                    </td>
-                                                    <td className="p-5 text-slate-600">
-                                                        {member.phone || member.telephone || "N/A"}
-                                                    </td>
-                                                    <td className="p-5">
-                                                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                                            member.status === "actif"
-                                                                ? "bg-green-100 text-green-800"
-                                                                : member.status === "inactif"
-                                                                ? "bg-red-100 text-red-800"
-                                                                : "bg-gray-100 text-gray-700"
-                                                        }`}>
-                                                            {member.status === "actif" ? "Actif" :
-                                                             member.status === "inactif" ? "Inactif" : "Actif"}
-                                                        </span>
-                                                    </td>
-                                                    <td className="p-5 text-right">
-                                                        <div className="flex items-center justify-end gap-2">
-                                                            <button
-                                                                type="button"
-                                                                title="Voir les détails"
-                                                                className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition transform hover:scale-105"
-                                                                onClick={() => {
-                                                                    openMemberModal(member);
-                                                                }}
-                                                            >
-                                                                <Eye size={18} />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                title="Modifier"
-                                                                className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition transform hover:scale-105"
-                                                                onClick={() => {
-                                                                    openEditModal(member);
-                                                                }}
-                                                            >
-                                                                <Edit size={18} />
-                                                            </button>
-                                                        </div>
-                                                    </td>
+                                <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-blue-600 text-white border-b border-slate-200">
+                                                <tr>
+                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                        #
+                                                    </th>
+                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                        Nom complet
+                                                    </th>
+                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                        Famille
+                                                    </th>
+                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                        Rôle
+                                                    </th>
+                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                        Email
+                                                    </th>
+                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                        Téléphone
+                                                    </th>
+                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                        Statut
+                                                    </th>
+                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider text-right">
+                                                        Actions
+                                                    </th>
                                                 </tr>
-                                            ));
-                                        })()}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center text-sm text-slate-500">
-                                <span>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {(() => {
+                                                    // Collecter tous les membres des familles filtrées
+                                                    let allMembers = [];
+                                                    filteredFamiliesList.forEach(
+                                                        (family) => {
+                                                            // Ajouter le responsable
+                                                            if (
+                                                                family.responsable
+                                                            ) {
+                                                                allMembers.push(
+                                                                    {
+                                                                        ...family.responsable,
+                                                                        famille_nom:
+                                                                            family.nom ||
+                                                                            family
+                                                                                .responsable
+                                                                                .nom,
+                                                                        is_responsable: true,
+                                                                    },
+                                                                );
+                                                            }
+                                                            // Ajouter les autres membres
+                                                            if (
+                                                                family.members &&
+                                                                family.members
+                                                                    .length > 0
+                                                            ) {
+                                                                family.members.forEach(
+                                                                    (
+                                                                        member,
+                                                                    ) => {
+                                                                        // Ne pas ajouter deux fois le responsable
+                                                                        if (
+                                                                            member.id !==
+                                                                            family
+                                                                                .responsable
+                                                                                ?.id
+                                                                        ) {
+                                                                            allMembers.push(
+                                                                                {
+                                                                                    ...member,
+                                                                                    famille_nom:
+                                                                                        family.nom ||
+                                                                                        family
+                                                                                            .responsable
+                                                                                            ?.nom ||
+                                                                                        "Famille",
+                                                                                },
+                                                                            );
+                                                                        }
+                                                                    },
+                                                                );
+                                                            }
+                                                        },
+                                                    );
+
+                                                    if (
+                                                        allMembers.length === 0
+                                                    ) {
+                                                        return (
+                                                            <tr>
+                                                                <td
+                                                                    colSpan="8"
+                                                                    className="p-12 text-center text-slate-500"
+                                                                >
+                                                                    <Users className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+                                                                    <p className="text-lg font-semibold">
+                                                                        Aucun
+                                                                        membre
+                                                                        de
+                                                                        famille
+                                                                        trouvé
+                                                                    </p>
+                                                                    <p className="text-sm">
+                                                                        Les
+                                                                        membres
+                                                                        des
+                                                                        familles
+                                                                        apparaîtront
+                                                                        ici
+                                                                    </p>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    }
+
+                                                    // Pagination for families tab
+                                                    const totalPagesFamilies =
+                                                        Math.ceil(
+                                                            allMembers.length /
+                                                                ITEMS_PER_PAGE,
+                                                        );
+                                                    const currentPageFamilies =
+                                                        pagination.families;
+                                                    const startIndex =
+                                                        (currentPageFamilies -
+                                                            1) *
+                                                        ITEMS_PER_PAGE;
+                                                    const endIndex =
+                                                        startIndex +
+                                                        ITEMS_PER_PAGE;
+                                                    const paginatedMembers =
+                                                        allMembers.slice(
+                                                            startIndex,
+                                                            endIndex,
+                                                        );
+
+                                                    return paginatedMembers.map(
+                                                        (member, idx) => (
+                                                            <tr
+                                                                key={
+                                                                    member.id ||
+                                                                    idx
+                                                                }
+                                                                className="hover:bg-slate-50 transition"
+                                                            >
+                                                                <td className="p-5 text-slate-500 font-mono text-xs">
+                                                                    {idx + 1}
+                                                                </td>
+                                                                <td className="p-5">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <ProfilePhoto
+                                                                            user={{
+                                                                                profile_photo_url:
+                                                                                    member.profile_photo_url,
+                                                                                prenom:
+                                                                                    member.prenom ||
+                                                                                    member.first_name ||
+                                                                                    member.firstName,
+                                                                                nom:
+                                                                                    member.nom ||
+                                                                                    member.last_name ||
+                                                                                    member.lastName,
+                                                                            }}
+                                                                            size="md"
+                                                                            rounded={
+                                                                                true
+                                                                            }
+                                                                        />
+                                                                        <div>
+                                                                            <div className="font-semibold text-slate-900">
+                                                                                {member.prenom ||
+                                                                                    member.first_name ||
+                                                                                    member.firstName}{" "}
+                                                                                {member.nom ||
+                                                                                    member.last_name ||
+                                                                                    member.lastName}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="p-5 text-slate-600">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Users className="w-4 h-4 text-blue-500" />
+                                                                        <span>
+                                                                            {member.famille_nom ||
+                                                                                "Famille"}
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="p-5">
+                                                                    <span
+                                                                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                                                            member.is_responsable ||
+                                                                            member.responsable_famille ||
+                                                                            member.is_family_responsible
+                                                                                ? "bg-blue-100 text-blue-700"
+                                                                                : member.role ===
+                                                                                    "conducteur"
+                                                                                  ? "bg-purple-100 text-purple-700"
+                                                                                  : "bg-green-100 text-green-700"
+                                                                        }`}
+                                                                    >
+                                                                        {member.is_responsable ||
+                                                                        member.responsable_famille ||
+                                                                        member.is_family_responsible
+                                                                            ? "Responsable"
+                                                                            : member.role ===
+                                                                                "conducteur"
+                                                                              ? "Conducteur"
+                                                                              : member.role ||
+                                                                                "Membre"}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="p-5 text-slate-600">
+                                                                    {member.email ||
+                                                                        "N/A"}
+                                                                </td>
+                                                                <td className="p-5 text-slate-600">
+                                                                    {member.phone ||
+                                                                        member.telephone ||
+                                                                        "N/A"}
+                                                                </td>
+                                                                <td className="p-5">
+                                                                    <span
+                                                                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                                                            member.status ===
+                                                                            "actif"
+                                                                                ? "bg-green-100 text-green-800"
+                                                                                : member.status ===
+                                                                                    "inactif"
+                                                                                  ? "bg-red-100 text-red-800"
+                                                                                  : "bg-gray-100 text-gray-700"
+                                                                        }`}
+                                                                    >
+                                                                        {member.status ===
+                                                                        "actif"
+                                                                            ? "Actif"
+                                                                            : member.status ===
+                                                                                "inactif"
+                                                                              ? "Inactif"
+                                                                              : "Actif"}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="p-5 text-right">
+                                                                    <div className="flex items-center justify-end gap-2">
+                                                                        <button
+                                                                            type="button"
+                                                                            title="Voir les détails"
+                                                                            className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition transform hover:scale-105"
+                                                                            onClick={() => {
+                                                                                openMemberModal(
+                                                                                    member,
+                                                                                );
+                                                                            }}
+                                                                        >
+                                                                            <Eye
+                                                                                size={
+                                                                                    18
+                                                                                }
+                                                                            />
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            title="Modifier"
+                                                                            className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition transform hover:scale-105"
+                                                                            onClick={() => {
+                                                                                openEditModal(
+                                                                                    member,
+                                                                                );
+                                                                            }}
+                                                                        >
+                                                                            <Edit
+                                                                                size={
+                                                                                    18
+                                                                                }
+                                                                            />
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        ),
+                                                    );
+                                                })()}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center text-sm text-slate-500">
+                                        <span>
+                                            {(() => {
+                                                let count = 0;
+                                                filteredFamiliesList.forEach(
+                                                    (family) => {
+                                                        count +=
+                                                            (family.members
+                                                                ?.length || 0) +
+                                                            (family.responsable
+                                                                ? 1
+                                                                : 0);
+                                                    },
+                                                );
+                                                return count;
+                                            })()}{" "}
+                                            membre(s) au total
+                                        </span>
+                                    </div>
+                                    {/* Pagination for families tab */}
                                     {(() => {
                                         let count = 0;
-                                        filteredFamiliesList.forEach(family => {
-                                            count += (family.members?.length || 0) + (family.responsable ? 1 : 0);
-                                        });
-                                        return count;
-                                    })()} membre(s) au total
-                                </span>
-                            </div>
-                            {/* Pagination for families tab */}
-                            {(() => {
-                                let count = 0;
-                                filteredFamiliesList.forEach(family => {
-                                    count += (family.members?.length || 0) + (family.responsable ? 1 : 0);
-                                });
-                                const totalPagesFamilies = Math.ceil(count / ITEMS_PER_PAGE);
-                                return (
-                                    <PaginationControls
-                                        currentPage={pagination.families}
-                                        totalPages={totalPagesFamilies}
-                                        onPrevious={() => handlePaginationChange('families', Math.max(1, pagination.families - 1))}
-                                        onNext={() => handlePaginationChange('families', Math.min(totalPagesFamilies, pagination.families + 1))}
-                                        itemsCount={count}
-                                        itemsPerPage={ITEMS_PER_PAGE}
-                                    />
-                                );
-                            })()}
-                        </div>
+                                        filteredFamiliesList.forEach(
+                                            (family) => {
+                                                count +=
+                                                    (family.members?.length ||
+                                                        0) +
+                                                    (family.responsable
+                                                        ? 1
+                                                        : 0);
+                                            },
+                                        );
+                                        const totalPagesFamilies = Math.ceil(
+                                            count / ITEMS_PER_PAGE,
+                                        );
+                                        return (
+                                            <PaginationControls
+                                                currentPage={
+                                                    pagination.families
+                                                }
+                                                totalPages={totalPagesFamilies}
+                                                onPrevious={() =>
+                                                    handlePaginationChange(
+                                                        "families",
+                                                        Math.max(
+                                                            1,
+                                                            pagination.families -
+                                                                1,
+                                                        ),
+                                                    )
+                                                }
+                                                onNext={() =>
+                                                    handlePaginationChange(
+                                                        "families",
+                                                        Math.min(
+                                                            totalPagesFamilies,
+                                                            pagination.families +
+                                                                1,
+                                                        ),
+                                                    )
+                                                }
+                                                itemsCount={count}
+                                                itemsPerPage={ITEMS_PER_PAGE}
+                                            />
+                                        );
+                                    })()}
+                                </div>
                             );
                         })()
                     ) : activeTab === "members" ? (
@@ -1542,153 +1961,267 @@ export default function Inscriptions({
                                     <tbody className="divide-y divide-slate-100">
                                         {filteredItems.length === 0 ? (
                                             <tr>
-                                                <td colSpan="11" className="p-12 text-center text-slate-500">
+                                                <td
+                                                    colSpan="11"
+                                                    className="p-12 text-center text-slate-500"
+                                                >
                                                     Aucun membre créé.
                                                 </td>
                                             </tr>
                                         ) : (
                                             (() => {
                                                 // Pagination for members tab
-                                                const totalPagesMembers = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
-                                                const currentPageMembers = pagination.members;
-                                                const startIndex = (currentPageMembers - 1) * ITEMS_PER_PAGE;
-                                                const endIndex = startIndex + ITEMS_PER_PAGE;
-                                                const paginatedItems = filteredItems.slice(startIndex, endIndex);
-
-                                                return paginatedItems.map((member, idx) => {
-                                                    // Trouver la famille du membre
-                                                    const memberFamily = familiesList.find(f =>
-                                                        f.members && f.members.some(m => m.id === member.id)
+                                                const totalPagesMembers =
+                                                    Math.ceil(
+                                                        filteredItems.length /
+                                                            ITEMS_PER_PAGE,
+                                                    );
+                                                const currentPageMembers =
+                                                    pagination.members;
+                                                const startIndex =
+                                                    (currentPageMembers - 1) *
+                                                    ITEMS_PER_PAGE;
+                                                const endIndex =
+                                                    startIndex + ITEMS_PER_PAGE;
+                                                const paginatedItems =
+                                                    filteredItems.slice(
+                                                        startIndex,
+                                                        endIndex,
                                                     );
 
-                                                    return (
-                                                        <tr key={member.id} className="hover:bg-slate-50 transition">
-                                                            <td className="p-5 text-slate-500 font-mono text-xs">
-                                                                {startIndex + idx + 1}
-                                                            </td>
-                                                            <td className="p-5">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 overflow-hidden">
-                                                                        {member.profile_photo_url ? (
-                                                                            <img
-                                                                                src={member.profile_photo_url}
-                                                                                alt={`${member.prenom} ${member.nom}`}
-                                                                                className="w-full h-full object-cover"
-                                                                                onError={(e) => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'flex'; }}
-                                                                            />
-                                                                        ) : null}
-                                                                        <span style={{ display: !member.profile_photo_url ? 'flex' : 'none', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
-                                                                            {member.prenom?.[0] || ""}{member.nom?.[0] || ""}
-                                                                        </span>
-                                                                    </div>
-                                                                    <div>
-                                                                        <div className="font-semibold text-slate-900">
-                                                                            {member.prenom} {member.nom}
+                                                return paginatedItems.map(
+                                                    (member, idx) => {
+                                                        // Trouver la famille du membre
+                                                        const memberFamily =
+                                                            familiesList.find(
+                                                                (f) =>
+                                                                    f.members &&
+                                                                    f.members.some(
+                                                                        (m) =>
+                                                                            m.id ===
+                                                                            member.id,
+                                                                    ),
+                                                            );
+
+                                                        return (
+                                                            <tr
+                                                                key={member.id}
+                                                                className="hover:bg-slate-50 transition"
+                                                            >
+                                                                <td className="p-5 text-slate-500 font-mono text-xs">
+                                                                    {startIndex +
+                                                                        idx +
+                                                                        1}
+                                                                </td>
+                                                                <td className="p-5">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <ProfilePhoto
+                                                                            user={{
+                                                                                profile_photo_url:
+                                                                                    member.profile_photo_url,
+                                                                                prenom: member.prenom,
+                                                                                nom: member.nom,
+                                                                            }}
+                                                                            size="md"
+                                                                            rounded={
+                                                                                true
+                                                                            }
+                                                                        />
+                                                                        <div>
+                                                                            <div className="font-semibold text-slate-900">
+                                                                                {
+                                                                                    member.prenom
+                                                                                }{" "}
+                                                                                {
+                                                                                    member.nom
+                                                                                }
+                                                                            </div>
                                                                         </div>
                                                                     </div>
-                                                                </div>
-                                                            </td>
-                                                            <td className="p-5 text-slate-600">
-                                                                {memberFamily ? memberFamily.nom : (member.famille_id ? `Famille #${member.famille_id}` : "Aucune famille")}
-                                                            </td>
-                                                            <td className="p-5 text-slate-600">
-                                                                {member.email}
-                                                            </td>
-                                                            <td className="p-5 text-slate-600">
-                                                                {member.phone || "N/A"}
-                                                            </td>
-                                                            <td className="p-5">
-                                                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                                                    member.role === "responsable_famille"
-                                                                        ? "bg-blue-100 text-blue-700"
-                                                                        : member.role === "membre_famille"
-                                                                        ? "bg-green-100 text-green-700"
-                                                                        : "bg-gray-100 text-gray-700"
-                                                                }`}>
-                                                                    {member.role === "responsable_famille" ? "Responsable" :
-                                                                     member.role === "membre_famille" ? "Membre" :
-                                                                     member.role || "Membre"}
-                                                                </span>
-                                                            </td>
-                                                            <td className="p-5">
-                                                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                                                    member.status === "actif"
-                                                                        ? "bg-green-100 text-green-800"
-                                                                        : member.status === "inactif"
-                                                                        ? "bg-red-100 text-red-800"
-                                                                        : "bg-gray-100 text-gray-700"
-                                                                }`}>
-                                                                    {member.status === "actif" ? "Actif" :
-                                                                     member.status === "inactif" ? "Inactif" :
-                                                                     member.status || "Actif"}
-                                                                </span>
-                                                            </td>
-                                                            <td className="p-5 text-slate-600 text-sm">
-                                                                {formatDateDisplay(member.date_naissance, "N/A")}
-                                                            </td>
-                                                            <td className="p-5 text-slate-600 text-sm">
-                                                                {formatDateDisplay(member.created_at, "N/A")}
-                                                            </td>
-                                                            <td className="p-5 text-slate-600 text-sm">
-                                                                {formatDateDisplay(member.updated_at || member.created_at, "N/A")}
-                                                            </td>
-                                                            <td className="p-5">
-                                                                <div className="flex items-center justify-end gap-2">
-                                                                    <button
-                                                                        type="button"
-                                                                        title="Voir les détails"
-                                                                        className="p-2 rounded-lg transition-all"
-                                                                        style={{ backgroundColor: "rgba(37, 99, 235, 0.1)", border: "2px solid rgba(37, 99, 235, 0.2)" }}
-                                                                        onClick={() => {
-                                                                            openMemberModal(member);
-                                                                        }}
+                                                                </td>
+                                                                <td className="p-5 text-slate-600">
+                                                                    {memberFamily
+                                                                        ? memberFamily.nom
+                                                                        : member.famille_id
+                                                                          ? `Famille #${member.famille_id}`
+                                                                          : "Aucune famille"}
+                                                                </td>
+                                                                <td className="p-5 text-slate-600">
+                                                                    {
+                                                                        member.email
+                                                                    }
+                                                                </td>
+                                                                <td className="p-5 text-slate-600">
+                                                                    {member.phone ||
+                                                                        "N/A"}
+                                                                </td>
+                                                                <td className="p-5">
+                                                                    <span
+                                                                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                                                            member.role ===
+                                                                            "responsable_famille"
+                                                                                ? "bg-blue-100 text-blue-700"
+                                                                                : member.role ===
+                                                                                    "membre_famille"
+                                                                                  ? "bg-green-100 text-green-700"
+                                                                                  : "bg-gray-100 text-gray-700"
+                                                                        }`}
                                                                     >
-                                                                        <Eye className="w-5 h-5 text-blue-600" />
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        title="Modifier"
-                                                                        className="p-2 rounded-lg transition-all"
-                                                                        style={{ backgroundColor: "rgba(37, 99, 235, 0.1)", border: "2px solid rgba(37, 99, 235, 0.2)" }}
-                                                                        onClick={() => {
-                                                                            console.log('Modifier clicked for member:', member);
-                                                                            openEditModal(member);
-                                                                        }}
+                                                                        {member.role ===
+                                                                        "responsable_famille"
+                                                                            ? "Responsable"
+                                                                            : member.role ===
+                                                                                "membre_famille"
+                                                                              ? "Membre"
+                                                                              : member.role ||
+                                                                                "Membre"}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="p-5">
+                                                                    <span
+                                                                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                                                            member.status ===
+                                                                            "actif"
+                                                                                ? "bg-green-100 text-green-800"
+                                                                                : member.status ===
+                                                                                    "inactif"
+                                                                                  ? "bg-red-100 text-red-800"
+                                                                                  : "bg-gray-100 text-gray-700"
+                                                                        }`}
                                                                     >
-                                                                        <Edit className="w-5 h-5 text-blue-600" />
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        title={member.status === "actif" ? "Désactiver" : "Activer"}
-                                                                        className="p-2 rounded-lg transition-all"
-                                                                        style={{
-                                                                            backgroundColor: member.status === "actif" ? "rgba(22, 163, 74, 0.1)" : "rgba(220, 38, 38, 0.1)",
-                                                                            border: member.status === "actif" ? "2px solid rgba(22, 163, 74, 0.2)" : "2px solid rgba(220, 38, 38, 0.2)"
-                                                                        }}
-                                                                        onClick={() => {
-                                                                            if (member.status === "actif") {
-                                                                                openDeactivateModal(member);
-                                                                            } else {
-                                                                                validateMember(member.id);
+                                                                        {member.status ===
+                                                                        "actif"
+                                                                            ? "Actif"
+                                                                            : member.status ===
+                                                                                "inactif"
+                                                                              ? "Inactif"
+                                                                              : member.status ||
+                                                                                "Actif"}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="p-5 text-slate-600 text-sm">
+                                                                    {formatDateDisplay(
+                                                                        member.date_naissance,
+                                                                        "N/A",
+                                                                    )}
+                                                                </td>
+                                                                <td className="p-5 text-slate-600 text-sm">
+                                                                    {formatDateDisplay(
+                                                                        member.created_at,
+                                                                        "N/A",
+                                                                    )}
+                                                                </td>
+                                                                <td className="p-5 text-slate-600 text-sm">
+                                                                    {formatDateDisplay(
+                                                                        member.updated_at ||
+                                                                            member.created_at,
+                                                                        "N/A",
+                                                                    )}
+                                                                </td>
+                                                                <td className="p-5">
+                                                                    <div className="flex items-center justify-end gap-2">
+                                                                        <button
+                                                                            type="button"
+                                                                            title="Voir les détails"
+                                                                            className="p-2 rounded-lg transition-all"
+                                                                            style={{
+                                                                                backgroundColor:
+                                                                                    "rgba(37, 99, 235, 0.1)",
+                                                                                border: "2px solid rgba(37, 99, 235, 0.2)",
+                                                                            }}
+                                                                            onClick={() => {
+                                                                                openMemberModal(
+                                                                                    member,
+                                                                                );
+                                                                            }}
+                                                                        >
+                                                                            <Eye className="w-5 h-5 text-blue-600" />
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            title="Modifier"
+                                                                            className="p-2 rounded-lg transition-all"
+                                                                            style={{
+                                                                                backgroundColor:
+                                                                                    "rgba(37, 99, 235, 0.1)",
+                                                                                border: "2px solid rgba(37, 99, 235, 0.2)",
+                                                                            }}
+                                                                            onClick={() => {
+                                                                                console.log(
+                                                                                    "Modifier clicked for member:",
+                                                                                    member,
+                                                                                );
+                                                                                openEditModal(
+                                                                                    member,
+                                                                                );
+                                                                            }}
+                                                                        >
+                                                                            <Edit className="w-5 h-5 text-blue-600" />
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            title={
+                                                                                member.status ===
+                                                                                "actif"
+                                                                                    ? "Désactiver"
+                                                                                    : "Activer"
                                                                             }
-                                                                        }}
-                                                                    >
-                                                                        <Power className={`w-5 h-5 ${member.status === "actif" ? "text-green-600" : "text-red-600"}`} />
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        title="Supprimer"
-                                                                        className="p-2 rounded-lg transition-all"
-                                                                        style={{ backgroundColor: "rgba(220, 38, 38, 0.1)", border: "2px solid rgba(220, 38, 38, 0.2)" }}
-                                                                        onClick={() => handleDelete(member.id, "member")}
-                                                                    >
-                                                                        <Trash2 className="w-5 h-5 text-red-600" />
-                                                                    </button>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                });
+                                                                            className="p-2 rounded-lg transition-all"
+                                                                            style={{
+                                                                                backgroundColor:
+                                                                                    member.status ===
+                                                                                    "actif"
+                                                                                        ? "rgba(22, 163, 74, 0.1)"
+                                                                                        : "rgba(220, 38, 38, 0.1)",
+                                                                                border:
+                                                                                    member.status ===
+                                                                                    "actif"
+                                                                                        ? "2px solid rgba(22, 163, 74, 0.2)"
+                                                                                        : "2px solid rgba(220, 38, 38, 0.2)",
+                                                                            }}
+                                                                            onClick={() => {
+                                                                                if (
+                                                                                    member.status ===
+                                                                                    "actif"
+                                                                                ) {
+                                                                                    openDeactivateModal(
+                                                                                        member,
+                                                                                    );
+                                                                                } else {
+                                                                                    validateMember(
+                                                                                        member.id,
+                                                                                    );
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            <Power
+                                                                                className={`w-5 h-5 ${member.status === "actif" ? "text-green-600" : "text-red-600"}`}
+                                                                            />
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            title="Supprimer"
+                                                                            className="p-2 rounded-lg transition-all"
+                                                                            style={{
+                                                                                backgroundColor:
+                                                                                    "rgba(220, 38, 38, 0.1)",
+                                                                                border: "2px solid rgba(220, 38, 38, 0.2)",
+                                                                            }}
+                                                                            onClick={() =>
+                                                                                handleDelete(
+                                                                                    member.id,
+                                                                                    "member",
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            <Trash2 className="w-5 h-5 text-red-600" />
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    },
+                                                );
                                             })()
                                         )}
                                     </tbody>
@@ -1697,9 +2230,27 @@ export default function Inscriptions({
                             {/* Pagination for members tab */}
                             <PaginationControls
                                 currentPage={pagination.members}
-                                totalPages={Math.ceil(filteredItems.length / ITEMS_PER_PAGE)}
-                                onPrevious={() => handlePaginationChange('members', Math.max(1, pagination.members - 1))}
-                                onNext={() => handlePaginationChange('members', Math.min(Math.ceil(filteredItems.length / ITEMS_PER_PAGE), pagination.members + 1))}
+                                totalPages={Math.ceil(
+                                    filteredItems.length / ITEMS_PER_PAGE,
+                                )}
+                                onPrevious={() =>
+                                    handlePaginationChange(
+                                        "members",
+                                        Math.max(1, pagination.members - 1),
+                                    )
+                                }
+                                onNext={() =>
+                                    handlePaginationChange(
+                                        "members",
+                                        Math.min(
+                                            Math.ceil(
+                                                filteredItems.length /
+                                                    ITEMS_PER_PAGE,
+                                            ),
+                                            pagination.members + 1,
+                                        ),
+                                    )
+                                }
                                 itemsCount={filteredItems.length}
                                 itemsPerPage={ITEMS_PER_PAGE}
                             />
@@ -1709,39 +2260,41 @@ export default function Inscriptions({
                         <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
-                                <thead
-                                    className={`${tableHeaderClass} border-b border-slate-200`}
-                                >
-                                    <tr>
-                                        <th className="p-6 text-sm font-bold uppercase tracking-wider">
-                                            Type
-                                        </th>
-                                        <th className="p-6 text-sm font-bold uppercase tracking-wider">
-                                            Prénom et Nom
-                                        </th>
-                                        <th className="p-6 text-sm font-bold uppercase tracking-wider">
-                                            Contact
-                                        </th>
-                                        <th className="p-6 text-sm font-bold uppercase tracking-wider">
-                                            Date Naissance
-                                        </th>
-                                        <th className="p-6 text-sm font-bold uppercase tracking-wider">
-                                            Fonction
-                                        </th>
-                                        <th className="p-6 text-sm font-bold uppercase tracking-wider">
-                                            Rôle
-                                        </th>
-                                        <th className="p-6 text-sm font-bold uppercase tracking-wider">
-                                            Date de création
-                                        </th>
-                                        <th className="p-6 text-sm font-bold uppercase tracking-wider">
-                                            {activeTab === "rejected" ? "Refusé par" : "Approuvé par"}
-                                        </th>
-                                        <th className="p-6 text-sm font-bold uppercase tracking-wider text-right">
-                                            Actions
-                                        </th>
-                                    </tr>
-                                </thead>
+                                    <thead
+                                        className={`${tableHeaderClass} border-b border-slate-200`}
+                                    >
+                                        <tr>
+                                            <th className="p-6 text-sm font-bold uppercase tracking-wider">
+                                                Type
+                                            </th>
+                                            <th className="p-6 text-sm font-bold uppercase tracking-wider">
+                                                Prénom et Nom
+                                            </th>
+                                            <th className="p-6 text-sm font-bold uppercase tracking-wider">
+                                                Contact
+                                            </th>
+                                            <th className="p-6 text-sm font-bold uppercase tracking-wider">
+                                                Date Naissance
+                                            </th>
+                                            <th className="p-6 text-sm font-bold uppercase tracking-wider">
+                                                Fonction
+                                            </th>
+                                            <th className="p-6 text-sm font-bold uppercase tracking-wider">
+                                                Rôle
+                                            </th>
+                                            <th className="p-6 text-sm font-bold uppercase tracking-wider">
+                                                Date de création
+                                            </th>
+                                            <th className="p-6 text-sm font-bold uppercase tracking-wider">
+                                                {activeTab === "rejected"
+                                                    ? "Refusé par"
+                                                    : "Approuvé par"}
+                                            </th>
+                                            <th className="p-6 text-sm font-bold uppercase tracking-wider text-right">
+                                                Actions
+                                            </th>
+                                        </tr>
+                                    </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {filteredItems.length === 0 ? (
                                             <tr>
@@ -1755,171 +2308,296 @@ export default function Inscriptions({
                                         ) : (
                                             (() => {
                                                 // Pagination for inscriptions tab
-                                                const totalPagesInscriptions = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
-                                                const currentPageInscriptions = activeTab === "pending" ? pagination.pending : activeTab === "approved" ? pagination.approved : pagination.rejected;
-                                                const startIndex = (currentPageInscriptions - 1) * ITEMS_PER_PAGE;
-                                                const endIndex = startIndex + ITEMS_PER_PAGE;
-                                                const paginatedItems = filteredItems.slice(startIndex, endIndex);
+                                                const totalPagesInscriptions =
+                                                    Math.ceil(
+                                                        filteredItems.length /
+                                                            ITEMS_PER_PAGE,
+                                                    );
+                                                const currentPageInscriptions =
+                                                    activeTab === "pending"
+                                                        ? pagination.pending
+                                                        : activeTab ===
+                                                            "approved"
+                                                          ? pagination.approved
+                                                          : pagination.rejected;
+                                                const startIndex =
+                                                    (currentPageInscriptions -
+                                                        1) *
+                                                    ITEMS_PER_PAGE;
+                                                const endIndex =
+                                                    startIndex + ITEMS_PER_PAGE;
+                                                const paginatedItems =
+                                                    filteredItems.slice(
+                                                        startIndex,
+                                                        endIndex,
+                                                    );
 
-                                                return paginatedItems.map((item) => (
-                                                    <tr
-                                                        key={`${item.kind}-${item.id}`}
-                                                        className="hover:bg-slate-50 transition"
-                                                    >
-                                                    <td className="p-6">
-                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                                            item.kind === "inscription"
-                                                                ? item.inscriptionType === "famille"
-                                                                    ? "bg-purple-100 text-purple-800"
-                                                                    : "bg-blue-100 text-blue-800"
-                                                                : "bg-green-100 text-green-800"
-                                                        }`}>
-                                                            {item.kind === "inscription"
-                                                                ? item.inscriptionType === "famille"
-                                                                    ? "👨‍👩‍👧‍👦 Famille"
-                                                                    : "Inscription"
-                                                                : "Membre"}
-                                                        </span>
-                                                    </td>
-                                                    <td className="p-6">
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-yellow-300 to-amber-400 flex items-center justify-center text-white font-bold text-lg shadow-sm overflow-hidden">
-                                                                {item.profile_photo_url ? (
-                                                                    <img
-                                                                        src={item.profile_photo_url}
-                                                                        alt={`${item.prenom} ${item.nom}`}
-                                                                        className="w-full h-full object-cover"
-                                                                        onError={(e) => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'flex'; }}
-                                                                    />
-                                                                ) : null}
-                                                                <span style={{ display: !item.profile_photo_url ? 'flex' : 'none', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
-                                                                    {item.prenom?.[0]}{item.nom?.[0]}
+                                                return paginatedItems.map(
+                                                    (item) => (
+                                                        <tr
+                                                            key={`${item.kind}-${item.id}`}
+                                                            className="hover:bg-slate-50 transition"
+                                                        >
+                                                            <td className="p-6">
+                                                                <span
+                                                                    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                                                        item.kind ===
+                                                                        "inscription"
+                                                                            ? item.inscriptionType ===
+                                                                              "famille"
+                                                                                ? "bg-purple-100 text-purple-800"
+                                                                                : "bg-blue-100 text-blue-800"
+                                                                            : "bg-green-100 text-green-800"
+                                                                    }`}
+                                                                >
+                                                                    {item.kind ===
+                                                                    "inscription"
+                                                                        ? item.inscriptionType ===
+                                                                          "famille"
+                                                                            ? "👨‍👩‍👧‍👦 Famille"
+                                                                            : "Inscription"
+                                                                        : "Membre"}
                                                                 </span>
-                                                            </div>
-                                                            <div>
-                                                                <div className="font-bold text-slate-900 text-base">
-                                                                    {item.nom} {item.prenom}
+                                                            </td>
+                                                            <td className="p-6">
+                                                                <div className="flex items-center gap-4">
+                                                                    <ProfilePhoto
+                                                                        user={{
+                                                                            profile_photo_url:
+                                                                                item.profile_photo_url,
+                                                                            prenom: item.prenom,
+                                                                            nom: item.nom,
+                                                                        }}
+                                                                        size="lg"
+                                                                        rounded={
+                                                                            true
+                                                                        }
+                                                                    />
+                                                                    <div>
+                                                                        <div className="font-bold text-slate-900 text-base">
+                                                                            {
+                                                                                item.nom
+                                                                            }{" "}
+                                                                            {
+                                                                                item.prenom
+                                                                            }
+                                                                        </div>
+                                                                        <div className="text-xs text-slate-500 font-medium">
+                                                                            ID:
+                                                                            #
+                                                                            {
+                                                                                item.id
+                                                                            }
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
-                                                                <div className="text-xs text-slate-500 font-medium">
-                                                                    ID: #{item.id}
+                                                            </td>
+                                                            <td className="p-6 text-sm text-slate-600">
+                                                                <div className="font-medium text-slate-800">
+                                                                    {item.email}
                                                                 </div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-6 text-sm text-slate-600">
-                                                        <div className="font-medium text-slate-800">
-                                                            {item.email}
-                                                        </div>
-                                                        <div className="text-xs text-slate-500 mt-0.5">
-                                                            {item.phone}
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-6 text-sm text-slate-600">
-                                                        {item.date_naissance
-                                                            ? formatDateDisplay(item.date_naissance, "N/A")
-                                                            : "N/A"}
-                                                    </td>
-                                                    <td className="p-6 text-sm text-slate-600">
-                                                        {item.fonction_professionnelle || "N/A"}
-                                                    </td>
-                                                    <td className="p-6">
-                                                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-                                                            {item.type === "famille" ? "Responsable" : item.type === "conducteur" ? "Conducteur" : item.role}
-                                                        </span>
-                                                    </td>
-                                                    <td className="p-6 text-sm text-slate-600">
-                                                        {formatDateDisplay(item.created_at, "N/A")}
-                                                    </td>
-                                                    <td className="p-6 text-sm">
-    {activeTab === "approved" ? (
-        <div className="space-y-2">
-            {item.conducteur_approved && item.conducteur_name && (
-                <div className="text-center">
-                    <div className="font-bold text-slate-900 text-sm">{item.conducteur_name}</div>
-                    <div className="text-xs text-blue-600">Conducteur</div>
-                </div>
-            )}
-            {item.admin_approved && item.admin_name && (
-                <div className="text-center">
-                    <div className="font-bold text-slate-900 text-sm">{item.admin_name}</div>
-                    <div className="text-xs text-purple-600">Admin</div>
-                </div>
-            )}
-            {!item.conducteur_approved && !item.admin_approved && (
-                <div className="text-slate-400 italic text-xs text-center">-</div>
-            )}
-        </div>
-    ) : activeTab === "rejected" ? (
-        <div className="space-y-2">
-            {item.conducteur_id && item.conducteur_name && (
-                <div className="text-center">
-                    <div className="font-bold text-slate-900 text-sm">{item.conducteur_name}</div>
-                    <div className="text-xs text-blue-600">Conducteur</div>
-                </div>
-            )}
-            {item.admin_id && item.admin_name && (
-                <div className="text-center">
-                    <div className="font-bold text-slate-900 text-sm">{item.admin_name}</div>
-                    <div className="text-xs text-purple-600">Admin</div>
-                </div>
-            )}
-            {!item.conducteur_id && !item.admin_id && (
-                <div className="text-slate-400 italic text-xs text-center">-</div>
-            )}
-        </div>
-    ) : (
-        <div className="space-y-2">
-            {item.conducteur_approved && item.conducteur_name && (
-                <div className="text-center">
-                    <div className="font-bold text-slate-900 text-sm">{item.conducteur_name}</div>
-                    <div className="text-xs text-blue-600">Conducteur</div>
-                </div>
-            )}
-            {item.admin_approved && item.admin_name && (
-                <div className="text-center">
-                    <div className="font-bold text-slate-900 text-sm">{item.admin_name}</div>
-                    <div className="text-xs text-purple-600">Admin</div>
-                </div>
-            )}
-            {!item.conducteur_approved && !item.admin_approved && (
-                <span className="text-slate-400 italic">-</span>
-            )}
-        </div>
-    )}
-</td>
-                                                    <td className="p-6 text-right">
-                                                        <div className="flex items-center justify-end gap-2">
-                                                            <button
-                                                                onClick={() => openDetailModal(item)}
-                                                                className="px-3 py-1.5 text-xs font-semibold bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg transition"
-                                                                title="Voir les détails"
-                                                            >
-                                                                Détails
-                                                            </button>
-                                                            {activeTab === "pending" && (
-                                                                <div className="flex gap-1">
+                                                                <div className="text-xs text-slate-500 mt-0.5">
+                                                                    {item.phone}
+                                                                </div>
+                                                            </td>
+                                                            <td className="p-6 text-sm text-slate-600">
+                                                                {item.date_naissance
+                                                                    ? formatDateDisplay(
+                                                                          item.date_naissance,
+                                                                          "N/A",
+                                                                      )
+                                                                    : "N/A"}
+                                                            </td>
+                                                            <td className="p-6 text-sm text-slate-600">
+                                                                {item.fonction_professionnelle ||
+                                                                    "N/A"}
+                                                            </td>
+                                                            <td className="p-6">
+                                                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                                                                    {item.type ===
+                                                                    "famille"
+                                                                        ? "Responsable"
+                                                                        : item.type ===
+                                                                            "conducteur"
+                                                                          ? "Conducteur"
+                                                                          : item.role}
+                                                                </span>
+                                                            </td>
+                                                            <td className="p-6 text-sm text-slate-600">
+                                                                {formatDateDisplay(
+                                                                    item.created_at,
+                                                                    "N/A",
+                                                                )}
+                                                            </td>
+                                                            <td className="p-6 text-sm">
+                                                                {activeTab ===
+                                                                "approved" ? (
+                                                                    <div className="space-y-2">
+                                                                        {item.conducteur_approved &&
+                                                                            item.conducteur_name && (
+                                                                                <div className="text-center">
+                                                                                    <div className="font-bold text-slate-900 text-sm">
+                                                                                        {
+                                                                                            item.conducteur_name
+                                                                                        }
+                                                                                    </div>
+                                                                                    <div className="text-xs text-blue-600">
+                                                                                        Conducteur
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        {item.admin_approved &&
+                                                                            item.admin_name && (
+                                                                                <div className="text-center">
+                                                                                    <div className="font-bold text-slate-900 text-sm">
+                                                                                        {
+                                                                                            item.admin_name
+                                                                                        }
+                                                                                    </div>
+                                                                                    <div className="text-xs text-purple-600">
+                                                                                        Admin
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        {!item.conducteur_approved &&
+                                                                            !item.admin_approved && (
+                                                                                <div className="text-slate-400 italic text-xs text-center">
+                                                                                    -
+                                                                                </div>
+                                                                            )}
+                                                                    </div>
+                                                                ) : activeTab ===
+                                                                  "rejected" ? (
+                                                                    <div className="space-y-2">
+                                                                        {item.conducteur_id &&
+                                                                            item.conducteur_name && (
+                                                                                <div className="text-center">
+                                                                                    <div className="font-bold text-slate-900 text-sm">
+                                                                                        {
+                                                                                            item.conducteur_name
+                                                                                        }
+                                                                                    </div>
+                                                                                    <div className="text-xs text-blue-600">
+                                                                                        Conducteur
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        {item.admin_id &&
+                                                                            item.admin_name && (
+                                                                                <div className="text-center">
+                                                                                    <div className="font-bold text-slate-900 text-sm">
+                                                                                        {
+                                                                                            item.admin_name
+                                                                                        }
+                                                                                    </div>
+                                                                                    <div className="text-xs text-purple-600">
+                                                                                        Admin
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        {!item.conducteur_id &&
+                                                                            !item.admin_id && (
+                                                                                <div className="text-slate-400 italic text-xs text-center">
+                                                                                    -
+                                                                                </div>
+                                                                            )}
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="space-y-2">
+                                                                        {item.conducteur_approved &&
+                                                                            item.conducteur_name && (
+                                                                                <div className="text-center">
+                                                                                    <div className="font-bold text-slate-900 text-sm">
+                                                                                        {
+                                                                                            item.conducteur_name
+                                                                                        }
+                                                                                    </div>
+                                                                                    <div className="text-xs text-blue-600">
+                                                                                        Conducteur
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        {item.admin_approved &&
+                                                                            item.admin_name && (
+                                                                                <div className="text-center">
+                                                                                    <div className="font-bold text-slate-900 text-sm">
+                                                                                        {
+                                                                                            item.admin_name
+                                                                                        }
+                                                                                    </div>
+                                                                                    <div className="text-xs text-purple-600">
+                                                                                        Admin
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        {!item.conducteur_approved &&
+                                                                            !item.admin_approved && (
+                                                                                <span className="text-slate-400 italic">
+                                                                                    -
+                                                                                </span>
+                                                                            )}
+                                                                    </div>
+                                                                )}
+                                                            </td>
+                                                            <td className="p-6 text-right">
+                                                                <div className="flex items-center justify-end gap-2">
                                                                     <button
-                                                                        onClick={() => approveInscription(item.id)}
-                                                                        disabled={approvingId === item.id}
-                                                                        className="px-3 py-1.5 text-xs font-semibold bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition disabled:opacity-50"
-                                                                        title="Approuver"
+                                                                        onClick={() =>
+                                                                            openDetailModal(
+                                                                                item,
+                                                                            )
+                                                                        }
+                                                                        className="px-3 py-1.5 text-xs font-semibold bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg transition"
+                                                                        title="Voir les détails"
                                                                     >
-                                                                        {approvingId === item.id ? "..." : "✓"}
+                                                                        Détails
                                                                     </button>
-                                                                    <button
-                                                                        onClick={() => rejectInscription(item.id)}
-                                                                        disabled={rejectingId === item.id}
-                                                                        className="px-3 py-1.5 text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200 rounded-lg transition disabled:opacity-50"
-                                                                        title="Rejeter"
-                                                                    >
-                                                                        {rejectingId === item.id ? "..." : "✕"}
-                                                                    </button>
+                                                                    {activeTab ===
+                                                                        "pending" && (
+                                                                        <div className="flex gap-1">
+                                                                            <button
+                                                                                onClick={() =>
+                                                                                    approveInscription(
+                                                                                        item.id,
+                                                                                    )
+                                                                                }
+                                                                                disabled={
+                                                                                    approvingId ===
+                                                                                    item.id
+                                                                                }
+                                                                                className="px-3 py-1.5 text-xs font-semibold bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition disabled:opacity-50"
+                                                                                title="Approuver"
+                                                                            >
+                                                                                {approvingId ===
+                                                                                item.id
+                                                                                    ? "..."
+                                                                                    : "✓"}
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() =>
+                                                                                    rejectInscription(
+                                                                                        item.id,
+                                                                                    )
+                                                                                }
+                                                                                disabled={
+                                                                                    rejectingId ===
+                                                                                    item.id
+                                                                                }
+                                                                                className="px-3 py-1.5 text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200 rounded-lg transition disabled:opacity-50"
+                                                                                title="Rejeter"
+                                                                            >
+                                                                                {rejectingId ===
+                                                                                item.id
+                                                                                    ? "..."
+                                                                                    : "✕"}
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ));
+                                                            </td>
+                                                        </tr>
+                                                    ),
+                                                );
                                             })()
                                         )}
                                     </tbody>
@@ -1927,15 +2605,43 @@ export default function Inscriptions({
                             </div>
                             {/* Pagination for inscriptions tab */}
                             {(() => {
-                                const totalPagesInscriptions = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
-                                const currentPageInscriptions = activeTab === "pending" ? pagination.pending : activeTab === "approved" ? pagination.approved : pagination.rejected;
-                                const tabKey = activeTab === "pending" ? "pending" : activeTab === "approved" ? "approved" : "rejected";
+                                const totalPagesInscriptions = Math.ceil(
+                                    filteredItems.length / ITEMS_PER_PAGE,
+                                );
+                                const currentPageInscriptions =
+                                    activeTab === "pending"
+                                        ? pagination.pending
+                                        : activeTab === "approved"
+                                          ? pagination.approved
+                                          : pagination.rejected;
+                                const tabKey =
+                                    activeTab === "pending"
+                                        ? "pending"
+                                        : activeTab === "approved"
+                                          ? "approved"
+                                          : "rejected";
                                 return (
                                     <PaginationControls
                                         currentPage={currentPageInscriptions}
                                         totalPages={totalPagesInscriptions}
-                                        onPrevious={() => handlePaginationChange(tabKey, Math.max(1, currentPageInscriptions - 1))}
-                                        onNext={() => handlePaginationChange(tabKey, Math.min(totalPagesInscriptions, currentPageInscriptions + 1))}
+                                        onPrevious={() =>
+                                            handlePaginationChange(
+                                                tabKey,
+                                                Math.max(
+                                                    1,
+                                                    currentPageInscriptions - 1,
+                                                ),
+                                            )
+                                        }
+                                        onNext={() =>
+                                            handlePaginationChange(
+                                                tabKey,
+                                                Math.min(
+                                                    totalPagesInscriptions,
+                                                    currentPageInscriptions + 1,
+                                                ),
+                                            )
+                                        }
                                         itemsCount={filteredItems.length}
                                         itemsPerPage={ITEMS_PER_PAGE}
                                     />
@@ -1946,430 +2652,838 @@ export default function Inscriptions({
                 </div>
 
                 {/* MODAL AJOUT / EDITION */}
-                {console.log('showModal state:', showModal) || showModal && (
-                    <div
-                        className="fixed inset-0 z-[60] flex items-center justify-center"
-                        aria-labelledby="modal-title"
-                        role="dialog"
-                        aria-modal="true"
-                    >
+                {console.log("showModal state:", showModal) ||
+                    (showModal && (
                         <div
-                            className="fixed inset-0 bg-slate-900/90 transition-opacity"
-                            onClick={() => setShowModal(false)}
-                        ></div>
-                        <div className="relative z-50 max-h-[90vh] overflow-y-auto bg-white rounded-3xl text-left shadow-2xl transform transition-all w-full max-w-7xl mx-2">
-                            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                                <div className="flex items-center gap-4">
-                                    <h2
-                                        className="text-2xl font-bold text-slate-900"
-                                        id="modal-title"
+                            className="fixed inset-0 z-[60] flex items-center justify-center"
+                            aria-labelledby="modal-title"
+                            role="dialog"
+                            aria-modal="true"
+                        >
+                            <div
+                                className="fixed inset-0 bg-slate-900/90 transition-opacity"
+                                onClick={() => setShowModal(false)}
+                            ></div>
+                            <div className="relative z-50 max-h-[90vh] overflow-y-auto bg-white rounded-3xl text-left shadow-2xl transform transition-all w-full max-w-7xl mx-2">
+                                <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                    <div className="flex items-center gap-4">
+                                        <h2
+                                            className="text-2xl font-bold text-slate-900"
+                                            id="modal-title"
+                                        >
+                                            {modalMode === "create"
+                                                ? "Nouveau Membre"
+                                                : "Modifier le Membre"}
+                                        </h2>
+                                        {/* Toast notification de sauvegarde */}
+                                        {saveNotification.show && (
+                                            <div className="px-4 py-2 bg-green-100 border border-green-300 text-green-700 rounded-lg text-sm font-semibold flex items-center gap-2 animate-pulse">
+                                                <Check className="w-4 h-4" />
+                                                {saveNotification.message}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <button
+                                        onClick={() => setShowModal(false)}
+                                        className="text-slate-400 hover:text-red-500 transition p-2 rounded-full hover:bg-red-50"
                                     >
-                                        {modalMode === "create"
-                                            ? "Nouveau Membre"
-                                            : "Modifier le Membre"}
-                                    </h2>
-                                    {/* Toast notification de sauvegarde */}
-                                    {saveNotification.show && (
-                                        <div className="px-4 py-2 bg-green-100 border border-green-300 text-green-700 rounded-lg text-sm font-semibold flex items-center gap-2 animate-pulse">
-                                            <Check className="w-4 h-4" />
-                                            {saveNotification.message}
-                                        </div>
-                                    )}
+                                        <X className="w-6 h-6" />
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => setShowModal(false)}
-                                    className="text-slate-400 hover:text-red-500 transition p-2 rounded-full hover:bg-red-50"
-                                >
-                                    <X className="w-6 h-6" />
-                                </button>
-                            </div>
-                            <div className="p-8">
-                                <form
-                                    onSubmit={handleSubmit}
-                                    encType="multipart/form-data"
-                                    className="space-y-8"
-                                >
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <div className="p-8">
+                                    <form
+                                        onSubmit={handleSubmit}
+                                        encType="multipart/form-data"
+                                        className="space-y-8"
+                                    >
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                            {/* GAUCHE : Identité & Contact */}
+                                            <div className="space-y-6">
+                                                <section>
+                                                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 pb-2 border-b border-gray-100">
+                                                        <User className="w-5 h-5 text-blue-600" />
+                                                        Identité
+                                                    </h3>
 
-                                        {/* GAUCHE : Identité & Contact */}
-                                        <div className="space-y-6">
-                                            <section>
-                                                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 pb-2 border-b border-gray-100">
-                                                    <User className="w-5 h-5 text-blue-600" />
-                                                    Identité
-                                                </h3>
-
-                                                {/* Photo Upload */}
-                                                <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200 mb-4">
-                                                    <div className="flex flex-col items-center gap-2">
-                                                        <h3 className="text-xs font-bold text-gray-800">Photo</h3>
-                                                        <div className="w-14 h-14 rounded-full bg-white overflow-hidden border-2 border-blue-400 shadow-md">
-                                                            {data.photoPreview ? (
-                                                                <img
-                                                                    src={data.photoPreview}
-                                                                    alt="profil"
-                                                                    className="w-full h-full object-cover"
-                                                                />
-                                                            ) : (
-                                                                <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                                                                    <User className="w-6 h-6 text-gray-400" />
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <input
-                                                            type="file"
-                                                            accept="image/*"
-                                                            onChange={(e) => {
-                                                                const file = e.target.files && e.target.files[0];
-                                                                if (file) {
-                                                                    const preview = URL.createObjectURL(file);
-                                                                    if (data.photoPreview) {
-                                                                        URL.revokeObjectURL(data.photoPreview);
-                                                                    }
-                                                                    setData({
-                                                                        ...data,
-                                                                        photo: file,
-                                                                        photoPreview: preview,
-                                                                    });
-                                                                }
-                                                            }}
-                                                            className="file:py-0.5 file:px-2 file:rounded file:bg-blue-600 file:text-white file:cursor-pointer file:font-semibold file:border-0 file:hover:bg-blue-700 file:transition-colors file:text-xs"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <FormField label="Nom" icon={User} required>
-                                                        <input
-                                                            ref={nomRef}
-                                                            className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 uppercase ${
-                                                                fieldErrors.nom ? "border-red-500 focus:border-red-500" : "border-gray-300 focus:border-blue-500"
-                                                            }`}
-                                                            value={data.nom}
-                                                            onChange={(e) => setData({...data, nom: e.target.value.toUpperCase()})}
-                                                            placeholder="ex: DUPONT"
-                                                        />
-                                                        {(fieldErrors.nom || errors.nom) && (
-                                                            <p className="text-red-500 text-xs mt-1">
-                                                                {fieldErrors.nom || errors.nom}
-                                                            </p>
-                                                        )}
-                                                    </FormField>
-                                                    <FormField label="Prénom" icon={User} required>
-                                                        <input
-                                                            ref={prenomRef}
-                                                            className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 capitalize ${
-                                                                fieldErrors.prenom ? "border-red-500 focus:border-red-500" : "border-gray-300 focus:border-blue-500"
-                                                            }`}
-                                                            value={data.prenom}
-                                                            onChange={(e) => setData({...data, prenom: e.target.value.toUpperCase()})}
-                                                            placeholder="ex: Jean"
-                                                        />
-                                                        {(fieldErrors.prenom || errors.prenom) && (
-                                                            <p className="text-red-500 text-xs mt-1">
-                                                                {fieldErrors.prenom || errors.prenom}
-                                                            </p>
-                                                        )}
-                                                    </FormField>
-                                                    <FormField label="Genre" icon={Users} required>
-                                                        <select
-                                                            className={`w-full h-12 border rounded-lg px-4 bg-white focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
-                                                                fieldErrors.genre ? "border-red-500 focus:border-red-500" : "border-gray-300 focus:border-blue-500"
-                                                            }`}
-                                                            value={data.genre}
-                                                            onChange={(e) => setData({...data, genre: e.target.value})}
-                                                        >
-                                                            <option value="">Sélectionner...</option>
-                                                            <option value="M">Masculin</option>
-                                                            <option value="F">Féminin</option>
-                                                        </select>
-                                                        {fieldErrors.genre && (
-                                                            <p className="text-red-500 text-xs mt-1">{fieldErrors.genre}</p>
-                                                        )}
-                                                    </FormField>
-                                                    <FormField label="Date de naissance" icon={Calendar} required>
-                                                        <input
-                                                            type="date"
-                                                            className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
-                                                                fieldErrors.date_naissance ? "border-red-500 focus:border-red-500" : "border-gray-300 focus:border-blue-500"
-                                                            }`}
-                                                            value={data.date_naissance}
-                                                            onChange={(e) => setData({...data, date_naissance: e.target.value})}
-                                                        />
-                                                        {(fieldErrors.date_naissance || errors.date_naissance) && (
-                                                            <p className="text-red-500 text-xs mt-1">
-                                                                {fieldErrors.date_naissance || errors.date_naissance}
-                                                            </p>
-                                                        )}
-                                                    </FormField>
-                                                </div>
-                                            </section>
-
-                                            <section>
-                                                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 pb-2 border-b border-gray-100">
-                                                    <Mail className="w-5 h-5 text-green-600" />
-                                                    Contact & Coordonnées
-                                                </h3>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <FormField label="Email" icon={Mail}>
-                                                        <input
-                                                            ref={emailRef}
-                                                            type="email"
-                                                            className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
-                                                                fieldErrors.email ? "border-red-500 focus:border-red-500" : "border-gray-300 focus:border-blue-500"
-                                                            }`}
-                                                            value={data.email}
-                                                            onChange={(e) => setData({...data, email: e.target.value})}
-                                                            placeholder="ex: jean.dupont@gmail.com"
-                                                        />
-                                                        {(fieldErrors.email || errors.email) && (
-                                                            <p className="text-red-500 text-xs mt-1">
-                                                                {fieldErrors.email || errors.email}
-                                                            </p>
-                                                        )}
-                                                    </FormField>
-                                                    <FormField label="Téléphone" icon={Phone}>
-                                                        <div className="flex">
-                                                            <span className="bg-gray-100 border border-gray-300 border-r-0 rounded-l-lg px-3 flex items-center text-gray-600">
-                                                                +225
-                                                            </span>
+                                                    {/* Photo Upload */}
+                                                    <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200 mb-4">
+                                                        <div className="flex flex-col items-center gap-2">
+                                                            <h3 className="text-xs font-bold text-gray-800">
+                                                                Photo
+                                                            </h3>
+                                                            <div className="w-14 h-14 rounded-full bg-white overflow-hidden border-2 border-blue-400 shadow-md">
+                                                                {data.photoPreview ? (
+                                                                    <img
+                                                                        src={
+                                                                            data.photoPreview
+                                                                        }
+                                                                        alt="profil"
+                                                                        className="w-full h-full object-cover"
+                                                                    />
+                                                                ) : (
+                                                                    <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                                                                        <User className="w-6 h-6 text-gray-400" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                             <input
-                                                                type="tel"
-                                                                className="flex-1 h-12 border border-gray-300 rounded-r-lg px-4 outline-none focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
-                                                                value={data.telephone}
-                                                                onChange={(e) => setData({...data, telephone: e.target.value.replace(/\D/g, "").substring(0, 10)})}
-                                                                placeholder="ex: 0102030405"
-                                                                maxLength="10"
+                                                                type="file"
+                                                                accept="image/*"
+                                                                onChange={(
+                                                                    e,
+                                                                ) => {
+                                                                    const file =
+                                                                        e.target
+                                                                            .files &&
+                                                                        e.target
+                                                                            .files[0];
+                                                                    if (file) {
+                                                                        const preview =
+                                                                            URL.createObjectURL(
+                                                                                file,
+                                                                            );
+                                                                        if (
+                                                                            data.photoPreview
+                                                                        ) {
+                                                                            URL.revokeObjectURL(
+                                                                                data.photoPreview,
+                                                                            );
+                                                                        }
+                                                                        setData(
+                                                                            {
+                                                                                ...data,
+                                                                                photo: file,
+                                                                                photoPreview:
+                                                                                    preview,
+                                                                            },
+                                                                        );
+                                                                    }
+                                                                }}
+                                                                className="file:py-0.5 file:px-2 file:rounded file:bg-blue-600 file:text-white file:cursor-pointer file:font-semibold file:border-0 file:hover:bg-blue-700 file:transition-colors file:text-xs"
                                                             />
                                                         </div>
-                                                    </FormField>
-                                                </div>
-                                            </section>
+                                                    </div>
 
-                                            <section>
-                                                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 pb-2 border-b border-gray-100">
-                                                    <Award className="w-5 h-5 text-purple-600" />
-                                                    Statut Professionnel
-                                                </h3>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <FormField label="Profession" icon={Briefcase} required>
-                                                        <input
-                                                            className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
-                                                                fieldErrors.profession ? "border-red-500 focus:border-red-500" : "border-gray-300 focus:border-blue-500"
-                                                            }`}
-                                                            value={data.profession}
-                                                            onChange={(e) => setData({...data, profession: e.target.value})}
-                                                            placeholder="ex: Enseignant, Commerçant"
-                                                        />
-                                                        {(fieldErrors.profession || errors.profession) && (
-                                                            <p className="text-red-500 text-xs mt-1">
-                                                                {fieldErrors.profession || errors.profession}
-                                                            </p>
-                                                        )}
-                                                    </FormField>
-                                                    <FormField label="Fonction dans l'église" icon={Users} required>
-                                                        <Select2Fonction
-                                                            value={data.fonction_id ? [data.fonction_id] : []}
-                                                            onChange={(e) => setData({...data, fonction_id: e.target.value && e.target.value.length > 0 ? String(e.target.value[0]) : ""})}
-                                                            options={fonctions}
-                                                            placeholder="Non renseigné"
-                                                        />
-                                                        {(fieldErrors.fonction_id || errors.fonction_id) && (
-                                                            <p className="text-red-500 text-xs mt-1">
-                                                                {fieldErrors.fonction_id || errors.fonction_id}
-                                                            </p>
-                                                        )}
-                                                    </FormField>
-                                                    <FormField label="Relation de Famille" icon={Users}>
-                                                        <Select2Relation
-                                                            value={data.relation}
-                                                            onChange={(e) => setData({...data, relation: e.target.value})}
-                                                            placeholder="Non renseigné"
-                                                        />
-                                                        {errors.relation && (
-                                                            <p className="text-red-500 text-xs mt-1">
-                                                                {errors.relation}
-                                                            </p>
-                                                        )}
-                                                    </FormField>
-                                                </div>
-                                            </section>
-                                        </div>
-
-                                        {/* DROITE : Situation & Sacrements */}
-                                        <div className="space-y-6">
-                                            <section>
-                                                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 pb-2 border-b border-gray-100">
-                                                    <Heart className="w-5 h-5 text-pink-600" />
-                                                    Situation Matrimoniale
-                                                </h3>
-                                                <div className="space-y-4">
-                                                    <FormField label="Statut Marital" icon={Heart} required>
-                                                        <select
-                                                            className="w-full h-12 border border-gray-300 rounded-lg px-4 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
-                                                            value={data.statut_marital}
-                                                            onChange={(e) => setData({...data, statut_marital: e.target.value})}
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <FormField
+                                                            label="Nom"
+                                                            icon={User}
+                                                            required
                                                         >
-                                                            <option value="">Non renseigné</option>
-                                                            <option value="Célibataire">Célibataire</option>
-                                                            <option value="Marié(e)">Marié(e)</option>
-                                                            <option value="Divorcé(e)">Divorcé(e)</option>
-                                                            <option value="Veuf(ve)">Veuf(ve)</option>
-                                                            <option value="Dote">Doté(e)</option>
-                                                        </select>
-                                                        {errors.statut_marital && (
-                                                            <p className="text-red-500 text-xs mt-1">
-                                                                {errors.statut_marital}
-                                                            </p>
-                                                        )}
-                                                    </FormField>
+                                                            <input
+                                                                ref={nomRef}
+                                                                className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 uppercase ${
+                                                                    fieldErrors.nom
+                                                                        ? "border-red-500 focus:border-red-500"
+                                                                        : "border-gray-300 focus:border-blue-500"
+                                                                }`}
+                                                                value={data.nom}
+                                                                onChange={(e) =>
+                                                                    setData({
+                                                                        ...data,
+                                                                        nom: e.target.value.toUpperCase(),
+                                                                    })
+                                                                }
+                                                                placeholder="ex: DUPONT"
+                                                            />
+                                                            {(fieldErrors.nom ||
+                                                                errors.nom) && (
+                                                                <p className="text-red-500 text-xs mt-1">
+                                                                    {fieldErrors.nom ||
+                                                                        errors.nom}
+                                                                </p>
+                                                            )}
+                                                        </FormField>
+                                                        <FormField
+                                                            label="Prénom"
+                                                            icon={User}
+                                                            required
+                                                        >
+                                                            <input
+                                                                ref={prenomRef}
+                                                                className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 capitalize ${
+                                                                    fieldErrors.prenom
+                                                                        ? "border-red-500 focus:border-red-500"
+                                                                        : "border-gray-300 focus:border-blue-500"
+                                                                }`}
+                                                                value={
+                                                                    data.prenom
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setData({
+                                                                        ...data,
+                                                                        prenom: e.target.value.toUpperCase(),
+                                                                    })
+                                                                }
+                                                                placeholder="ex: Jean"
+                                                            />
+                                                            {(fieldErrors.prenom ||
+                                                                errors.prenom) && (
+                                                                <p className="text-red-500 text-xs mt-1">
+                                                                    {fieldErrors.prenom ||
+                                                                        errors.prenom}
+                                                                </p>
+                                                            )}
+                                                        </FormField>
+                                                        <FormField
+                                                            label="Genre"
+                                                            icon={Users}
+                                                            required
+                                                        >
+                                                            <select
+                                                                className={`w-full h-12 border rounded-lg px-4 bg-white focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
+                                                                    fieldErrors.genre
+                                                                        ? "border-red-500 focus:border-red-500"
+                                                                        : "border-gray-300 focus:border-blue-500"
+                                                                }`}
+                                                                value={
+                                                                    data.genre
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setData({
+                                                                        ...data,
+                                                                        genre: e
+                                                                            .target
+                                                                            .value,
+                                                                    })
+                                                                }
+                                                            >
+                                                                <option value="">
+                                                                    Sélectionner...
+                                                                </option>
+                                                                <option value="M">
+                                                                    Masculin
+                                                                </option>
+                                                                <option value="F">
+                                                                    Féminin
+                                                                </option>
+                                                            </select>
+                                                            {fieldErrors.genre && (
+                                                                <p className="text-red-500 text-xs mt-1">
+                                                                    {
+                                                                        fieldErrors.genre
+                                                                    }
+                                                                </p>
+                                                            )}
+                                                        </FormField>
+                                                        <FormField
+                                                            label="Date de naissance"
+                                                            icon={Calendar}
+                                                            required
+                                                        >
+                                                            <input
+                                                                type="date"
+                                                                className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
+                                                                    fieldErrors.date_naissance
+                                                                        ? "border-red-500 focus:border-red-500"
+                                                                        : "border-gray-300 focus:border-blue-500"
+                                                                }`}
+                                                                value={
+                                                                    data.date_naissance
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setData({
+                                                                        ...data,
+                                                                        date_naissance:
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                    })
+                                                                }
+                                                            />
+                                                            {(fieldErrors.date_naissance ||
+                                                                errors.date_naissance) && (
+                                                                <p className="text-red-500 text-xs mt-1">
+                                                                    {fieldErrors.date_naissance ||
+                                                                        errors.date_naissance}
+                                                                </p>
+                                                            )}
+                                                        </FormField>
+                                                    </div>
+                                                </section>
 
-                                                    {data.statut_marital && data.statut_marital !== "Célibataire" && (
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                                            <FormField label={data.statut_marital === "Dote" ? "Date Dot" : data.statut_marital === "Divorcé(e)" ? "Date du Divorce" : data.statut_marital === "Veuf(ve)" ? "Date du Décès" : "Date Mariage"} icon={Calendar} required>
+                                                <section>
+                                                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 pb-2 border-b border-gray-100">
+                                                        <Mail className="w-5 h-5 text-green-600" />
+                                                        Contact & Coordonnées
+                                                    </h3>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <FormField
+                                                            label="Email"
+                                                            icon={Mail}
+                                                        >
+                                                            <input
+                                                                ref={emailRef}
+                                                                type="email"
+                                                                className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
+                                                                    fieldErrors.email
+                                                                        ? "border-red-500 focus:border-red-500"
+                                                                        : "border-gray-300 focus:border-blue-500"
+                                                                }`}
+                                                                value={
+                                                                    data.email
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setData({
+                                                                        ...data,
+                                                                        email: e
+                                                                            .target
+                                                                            .value,
+                                                                    })
+                                                                }
+                                                                placeholder="ex: jean.dupont@gmail.com"
+                                                            />
+                                                            {(fieldErrors.email ||
+                                                                errors.email) && (
+                                                                <p className="text-red-500 text-xs mt-1">
+                                                                    {fieldErrors.email ||
+                                                                        errors.email}
+                                                                </p>
+                                                            )}
+                                                        </FormField>
+                                                        <FormField
+                                                            label="Téléphone"
+                                                            icon={Phone}
+                                                        >
+                                                            <div className="flex">
+                                                                <span className="bg-gray-100 border border-gray-300 border-r-0 rounded-l-lg px-3 flex items-center text-gray-600">
+                                                                    +225
+                                                                </span>
+                                                                <input
+                                                                    type="tel"
+                                                                    className="flex-1 h-12 border border-gray-300 rounded-r-lg px-4 outline-none focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
+                                                                    value={
+                                                                        data.telephone
+                                                                    }
+                                                                    onChange={(
+                                                                        e,
+                                                                    ) =>
+                                                                        setData(
+                                                                            {
+                                                                                ...data,
+                                                                                telephone:
+                                                                                    e.target.value
+                                                                                        .replace(
+                                                                                            /\D/g,
+                                                                                            "",
+                                                                                        )
+                                                                                        .substring(
+                                                                                            0,
+                                                                                            10,
+                                                                                        ),
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                    placeholder="ex: 0102030405"
+                                                                    maxLength="10"
+                                                                />
+                                                            </div>
+                                                        </FormField>
+                                                    </div>
+                                                </section>
+
+                                                <section>
+                                                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 pb-2 border-b border-gray-100">
+                                                        <Award className="w-5 h-5 text-purple-600" />
+                                                        Statut Professionnel
+                                                    </h3>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <FormField
+                                                            label="Profession"
+                                                            icon={Briefcase}
+                                                            required
+                                                        >
+                                                            <input
+                                                                className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
+                                                                    fieldErrors.profession
+                                                                        ? "border-red-500 focus:border-red-500"
+                                                                        : "border-gray-300 focus:border-blue-500"
+                                                                }`}
+                                                                value={
+                                                                    data.profession
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setData({
+                                                                        ...data,
+                                                                        profession:
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                    })
+                                                                }
+                                                                placeholder="ex: Enseignant, Commerçant"
+                                                            />
+                                                            {(fieldErrors.profession ||
+                                                                errors.profession) && (
+                                                                <p className="text-red-500 text-xs mt-1">
+                                                                    {fieldErrors.profession ||
+                                                                        errors.profession}
+                                                                </p>
+                                                            )}
+                                                        </FormField>
+                                                        <FormField
+                                                            label="Fonction dans l'église"
+                                                            icon={Users}
+                                                            required
+                                                        >
+                                                            <Select2Fonction
+                                                                value={
+                                                                    data.fonction_id
+                                                                        ? [
+                                                                              data.fonction_id,
+                                                                          ]
+                                                                        : []
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setData({
+                                                                        ...data,
+                                                                        fonction_id:
+                                                                            e
+                                                                                .target
+                                                                                .value &&
+                                                                            e
+                                                                                .target
+                                                                                .value
+                                                                                .length >
+                                                                                0
+                                                                                ? String(
+                                                                                      e
+                                                                                          .target
+                                                                                          .value[0],
+                                                                                  )
+                                                                                : "",
+                                                                    })
+                                                                }
+                                                                options={
+                                                                    fonctions
+                                                                }
+                                                                placeholder="Non renseigné"
+                                                            />
+                                                            {(fieldErrors.fonction_id ||
+                                                                errors.fonction_id) && (
+                                                                <p className="text-red-500 text-xs mt-1">
+                                                                    {fieldErrors.fonction_id ||
+                                                                        errors.fonction_id}
+                                                                </p>
+                                                            )}
+                                                        </FormField>
+                                                        <FormField
+                                                            label="Relation de Famille"
+                                                            icon={Users}
+                                                        >
+                                                            <Select2Relation
+                                                                value={
+                                                                    data.relation
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setData({
+                                                                        ...data,
+                                                                        relation:
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                    })
+                                                                }
+                                                                placeholder="Non renseigné"
+                                                            />
+                                                            {errors.relation && (
+                                                                <p className="text-red-500 text-xs mt-1">
+                                                                    {
+                                                                        errors.relation
+                                                                    }
+                                                                </p>
+                                                            )}
+                                                        </FormField>
+                                                    </div>
+                                                </section>
+                                            </div>
+
+                                            {/* DROITE : Situation & Sacrements */}
+                                            <div className="space-y-6">
+                                                <section>
+                                                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 pb-2 border-b border-gray-100">
+                                                        <Heart className="w-5 h-5 text-pink-600" />
+                                                        Situation Matrimoniale
+                                                    </h3>
+                                                    <div className="space-y-4">
+                                                        <FormField
+                                                            label="Statut Marital"
+                                                            icon={Heart}
+                                                            required
+                                                        >
+                                                            <select
+                                                                className="w-full h-12 border border-gray-300 rounded-lg px-4 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
+                                                                value={
+                                                                    data.statut_marital
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setData({
+                                                                        ...data,
+                                                                        statut_marital:
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                    })
+                                                                }
+                                                            >
+                                                                <option value="">
+                                                                    Non
+                                                                    renseigné
+                                                                </option>
+                                                                <option value="Célibataire">
+                                                                    Célibataire
+                                                                </option>
+                                                                <option value="Marié(e)">
+                                                                    Marié(e)
+                                                                </option>
+                                                                <option value="Divorcé(e)">
+                                                                    Divorcé(e)
+                                                                </option>
+                                                                <option value="Veuf(ve)">
+                                                                    Veuf(ve)
+                                                                </option>
+                                                                <option value="Dote">
+                                                                    Doté(e)
+                                                                </option>
+                                                            </select>
+                                                            {errors.statut_marital && (
+                                                                <p className="text-red-500 text-xs mt-1">
+                                                                    {
+                                                                        errors.statut_marital
+                                                                    }
+                                                                </p>
+                                                            )}
+                                                        </FormField>
+
+                                                        {data.statut_marital &&
+                                                            data.statut_marital !==
+                                                                "Célibataire" && (
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                                                    <FormField
+                                                                        label={
+                                                                            data.statut_marital ===
+                                                                            "Dote"
+                                                                                ? "Date Dot"
+                                                                                : data.statut_marital ===
+                                                                                    "Divorcé(e)"
+                                                                                  ? "Date du Divorce"
+                                                                                  : data.statut_marital ===
+                                                                                      "Veuf(ve)"
+                                                                                    ? "Date du Décès"
+                                                                                    : "Date Mariage"
+                                                                        }
+                                                                        icon={
+                                                                            Calendar
+                                                                        }
+                                                                        required
+                                                                    >
+                                                                        <input
+                                                                            type="date"
+                                                                            className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
+                                                                            value={
+                                                                                data.date_mariage
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                setData(
+                                                                                    {
+                                                                                        ...data,
+                                                                                        date_mariage:
+                                                                                            e
+                                                                                                .target
+                                                                                                .value,
+                                                                                    },
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                        {errors.date_mariage && (
+                                                                            <p className="text-red-500 text-xs mt-1">
+                                                                                {
+                                                                                    errors.date_mariage
+                                                                                }
+                                                                            </p>
+                                                                        )}
+                                                                    </FormField>
+                                                                    <FormField
+                                                                        label={
+                                                                            data.statut_marital ===
+                                                                            "Dote"
+                                                                                ? "Lieu Dot"
+                                                                                : data.statut_marital ===
+                                                                                    "Divorcé(e)"
+                                                                                  ? "Lieu du Divorce"
+                                                                                  : data.statut_marital ===
+                                                                                      "Veuf(ve)"
+                                                                                    ? "Lieu du Décès"
+                                                                                    : "Lieu Mariage"
+                                                                        }
+                                                                        icon={
+                                                                            MapPin
+                                                                        }
+                                                                        required
+                                                                    >
+                                                                        <input
+                                                                            className="w-full h-10 border border-gray-300 rounded px-2 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
+                                                                            value={
+                                                                                data.lieu_mariage
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                setData(
+                                                                                    {
+                                                                                        ...data,
+                                                                                        lieu_mariage:
+                                                                                            e
+                                                                                                .target
+                                                                                                .value,
+                                                                                    },
+                                                                                )
+                                                                            }
+                                                                            placeholder="ex: Paris, Yaoundé"
+                                                                        />
+                                                                        {errors.lieu_mariage && (
+                                                                            <p className="text-red-500 text-xs mt-1">
+                                                                                {
+                                                                                    errors.lieu_mariage
+                                                                                }
+                                                                            </p>
+                                                                        )}
+                                                                    </FormField>
+                                                                </div>
+                                                            )}
+                                                    </div>
+                                                </section>
+
+                                                <section>
+                                                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 pb-2 border-b border-gray-100">
+                                                        <BookOpen className="w-5 h-5 text-indigo-600" />
+                                                        Sacrements & Vie
+                                                        Chrétienne
+                                                    </h3>
+                                                    <div className="space-y-3">
+                                                        <SacrementSection
+                                                            title="Baptême"
+                                                            icon={BookOpen}
+                                                            color="purple"
+                                                            checked={
+                                                                data.baptise
+                                                            }
+                                                            onChange={(val) =>
+                                                                setData({
+                                                                    ...data,
+                                                                    baptise:
+                                                                        val,
+                                                                })
+                                                            }
+                                                        >
+                                                            <FormField label="Date du baptême">
                                                                 <input
                                                                     type="date"
                                                                     className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
-                                                                    value={data.date_mariage}
-                                                                    onChange={(e) => setData({...data, date_mariage: e.target.value})}
+                                                                    value={
+                                                                        data.date_bapteme
+                                                                    }
+                                                                    onChange={(
+                                                                        e,
+                                                                    ) =>
+                                                                        setData(
+                                                                            {
+                                                                                ...data,
+                                                                                date_bapteme:
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                            },
+                                                                        )
+                                                                    }
                                                                 />
-                                                                {errors.date_mariage && (
-                                                                    <p className="text-red-500 text-xs mt-1">
-                                                                        {errors.date_mariage}
-                                                                    </p>
-                                                                )}
                                                             </FormField>
-                                                            <FormField label={data.statut_marital === "Dote" ? "Lieu Dot" : data.statut_marital === "Divorcé(e)" ? "Lieu du Divorce" : data.statut_marital === "Veuf(ve)" ? "Lieu du Décès" : "Lieu Mariage"} icon={MapPin} required>
+                                                            <FormField label="Lieu du baptême">
                                                                 <input
                                                                     className="w-full h-10 border border-gray-300 rounded px-2 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
-                                                                    value={data.lieu_mariage}
-                                                                    onChange={(e) => setData({...data, lieu_mariage: e.target.value})}
-                                                                    placeholder="ex: Paris, Yaoundé"
+                                                                    value={
+                                                                        data.lieu_bapteme
+                                                                    }
+                                                                    onChange={(
+                                                                        e,
+                                                                    ) =>
+                                                                        setData(
+                                                                            {
+                                                                                ...data,
+                                                                                lieu_bapteme:
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                    placeholder="ex: Église Saint-Paul"
                                                                 />
-                                                                {errors.lieu_mariage && (
-                                                                    <p className="text-red-500 text-xs mt-1">
-                                                                        {errors.lieu_mariage}
-                                                                    </p>
-                                                                )}
                                                             </FormField>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </section>
+                                                        </SacrementSection>
 
-                                            <section>
-                                                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 pb-2 border-b border-gray-100">
-                                                    <BookOpen className="w-5 h-5 text-indigo-600" />
-                                                    Sacrements & Vie Chrétienne
-                                                </h3>
-                                                <div className="space-y-3">
-                                                    <SacrementSection
-                                                        title="Baptême"
-                                                        icon={BookOpen}
-                                                        color="purple"
-                                                        checked={data.baptise}
-                                                        onChange={(val) => setData({ ...data, baptise: val })}
-                                                    >
-                                                        <FormField label="Date du baptême">
-                                                            <input
-                                                                type="date"
-                                                                className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
-                                                                value={data.date_bapteme}
-                                                                onChange={(e) => setData({...data, date_bapteme: e.target.value})}
-                                                            />
-                                                        </FormField>
-                                                        <FormField label="Lieu du baptême">
-                                                            <input
-                                                                className="w-full h-10 border border-gray-300 rounded px-2 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
-                                                                value={data.lieu_bapteme}
-                                                                onChange={(e) => setData({...data, lieu_bapteme: e.target.value})}
-                                                                placeholder="ex: Église Saint-Paul"
-                                                            />
-                                                        </FormField>
-                                                    </SacrementSection>
+                                                        <SacrementSection
+                                                            title="Première Communion"
+                                                            icon={Gift}
+                                                            color="yellow"
+                                                            checked={
+                                                                data.premiere_communion
+                                                            }
+                                                            onChange={(val) =>
+                                                                setData({
+                                                                    ...data,
+                                                                    premiere_communion:
+                                                                        val,
+                                                                })
+                                                            }
+                                                        >
+                                                            <FormField label="Date de première communion">
+                                                                <input
+                                                                    type="date"
+                                                                    className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
+                                                                    value={
+                                                                        data.date_premiere_communion
+                                                                    }
+                                                                    onChange={(
+                                                                        e,
+                                                                    ) =>
+                                                                        setData(
+                                                                            {
+                                                                                ...data,
+                                                                                date_premiere_communion:
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                />
+                                                            </FormField>
+                                                            <FormField label="Lieu de première communion">
+                                                                <input
+                                                                    className="w-full h-10 border border-gray-300 rounded px-2 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
+                                                                    value={
+                                                                        data.lieu_premiere_communion
+                                                                    }
+                                                                    onChange={(
+                                                                        e,
+                                                                    ) =>
+                                                                        setData(
+                                                                            {
+                                                                                ...data,
+                                                                                lieu_premiere_communion:
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                    placeholder="ex: Église Saint-Paul"
+                                                                />
+                                                            </FormField>
+                                                        </SacrementSection>
 
-                                                    <SacrementSection
-                                                        title="Première Communion"
-                                                        icon={Gift}
-                                                        color="yellow"
-                                                        checked={data.premiere_communion}
-                                                        onChange={(val) => setData({ ...data, premiere_communion: val })}
-                                                    >
-                                                        <FormField label="Date de première communion">
-                                                            <input
-                                                                type="date"
-                                                                className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
-                                                                value={data.date_premiere_communion}
-                                                                onChange={(e) => setData({...data, date_premiere_communion: e.target.value})}
-                                                            />
-                                                        </FormField>
-                                                        <FormField label="Lieu de première communion">
-                                                            <input
-                                                                className="w-full h-10 border border-gray-300 rounded px-2 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
-                                                                value={data.lieu_premiere_communion}
-                                                                onChange={(e) => setData({...data, lieu_premiere_communion: e.target.value})}
-                                                                placeholder="ex: Église Saint-Paul"
-                                                            />
-                                                        </FormField>
-                                                    </SacrementSection>
-
-                                                    <SacrementSection
-                                                        title="Mariage Religieux"
-                                                        icon={Heart}
-                                                        color="rose"
-                                                        checked={data.marie_religieusement}
-                                                        onChange={(val) => setData({ ...data, marie_religieusement: val })}
-                                                    >
-                                                        <FormField label="Date du mariage religieux">
-                                                            <input
-                                                                type="date"
-                                                                className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
-                                                                value={data.date_mariage_religieux}
-                                                                onChange={(e) => setData({...data, date_mariage_religieux: e.target.value})}
-                                                            />
-                                                        </FormField>
-                                                        <FormField label="Lieu du mariage religieux">
-                                                            <input
-                                                                className="w-full h-10 border border-gray-300 rounded px-2 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
-                                                                value={data.lieu_mariage_religieux}
-                                                                onChange={(e) => setData({...data, lieu_mariage_religieux: e.target.value})}
-                                                                placeholder="ex: Église Saint-Paul"
-                                                            />
-                                                        </FormField>
-                                                    </SacrementSection>
-                                                </div>
-                                            </section>
+                                                        <SacrementSection
+                                                            title="Mariage Religieux"
+                                                            icon={Heart}
+                                                            color="rose"
+                                                            checked={
+                                                                data.marie_religieusement
+                                                            }
+                                                            onChange={(val) =>
+                                                                setData({
+                                                                    ...data,
+                                                                    marie_religieusement:
+                                                                        val,
+                                                                })
+                                                            }
+                                                        >
+                                                            <FormField label="Date du mariage religieux">
+                                                                <input
+                                                                    type="date"
+                                                                    className="w-full h-10 border border-gray-300 rounded px-2 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
+                                                                    value={
+                                                                        data.date_mariage_religieux
+                                                                    }
+                                                                    onChange={(
+                                                                        e,
+                                                                    ) =>
+                                                                        setData(
+                                                                            {
+                                                                                ...data,
+                                                                                date_mariage_religieux:
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                />
+                                                            </FormField>
+                                                            <FormField label="Lieu du mariage religieux">
+                                                                <input
+                                                                    className="w-full h-10 border border-gray-300 rounded px-2 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
+                                                                    value={
+                                                                        data.lieu_mariage_religieux
+                                                                    }
+                                                                    onChange={(
+                                                                        e,
+                                                                    ) =>
+                                                                        setData(
+                                                                            {
+                                                                                ...data,
+                                                                                lieu_mariage_religieux:
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                    placeholder="ex: Église Saint-Paul"
+                                                                />
+                                                            </FormField>
+                                                        </SacrementSection>
+                                                    </div>
+                                                </section>
+                                            </div>
                                         </div>
 
-                                    </div>
-
-                                    {/* Footer Actions */}
-                                    <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowModal(false)}
-                                            className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2"
-                                        >
-                                            <X className="w-4 h-4" /> Annuler
-                                        </button>
-                                        <button
-                                            type="submit"
-                                            disabled={processing}
-                                            className="px-8 py-2.5 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-blue-500/30 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform disabled:hover:scale-100 flex items-center gap-2"
-                                        >
-                                            {processing ? (
-                                                <>Enregistrement...</>
-                                            ) : (
-                                                <><Check className="w-4 h-4" /> {modalMode === "create" ? "Enregistrer le Membre" : "Mettre à jour"}</>
-                                            )}
-                                        </button>
-                                    </div>
-
-                                </form>
+                                        {/* Footer Actions */}
+                                        <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setShowModal(false)
+                                                }
+                                                className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2"
+                                            >
+                                                <X className="w-4 h-4" />{" "}
+                                                Annuler
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                disabled={processing}
+                                                className="px-8 py-2.5 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-blue-500/30 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform disabled:hover:scale-100 flex items-center gap-2"
+                                            >
+                                                {processing ? (
+                                                    <>Enregistrement...</>
+                                                ) : (
+                                                    <>
+                                                        <Check className="w-4 h-4" />{" "}
+                                                        {modalMode === "create"
+                                                            ? "Enregistrer le Membre"
+                                                            : "Mettre à jour"}
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    ))}
 
                 {/* MODAL DÉTAILS INSCRIPTION (Design Cartes) */}
                 {showDetailModal && selectedInscription && (
@@ -2443,8 +3557,8 @@ export default function Inscriptions({
                                                     </label>
                                                     <p className="text-slate-800 font-medium">
                                                         {selectedInscription.date_naissance ||
-                                                        selectedInscription.responsable_date_naissance ||
-                                                        "N/A"}
+                                                            selectedInscription.responsable_date_naissance ||
+                                                            "N/A"}
                                                     </p>
                                                 </div>
                                                 <div>
@@ -2521,7 +3635,9 @@ export default function Inscriptions({
                                                 Baptisé
                                             </label>
                                             <p className="text-slate-800 font-medium">
-                                                {selectedInscription.baptise ? "Oui" : "Non"}
+                                                {selectedInscription.baptise
+                                                    ? "Oui"
+                                                    : "Non"}
                                             </p>
                                         </div>
                                         {selectedInscription.date_mariage && (
@@ -2530,7 +3646,9 @@ export default function Inscriptions({
                                                     Date Mariage
                                                 </label>
                                                 <p className="text-slate-800 font-medium">
-                                                    {selectedInscription.date_mariage}
+                                                    {
+                                                        selectedInscription.date_mariage
+                                                    }
                                                 </p>
                                             </div>
                                         )}
@@ -2540,7 +3658,9 @@ export default function Inscriptions({
                                                     Lieu Mariage
                                                 </label>
                                                 <p className="text-slate-800 font-medium">
-                                                    {selectedInscription.lieu_mariage}
+                                                    {
+                                                        selectedInscription.lieu_mariage
+                                                    }
                                                 </p>
                                             </div>
                                         )}
@@ -2550,7 +3670,9 @@ export default function Inscriptions({
                                                     Date Baptême
                                                 </label>
                                                 <p className="text-slate-800 font-medium">
-                                                    {selectedInscription.date_bapteme}
+                                                    {
+                                                        selectedInscription.date_bapteme
+                                                    }
                                                 </p>
                                             </div>
                                         )}
@@ -2560,7 +3682,9 @@ export default function Inscriptions({
                                                     Lieu Baptême
                                                 </label>
                                                 <p className="text-slate-800 font-medium">
-                                                    {selectedInscription.lieu_bapteme}
+                                                    {
+                                                        selectedInscription.lieu_bapteme
+                                                    }
                                                 </p>
                                             </div>
                                         )}
@@ -2570,7 +3694,9 @@ export default function Inscriptions({
                                                     Première Communion
                                                 </label>
                                                 <p className="text-slate-800 font-medium">
-                                                    {selectedInscription.premiere_communion ? "Oui" : "Non"}
+                                                    {selectedInscription.premiere_communion
+                                                        ? "Oui"
+                                                        : "Non"}
                                                 </p>
                                             </div>
                                         )}
@@ -2580,7 +3706,9 @@ export default function Inscriptions({
                                                     Date Première Communion
                                                 </label>
                                                 <p className="text-slate-800 font-medium">
-                                                    {selectedInscription.date_premiere_communion}
+                                                    {
+                                                        selectedInscription.date_premiere_communion
+                                                    }
                                                 </p>
                                             </div>
                                         )}
@@ -2590,7 +3718,9 @@ export default function Inscriptions({
                                                     Mariage Religieux
                                                 </label>
                                                 <p className="text-slate-800 font-medium">
-                                                    {selectedInscription.mariage_religieux ? "Oui" : "Non"}
+                                                    {selectedInscription.mariage_religieux
+                                                        ? "Oui"
+                                                        : "Non"}
                                                 </p>
                                             </div>
                                         )}
@@ -2600,7 +3730,9 @@ export default function Inscriptions({
                                                     Date Mariage Religieux
                                                 </label>
                                                 <p className="text-slate-800 font-medium">
-                                                    {selectedInscription.date_mariage_religieux}
+                                                    {
+                                                        selectedInscription.date_mariage_religieux
+                                                    }
                                                 </p>
                                             </div>
                                         )}
@@ -2610,7 +3742,9 @@ export default function Inscriptions({
                                                     Lieu Mariage Religieux
                                                 </label>
                                                 <p className="text-slate-800 font-medium">
-                                                    {selectedInscription.lieu_mariage_religieux}
+                                                    {
+                                                        selectedInscription.lieu_mariage_religieux
+                                                    }
                                                 </p>
                                             </div>
                                         )}
@@ -2632,18 +3766,33 @@ export default function Inscriptions({
                                                 {selectedInscription.admin_approved ? (
                                                     <div className="flex items-center gap-2">
                                                         <span className="w-3 h-3 rounded-full bg-green-500"></span>
-                                                        <span className="text-slate-800 font-medium">Approuvé</span>
+                                                        <span className="text-slate-800 font-medium">
+                                                            Approuvé
+                                                        </span>
                                                         {selectedInscription.admin_name && (
-                                                            <span className="text-xs text-slate-600">par {selectedInscription.admin_name}</span>
+                                                            <span className="text-xs text-slate-600">
+                                                                par{" "}
+                                                                {
+                                                                    selectedInscription.admin_name
+                                                                }
+                                                            </span>
                                                         )}
                                                         {selectedInscription.admin_approved_at && (
-                                                            <span className="text-xs text-slate-600">le {formatDateDisplay(selectedInscription.admin_approved_at, "N/A")}</span>
+                                                            <span className="text-xs text-slate-600">
+                                                                le{" "}
+                                                                {formatDateDisplay(
+                                                                    selectedInscription.admin_approved_at,
+                                                                    "N/A",
+                                                                )}
+                                                            </span>
                                                         )}
                                                     </div>
                                                 ) : (
                                                     <div className="flex items-center gap-2">
                                                         <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
-                                                        <span className="text-slate-800 font-medium">En attente</span>
+                                                        <span className="text-slate-800 font-medium">
+                                                            En attente
+                                                        </span>
                                                     </div>
                                                 )}
                                             </div>
@@ -2656,15 +3805,24 @@ export default function Inscriptions({
                                                 {selectedInscription.conducteur_approved ? (
                                                     <div className="flex items-center gap-2">
                                                         <span className="w-3 h-3 rounded-full bg-green-500"></span>
-                                                        <span className="text-slate-800 font-medium">Approuvé</span>
+                                                        <span className="text-slate-800 font-medium">
+                                                            Approuvé
+                                                        </span>
                                                         {selectedInscription.conducteur_name && (
-                                                            <span className="text-xs text-slate-600">par {selectedInscription.conducteur_name}</span>
+                                                            <span className="text-xs text-slate-600">
+                                                                par{" "}
+                                                                {
+                                                                    selectedInscription.conducteur_name
+                                                                }
+                                                            </span>
                                                         )}
                                                     </div>
                                                 ) : (
                                                     <div className="flex items-center gap-2">
                                                         <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
-                                                        <span className="text-slate-800 font-medium">En attente</span>
+                                                        <span className="text-slate-800 font-medium">
+                                                            En attente
+                                                        </span>
                                                     </div>
                                                 )}
                                             </div>
@@ -2675,7 +3833,9 @@ export default function Inscriptions({
                                                     Motif Rejet
                                                 </label>
                                                 <p className="text-slate-800 font-medium bg-red-50 border border-red-200 rounded-lg p-3 text-sm">
-                                                    {selectedInscription.raison_rejet}
+                                                    {
+                                                        selectedInscription.raison_rejet
+                                                    }
                                                 </p>
                                             </div>
                                         )}
@@ -2727,33 +3887,49 @@ export default function Inscriptions({
                                 <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                                     <div className="flex items-center gap-2 mb-4 text-green-600 font-bold uppercase text-xs tracking-wider">
                                         <CheckCircle className="w-4 h-4" />
-                                        <span>Informations supplémentaires</span>
+                                        <span>
+                                            Informations supplémentaires
+                                        </span>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {(selectedInscription.created_at || selectedInscription.raw?.created_at) && (
+                                        {(selectedInscription.created_at ||
+                                            selectedInscription.raw
+                                                ?.created_at) && (
                                             <div>
                                                 <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
                                                     Date d'inscription
                                                 </label>
                                                 <p className="text-slate-800 font-medium">
                                                     {formatDateDisplay(
-                                                        selectedInscription.created_at || selectedInscription.raw?.created_at,
+                                                        selectedInscription.created_at ||
+                                                            selectedInscription
+                                                                .raw
+                                                                ?.created_at,
                                                         "N/A",
                                                     )}
                                                 </p>
                                             </div>
                                         )}
-                                        {(selectedInscription.updated_at || selectedInscription.raw?.updated_at || selectedInscription.created_at || selectedInscription.raw?.created_at) && (
+                                        {(selectedInscription.updated_at ||
+                                            selectedInscription.raw
+                                                ?.updated_at ||
+                                            selectedInscription.created_at ||
+                                            selectedInscription.raw
+                                                ?.created_at) && (
                                             <div>
                                                 <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
                                                     Dernière modification
                                                 </label>
                                                 <p className="text-slate-800 font-medium">
                                                     {formatDateDisplay(
-                                                        selectedInscription.updated_at
-                                                            || selectedInscription.raw?.updated_at
-                                                            || selectedInscription.created_at
-                                                            || selectedInscription.raw?.created_at,
+                                                        selectedInscription.updated_at ||
+                                                            selectedInscription
+                                                                .raw
+                                                                ?.updated_at ||
+                                                            selectedInscription.created_at ||
+                                                            selectedInscription
+                                                                .raw
+                                                                ?.created_at,
                                                         "N/A",
                                                     )}
                                                 </p>
@@ -2763,41 +3939,70 @@ export default function Inscriptions({
                                 </div>
 
                                 {/* Section membres de la famille (si c'est une inscription familiale) */}
-                                {selectedInscription.type === 'famille' && selectedInscription.membres && selectedInscription.membres.length > 0 && (
-                                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                                        <div className="flex items-center gap-2 mb-4 text-purple-600 font-bold uppercase text-xs tracking-wider">
-                                            <Users className="w-4 h-4" />
-                                            <span>Membres de la famille ({selectedInscription.membres.length})</span>
-                                        </div>
-                                        <div className="space-y-3">
-                                            {selectedInscription.membres.map((membre, index) => (
-                                                <div key={index} className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center gap-4">
-                                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-300 to-indigo-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                                                        {membre.prenom?.[0]}{membre.nom?.[0]}
-                                                    </div>
-                                                    <div className="flex-grow">
-                                                        <div className="font-semibold text-slate-800">
-                                                            {membre.prenom} {membre.nom}
-                                                        </div>
-                                                        <div className="text-sm text-slate-600">
-                                                            {membre.email || "Email non renseigné"}
-                                                        </div>
-                                                        {membre.telephone && (
-                                                            <div className="text-xs text-slate-500">
-                                                                {membre.telephone}
+                                {selectedInscription.type === "famille" &&
+                                    selectedInscription.membres &&
+                                    selectedInscription.membres.length > 0 && (
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                                            <div className="flex items-center gap-2 mb-4 text-purple-600 font-bold uppercase text-xs tracking-wider">
+                                                <Users className="w-4 h-4" />
+                                                <span>
+                                                    Membres de la famille (
+                                                    {
+                                                        selectedInscription
+                                                            .membres.length
+                                                    }
+                                                    )
+                                                </span>
+                                            </div>
+                                            <div className="space-y-3">
+                                                {selectedInscription.membres.map(
+                                                    (membre, index) => (
+                                                        <div
+                                                            key={index}
+                                                            className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center gap-4"
+                                                        >
+                                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-300 to-indigo-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                                                                {
+                                                                    membre
+                                                                        .prenom?.[0]
+                                                                }
+                                                                {
+                                                                    membre
+                                                                        .nom?.[0]
+                                                                }
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                    {membre.relation && (
-                                                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-200 text-slate-700">
-                                                            {membre.relation}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            ))}
+                                                            <div className="flex-grow">
+                                                                <div className="font-semibold text-slate-800">
+                                                                    {
+                                                                        membre.prenom
+                                                                    }{" "}
+                                                                    {membre.nom}
+                                                                </div>
+                                                                <div className="text-sm text-slate-600">
+                                                                    {membre.email ||
+                                                                        "Email non renseigné"}
+                                                                </div>
+                                                                {membre.telephone && (
+                                                                    <div className="text-xs text-slate-500">
+                                                                        {
+                                                                            membre.telephone
+                                                                        }
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            {membre.relation && (
+                                                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-200 text-slate-700">
+                                                                    {
+                                                                        membre.relation
+                                                                    }
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    ),
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
                             </div>
                             <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
                                 <button
@@ -2859,7 +4064,8 @@ export default function Inscriptions({
                                     className="text-2xl font-bold text-slate-900"
                                     id="modal-title"
                                 >
-                                    Détails – {selectedMember.prenom} {selectedMember.nom}
+                                    Détails – {selectedMember.prenom}{" "}
+                                    {selectedMember.nom}
                                 </h2>
                                 <button
                                     onClick={() => setShowMemberModal(false)}
@@ -2878,13 +4084,16 @@ export default function Inscriptions({
                                         <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex-shrink-0 flex items-center justify-center text-white text-3xl font-bold shadow-md overflow-hidden">
                                             {selectedMember.profile_photo_url ? (
                                                 <img
-                                                    src={selectedMember.profile_photo_url}
+                                                    src={
+                                                        selectedMember.profile_photo_url
+                                                    }
                                                     alt={`${selectedMember.prenom} ${selectedMember.nom}`}
                                                     className="w-full h-full object-cover"
                                                 />
                                             ) : (
                                                 <>
-                                                    {selectedMember.prenom?.[0]}{selectedMember.nom?.[0]}
+                                                    {selectedMember.prenom?.[0]}
+                                                    {selectedMember.nom?.[0]}
                                                 </>
                                             )}
                                         </div>
@@ -2913,9 +4122,14 @@ export default function Inscriptions({
                                                         Rôle
                                                     </label>
                                                     <p className="text-slate-800 font-medium">
-                                                        {selectedMember.role === "responsable_famille" ? "Responsable de famille" :
-                                                         selectedMember.role === "membre_famille" ? "Membre de famille" :
-                                                         selectedMember.role || "Membre"}
+                                                        {selectedMember.role ===
+                                                        "responsable_famille"
+                                                            ? "Responsable de famille"
+                                                            : selectedMember.role ===
+                                                                "membre_famille"
+                                                              ? "Membre de famille"
+                                                              : selectedMember.role ||
+                                                                "Membre"}
                                                     </p>
                                                 </div>
                                                 <div>
@@ -2923,17 +4137,25 @@ export default function Inscriptions({
                                                         Statut
                                                     </label>
                                                     <p className="text-slate-800 font-medium">
-                                                        {selectedMember.status === "actif" ? "Actif" : "Inactif"}
+                                                        {selectedMember.status ===
+                                                        "actif"
+                                                            ? "Actif"
+                                                            : "Inactif"}
                                                     </p>
                                                 </div>
                                             </div>
-                                            {selectedMember.raw?.date_naissance && (
+                                            {selectedMember.raw
+                                                ?.date_naissance && (
                                                 <div>
                                                     <label className="block text-xs font-semibold text-slate-400 uppercase">
                                                         Date de naissance
                                                     </label>
                                                     <p className="text-slate-800 font-medium">
-                                                        {formatDateDisplay(selectedMember.raw.date_naissance, "N/A")}
+                                                        {formatDateDisplay(
+                                                            selectedMember.raw
+                                                                .date_naissance,
+                                                            "N/A",
+                                                        )}
                                                     </p>
                                                 </div>
                                             )}
@@ -2957,7 +4179,8 @@ export default function Inscriptions({
                                                         Email
                                                     </label>
                                                     <p className="text-slate-800 font-medium">
-                                                        {selectedMember.email || "Non renseigné"}
+                                                        {selectedMember.email ||
+                                                            "Non renseigné"}
                                                     </p>
                                                 </div>
                                             </div>
@@ -2970,7 +4193,8 @@ export default function Inscriptions({
                                                         Téléphone
                                                     </label>
                                                     <p className="text-slate-800 font-medium">
-                                                        {selectedMember.phone || "Non renseigné"}
+                                                        {selectedMember.phone ||
+                                                            "Non renseigné"}
                                                     </p>
                                                 </div>
                                             </div>
@@ -2987,10 +4211,21 @@ export default function Inscriptions({
                                                         </label>
                                                         <p className="text-slate-800 font-medium">
                                                             {(() => {
-                                                                const memberFamily = familiesList.find(f =>
-                                                                    f.members && f.members.some(m => m.id === selectedMember.id)
-                                                                );
-                                                                return memberFamily ? memberFamily.nom : `Famille #${selectedMember.famille_id}`;
+                                                                const memberFamily =
+                                                                    familiesList.find(
+                                                                        (f) =>
+                                                                            f.members &&
+                                                                            f.members.some(
+                                                                                (
+                                                                                    m,
+                                                                                ) =>
+                                                                                    m.id ===
+                                                                                    selectedMember.id,
+                                                                            ),
+                                                                    );
+                                                                return memberFamily
+                                                                    ? memberFamily.nom
+                                                                    : `Famille #${selectedMember.famille_id}`;
                                                             })()}
                                                         </p>
                                                     </div>
@@ -3003,7 +4238,9 @@ export default function Inscriptions({
                                 <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                                     <div className="flex items-center gap-2 mb-4 text-green-600 font-bold uppercase text-xs tracking-wider">
                                         <CheckCircle className="w-4 h-4" />
-                                        <span>Informations supplémentaires</span>
+                                        <span>
+                                            Informations supplémentaires
+                                        </span>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
@@ -3012,9 +4249,10 @@ export default function Inscriptions({
                                             </label>
                                             <p className="text-slate-800 font-medium">
                                                 {formatDateDisplay(
-                                                    selectedMember.raw?.created_at
-                                                        || selectedMember.created_at
-                                                        || null,
+                                                    selectedMember.raw
+                                                        ?.created_at ||
+                                                        selectedMember.created_at ||
+                                                        null,
                                                     "Non disponible",
                                                 )}
                                             </p>
@@ -3025,11 +4263,13 @@ export default function Inscriptions({
                                             </label>
                                             <p className="text-slate-800 font-medium">
                                                 {formatDateDisplay(
-                                                    selectedMember.raw?.updated_at
-                                                        || selectedMember.updated_at
-                                                        || selectedMember.raw?.created_at
-                                                        || selectedMember.created_at
-                                                        || null,
+                                                    selectedMember.raw
+                                                        ?.updated_at ||
+                                                        selectedMember.updated_at ||
+                                                        selectedMember.raw
+                                                            ?.created_at ||
+                                                        selectedMember.created_at ||
+                                                        null,
                                                     "Non disponible",
                                                 )}
                                             </p>
@@ -3049,7 +4289,9 @@ export default function Inscriptions({
                                                 Baptisé
                                             </label>
                                             <p className="text-slate-800 font-medium">
-                                                {selectedMember.raw?.baptise ? "Oui" : "Non"}
+                                                {selectedMember.raw?.baptise
+                                                    ? "Oui"
+                                                    : "Non"}
                                             </p>
                                         </div>
                                         <div>
@@ -3057,7 +4299,10 @@ export default function Inscriptions({
                                                 Première Communion
                                             </label>
                                             <p className="text-slate-800 font-medium">
-                                                {selectedMember.raw?.premiere_communion ? "Oui" : "Non"}
+                                                {selectedMember.raw
+                                                    ?.premiere_communion
+                                                    ? "Oui"
+                                                    : "Non"}
                                             </p>
                                         </div>
                                         <div>
@@ -3065,7 +4310,10 @@ export default function Inscriptions({
                                                 Mariage Religieux
                                             </label>
                                             <p className="text-slate-800 font-medium">
-                                                {selectedMember.raw?.mariage_religieux ? "Oui" : "Non"}
+                                                {selectedMember.raw
+                                                    ?.mariage_religieux
+                                                    ? "Oui"
+                                                    : "Non"}
                                             </p>
                                         </div>
                                         <div>
@@ -3073,7 +4321,9 @@ export default function Inscriptions({
                                                 Statut Marital
                                             </label>
                                             <p className="text-slate-800 font-medium">
-                                                {selectedMember.raw?.statut_marital || "Non renseigné"}
+                                                {selectedMember.raw
+                                                    ?.statut_marital ||
+                                                    "Non renseigné"}
                                             </p>
                                         </div>
                                         {selectedMember.raw?.date_bapteme && (
@@ -3082,7 +4332,10 @@ export default function Inscriptions({
                                                     Date Baptême
                                                 </label>
                                                 <p className="text-slate-800 font-medium">
-                                                    {selectedMember.raw.date_bapteme}
+                                                    {
+                                                        selectedMember.raw
+                                                            .date_bapteme
+                                                    }
                                                 </p>
                                             </div>
                                         )}
@@ -3092,37 +4345,52 @@ export default function Inscriptions({
                                                     Lieu Baptême
                                                 </label>
                                                 <p className="text-slate-800 font-medium">
-                                                    {selectedMember.raw.lieu_bapteme}
+                                                    {
+                                                        selectedMember.raw
+                                                            .lieu_bapteme
+                                                    }
                                                 </p>
                                             </div>
                                         )}
-                                        {selectedMember.raw?.date_premiere_communion && (
+                                        {selectedMember.raw
+                                            ?.date_premiere_communion && (
                                             <div>
                                                 <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
                                                     Date Première Communion
                                                 </label>
                                                 <p className="text-slate-800 font-medium">
-                                                    {selectedMember.raw.date_premiere_communion}
+                                                    {
+                                                        selectedMember.raw
+                                                            .date_premiere_communion
+                                                    }
                                                 </p>
                                             </div>
                                         )}
-                                        {selectedMember.raw?.date_mariage_religieux && (
+                                        {selectedMember.raw
+                                            ?.date_mariage_religieux && (
                                             <div>
                                                 <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
                                                     Date Mariage Religieux
                                                 </label>
                                                 <p className="text-slate-800 font-medium">
-                                                    {selectedMember.raw.date_mariage_religieux}
+                                                    {
+                                                        selectedMember.raw
+                                                            .date_mariage_religieux
+                                                    }
                                                 </p>
                                             </div>
                                         )}
-                                        {selectedMember.raw?.lieu_mariage_religieux && (
+                                        {selectedMember.raw
+                                            ?.lieu_mariage_religieux && (
                                             <div>
                                                 <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
                                                     Lieu Mariage Religieux
                                                 </label>
                                                 <p className="text-slate-800 font-medium">
-                                                    {selectedMember.raw.lieu_mariage_religieux}
+                                                    {
+                                                        selectedMember.raw
+                                                            .lieu_mariage_religieux
+                                                    }
                                                 </p>
                                             </div>
                                         )}
@@ -3132,7 +4400,10 @@ export default function Inscriptions({
                                                     Date Mariage
                                                 </label>
                                                 <p className="text-slate-800 font-medium">
-                                                    {selectedMember.raw.date_mariage}
+                                                    {
+                                                        selectedMember.raw
+                                                            .date_mariage
+                                                    }
                                                 </p>
                                             </div>
                                         )}
@@ -3142,7 +4413,10 @@ export default function Inscriptions({
                                                     Lieu Mariage
                                                 </label>
                                                 <p className="text-slate-800 font-medium">
-                                                    {selectedMember.raw.lieu_mariage}
+                                                    {
+                                                        selectedMember.raw
+                                                            .lieu_mariage
+                                                    }
                                                 </p>
                                             </div>
                                         )}
@@ -3225,9 +4499,7 @@ export default function Inscriptions({
                                 {/* Contenu */}
                                 <div className="overflow-y-auto p-8 space-y-4 max-h-[70vh]">
                                     <div className="flex items-center gap-2 mb-4 text-indigo-600 font-bold uppercase text-xs tracking-wider">
-                                        <Users
-                                            className="w-4 h-4"
-                                        />
+                                        <Users className="w-4 h-4" />
                                         <span>
                                             Membres de la famille (
                                             {selectedFamily.memberCount})
@@ -3273,14 +4545,23 @@ export default function Inscriptions({
                                     <div className="space-y-3">
                                         {selectedFamily.members &&
                                         selectedFamily.members.length > 0 ? (
-                                                selectedFamily.members
-                                                    .filter((member) => {
-                                                        if (member.responsable_famille) return false;
-                                                        if (selectedFamily.responsable?.id && member.id === selectedFamily.responsable.id) return false;
-                                                        return true;
-                                                    })
-                                                    .map(
-                                                (member, index) => (
+                                            selectedFamily.members
+                                                .filter((member) => {
+                                                    if (
+                                                        member.responsable_famille
+                                                    )
+                                                        return false;
+                                                    if (
+                                                        selectedFamily
+                                                            .responsable?.id &&
+                                                        member.id ===
+                                                            selectedFamily
+                                                                .responsable.id
+                                                    )
+                                                        return false;
+                                                    return true;
+                                                })
+                                                .map((member, index) => (
                                                     <div
                                                         key={`${member.kind}-${member.id}`}
                                                         className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition flex items-center gap-4"
@@ -3338,8 +4619,7 @@ export default function Inscriptions({
                                                             )}
                                                         </div>
                                                     </div>
-                                                ),
-                                            )
+                                                ))
                                         ) : (
                                             <div className="text-center py-8 text-slate-500">
                                                 <p>
@@ -3405,10 +4685,14 @@ export default function Inscriptions({
                                 <button
                                     type="button"
                                     disabled={toggleProcessing}
-                                    onClick={() => rejectMember(memberToToggle.id)}
+                                    onClick={() =>
+                                        rejectMember(memberToToggle.id)
+                                    }
                                     className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition disabled:opacity-50"
                                 >
-                                    {toggleProcessing ? "Désactivation..." : "Désactiver"}
+                                    {toggleProcessing
+                                        ? "Désactivation..."
+                                        : "Désactiver"}
                                 </button>
                             </div>
                         </div>
@@ -3418,12 +4702,3 @@ export default function Inscriptions({
         </>
     );
 }
-
-
-
-
-
-
-
-
-

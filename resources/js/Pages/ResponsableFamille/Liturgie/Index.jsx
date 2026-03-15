@@ -500,24 +500,38 @@ export default function Index({
                             value={quickFilter}
                             onChange={(e) => setQuickFilter(e.target.value)}
                         >
-                            <option value="all">🔍 Tous les actes et annonces</option>
+                            <option value="all">
+                                🔍 Tous les actes et annonces
+                            </option>
                             <optgroup label="Actes liturgiques">
                                 <option value="bapteme">💧 Baptême</option>
                                 <option value="mariage">💍 Mariage</option>
-                                <option value="premiere_communion">🍞 Première Communion</option>
-                                <option value="confirmation">✝️ Confirmation</option>
+                                <option value="premiere_communion">
+                                    🍞 Première Communion
+                                </option>
+                                <option value="confirmation">
+                                    ✝️ Confirmation
+                                </option>
                                 <option value="naissance">👶 Naissance</option>
                                 <option value="deces">🕯️ Décès</option>
                             </optgroup>
                             <optgroup label="Annonces">
                                 <option value="priere">🙏 Prière</option>
-                                <option value="grace">🙌 Action de grâce</option>
-                                <option value="felicitations">🎉 Félicitations</option>
+                                <option value="grace">
+                                    🙌 Action de grâce
+                                </option>
+                                <option value="felicitations">
+                                    🎉 Félicitations
+                                </option>
                                 <option value="generale">📢 Générale</option>
                             </optgroup>
                             <optgroup label="Mes contenus">
-                                <option value="mes_demandes">📋 Mes demandes</option>
-                                <option value="mes_annonces">📣 Mes annonces</option>
+                                <option value="mes_demandes">
+                                    📋 Mes demandes
+                                </option>
+                                <option value="mes_annonces">
+                                    📣 Mes annonces
+                                </option>
                             </optgroup>
                         </select>
                         <input
@@ -660,7 +674,13 @@ export default function Index({
                                                         acte.statut ===
                                                         "REFUSEE_PAR_CONDUCTEUR"
                                                     }
-                                                    date={refusConducteur ? formatDateTime(refusConducteur.created_at) : etapeConducteur?.date}
+                                                    date={
+                                                        refusConducteur
+                                                            ? formatDateTime(
+                                                                  refusConducteur.created_at,
+                                                              )
+                                                            : etapeConducteur?.date
+                                                    }
                                                 />
                                                 <StatusStep
                                                     label="Validation du pasteur"
@@ -681,7 +701,13 @@ export default function Index({
                                                         acte.statut ===
                                                         "REFUSEE_PAR_PASTEUR"
                                                     }
-                                                    date={refusPasteur ? formatDateTime(refusPasteur.created_at) : etapePasteur?.date}
+                                                    date={
+                                                        refusPasteur
+                                                            ? formatDateTime(
+                                                                  refusPasteur.created_at,
+                                                              )
+                                                            : etapePasteur?.date
+                                                    }
                                                 />
                                             </div>
                                             <div className="d-actions">

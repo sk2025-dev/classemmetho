@@ -395,6 +395,9 @@ export default function RegisterFamille({
         "registerFamille_selectedCity",
         null,
     );
+    const [isResponsablePhotoUploading, setIsResponsablePhotoUploading] =
+        useState(false);
+    const [isMemberPhotoUploading, setIsMemberPhotoUploading] = useState(false);
 
     // Refs
     const familyNameRef = useRef(null);
@@ -548,7 +551,58 @@ export default function RegisterFamille({
         return cleaned.substring(0, 10);
     };
 
+    const normalizePhotoValue = (value, fallback = null) => {
+        const candidate = value ?? fallback;
+
+        if (!candidate) {
+            return null;
+        }
+
+        if (candidate instanceof File) {
+            return candidate;
+        }
+
+        if (typeof candidate === "string") {
+            const normalized = candidate.trim();
+
+            if (
+                !normalized ||
+                normalized.startsWith("blob:") ||
+                normalized === "[object Object]"
+            ) {
+                return null;
+            }
+
+            return normalized;
+        }
+
+        if (Array.isArray(candidate)) {
+            return normalizePhotoValue(candidate[0] ?? null, fallback);
+        }
+
+        if (typeof candidate === "object") {
+            return normalizePhotoValue(
+                candidate.photo_url ??
+                    candidate.photoUrl ??
+                    candidate.url ??
+                    candidate.path ??
+                    candidate.value ??
+                    null,
+                fallback,
+            );
+        }
+
+        return null;
+    };
+
     const ajouterMembre = () => {
+        if (isMemberPhotoUploading) {
+            showWarning(
+                "Veuillez attendre la fin de l'upload de la photo du membre avant d'ajouter ce membre.",
+            );
+            return;
+        }
+
         const newErrors = {};
 
         if (!membreTemp.nom) newErrors["membre.nom"] = "Nom requis";
@@ -629,11 +683,24 @@ export default function RegisterFamille({
             return;
         }
 
+        const normalizedMemberPhoto = normalizePhotoValue(
+            membreTemp.photo,
+            membreTemp.photoPreview,
+        );
+        const normalizedMember = {
+            ...membreTemp,
+            photo: normalizedMemberPhoto,
+            photoPreview:
+                typeof normalizedMemberPhoto === "string"
+                    ? normalizedMemberPhoto
+                    : membreTemp.photoPreview,
+        };
+
         // Vérifier si on édite un membre ou on en ajoute un nouveau
         if (editingMemberIndex !== null) {
             // Mettre à jour le membre existant
             const updatedMembres = [...membres];
-            updatedMembres[editingMemberIndex] = { ...membreTemp };
+            updatedMembres[editingMemberIndex] = normalizedMember;
             setMembres(updatedMembres);
             showSuccess("✅ Membre modifié avec succès !");
 
@@ -641,9 +708,9 @@ export default function RegisterFamille({
             setEditingMemberIndex(null);
         } else {
             // Ajouter le nouveau membre
-            setMembres([...membres, { ...membreTemp }]);
+            setMembres([...membres, normalizedMember]);
             // Afficher toast avec bouton Modifier
-            const memberToEdit = { ...membreTemp };
+            const memberToEdit = normalizedMember;
             showSuccess("✅ Membre ajouté avec succès !", 0, {
                 label: "Modifier",
                 onClick: () => {
@@ -879,10 +946,21 @@ export default function RegisterFamille({
             return;
         }
 
+        if (isResponsablePhotoUploading || isMemberPhotoUploading) {
+            showWarning(
+                "Veuillez attendre la fin de l'upload des photos avant de soumettre le formulaire.",
+            );
+            return;
+        }
+
         console.log("✓ Tous les validations passées");
         setLoading(true);
 
         const formData = new FormData(); /*  */
+        const responsablePhotoToSend = normalizePhotoValue(
+            responsable.photo,
+            responsable.photoPreview,
+        );
 
         // --- 1. Famille (avec nettoyage t?l?phone) ---
         Object.entries(famille).forEach(([k, v]) => {
@@ -905,11 +983,18 @@ export default function RegisterFamille({
 
         // --- 2. Responsable (avec nettoyage t?l?phone) ---
         Object.entries(responsable).forEach(([k, v]) => {
+            if (k === "photo") {
+                if (responsablePhotoToSend) {
+                    formData.append(
+                        `responsable[photo]`,
+                        responsablePhotoToSend,
+                    );
+                }
+                return;
+            }
             let valueToSend = v;
 
-            if (k === "photo" && v) {
-                formData.append(`responsable[photo]`, v);
-            } else if (k !== "photoPreview") {
+            if (k !== "photoPreview") {
                 // CORRECTION : On enlève le préfixe "225" pour le t?l?phone du responsable
                 if (k === "tel" && valueToSend) {
                     valueToSend = valueToSend.toString().replace(/^225/, "");
@@ -921,9 +1006,18 @@ export default function RegisterFamille({
         // --- 3. Membres ---
         if (membres.length > 0) {
             membres.forEach((m, i) => {
+                const memberPhotoToSend = normalizePhotoValue(
+                    m.photo,
+                    m.photoPreview,
+                );
                 Object.entries(m).forEach(([k, v]) => {
-                    if (k === "photo" && v) {
-                        formData.append(`membres[${i}][photo]`, v);
+                    if (k === "photo") {
+                        if (memberPhotoToSend) {
+                            formData.append(
+                                `membres[${i}][photo]`,
+                                memberPhotoToSend,
+                            );
+                        }
                     } else if (k !== "photoPreview") {
                         // Nettoyer le t?l?phone si pr?sent
                         let valueToSend = v;
@@ -1326,12 +1420,15 @@ export default function RegisterFamille({
                                 <PhotoUploadInput
                                     size="md"
                                     initialPhotoUrl={responsable.photoPreview}
+                                    onUploadStateChange={
+                                        setIsResponsablePhotoUploading
+                                    }
                                     onPhotoSelected={(photoUrl) => {
-                                        setResponsable({
-                                            ...responsable,
+                                        setResponsable((prev) => ({
+                                            ...prev,
                                             photo: photoUrl,
                                             photoPreview: photoUrl,
-                                        });
+                                        }));
                                     }}
                                 />
                             </div>
@@ -2044,13 +2141,18 @@ export default function RegisterFamille({
                                             </div>
                                             <PhotoUploadInput
                                                 size="md"
-                                                initialPhotoUrl={membreTemp.photoPreview}
+                                                initialPhotoUrl={
+                                                    membreTemp.photoPreview
+                                                }
+                                                onUploadStateChange={
+                                                    setIsMemberPhotoUploading
+                                                }
                                                 onPhotoSelected={(photoUrl) => {
-                                                    setMembreTemp({
-                                                        ...membreTemp,
+                                                    setMembreTemp((prev) => ({
+                                                        ...prev,
                                                         photo: photoUrl,
                                                         photoPreview: photoUrl,
-                                                    });
+                                                    }));
                                                 }}
                                             />
                                         </div>

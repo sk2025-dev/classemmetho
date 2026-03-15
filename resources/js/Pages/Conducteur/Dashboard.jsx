@@ -82,7 +82,13 @@ const Icon = ({ name, className }) => {
     );
 };
 
-export default function Dashboard({ role, pendingInscriptions, pendingLiturgieCount = 0, auth, className = 'Ma Classe' }) {
+export default function Dashboard({
+    role,
+    pendingInscriptions = 0,
+    pendingLiturgieCount = 0,
+    auth,
+    className = "Ma Classe",
+}) {
     const menuItems = [
         {
             title: "Inscription",
@@ -170,10 +176,11 @@ export default function Dashboard({ role, pendingInscriptions, pendingLiturgieCo
             {/* MAIN CONTENT */}
             <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
                 <div className="mb-10">
-                    <h6 className="dashboard-title">
-                        Espace du Conducteur
-                    </h6>
-                    <p className="mb-2 text-lg text-center" style={{ color: "#EEE00F" }}>
+                    <h6 className="dashboard-title">Espace du Conducteur</h6>
+                    <p
+                        className="mb-2 text-lg text-center"
+                        style={{ color: "#EEE00F" }}
+                    >
                         Classe: <strong>{className}</strong>
                     </p>
                     <div className="animated-text-container">
@@ -215,19 +222,19 @@ export default function Dashboard({ role, pendingInscriptions, pendingLiturgieCo
                                         {item.desc}
                                     </p>
                                 </div>
-                                {/* Badge pour Inscription si pending */}
+                                {/* Badge numerique pour les demandes en attente */}
                                 {item.icon === "inscription" &&
                                     pendingInscriptions > 0 && (
-                                        <span className="absolute top-4 right-4 flex h-3 w-3">
-                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                        <span className="absolute top-4 right-4 inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold shadow">
+                                            {pendingInscriptions}
                                         </span>
                                     )}
-                                {item.icon === "liturgique" && pendingLiturgieCount > 0 && (
-                                    <span className="absolute top-4 right-4 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold">
-                                        {pendingLiturgieCount}
-                                    </span>
-                                )}
+                                {item.icon === "liturgique" &&
+                                    pendingLiturgieCount > 0 && (
+                                        <span className="absolute top-4 right-4 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                                            {pendingLiturgieCount}
+                                        </span>
+                                    )}
                             </div>
                         </Link>
                     ))}

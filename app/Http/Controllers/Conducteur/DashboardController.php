@@ -28,6 +28,8 @@ class DashboardController extends Controller
             return Inertia::render('Conducteur/Dashboard', [
                 'role' => $user->role,
                 'pendingInscriptions' => 0,
+                'pendingLiturgieCount' => 0,
+                'flashAnnouncements' => $this->buildFlashAnnouncements(),
                 'pendingTransfers' => 0,
                 'inscriptions' => [],
                 'users' => [],
@@ -36,16 +38,24 @@ class DashboardController extends Controller
         }
 
         $classIds = $conductorClasses->pluck('id')->toArray();
-        // NOTE: classe_id dans le JSON est une chaîne, donc on le convertit pour la comparaison
         $classIdsStr = array_map('strval', $classIds);
         $className = $conductorClasses->first()->nom ?? 'Classes multiples';
 
-        // 1. Récupérer TOUTES les inscriptions en attente de sa classe
-        $placeholders = implode(',', array_fill(0, count($classIdsStr), '?'));
-        $pendingInscriptions = Inscription::whereRaw('JSON_EXTRACT(data, "$.famille.classe_id") IN (' . $placeholders . ')', $classIdsStr)
-            ->where('status', 'en_attente')
+        // 1. Récupérer TOUTES les inscriptions en attente de ses classes
+        // Même logique que l'écran Conducteur/Inscriptions (fallback sur plusieurs chemins de classe)
+        $pendingInscriptions = Inscription::whereIn('status', ['en_attente', 'pending'])
             ->orderBy('created_at', 'desc')
             ->get()
+            ->filter(function ($insc) use ($classIdsStr) {
+                $classeId = $insc->data['famille']['classe_id']
+                    ?? $insc->data['classe_id']
+                    ?? $insc->data['responsable']['classe_id']
+                    ?? $insc->classe_id
+                    ?? null;
+
+                return in_array((string) $classeId, $classIdsStr, true);
+            })
+            ->values()
             ->map(function ($insc) {
                 return [
                     'id' => $insc->id,
@@ -98,18 +108,59 @@ class DashboardController extends Controller
             });
 
         $pendingCount = $pendingInscriptions->count();
+        $pendingLiturgieCount = ActeLiturgique::query()
+            ->whereIn('classe_id', $classIds)
+            ->where('statut', ActeLiturgique::STATUT_Soumise)
+            ->count();
         $pendingTransfers = 0; // À implémenter selon votre logique
 
         return Inertia::render('Conducteur/Dashboard', [
             'role' => $user->role,
             'pendingInscriptions' => $pendingCount,
+            'pendingLiturgieCount' => $pendingLiturgieCount,
+            'flashAnnouncements' => $this->buildFlashAnnouncements(),
             'pendingTransfers' => $pendingTransfers,
             'inscriptions' => $pendingInscriptions->values(),
             'users' => $classUsers->values(),
             'className' => $className,
             'userCount' => $classUsers->count(),
-            'totalInscriptionCount' => Inscription::whereRaw('JSON_EXTRACT(data, "$.famille.classe_id") IN (' . implode(',', array_fill(0, count($classIdsStr), '?')) . ')', $classIdsStr)->count(),
+            'totalInscriptionCount' => Inscription::all()
+                ->filter(function ($insc) use ($classIdsStr) {
+                    $classeId = $insc->data['famille']['classe_id']
+                        ?? $insc->data['classe_id']
+                        ?? $insc->data['responsable']['classe_id']
+                        ?? $insc->classe_id
+                        ?? null;
+
+                    return in_array((string) $classeId, $classIdsStr, true);
+                })
+                ->count(),
         ]);
+    }
+
+    private function buildFlashAnnouncements()
+    {
+        return ActeLiturgique::query()
+            ->where('est_annonce', true)
+            ->whereNotNull('pasteur_id')
+            ->whereIn('statut', [ActeLiturgique::STATUT_VALIDEE, ActeLiturgique::STATUT_PUBLIEE])
+            ->orderByDesc('date_publication')
+            ->orderByDesc('updated_at')
+            ->limit(12)
+            ->get()
+            ->map(function (ActeLiturgique $annonce) {
+                $text = trim((string) ($annonce->details['contenu'] ?? $annonce->message ?? ''));
+
+                if ($text === '') {
+                    $text = 'Annonce paroissiale publiee.';
+                }
+
+                return [
+                    'id' => $annonce->id,
+                    'text' => $text,
+                ];
+            })
+            ->values();
     }
 
     /**

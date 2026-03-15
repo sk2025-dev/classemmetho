@@ -27,7 +27,11 @@ export default function App() {
     return (
         <div style={{ minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
             {/* VerticalTicker en haut de la page */}
-            <VerticalTicker messages={flashMessages} interval={4000} label="Flash Infos" />
+            <VerticalTicker
+                messages={flashMessages}
+                interval={4000}
+                label="Flash Infos"
+            />
 
             {/* Contenu principal */}
             <div style={{ padding: "40px 20px" }}>
@@ -48,8 +52,10 @@ export default function App() {
                         À propos du VerticalTicker
                     </h2>
                     <p style={{ color: "#666", lineHeight: "1.6" }}>
-                        Le composant VerticalTicker affiche automatiquement des messages
-                        avec une animation verticale fluide. Les messages changent en boucle toutes les 4 secondes (configurable).
+                        Le composant VerticalTicker affiche automatiquement des
+                        messages avec une animation verticale fluide. Les
+                        messages changent en boucle toutes les 4 secondes
+                        (configurable).
                     </p>
                 </div>
 
@@ -77,7 +83,9 @@ export default function App() {
                         <li>✅ Texte blanc sur fond rouge foncé</li>
                         <li>✅ Hauteur 40px (hauteur fixe)</li>
                         <li>✅ Utilise useState et useEffect</li>
-                        <li>✅ Styles centralisés avec objets COLORS et STYLES</li>
+                        <li>
+                            ✅ Styles centralisés avec objets COLORS et STYLES
+                        </li>
                         <li>✅ Animation CSS dans &lt;style jsx global&gt;</li>
                     </ul>
                 </div>

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -28,16 +30,17 @@ class PhotoUploadController extends Controller
             // Stocker l'image dans storage/app/public/profiles
             $path = $file->storeAs('profiles', $filename, 'public');
 
-            // Retourner l'URL publique et le chemin relatif
-            $photoUrl = asset('storage/' . $path);
+            // Retourner l'URL relative (pas d'URL absolue pour éviter les problèmes de domaine)
+            $photoUrl = '/storage/' . ltrim($path, '/');
 
             return response()->json([
                 'success' => true,
                 'photo_url' => $photoUrl,
+                'relative_url' => $photoUrl,
                 'path' => $path,
             ], 200);
         } catch (\Exception $e) {
-            \Log::error('Erreur upload photo inscription: ' . $e->getMessage());
+            Log::error('Erreur upload photo inscription: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'error' => 'Erreur lors de l\'upload de la photo',
@@ -58,21 +61,22 @@ class PhotoUploadController extends Controller
             $file = $request->file('photo');
 
             // Générer un nom unique
-            $filename = 'profile_' . auth()->id() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
+            $filename = 'profile_' . Auth::id() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
 
             // Stocker l'image dans storage/app/public/profiles
             $path = $file->storeAs('profiles', $filename, 'public');
 
-            // Retourner l'URL publique
-            $photoUrl = asset('storage/' . $path);
+            // Retourner l'URL relative (pas d'URL absolue pour éviter les problèmes de domaine)
+            $photoUrl = '/storage/' . ltrim($path, '/');
 
             return response()->json([
                 'success' => true,
                 'photo_url' => $photoUrl,
+                'relative_url' => $photoUrl,
                 'path' => $path,
             ], 200);
         } catch (\Exception $e) {
-            \Log::error('Erreur upload photo: ' . $e->getMessage());
+            Log::error('Erreur upload photo: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'error' => 'Erreur lors de l\'upload de la photo',
@@ -86,11 +90,18 @@ class PhotoUploadController extends Controller
     public function deleteProfilePhoto(Request $request)
     {
         try {
-            $user = auth()->user();
+            $user = Auth::user();
 
             if ($user && $user->profile_photo_url) {
-                // Extraire le chemin du fichier depuis l'URL
-                $path = str_replace(asset('storage/'), '', $user->profile_photo_url);
+                // Extraire le chemin du fichier depuis l'URL (gère URLs relatives et absolues)
+                $rawUrl = $user->profile_photo_url;
+                if (str_starts_with($rawUrl, '/storage/')) {
+                    $path = ltrim(substr($rawUrl, strlen('/storage/')), '/');
+                } elseif (str_contains($rawUrl, '/storage/')) {
+                    $path = ltrim(substr($rawUrl, strpos($rawUrl, '/storage/') + strlen('/storage/')), '/');
+                } else {
+                    $path = ltrim(str_replace(asset('storage/'), '', $rawUrl), '/');
+                }
 
                 // Supprimer le fichier
                 if (Storage::disk('public')->exists($path)) {
@@ -111,7 +122,7 @@ class PhotoUploadController extends Controller
                 'error' => 'Aucune photo à supprimer',
             ], 404);
         } catch (\Exception $e) {
-            \Log::error('Erreur suppression photo: ' . $e->getMessage());
+            Log::error('Erreur suppression photo: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'error' => 'Erreur lors de la suppression',

@@ -56,8 +56,8 @@ class PhotoController extends Controller
                 ], 500);
             }
 
-            // Retourner le chemin complet et l'URL
-            $publicUrl = asset('storage/' . $storagePath);
+            // Retourner l'URL relative (évite les problèmes de domaine absolu)
+            $publicUrl = '/storage/' . ltrim($storagePath, '/');
 
             return response()->json([
                 'success' => true,

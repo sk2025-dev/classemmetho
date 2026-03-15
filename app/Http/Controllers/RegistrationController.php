@@ -44,6 +44,14 @@ class RegistrationController extends Controller
 
             Log::info('Registration payload received', ['payload' => $input]);
 
+            // ✅ Log les photos reçues (debugging)
+            Log::info('🖼️ Photos dans le payload', [
+                'responsable_photo' => $input['responsable']['photo'] ?? 'ABSENT',
+                'responsable_photo_type' => gettype($input['responsable']['photo'] ?? null),
+                'membres_count' => count($input['membres'] ?? []),
+                'membres_photos' => array_filter(array_map(fn($m) => $m['photo'] ?? null, $input['membres'] ?? []))
+            ]);
+
             $validated = $this->validateRegistration($input);
 
             if (!$validated['success']) {
@@ -88,7 +96,7 @@ class RegistrationController extends Controller
                 $photoPath = null;
                 $photoUrl  = null;
 
-                // ✅ Photo responsable
+                // ✅ Photo responsable (ou fallback au premier membre)
                 if (!empty($data['responsable']['photo'])) {
                     $photoVal = $data['responsable']['photo'];
 
@@ -113,6 +121,22 @@ class RegistrationController extends Controller
                     }
 
                     unset($data['responsable']['photo']);
+                } else {
+                    // ✅ FALLBACK: Si pas de photo responsable, utiliser la photo du premier membre
+                    if (!empty($data['membres']) && is_array($data['membres'])) {
+                        foreach ($data['membres'] as $membre) {
+                            if (!empty($membre['photo_path']) || !empty($membre['photo_url'])) {
+                                $photoPath = $membre['photo_path'] ?? null;
+                                $photoUrl  = $membre['photo_url'] ?? null;
+                                Log::info('🔄 Photo responsable récupérée du premier membre', [
+                                    'member_name' => ($membre['prenom'] ?? '') . ' ' . ($membre['nom'] ?? ''),
+                                    'photo_path' => $photoPath,
+                                    'photo_url' => $photoUrl
+                                ]);
+                                break; // On prend le premier membre avec une photo
+                            }
+                        }
+                    }
                 }
 
                 // ✅ Photos membres
@@ -261,7 +285,6 @@ class RegistrationController extends Controller
                 ],
                 'timestamp' => now()->toISOString()
             ], 201);
-
         } catch (\Exception $e) {
             Log::error('Erreur lors de l\'inscription', [
                 'error' => $e->getMessage(),
@@ -625,6 +648,22 @@ class RegistrationController extends Controller
                 } elseif (!empty($responsableInput['photo']) && is_string($responsableInput['photo'])) {
                     $photoUrl  = $responsableInput['photo'];
                     $photoPath = $this->resolvePhotoPathFromUrl($photoUrl);
+                } else {
+                    // ✅ FALLBACK: Si pas de photo responsable, utiliser la photo du premier membre
+                    if (!empty($membresInput) && is_array($membresInput)) {
+                        foreach ($membresInput as $member) {
+                            if (!empty($member['photo_path']) || !empty($member['photo_url'])) {
+                                $photoPath = $member['photo_path'] ?? null;
+                                $photoUrl  = $member['photo_url'] ?? null;
+                                Log::info('🔄 Photo conducteur récupérée du premier membre', [
+                                    'member_name' => ($member['prenom'] ?? '') . ' ' . ($member['nom'] ?? ''),
+                                    'photo_path' => $photoPath,
+                                    'photo_url' => $photoUrl
+                                ]);
+                                break;
+                            }
+                        }
+                    }
                 }
 
                 $normalizedMembers = is_array($membresInput) ? $membresInput : [];
@@ -764,7 +803,6 @@ class RegistrationController extends Controller
                 ],
                 'timestamp' => now()->toISOString()
             ], 201);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('Erreur de validation inscription conducteur', [
                 'errors'             => $e->errors(),
@@ -804,7 +842,7 @@ class RegistrationController extends Controller
 
             $path = Storage::disk('public')->putFileAs('inscriptions', $file, $filename);
 
-            $photoUrl = asset('storage/' . $path);
+            $photoUrl = '/storage/' . ltrim($path, '/');
 
             Log::info('Photo stockée avec succès', [
                 'path'     => $path,

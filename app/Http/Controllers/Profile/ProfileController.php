@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Profile;
 
+use App\Helpers\PhotoHelper;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -28,7 +29,8 @@ class ProfileController extends Controller
                 'role' => $user->role,
                 'created_at' => $user->created_at,
                 'last_login_at' => $user->last_login_at,
-                'signature_url' => $user->signature_path ? Storage::disk('public')->url($user->signature_path) : null,
+                'profile_photo_url' => $user->profile_photo_url ?: PhotoHelper::getPhotoUrl($user->photo_path, $user->prenom, $user->nom),
+                'signature_url' => $user->signature_path ? '/storage/' . ltrim($user->signature_path, '/') : null,
             ]
         ]);
     }

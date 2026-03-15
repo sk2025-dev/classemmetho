@@ -119,10 +119,16 @@ class ActeLiturgiqueService
 
             if ($actor->role === 'conducteur') {
                 $update['conducteur_id'] = $actor->id;
+                if ($commentaire !== null && trim((string) $commentaire) !== '') {
+                    $update['note_conducteur'] = $commentaire;
+                }
             }
 
             if ($actor->role === 'pasteur') {
                 $update['pasteur_id'] = $actor->id;
+                if ($commentaire !== null && trim((string) $commentaire) !== '') {
+                    $update['note_pastorale'] = $commentaire;
+                }
             }
 
             $acte->update($update);

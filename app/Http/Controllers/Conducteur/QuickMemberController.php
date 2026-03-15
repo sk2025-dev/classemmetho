@@ -44,7 +44,8 @@ class QuickMemberController extends Controller
                 'profession' => 'nullable|string|max:255',
                 'fonction_id' => 'nullable|exists:fonctions,id',
                 'relation' => 'nullable|string|max:100', // Pour les données de la famille
-                'photo' => 'nullable|image|max:2048', // Max 2MB
+                'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // Max 5MB
+                'profile_photo_url' => 'nullable|string|max:1000',
 
                 // Sacrements
                 'baptise' => 'nullable|in:true,false,1,0',
@@ -83,6 +84,7 @@ class QuickMemberController extends Controller
 
             // Traiter la photo si présente
             $photoPath = null;
+            $profilePhotoUrl = null;
             if ($request->hasFile('photo')) {
                 $photoFile = $request->file('photo');
                 if ($photoFile && $photoFile->isValid()) {
@@ -90,6 +92,19 @@ class QuickMemberController extends Controller
                     if ($mime && str_starts_with($mime, 'image/')) {
                         $photoPath = $photoFile->store('family_members', 'public');
                     }
+                }
+            } elseif (!empty($validated['profile_photo_url']) && is_string($validated['profile_photo_url'])) {
+                $candidate = trim($validated['profile_photo_url']);
+                // N'accepter que des chemins relatifs sûrs ou des URLs http(s)
+                if (
+                    str_starts_with($candidate, '/storage/') ||
+                    str_starts_with($candidate, 'storage/') ||
+                    str_starts_with($candidate, 'http://') ||
+                    str_starts_with($candidate, 'https://')
+                ) {
+                    $profilePhotoUrl = str_starts_with($candidate, 'storage/')
+                        ? '/' . $candidate
+                        : $candidate;
                 }
             }
 
@@ -113,6 +128,7 @@ class QuickMemberController extends Controller
                 'telephone' => $validated['telephone'] ?? null,
                 'telephone2' => $validated['telephone2'] ?? null,
                 'photo_path' => $photoPath,
+                'profile_photo_url' => $profilePhotoUrl,
                 'genre' => $validated['genre'],
                 'date_naissance' => $validated['date_naissance'] ?? null,
                 'profession' => $validated['profession'] ?? null,

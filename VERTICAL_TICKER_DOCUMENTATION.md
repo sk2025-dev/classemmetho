@@ -17,6 +17,7 @@ Un composant React autonome pour afficher des messages en boucle avec animation 
 ## 🚀 Installation
 
 Le composant est situé à :
+
 ```
 resources/js/Components/VerticalTicker.jsx
 ```
@@ -45,7 +46,9 @@ export default function Dashboard() {
 ## 🎯 Props
 
 ### `messages` (Array, requis)
+
 Tableau de messages à afficher. Chaque objet doit avoir :
+
 - `id` : identifiant unique
 - `text` : texte du message
 
@@ -57,7 +60,9 @@ const messages = [
 ```
 
 ### `interval` (Number, optionnel)
+
 Intervalle de changement en millisecondes.
+
 - Défaut: `4000` (4 secondes)
 
 ```jsx
@@ -65,7 +70,9 @@ Intervalle de changement en millisecondes.
 ```
 
 ### `label` (String, optionnel)
+
 Texte affiché dans le label à gauche.
+
 - Défaut: `"Flash Infos"`
 
 ```jsx
@@ -80,15 +87,16 @@ Texte affiché dans le label à gauche.
 
 ```jsx
 const COLORS = {
-    labelBg: "#1e40af",    // Bleu label
-    tickerBg: "#7f1d1d",   // Rouge foncé fond
-    text: "#ffffff",       // Blanc texte
+    labelBg: "#1e40af", // Bleu label
+    tickerBg: "#7f1d1d", // Rouge foncé fond
+    text: "#ffffff", // Blanc texte
 };
 ```
 
 ### Modifier les styles
 
 Éditez l'objet `STYLES` pour ajuster :
+
 - Padding
 - Hauteur
 - Police
@@ -97,7 +105,7 @@ const COLORS = {
 ```jsx
 const STYLES = {
     container: {
-        height: "40px",           // Hauteur fixe
+        height: "40px", // Hauteur fixe
         backgroundColor: COLORS.tickerBg,
         padding: "0 16px",
         // ... autres propriétés
@@ -121,11 +129,9 @@ export default function Dashboard(props) {
     return (
         <MainLayout>
             <VerticalTicker messages={messages} />
-            
+
             {/* Votre contenu du dashboard */}
-            <div className="content">
-                {/* ... */}
-            </div>
+            <div className="content">{/* ... */}</div>
         </MainLayout>
     );
 }
@@ -134,6 +140,7 @@ export default function Dashboard(props) {
 ## 🎬 Animations
 
 L'animation `slideInFromTop` fait :
+
 1. Apparaître le texte depuis le haut (-10px)
 2. Transition d'opacité de 0 à 1
 3. Déplacement vers la position finale (0px)
@@ -171,7 +178,11 @@ export default function DynamicDashboard() {
 
     return (
         <div>
-            <VerticalTicker messages={messages} interval={5000} label="Actualités" />
+            <VerticalTicker
+                messages={messages}
+                interval={5000}
+                label="Actualités"
+            />
             <button onClick={() => addMessage("Nouveau message!")}>
                 Ajouter message
             </button>

@@ -47,11 +47,12 @@ class HandleInertiaRequests extends Middleware
                     'email' => $request->user()->email,
                     'telephone' => $request->user()->telephone,
                     'photo' => $request->user()->photo ?? null,
-                    'profile_photo_url' => PhotoHelper::getPhotoUrl(
-                        $request->user()->photo_path, 
-                        $request->user()->prenom, 
-                        $request->user()->nom
-                    ),
+                    'profile_photo_url' => $request->user()->profile_photo_url
+                        ?: PhotoHelper::getPhotoUrl(
+                            $request->user()->photo_path,
+                            $request->user()->prenom,
+                            $request->user()->nom
+                        ),
                     'role' => $request->user()->role,
                     'identifier' => $request->user()->identifier,
                     'classe' => $request->user()->classe ? [

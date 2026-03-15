@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\MembreFamille;
 
+use App\Helpers\PhotoHelper;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Fonction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class ProfileController extends Controller
@@ -14,6 +16,7 @@ class ProfileController extends Controller
     public function edit()
     {
         $user = Auth::user();
+        $user->profile_photo_url = $user->profile_photo_url ?: PhotoHelper::getPhotoUrl($user->photo_path, $user->prenom, $user->nom);
 
         // Récupérer les fonctions disponibles
         $fonctions = Fonction::select('id', 'nom', 'description')
@@ -84,8 +87,12 @@ class ProfileController extends Controller
         if ($request->hasFile('photo') && $request->file('photo')->isValid()) {
             $photoPath = $request->file('photo')->store('profiles', 'public');
             $validated['photo_path'] = $photoPath;
+            $validated['profile_photo_url'] = '/storage/' . ltrim($photoPath, '/');
         } elseif (is_string($request->input('photo')) && !empty($request->input('photo'))) {
             $validated['photo_path'] = $this->resolvePhotoPathFromInput($request->input('photo'));
+            $validated['profile_photo_url'] = $validated['photo_path']
+                ? '/storage/' . ltrim($validated['photo_path'], '/')
+                : $request->input('photo');
         }
 
         // Mettre à jour l'utilisateur (colonnes qui existent dans users)
@@ -101,6 +108,7 @@ class ProfileController extends Controller
             'fonction_id' => $validated['fonction_id'] ?? $user->fonction_id,
             'relation' => $validated['relation'] ?? $user->relation,
             'photo_path' => $validated['photo_path'] ?? $user->photo_path,
+            'profile_photo_url' => $validated['profile_photo_url'] ?? $user->profile_photo_url,
         ]);
 
         // Mettre à jour les sacrements (relation hasOne)

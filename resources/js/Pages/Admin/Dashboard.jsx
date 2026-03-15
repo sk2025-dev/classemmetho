@@ -103,7 +103,7 @@ const Icon = ({ name, className }) => {
     );
 };
 
-export default function Dashboard({ role, pendingInscriptions, auth }) {
+export default function Dashboard({ role, pendingInscriptions = 0, auth }) {
     const menuItems = [
         {
             title: "Inscription",
@@ -240,12 +240,11 @@ export default function Dashboard({ role, pendingInscriptions, auth }) {
                                         {item.desc}
                                     </p>
                                 </div>
-                                {/* Badge pour Inscription si pending */}
+                                {/* Badge numerique pour les demandes en attente */}
                                 {item.icon === "inscription" &&
                                     pendingInscriptions > 0 && (
-                                        <span className="absolute top-4 right-4 flex h-3 w-3">
-                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                        <span className="absolute top-4 right-4 inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold shadow">
+                                            {pendingInscriptions}
                                         </span>
                                     )}
                             </div>

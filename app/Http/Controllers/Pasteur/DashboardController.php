@@ -50,8 +50,37 @@ class DashboardController extends Controller
 
         return Inertia::render('Pasteur/Dashboard', [
             'role' => $user->role,
+            'pendingLiturgieCount' => ActeLiturgique::query()
+                ->where('statut', ActeLiturgique::STATUT_TRANSMISE_AU_PASTEUR)
+                ->count(),
+            'flashAnnouncements' => $this->buildFlashAnnouncements(),
             'familyStats' => $familyStats,
             'familyData' => $familyData,
         ]);
+    }
+
+    private function buildFlashAnnouncements()
+    {
+        return ActeLiturgique::query()
+            ->where('est_annonce', true)
+            ->whereNotNull('pasteur_id')
+            ->whereIn('statut', [ActeLiturgique::STATUT_VALIDEE, ActeLiturgique::STATUT_PUBLIEE])
+            ->orderByDesc('date_publication')
+            ->orderByDesc('updated_at')
+            ->limit(12)
+            ->get()
+            ->map(function (ActeLiturgique $annonce) {
+                $text = trim((string) ($annonce->details['contenu'] ?? $annonce->message ?? ''));
+
+                if ($text === '') {
+                    $text = 'Annonce paroissiale publiee.';
+                }
+
+                return [
+                    'id' => $annonce->id,
+                    'text' => $text,
+                ];
+            })
+            ->values();
     }
 }

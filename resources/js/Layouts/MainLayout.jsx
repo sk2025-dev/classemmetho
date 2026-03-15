@@ -141,13 +141,13 @@ function AppHeader({ auth, onLogout }) {
                                     {/* En-tête du profil */}
                                     <div className="p-4 border-b border-gray-100">
                                         <div className="flex items-start gap-3">
-                                                <div className="w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center text-white font-medium overflow-hidden flex-shrink-0">
-                                                    <ProfilePhoto
-                                                        user={auth?.user}
-                                                        size="2xl"
-                                                        className="w-full h-full"
-                                                    />
-                                                </div>
+                                            <div className="w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center text-white font-medium overflow-hidden flex-shrink-0">
+                                                <ProfilePhoto
+                                                    user={auth?.user}
+                                                    size="2xl"
+                                                    className="w-full h-full"
+                                                />
+                                            </div>
                                             <div className="flex-1 min-w-0">
                                                 <h3 className="font-semibold text-gray-900 truncate">
                                                     {auth?.user?.prenom &&
@@ -312,10 +312,7 @@ export default function MainLayout({ children, auth }) {
             return details;
         }
         return (
-            details?.titre ||
-            details?.contenu ||
-            details?.message ||
-            "Annonce"
+            details?.titre || details?.contenu || details?.message || "Annonce"
         );
     };
 
@@ -421,6 +418,27 @@ export default function MainLayout({ children, auth }) {
         })
         .filter((message) => message.text);
 
+    // Infos eglise fictives demandees pour enrichir le flash info dashboard.
+    const churchInfoMessages = [
+        {
+            id: "church-1",
+            text: "Information paroissiale: Horaires de culte ce dimanche - 07h30, 09h30 et 11h30.",
+        },
+        {
+            id: "church-2",
+            text: "Information paroissiale: Ce dimanche, 3 cultes sont programmes au Temple du Jubile de Cocody.",
+        },
+        {
+            id: "church-3",
+            text: "Information paroissiale: Programme de prieres - Mardi 18h30 (intercession), Jeudi 18h30 (delivrance), Vendredi 20h00 (veillee).",
+        },
+    ];
+
+    const mergedTickerMessages = [
+        ...churchInfoMessages,
+        ...tickerMessages,
+    ];
+
     const handleLogout = () => {
         // Afficher le loader d'au revoir
         setShowGoodbyeLoader(true);
@@ -444,10 +462,10 @@ export default function MainLayout({ children, auth }) {
         >
             <AppHeader auth={auth} onLogout={handleLogout} />
 
-            {tickerMessages.length > 0 && (
+            {mergedTickerMessages.length > 0 && (
                 <section className="w-full sticky top-16 z-40">
                     <VerticalTicker
-                        messages={tickerMessages}
+                        messages={mergedTickerMessages}
                         interval={4000}
                         label="Flash Infos"
                     />

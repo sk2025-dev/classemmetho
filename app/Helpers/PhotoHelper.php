@@ -44,7 +44,7 @@ class PhotoHelper
 
             // Vérifier si le fichier existe dans le stockage public
             if (Storage::disk('public')->exists($normalizedPath)) {
-                return Storage::disk('public')->url($normalizedPath);
+                return '/storage/' . ltrim($normalizedPath, '/');
             }
 
             // Fallback si le chemin existe mais pas en storage

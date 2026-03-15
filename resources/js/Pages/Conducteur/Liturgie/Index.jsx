@@ -24,9 +24,11 @@ const ACTE_REQUIRED_FIELDS = {
     premiere_communion: ["date", "lieu"],
     bapteme_premiere_communion: ["date", "lieu"],
     confirmation: ["confirmand", "date", "lieu"],
-    mariage: ["conjoint_1", "conjoint_2", "date", "lieu", "type_mariage"],
+    // Le membre concerne est deja l'un des conjoints
+    mariage: ["date", "lieu", "type_mariage"],
     naissance: ["nom_enfant", "date_naissance", "parents"],
-    deces: ["nom_defunt", "date_deces", "lien_familial"],
+    // Le membre concerne est deja le defunt
+    deces: ["date_deces"],
 };
 
 const ACTE_DETAIL_LABELS = {
@@ -361,6 +363,24 @@ export default function Index({
         }
         try {
             setActeProcessing(true);
+            const selectedMember = familyMembers.find(
+                (member) => String(member.id) === String(createForm.membre_id),
+            );
+            const selectedMemberName = selectedMember
+                ? `${selectedMember.prenom || ""} ${selectedMember.nom || ""}`.trim()
+                : "";
+
+            // Compatibilite aval: certains ecrans utilisent encore ces cles detail.
+            const normalizedDetails = {
+                ...(createForm.details || {}),
+            };
+            if (createForm.type_acte === "mariage" && selectedMemberName) {
+                normalizedDetails.conjoint_1 = selectedMemberName;
+            }
+            if (createForm.type_acte === "deces" && selectedMemberName) {
+                normalizedDetails.nom_defunt = selectedMemberName;
+            }
+
             const payload = {
                 type_acte: createForm.type_acte,
                 membre_id: createForm.membre_id,
@@ -368,7 +388,7 @@ export default function Index({
                 date_souhaitee: createForm.date_souhaitee,
                 details: {
                     message: createForm.message,
-                    ...(createForm.details || {}),
+                    ...normalizedDetails,
                 },
             };
             const res = await axios.post("/conducteur/liturgie", payload);

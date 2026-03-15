@@ -51,9 +51,11 @@ class StoreActeLiturgiqueRequest extends FormRequest
                 'premiere_communion' => ['date', 'lieu'],
                 'bapteme_premiere_communion' => ['date', 'lieu'],
                 'confirmation' => ['confirmand', 'date', 'lieu'],
-                'mariage' => ['conjoint_1', 'conjoint_2', 'date', 'lieu', 'type_mariage'],
+                // Le membre concerne est deja l'un des conjoints
+                'mariage' => ['date', 'lieu', 'type_mariage'],
                 'naissance' => ['nom_enfant', 'date_naissance', 'parents'],
-                'deces' => ['nom_defunt', 'date_deces', 'lien_familial'],
+                // Le membre concerne est deja le defunt
+                'deces' => ['date_deces'],
             ];
 
             foreach (($requiredByType[$type] ?? []) as $field) {
