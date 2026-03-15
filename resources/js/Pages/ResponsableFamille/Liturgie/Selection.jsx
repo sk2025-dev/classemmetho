@@ -33,7 +33,7 @@ const ACTE_OPTIONS = [
     },
 ];
 
-export default function Selection() {
+export default function Selection({ basePath = "/responsable-famille/liturgie" }) {
     return (
         <div
             className="min-h-screen py-10 px-4"
@@ -44,7 +44,7 @@ export default function Selection() {
         >
             <div className="max-w-6xl mx-auto">
                 <Link
-                    href="/responsable-famille/liturgie"
+                    href={basePath}
                     className="inline-flex items-center gap-2 text-white hover:text-yellow-300 font-semibold transition-colors mb-6"
                 >
                     <ArrowLeft size={18} />
@@ -67,7 +67,7 @@ export default function Selection() {
                     {ACTE_OPTIONS.map((option) => (
                         <Link
                             key={option.key}
-                            href={`/responsable-famille/liturgie/nouvelle/formulaire?type_acte=${option.key}`}
+                            href={`${basePath}/nouvelle/formulaire?type_acte=${option.key}`}
                             className="group bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:-translate-y-1 hover:shadow-xl transition-all"
                         >
                             <div className={`h-1.5 ${toneBar(option.tone)}`} />

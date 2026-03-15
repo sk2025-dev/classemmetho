@@ -11,7 +11,6 @@ const IN_PROGRESS = [
     "TRANSMISE_AU_PASTEUR",
 ];
 const VALID = ["VALIDEE", "PUBLIEE", "ARCHIVEE", "CELEBRE", "TERMINE"];
-const DONE = ["CELEBRE", "TERMINE"];
 const DEFAULT_PER_PAGE = 5;
 const FAMILY_PER_PAGE = 6;
 const ANN_PER_PAGE = 6;
@@ -242,20 +241,15 @@ export default function Index({
                 {/* ── BARRE ACTIONS ── */}
                 <div className="rf-actions">
                     <Link
-                        href="/responsable-famille/dashboard"
+                        href="/membre-famille/dashboard"
                         className="btn-ghost"
                     >
                         <ArrowLeft size={16} /> Retour
                     </Link>
                     <div style={{ display: "flex", gap: 8 }}>
-                        <button
-                            type="button"
+                        <Link
+                            href="/membre-famille/liturgie/nouvelle"
                             className="btn-annonce-top"
-                            onClick={() => {
-                                setActiveTab("annonces");
-                                setAnnTab("mes");
-                                openAnnonce();
-                            }}
                         >
                             <svg
                                 width="15"
@@ -271,8 +265,8 @@ export default function Index({
                                     d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
                                 />
                             </svg>
-                            Faire une annonce
-                        </button>
+                            Faire une nouvelle demande d'acte
+                        </Link>
                         <button
                             type="button"
                             className="btn-terra"
@@ -429,7 +423,7 @@ export default function Index({
                                         </div>
                                     </div>
                                     <Link
-                                        href="/responsable-famille/liturgie/nouvelle"
+                                        href="/membre-famille/liturgie/nouvelle"
                                         className="ph-link"
                                     >
                                         + Nouvelle
@@ -474,9 +468,6 @@ export default function Index({
                                         "TRANSMISE_AU_PASTEUR",
                                     );
                                     const etapePasteur = getEtape("VALIDEE");
-                                    const etapeFinal =
-                                        getEtape("CELEBRE") ||
-                                        getEtape("TERMINE");
                                     return (
                                         <article
                                             key={acte.id}
@@ -560,13 +551,13 @@ export default function Index({
                                                 <StatusStep
                                                     label="Pasteur"
                                                     done={
-                                                        acte.statut ===
-                                                            "VALIDEE" ||
+                                                        VALID.includes(
+                                                            acte.statut,
+                                                        ) ||
                                                         acte.statut ===
                                                             "REFUSEE_PAR_PASTEUR" ||
-                                                        DONE.includes(
-                                                            acte.statut,
-                                                        )
+                                                        acte.statut ===
+                                                            "VALIDEE"
                                                     }
                                                     active={
                                                         acte.statut ===
@@ -584,33 +575,6 @@ export default function Index({
                                                             : etapePasteur?.date
                                                     }
                                                 />
-                                                <StatusStep
-                                                    label="Validé"
-                                                    done={
-                                                        acte.statut ===
-                                                            "VALIDEE" ||
-                                                        DONE.includes(
-                                                            acte.statut,
-                                                        )
-                                                    }
-                                                    active={
-                                                        acte.statut ===
-                                                        "VALIDEE"
-                                                    }
-                                                    date={etapePasteur?.date}
-                                                />
-                                                <StatusStep
-                                                    label={finalStepLabel(
-                                                        acte.type_acte,
-                                                    )}
-                                                    done={DONE.includes(
-                                                        acte.statut,
-                                                    )}
-                                                    active={DONE.includes(
-                                                        acte.statut,
-                                                    )}
-                                                    date={etapeFinal?.date}
-                                                />
                                             </div>
                                             <div className="d-actions">
                                                 <button
@@ -622,13 +586,13 @@ export default function Index({
                                                 >
                                                     Voir le détail
                                                 </button>
-                                                {DONE.includes(acte.statut) && (
+                                                {VALID.includes(acte.statut) && (
                                                     <button
                                                         type="button"
                                                         className="btn-pdf"
                                                         onClick={() =>
                                                             window.open(
-                                                                `/responsable-famille/liturgie/${acte.id}/certificat`,
+                                                                `/membre-famille/liturgie/${acte.id}/certificat`,
                                                                 "_blank",
                                                             )
                                                         }
@@ -850,7 +814,7 @@ export default function Index({
                                     ))}
                                 </div>
                                 <Link
-                                    href="/responsable-famille/liturgie/nouvelle"
+                                    href="/membre-famille/liturgie/nouvelle"
                                     className="btn-cta"
                                 >
                                     + Nouvelle demande d'acte
@@ -1613,7 +1577,7 @@ export default function Index({
                                 </div>
                                 <div className="modal-sub">
                                     Étape {annonceStep} / 3 · Circuit :
-                                    Conducteur → Pasteur → Publication
+                                    Conducteur → Pasteur
                                 </div>
                             </div>
                             <button
@@ -1824,7 +1788,7 @@ export default function Index({
                                         Après soumission :{" "}
                                         <strong>Conducteur</strong> →{" "}
                                         <strong>Pasteur</strong> →{" "}
-                                        <strong>Publication + Fiche PDF</strong>
+                                        <strong>Téléchargement du fichier</strong>
                                     </div>
                                 </div>
                             )}
@@ -2126,7 +2090,7 @@ export default function Index({
                                     </div>
                                 )}
 
-                            {/* PDF si validée */}
+                            {/* PDF après validation pasteur */}
                             {VALID.includes(selectedAnnonce.statut) && (
                                 <button
                                     type="button"
@@ -2138,7 +2102,7 @@ export default function Index({
                                     }}
                                     onClick={() =>
                                         window.open(
-                                            `/responsable-famille/annonces/${selectedAnnonce.id}/fiche`,
+                                            `/membre-famille/annonces/${selectedAnnonce.id}/fiche`,
                                             "_blank",
                                         )
                                     }
@@ -2241,23 +2205,26 @@ function AnnonceDotTrack({ statut, expanded }) {
         { key: "SOUMISE", label: "Soumise", icon: "📝" },
         { key: "EN_ATTENTE_CONDUCTEUR", label: "Conducteur", icon: "📋" },
         { key: "TRANSMISE_AU_PASTEUR", label: "Pasteur", icon: "✝" },
-        { key: "VALIDEE", label: "Publié", icon: "🌍" },
     ];
     const isRefuse = String(statut).startsWith("REFUSEE");
-    const idx = steps.findIndex((s) => s.key === statut);
+    const isValidated = VALID.includes(statut);
     const activeIdx = isRefuse
         ? statut === "REFUSEE_PAR_CONDUCTEUR"
             ? 1
             : 2
-        : idx === -1
-          ? 0
-          : idx;
+        : statut === "EN_ATTENTE_CONDUCTEUR"
+          ? 1
+          : statut === "TRANSMISE_AU_PASTEUR"
+            ? 2
+            : isValidated
+              ? 2
+              : 0;
 
     return (
         <div className={`ann-track ${expanded ? "ann-track-exp" : ""}`}>
             {steps.map((s, i) => {
-                const isDone = !isRefuse && i < activeIdx;
-                const isActive = i === activeIdx;
+                const isDone = isValidated ? i <= 2 : !isRefuse && i < activeIdx;
+                const isActive = !isValidated && i === activeIdx;
                 const isRef = isRefuse && isActive;
                 return (
                     <div key={s.key} className="ann-track-step">
@@ -2435,9 +2402,11 @@ function annStatutLabel(s) {
         SOUMISE: "Soumise — en attente du conducteur",
         EN_ATTENTE_CONDUCTEUR: "En attente du conducteur",
         TRANSMISE_AU_PASTEUR: "Transmise au pasteur",
-        VALIDEE: "Validée et publiée",
-        CELEBRE: "Publiée",
-        TERMINE: "Terminée",
+        VALIDEE: "Validée par le pasteur",
+        PUBLIEE: "Validée par le pasteur",
+        ARCHIVEE: "Validée par le pasteur",
+        CELEBRE: "Validée par le pasteur",
+        TERMINE: "Validée par le pasteur",
         REFUSEE_PAR_CONDUCTEUR: "Refusée par le conducteur",
         REFUSEE_PAR_PASTEUR: "Refusée par le pasteur",
     };
@@ -2455,21 +2424,15 @@ function statusLabel(s) {
         SOUMISE: "SOUMISE",
         EN_ATTENTE_CONDUCTEUR: "CONDUCTEUR",
         TRANSMISE_AU_PASTEUR: "PASTEUR",
-        VALIDEE: "VALIDÉE",
-        CELEBRE: "CÉLÉBRÉ",
-        TERMINE: "TERMINÉ",
-        ARCHIVEE: "VALIDÉE",
+        VALIDEE: "VALIDÉE PAR LE PASTEUR",
+        PUBLIEE: "VALIDÉE PAR LE PASTEUR",
+        CELEBRE: "VALIDÉE PAR LE PASTEUR",
+        TERMINE: "VALIDÉE PAR LE PASTEUR",
+        ARCHIVEE: "VALIDÉE PAR LE PASTEUR",
         REFUSEE_PAR_CONDUCTEUR: "REFUSÉE",
         REFUSEE_PAR_PASTEUR: "REFUSÉE",
     };
     return m[s] || s;
-}
-function finalStepLabel(t) {
-    return t === "mariage" || t === "bapteme"
-        ? "Célébré"
-        : t === "deces"
-          ? "Terminé"
-          : "Effectué";
 }
 function prettyType(t) {
     const m = {

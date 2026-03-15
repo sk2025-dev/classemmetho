@@ -317,6 +317,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/membre-famille/profile/edit', [MembreFamilleProfileController::class, 'edit'])->name('membre_famille.profile.edit');
         Route::put('/membre-famille/profile/update', [MembreFamilleProfileController::class, 'update'])->name('membre_famille.profile.update');
         Route::get('/membre-famille/liturgie', [MembreFamilleLiturgieController::class, 'index'])->name('membre_famille.liturgie.index');
+        Route::get('/membre-famille/liturgie/nouvelle', [MembreFamilleLiturgieController::class, 'create'])->name('membre_famille.liturgie.create');
+        Route::get('/membre-famille/liturgie/nouvelle/formulaire', [MembreFamilleLiturgieController::class, 'createForm'])->name('membre_famille.liturgie.form');
         Route::post('/membre-famille/liturgie', [MembreFamilleLiturgieController::class, 'store'])->name('membre_famille.liturgie.store');
         Route::get('/membre-famille/liturgie/{id}/certificat', [MembreFamilleLiturgieController::class, 'certificat'])->name('membre_famille.liturgie.certificat');
         Route::post('/membre-famille/annonces', [\App\Http\Controllers\MembreFamille\AnnonceController::class, 'store'])->name('membre_famille.annonces.store');

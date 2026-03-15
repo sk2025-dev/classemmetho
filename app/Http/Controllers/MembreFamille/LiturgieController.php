@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ActesLiturgiques\StoreActeLiturgiqueRequest;
 use App\Models\ActeLiturgique;
 use App\Models\ActeLiturgiquePieceJointe;
+use App\Models\Classe;
 use App\Models\User;
 use App\Services\ActeLiturgiqueService;
 use Illuminate\Http\Request;
@@ -24,21 +25,20 @@ class LiturgieController extends Controller
     {
         $user = Auth::user();
         $user->load('classe', 'sacrements');
-        $familyMemberIds = User::where('family_id', $user->family_id)->pluck('id');
 
         $actes = ActeLiturgique::with(['membre', 'classe', 'historiques.acteur'])
-            ->where(function ($query) use ($user, $familyMemberIds) {
+            ->where(function ($query) use ($user) {
                 $query->where('created_by', $user->id)
-                    ->orWhereIn('membre_id', $familyMemberIds);
+                    ->orWhere('membre_id', $user->id);
             })
             ->latest()
             ->get();
 
         $annonces = ActeLiturgique::with(['membre', 'classe', 'createur', 'historiques.acteur'])
             ->annonces()
-            ->where(function ($query) use ($user, $familyMemberIds) {
+            ->where(function ($query) use ($user) {
                 $query->where('created_by', $user->id)
-                    ->orWhereIn('membre_id', $familyMemberIds);
+                    ->orWhere('membre_id', $user->id);
             })
             ->latest()
             ->get();
@@ -73,6 +73,60 @@ class LiturgieController extends Controller
         ]);
     }
 
+    public function create(Request $request)
+    {
+        return Inertia::render('ResponsableFamille/Liturgie/Selection', [
+            'basePath' => '/membre-famille/liturgie',
+        ]);
+    }
+
+    public function createForm(Request $request)
+    {
+        $user = Auth::user();
+        $user->load('classe', 'sacrements');
+
+        $actes = ActeLiturgique::with(['membre', 'classe', 'historiques.acteur'])
+            ->where(function ($query) use ($user) {
+                $query->where('created_by', $user->id)
+                    ->orWhere('membre_id', $user->id);
+            })
+            ->latest()
+            ->get();
+
+        $classes = Classe::query()
+            ->select('id', 'nom')
+            ->orderBy('nom')
+            ->get();
+
+        $allowedTypes = ['bapteme', 'premiere_communion', 'confirmation', 'mariage', 'naissance', 'deces'];
+        $initialType = $request->query('type_acte');
+
+        if (!in_array($initialType, $allowedTypes, true)) {
+            $initialType = null;
+        }
+
+        return Inertia::render('ResponsableFamille/Liturgie/Form', [
+            'actes' => $actes,
+            'familyMembers' => [[
+                'id' => $user->id,
+                'nom' => $user->nom,
+                'prenom' => $user->prenom,
+                'classe_id' => $user->classe_id,
+                'classe' => $user->classe,
+                'genre' => $user->genre,
+                'date_naissance' => $user->date_naissance?->format('Y-m-d'),
+                'lieu_naissance' => $user->lieu_naissance ?? null,
+                'pere' => $user->pere ?? null,
+                'mere' => $user->mere ?? null,
+                'sacrements' => $user->sacrements,
+            ]],
+            'classes' => $classes,
+            'initialType' => $initialType,
+            'routeBase' => '/membre-famille/liturgie',
+            'canSelectMember' => false,
+        ]);
+    }
+
     public function store(StoreActeLiturgiqueRequest $request)
     {
         $user = Auth::user();
@@ -85,6 +139,33 @@ class LiturgieController extends Controller
 
         if (empty($payload['classe_id']) && $user->classe_id) {
             $payload['classe_id'] = $user->classe_id;
+        }
+
+        if (!empty($payload['type_acte'])) {
+            $existingActe = ActeLiturgique::query()
+                ->where('membre_id', $user->id)
+                ->where('type_acte', $payload['type_acte'])
+                ->where('statut', '!=', 'ARCHIVEE')
+                ->latest('id')
+                ->first();
+
+            if ($existingActe) {
+                $creator = $existingActe->created_by
+                    ? User::query()->select(['id', 'role', 'prenom', 'nom'])->find($existingActe->created_by)
+                    : null;
+
+                if ($creator && (int) $creator->id !== (int) $user->id && $creator->role === 'responsable_famille') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Votre responsable de famille a deja fait cette demande d'acte pour vous.",
+                    ], 422);
+                }
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Une demande de ce type existe deja pour votre profil.',
+                ], 422);
+            }
         }
 
         $acte = $this->service->create($payload, $user);
@@ -113,17 +194,15 @@ class LiturgieController extends Controller
     public function certificat(int $id)
     {
         $user = Auth::user();
-        $familyMemberIds = User::where('family_id', $user->family_id)->pluck('id');
-
         $acte = ActeLiturgique::with(['membre', 'classe', 'conducteur', 'pasteur'])
-            ->where(function ($query) use ($user, $familyMemberIds) {
+            ->where(function ($query) use ($user) {
                 $query->where('created_by', $user->id)
-                    ->orWhereIn('membre_id', $familyMemberIds);
+                    ->orWhere('membre_id', $user->id);
             })
             ->findOrFail($id);
 
-        if (!in_array($acte->statut, ['CELEBRE', 'TERMINE'], true)) {
-            abort(422, "Le certificat est disponible uniquement apres l'acte effectue.");
+        if (!in_array($acte->statut, ['VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'], true) || !$acte->pasteur_id) {
+            abort(422, "Le certificat est disponible uniquement apres validation du pasteur.");
         }
 
         $pasteurSignature = $acte->pasteur?->signature_path && Storage::disk('public')->exists($acte->pasteur->signature_path)

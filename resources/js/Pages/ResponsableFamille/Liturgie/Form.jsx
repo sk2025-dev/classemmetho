@@ -7,14 +7,21 @@ import NaissanceForm from "../../Liturgie/forms/NaissanceForm";
 import DecesForm from "../../Liturgie/forms/DecesForm";
 import ConfirmationForm from "../../Liturgie/forms/ConfirmationForm";
 
-export default function Form({ actes = [], familyMembers = [], classes = [], initialType = null }) {
+export default function Form({
+    actes = [],
+    familyMembers = [],
+    classes = [],
+    initialType = null,
+    routeBase = "/responsable-famille/liturgie",
+    canSelectMember = true,
+}) {
     const commonProps = {
-        backHref: "/responsable-famille/liturgie/nouvelle",
-        submitUrl: "/responsable-famille/liturgie",
+        backHref: `${routeBase}/nouvelle`,
+        submitUrl: routeBase,
         actes,
         familyMembers,
         classes,
-        canSelectMember: true,
+        canSelectMember,
     };
 
     if (initialType === "mariage") return <MariageForm {...commonProps} />;
@@ -33,7 +40,7 @@ export default function Form({ actes = [], familyMembers = [], classes = [], ini
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">Type d'acte non defini</h1>
                 <p className="text-gray-600 mb-6">Selectionnez d'abord un type de demande liturgique.</p>
                 <Link
-                    href="/responsable-famille/liturgie/nouvelle"
+                    href={`${routeBase}/nouvelle`}
                     className="inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
                 >
                     Aller a la selection
