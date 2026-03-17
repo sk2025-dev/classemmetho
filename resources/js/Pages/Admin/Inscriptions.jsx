@@ -35,6 +35,8 @@ export default function Inscriptions() {
     const [statusFilter, setStatusFilter] = useState(""); // Filtre par statut
     const [approving, setApproving] = useState(null);
     const [rejectingId, setRejectingId] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
 
     // Filtre par recherche ET par statut
     const filteredInscriptions = inscriptions.filter((inscription) => {
@@ -51,6 +53,19 @@ export default function Inscriptions() {
 
         return matchSearch && matchStatus;
     });
+
+    // Réinitialiser la page actuelle quand les filtres changent
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter]);
+
+    // Calcul de la pagination
+    const totalPages = Math.ceil(filteredInscriptions.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedInscriptions = filteredInscriptions.slice(
+        startIndex,
+        startIndex + itemsPerPage,
+    );
 
     const handleApprove = async (id) => {
         if (
@@ -292,14 +307,14 @@ export default function Inscriptions() {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-100">
-                            {filteredInscriptions.length > 0 ? (
-                                filteredInscriptions.map((inscription, idx) => (
+                            {paginatedInscriptions.length > 0 ? (
+                                paginatedInscriptions.map((inscription, idx) => (
                                     <tr
                                         key={inscription.id}
                                         className="hover:bg-[#EDD31D]/20 transition-colors"
                                     >
                                         <td className="px-4 py-3 font-mono text-xs text-gray-400">
-                                            {idx + 1}
+                                            {startIndex + idx + 1}
                                         </td>
                                         <td className="px-4 py-3 whitespace-nowrap flex items-center gap-3">
                                             <ProfilePhoto 
@@ -442,15 +457,72 @@ export default function Inscriptions() {
                         </tbody>
                     </table>
                 </div>
-                {/* Barre d'infos et actualisation */}
-                <div className="flex flex-col sm:flex-row items-center justify-between bg-gray-50 px-4 py-3 border-t border-gray-200 mt-4 gap-4 rounded-b-lg">
-                    <div className="text-sm text-gray-600">
-                        <span className="font-semibold">
-                            {filteredInscriptions.length}
-                        </span>{" "}
-                        inscription{filteredInscriptions.length !== 1 ? "s" : ""}{" "}
-                        trouvée{filteredInscriptions.length !== 1 ? "s" : ""}
+                {/* Pagination */}
+                {totalPages > 1 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between bg-white px-4 py-4 border-t border-gray-200 mt-4 gap-4 rounded-lg shadow">
+                        <div className="text-sm text-gray-600">
+                            <span className="font-semibold">
+                                {filteredInscriptions.length}
+                            </span>{" "}
+                            inscription{filteredInscriptions.length !== 1 ? "s" : ""}{" "}
+                            trouvée{filteredInscriptions.length !== 1 ? "s" : ""} • Page{" "}
+                            <span className="font-semibold">{currentPage}</span> sur{" "}
+                            <span className="font-semibold">{totalPages}</span>
+                        </div>
+                        <div className="flex items-center justify-center gap-2">
+                            <button
+                                onClick={() =>
+                                    setCurrentPage(Math.max(1, currentPage - 1))
+                                }
+                                disabled={currentPage === 1}
+                                className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
+                                title="Page précédente"
+                            >
+                                ← Précédent
+                            </button>
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                                (page) => (
+                                    <button
+                                        key={page}
+                                        onClick={() => setCurrentPage(page)}
+                                        className={`px-3 py-1 rounded font-medium transition ${
+                                            page === currentPage
+                                                ? "bg-[#B6C01A] text-white border-[#B6C01A]"
+                                                : "border border-gray-300 text-gray-700 hover:bg-gray-100"
+                                        }`}
+                                    >
+                                        {page}
+                                    </button>
+                                ),
+                            )}
+                            <button
+                                onClick={() =>
+                                    setCurrentPage(Math.min(totalPages, currentPage + 1))
+                                }
+                                disabled={currentPage === totalPages}
+                                className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition"
+                                title="Page suivante"
+                            >
+                                Suivant →
+                            </button>
+                        </div>
+                        <select
+                            value={itemsPerPage}
+                            onChange={(e) => {
+                                setItemsPerPage(parseInt(e.target.value));
+                                setCurrentPage(1);
+                            }}
+                            className="px-3 py-1 border border-gray-300 rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#B6C01A]"
+                        >
+                            <option value="5">5/page</option>
+                            <option value="10">10/page</option>
+                            <option value="20">20/page</option>
+                            <option value="50">50/page</option>
+                        </select>
                     </div>
+                )}
+                {/* Barre d'infos et actualisation */}
+                <div className="flex justify-end bg-gray-50 px-4 py-3 border-t border-gray-200 mt-4 gap-4 rounded-b-lg">
                     <button
                         onClick={() => window.location.reload()}
                         className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow transition font-medium"

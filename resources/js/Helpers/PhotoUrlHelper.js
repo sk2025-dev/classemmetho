@@ -9,39 +9,39 @@
  * @returns {string|null} URL normalisée ou null
  */
 export function normalizePhotoUrl(photoPath) {
-    if (!photoPath || typeof photoPath !== 'string') {
+    if (!photoPath || typeof photoPath !== "string") {
         return null;
     }
 
     const trimmed = photoPath.trim();
     const lowered = trimmed.toLowerCase();
 
-    if (!trimmed || lowered === 'null' || lowered === 'undefined') {
+    if (!trimmed || lowered === "null" || lowered === "undefined") {
         return null;
     }
 
     // Déjà une URL complète (http:// ou https://)
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
         return trimmed;
     }
 
     // Déjà un chemin web absolu
-    if (trimmed.startsWith('/storage/')) {
+    if (trimmed.startsWith("/storage/")) {
         return trimmed;
     }
 
     // Tout autre chemin absolu web est déjà exploitable (/images/..., /assets/...)
-    if (trimmed.startsWith('/')) {
+    if (trimmed.startsWith("/")) {
         return trimmed;
     }
 
     // Chemin avec "storage/" au début sans le slash
-    if (trimmed.startsWith('storage/')) {
+    if (trimmed.startsWith("storage/")) {
         return `/${trimmed}`;
     }
 
     // Nettoyer le préfixe "public/" et convertir en chemin web
-    if (trimmed.startsWith('public/')) {
+    if (trimmed.startsWith("public/")) {
         return `/storage/${trimmed.substring(7)}`;
     }
 
@@ -90,14 +90,14 @@ export function getAvatarUrl(member) {
  * @returns {boolean} true si l'URL est valide
  */
 export function isValidPhotoUrl(photoUrl) {
-    if (!photoUrl || typeof photoUrl !== 'string') {
+    if (!photoUrl || typeof photoUrl !== "string") {
         return false;
     }
 
     const trimmed = photoUrl.trim().toLowerCase();
-    
+
     // Invalide si c'est "null" ou "undefined" en string
-    if (trimmed === 'null' || trimmed === 'undefined' || trimmed === '') {
+    if (trimmed === "null" || trimmed === "undefined" || trimmed === "") {
         return false;
     }
 

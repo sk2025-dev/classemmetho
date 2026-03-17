@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 use App\Traits\TrackModifications;
 
 class Family extends Model
@@ -14,6 +15,7 @@ class Family extends Model
     protected $fillable = [
         // === INFOS BASIQUES ===
         'nom',
+        'code_famille',
         'classe_id',
 
         // === RESPONSABLE ===
@@ -88,5 +90,31 @@ class Family extends Model
     public function updatedByUser()
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    /**
+     * Génère un code unique pour la famille (ex: FAM-2026-AB3XY)
+     */
+    public static function generateCode(): string
+    {
+        do {
+            $code = 'FAM-' . now()->year . '-' . strtoupper(Str::random(5));
+        } while (static::withTrashed()->where('code_famille', $code)->exists());
+
+        return $code;
+    }
+
+    /**
+     * Auto-génère un code lors de la création si absent
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function (Family $family) {
+            if (empty($family->code_famille)) {
+                $family->code_famille = static::generateCode();
+            }
+        });
     }
 }

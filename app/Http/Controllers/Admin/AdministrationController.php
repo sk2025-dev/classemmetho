@@ -192,6 +192,7 @@ class AdministrationController extends Controller
                     ?? $m->family?->ville?->nom
                     ?? ($m->family?->ville_id ? ('Ville ID: ' . $m->family->ville_id) : null),
                 'famille' => $m->family?->nom,
+                'code_famille' => $m->family?->code_famille,
 
                 // === CHAMPS SUPPLÉMENTAIRES POUR LA MODIFICATION ===
                 'profession' => $m->profession,

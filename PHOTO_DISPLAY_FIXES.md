@@ -3,11 +3,13 @@
 ## ❌ Problèmes Identifiés
 
 ### 1. **Incohérence Backend**
+
 - **Certains contrôleurs** utilisent `PhotoHelper::getPhotoUrl()` ✅
 - **D'autres contrôleurs** retournent juste `photo_path` brut ❌
 - **Résultat**: Frontend reçoit des formats différents
 
 ### 2. **Chemins Non Normalisés**
+
 ```php
 // ❌ PROBLÈME ACTUEL
 MembreFamille/InscriptionsController.php:
@@ -17,16 +19,18 @@ MembreFamille/InscriptionsController.php:
 ```
 
 ### 3. **PhotoHelper Existe Mais Pas Utilisé Partout**
+
 ```php
 // ✅ CE QUI EST CORRECT
 app/Helpers/PhotoHelper.php::getPhotoUrl()
 - Gère les URLs complètes
-- Nettoie "public/" dans les chemins  
+- Nettoie "public/" dans les chemins
 - Vérifie l'existence des fichiers
 - Génère avatars avec initiales si pas de photo
 ```
 
 ### 4. **Middleware/Partage Inertia ne Normalise Pas**
+
 ```php
 // HandleInertiaRequests.php ne normalise PAS les photos de auth()->user()
 ```
@@ -44,29 +48,29 @@ app/Helpers/PhotoHelper.php::getPhotoUrl()
  * Normalise l'URL d'une photo depuis n'importe quel format
  */
 export function normalizePhotoUrl(photoPath) {
-    if (!photoPath || typeof photoPath !== 'string') {
+    if (!photoPath || typeof photoPath !== "string") {
         return null;
     }
 
     const trimmed = photoPath.trim();
 
     // Déjà une URL complète
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
         return trimmed;
     }
 
     // Déjà un chemin web
-    if (trimmed.startsWith('/storage/')) {
+    if (trimmed.startsWith("/storage/")) {
         return trimmed;
     }
 
     // Chemin avec "storage/" au début
-    if (trimmed.startsWith('storage/')) {
+    if (trimmed.startsWith("storage/")) {
         return `/${trimmed}`;
     }
 
     // Nettoyer "public/" et préfixer avec /storage/
-    if (trimmed.startsWith('public/')) {
+    if (trimmed.startsWith("public/")) {
         return `/storage/${trimmed.substring(7)}`;
     }
 
@@ -107,9 +111,9 @@ export function getAvatarUrl(member) {
     if (photoUrl) return photoUrl;
 
     // Générer initiales
-    const prenom = member.prenom || member.name || '';
-    const nom = member.nom || '';
-    const initials = (prenom[0] || '') + (nom[0] || '');
+    const prenom = member.prenom || member.name || "";
+    const nom = member.nom || "";
+    const initials = (prenom[0] || "") + (nom[0] || "");
 
     // Service d'avatar
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=random&color=fff&bold=true&size=128`;
@@ -130,7 +134,7 @@ use App\Helpers\PhotoHelper;
 public function share(Request $request): array
 {
     $user = $request->user();
-    
+
     return [
         ...parent::share($request),
         'auth' => [
@@ -152,6 +156,7 @@ public function share(Request $request): array
 #### **B. Contrôleurs à Corriger**
 
 **MembreFamille/InscriptionsController.php:**
+
 ```php
 use App\Helpers\PhotoHelper;
 
@@ -163,6 +168,7 @@ use App\Helpers\PhotoHelper;
 ```
 
 **MembreFamille/FamilyController.php:**
+
 ```php
 use App\Helpers\PhotoHelper;
 
@@ -175,6 +181,7 @@ $membersData = $family->members->map(function ($member) {
 ```
 
 **Admin/InscriptionsController.php** (ligne 85):
+
 ```php
 use App\Helpers\PhotoHelper;
 
@@ -183,8 +190,8 @@ use App\Helpers\PhotoHelper;
 
 // PAR:
 'profile_photo_url' => PhotoHelper::getPhotoUrl(
-    $fullInscription->photo_path ?? null, 
-    $fullInscription->prenom ?? null, 
+    $fullInscription->photo_path ?? null,
+    $fullInscription->prenom ?? null,
     $fullInscription->nom ?? null
 ),
 ```
@@ -194,6 +201,7 @@ use App\Helpers\PhotoHelper;
 ### ÉTAPE 3: Utiliser le Helper Frontend Partout
 
 **MainLayout.jsx:**
+
 ```jsx
 import { getMemberPhotoUrl, getAvatarUrl } from '@/Helpers/PhotoUrlHelper';
 
@@ -205,15 +213,18 @@ src={getAvatarUrl(auth?.user)}
 ```
 
 **Admin/Inscriptions.jsx, Conducteur/Inscriptions.jsx, etc.:**
+
 ```jsx
-import { getAvatarUrl } from '@/Helpers/PhotoUrlHelper';
+import { getAvatarUrl } from "@/Helpers/PhotoUrlHelper";
 
 // Dans le rendu:
-{inscription.profile_photo_url ? (
-    <img src={getAvatarUrl(inscription)} alt="Photo" />
-) : (
-    <CircleWithInitials />
-)}
+{
+    inscription.profile_photo_url ? (
+        <img src={getAvatarUrl(inscription)} alt="Photo" />
+    ) : (
+        <CircleWithInitials />
+    );
+}
 ```
 
 ---
@@ -221,6 +232,7 @@ import { getAvatarUrl } from '@/Helpers/PhotoUrlHelper';
 ## 🧪 Tests de Vérification
 
 ### Backend
+
 ```bash
 php artisan tinker
 >>> $user = App\Models\User::first();
@@ -229,14 +241,22 @@ php artisan tinker
 ```
 
 ### Frontend
+
 ```javascript
 // Dans la console navigateur
-import { getAvatarUrl } from '@/Helpers/PhotoUrlHelper';
-console.log(getAvatarUrl({ photo_path: 'profiles/test.jpg', prenom: 'Jean', nom: 'Dupont' }));
+import { getAvatarUrl } from "@/Helpers/PhotoUrlHelper";
+console.log(
+    getAvatarUrl({
+        photo_path: "profiles/test.jpg",
+        prenom: "Jean",
+        nom: "Dupont",
+    }),
+);
 // Doit afficher: "/storage/profiles/test.jpg"
 ```
 
 ### Lien Symbolique
+
 ```bash
 # Vérifier que le lien existe
 php artisan storage:link

@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\ActeSubmittedToConducteur;
 use App\Mail\ActeValidatedToPasteur;
 use App\Mail\ActeCertificateReadyToResponsable;
+use App\Mail\ActeRefusedToCreateur;
+use App\Mail\ActeValidatedToCreateur;
+use App\Mail\ActeDecisionToConducteur;
 use InvalidArgumentException;
 
 class ActeLiturgiqueService
@@ -183,6 +186,76 @@ class ActeLiturgiqueService
                     ]);
                 } catch (\Exception $e) {
                     // ignore notification errors
+                }
+            }
+        }
+
+        // email au créateur quand refus conducteur ou pasteur
+        if (in_array($newStatus, ['REFUSEE_PAR_CONDUCTEUR', 'REFUSEE_PAR_PASTEUR'], true)) {
+            $owner = $acte->createur;
+            if ($owner && $owner->email) {
+                $refusePar = $newStatus === 'REFUSEE_PAR_CONDUCTEUR' ? 'conducteur' : 'pasteur';
+                Mail::to($owner->email)->queue(new ActeRefusedToCreateur($acte, $refusePar));
+                try {
+                    Notification::create([
+                        'user_id' => $owner->id,
+                        'channel' => 'in_app',
+                        'to'      => $owner->email,
+                        'subject' => 'Votre demande a été refusée',
+                        'body'    => "Votre demande (Réf {$acte->reference}) a été refusée par le {$refusePar}.",
+                        'data'    => ['link' => config('app.url') . '/membre-famille/liturgie'],
+                        'sent_at' => now(),
+                    ]);
+                } catch (\Exception $e) {
+                    // ignore
+                }
+            }
+        }
+
+        // email au créateur quand le pasteur valide (VALIDEE)
+        if ($actor->role === 'pasteur' && $newStatus === 'VALIDEE') {
+            $owner = $acte->createur;
+            if ($owner && $owner->email) {
+                Mail::to($owner->email)->queue(new ActeValidatedToCreateur($acte));
+                try {
+                    Notification::create([
+                        'user_id' => $owner->id,
+                        'channel' => 'in_app',
+                        'to'      => $owner->email,
+                        'subject' => 'Votre demande a été validée',
+                        'body'    => "Votre demande (Réf {$acte->reference}) a été validée par le pasteur.",
+                        'data'    => ['link' => config('app.url') . '/membre-famille/liturgie'],
+                        'sent_at' => now(),
+                    ]);
+                } catch (\Exception $e) {
+                    // ignore
+                }
+            }
+        }
+
+        // email au conducteur quand le pasteur valide ou refuse
+        if ($actor->role === 'pasteur' && in_array($newStatus, ['VALIDEE', 'REFUSEE_PAR_PASTEUR'], true)) {
+            $conducteurs = User::query()
+                ->where('role', 'conducteur')
+                ->where('classe_id', $acte->classe_id)
+                ->whereNotNull('email')
+                ->get();
+            $decision = $newStatus === 'VALIDEE' ? 'validee' : 'refusee';
+            foreach ($conducteurs as $cond) {
+                Mail::to($cond->email)->queue(new ActeDecisionToConducteur($acte, $decision));
+                try {
+                    $label = $decision === 'validee' ? 'validée' : 'refusée';
+                    Notification::create([
+                        'user_id' => $cond->id,
+                        'channel' => 'in_app',
+                        'to'      => $cond->email,
+                        'subject' => "Décision pastorale : demande {$label}",
+                        'body'    => "La demande (Réf {$acte->reference}) de {$acte->createur?->prenom} {$acte->createur?->nom} a été {$label} par le pasteur.",
+                        'data'    => ['link' => config('app.url') . '/conducteur/liturgie'],
+                        'sent_at' => now(),
+                    ]);
+                } catch (\Exception $e) {
+                    // ignore
                 }
             }
         }

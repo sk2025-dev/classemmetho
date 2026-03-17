@@ -98,7 +98,7 @@ export default function Index({
     );
 
     const [localActes, setLocalActes] = useState(
-        actesPaginator?.data || (Array.isArray(actes) ? actes : [])
+        actesPaginator?.data || (Array.isArray(actes) ? actes : []),
     );
     const currentPage = actesPaginator?.current_page || 1;
     const lastPage = actesPaginator?.last_page || 1;
@@ -186,7 +186,12 @@ export default function Index({
     /* ── FAMILIES ET CLASSES POUR FILTRES ── */
     const availableFamilies = useMemo(() => {
         const familySet = new Set();
-        [...localActes, ...historiqueList, ...annonces, ...annoncesHistorique].forEach((item) => {
+        [
+            ...localActes,
+            ...historiqueList,
+            ...annonces,
+            ...annoncesHistorique,
+        ].forEach((item) => {
             if (item.family?.nom || item.family?.id) {
                 familySet.add(
                     JSON.stringify({
@@ -198,13 +203,18 @@ export default function Index({
         });
         return Array.from(familySet)
             .map((f) => JSON.parse(f))
-            .filter(f => f.id && f.nom)
+            .filter((f) => f.id && f.nom)
             .sort((a, b) => a.nom.localeCompare(b.nom));
     }, [localActes, historiqueList, annonces, annoncesHistorique]);
 
     const availableClasses = useMemo(() => {
         const classeSet = new Set();
-        [...localActes, ...historiqueList, ...annonces, ...annoncesHistorique].forEach((item) => {
+        [
+            ...localActes,
+            ...historiqueList,
+            ...annonces,
+            ...annoncesHistorique,
+        ].forEach((item) => {
             if (item.classe?.id && item.classe?.nom) {
                 classeSet.add(
                     JSON.stringify({
@@ -220,12 +230,18 @@ export default function Index({
     }, [localActes, historiqueList, annonces, annoncesHistorique]);
 
     /* ── FILTRES COMMUNS (ACTES + ANNONCES) ── */
-    const VALID_STATUSES = ["VALIDEE", "PUBLIEE", "ARCHIVEE", "CELEBRE", "TERMINE"];
+    const VALID_STATUSES = [
+        "VALIDEE",
+        "PUBLIEE",
+        "ARCHIVEE",
+        "CELEBRE",
+        "TERMINE",
+    ];
     const searchNeedle = searchTerm.trim().toLowerCase();
 
     const filteredActes = useMemo(() => {
         let result = [...localActes];
-        
+
         // Afficher uniquement les actes en attente de validation du pasteur
         result = result.filter((a) => a.statut === "TRANSMISE_AU_PASTEUR");
 
@@ -238,14 +254,14 @@ export default function Index({
         }
 
         if (selectedFamily && selectedFamily !== "all") {
-            result = result.filter((a) =>
-                String(a.family?.id) === selectedFamily
+            result = result.filter(
+                (a) => String(a.family?.id) === selectedFamily,
             );
         }
 
         if (selectedClasse && selectedClasse !== "all") {
-            result = result.filter((a) =>
-                String(a.classe?.id) === selectedClasse
+            result = result.filter(
+                (a) => String(a.classe?.id) === selectedClasse,
             );
         }
 
@@ -259,7 +275,9 @@ export default function Index({
                     a.membre?.nom,
                     a.classe?.nom,
                 ].some((field) =>
-                    String(field || "").toLowerCase().includes(searchNeedle),
+                    String(field || "")
+                        .toLowerCase()
+                        .includes(searchNeedle),
                 ),
             );
         }
@@ -279,14 +297,14 @@ export default function Index({
         }
 
         if (selectedFamily && selectedFamily !== "all") {
-            result = result.filter((a) =>
-                String(a.family_id || a.family?.id) === selectedFamily
+            result = result.filter(
+                (a) => String(a.family_id || a.family?.id) === selectedFamily,
             );
         }
 
         if (selectedClasse && selectedClasse !== "all") {
-            result = result.filter((a) =>
-                String(a.classe_id || a.classe?.id) === selectedClasse
+            result = result.filter(
+                (a) => String(a.classe_id || a.classe?.id) === selectedClasse,
             );
         }
 
@@ -301,24 +319,29 @@ export default function Index({
                     a.classe?.nom,
                     a.family?.nom,
                 ].some((field) =>
-                    String(field || "").toLowerCase().includes(searchNeedle),
+                    String(field || "")
+                        .toLowerCase()
+                        .includes(searchNeedle),
                 ),
             );
         }
 
         return result;
-    }, [historiqueList, quickFilter, selectedFamily, selectedClasse, searchNeedle]);
-        const annFiltered = useMemo(() => {
+    }, [
+        historiqueList,
+        quickFilter,
+        selectedFamily,
+        selectedClasse,
+        searchNeedle,
+    ]);
+    const annFiltered = useMemo(() => {
         let result = [...annonces];
-        
+
         // Afficher uniquement les annonces en attente de validation du pasteur
         result = result.filter((a) => a.statut === "TRANSMISE_AU_PASTEUR");
-        
+
         // Filter by specific type
-        if (
-            quickFilter &&
-            quickFilter !== "all"
-        ) {
+        if (quickFilter && quickFilter !== "all") {
             result = result.filter((a) =>
                 [a.type_annonce, a.type_acte].some((field) =>
                     String(field || "")
@@ -329,17 +352,17 @@ export default function Index({
         }
 
         if (selectedFamily && selectedFamily !== "all") {
-            result = result.filter((a) =>
-                String(a.family?.id) === selectedFamily
+            result = result.filter(
+                (a) => String(a.family?.id) === selectedFamily,
             );
         }
 
         if (selectedClasse && selectedClasse !== "all") {
-            result = result.filter((a) =>
-                String(a.classe?.id) === selectedClasse
+            result = result.filter(
+                (a) => String(a.classe?.id) === selectedClasse,
             );
         }
-        
+
         // Filter by search term
         if (searchNeedle) {
             result = result.filter((a) =>
@@ -354,17 +377,19 @@ export default function Index({
                     a.membre?.prenom,
                     a.membre?.nom,
                 ].some((field) =>
-                    String(field || "").toLowerCase().includes(searchNeedle),
+                    String(field || "")
+                        .toLowerCase()
+                        .includes(searchNeedle),
                 ),
             );
         }
-        
+
         return result;
     }, [annonces, quickFilter, selectedFamily, selectedClasse, searchNeedle]);
-    
+
     const annHistFiltered = useMemo(() => {
         let result = [...annoncesHistorique];
-        
+
         // Filter by status (Toutes/En cours/Validées/Refusées)
         if (annFilter === "en_cours") {
             result = result.filter(
@@ -373,20 +398,15 @@ export default function Index({
                     !String(a.statut).startsWith("REFUSEE"),
             );
         } else if (annFilter === "validees") {
-            result = result.filter((a) =>
-                VALID_STATUSES.includes(a.statut),
-            );
+            result = result.filter((a) => VALID_STATUSES.includes(a.statut));
         } else if (annFilter === "refusees") {
             result = result.filter((a) =>
                 String(a.statut).startsWith("REFUSEE"),
             );
         }
-        
+
         // Filter by specific type
-        if (
-            quickFilter &&
-            quickFilter !== "all"
-        ) {
+        if (quickFilter && quickFilter !== "all") {
             result = result.filter((a) =>
                 [a.type_annonce, a.type_acte].some((field) =>
                     String(field || "")
@@ -397,17 +417,17 @@ export default function Index({
         }
 
         if (selectedFamily && selectedFamily !== "all") {
-            result = result.filter((a) =>
-                String(a.family?.id) === selectedFamily
+            result = result.filter(
+                (a) => String(a.family?.id) === selectedFamily,
             );
         }
 
         if (selectedClasse && selectedClasse !== "all") {
-            result = result.filter((a) =>
-                String(a.classe?.id) === selectedClasse
+            result = result.filter(
+                (a) => String(a.classe?.id) === selectedClasse,
             );
         }
-        
+
         // Filter by search term
         if (searchNeedle) {
             result = result.filter((a) =>
@@ -422,13 +442,22 @@ export default function Index({
                     a.membre?.prenom,
                     a.membre?.nom,
                 ].some((field) =>
-                    String(field || "").toLowerCase().includes(searchNeedle),
+                    String(field || "")
+                        .toLowerCase()
+                        .includes(searchNeedle),
                 ),
             );
         }
-        
+
         return result;
-    }, [annoncesHistorique, annFilter, quickFilter, selectedFamily, selectedClasse, searchNeedle]);
+    }, [
+        annoncesHistorique,
+        annFilter,
+        quickFilter,
+        selectedFamily,
+        selectedClasse,
+        searchNeedle,
+    ]);
 
     const historyTotalPages = Math.max(
         1,
@@ -1475,30 +1504,48 @@ export default function Index({
                                 value={quickFilter}
                                 onChange={(e) => setQuickFilter(e.target.value)}
                             >
-                                <option value="all">🔍 Tous les contenus</option>
+                                <option value="all">
+                                    🔍 Tous les contenus
+                                </option>
                                 <optgroup label="Types d'actes">
                                     <option value="bapteme">💧 Baptême</option>
                                     <option value="mariage">💍 Mariage</option>
-                                    <option value="premiere_communion">🍞 Première Communion</option>
-                                    <option value="confirmation">✝️ Confirmation</option>
-                                    <option value="naissance">👶 Naissance</option>
+                                    <option value="premiere_communion">
+                                        🍞 Première Communion
+                                    </option>
+                                    <option value="confirmation">
+                                        ✝️ Confirmation
+                                    </option>
+                                    <option value="naissance">
+                                        👶 Naissance
+                                    </option>
                                     <option value="deces">🕯️ Décès</option>
                                 </optgroup>
                                 <optgroup label="Types d'annonces">
                                     <option value="priere">🙏 Prière</option>
-                                    <option value="grace">🙌 Action de grâce</option>
+                                    <option value="grace">
+                                        🙌 Action de grâce
+                                    </option>
                                     <option value="deces">⚰️ Décès</option>
-                                    <option value="felicitations">🎉 Félicitations</option>
-                                    <option value="generale">📢 Générale</option>
+                                    <option value="felicitations">
+                                        🎉 Félicitations
+                                    </option>
+                                    <option value="generale">
+                                        📢 Générale
+                                    </option>
                                 </optgroup>
                             </select>
                             <select
                                 className="quick-dropdown"
                                 value={selectedFamily}
-                                onChange={(e) => setSelectedFamily(e.target.value)}
+                                onChange={(e) =>
+                                    setSelectedFamily(e.target.value)
+                                }
                                 title="Filtrer par famille"
                             >
-                                <option value="all">👨‍👩‍👧‍👦 Toutes les familles</option>
+                                <option value="all">
+                                    👨‍👩‍👧‍👦 Toutes les familles
+                                </option>
                                 {availableFamilies.map((family) => (
                                     <option key={family.id} value={family.id}>
                                         👨‍👩‍👧‍👦 {family.nom}
@@ -1508,10 +1555,14 @@ export default function Index({
                             <select
                                 className="quick-dropdown"
                                 value={selectedClasse}
-                                onChange={(e) => setSelectedClasse(e.target.value)}
+                                onChange={(e) =>
+                                    setSelectedClasse(e.target.value)
+                                }
                                 title="Filtrer par classe"
                             >
-                                <option value="all">🎓 Toutes les classes</option>
+                                <option value="all">
+                                    🎓 Toutes les classes
+                                </option>
                                 {availableClasses.map((classe) => (
                                     <option key={classe.id} value={classe.id}>
                                         🎓 {classe.nom}
@@ -1656,7 +1707,23 @@ export default function Index({
                                                     <span />
                                                 </label>
                                                 <div className="acte-emoji-box">
-                                                    {iconEmoji(acte.type_acte)}
+                                                    {acte.membre?.profile_photo_url ? (
+                                                        <img
+                                                            src={acte.membre.profile_photo_url}
+                                                            alt={acte.membre?.prenom + " " + acte.membre?.nom}
+                                                            className="member-photo"
+                                                            style={{
+                                                                width: "100%",
+                                                                height: "100%",
+                                                                objectFit: "cover",
+                                                                borderRadius: "50%",
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <span className="photo-fallback">
+                                                            {iconEmoji(acte.type_acte)}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="acte-info">
                                                     <div className="acte-name">
@@ -1849,39 +1916,41 @@ export default function Index({
                                             </div>
                                         </div>
                                     ))}
-                                    {filteredActes.length > 0 && lastPage > 1 && (
-                                        <div className="pager">
-                                            <button
-                                                type="button"
-                                                className="pager-btn"
-                                                onClick={() =>
-                                                    goToActesPage(
-                                                        currentPage - 1,
-                                                    )
-                                                }
-                                                disabled={currentPage === 1}
-                                            >
-                                                Précédent
-                                            </button>
-                                            <div className="pager-info">
-                                                Page {currentPage} / {lastPage}
+                                    {filteredActes.length > 0 &&
+                                        lastPage > 1 && (
+                                            <div className="pager">
+                                                <button
+                                                    type="button"
+                                                    className="pager-btn"
+                                                    onClick={() =>
+                                                        goToActesPage(
+                                                            currentPage - 1,
+                                                        )
+                                                    }
+                                                    disabled={currentPage === 1}
+                                                >
+                                                    Précédent
+                                                </button>
+                                                <div className="pager-info">
+                                                    Page {currentPage} /{" "}
+                                                    {lastPage}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    className="pager-btn"
+                                                    onClick={() =>
+                                                        goToActesPage(
+                                                            currentPage + 1,
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        currentPage === lastPage
+                                                    }
+                                                >
+                                                    Suivant
+                                                </button>
                                             </div>
-                                            <button
-                                                type="button"
-                                                className="pager-btn"
-                                                onClick={() =>
-                                                    goToActesPage(
-                                                        currentPage + 1,
-                                                    )
-                                                }
-                                                disabled={
-                                                    currentPage === lastPage
-                                                }
-                                            >
-                                                Suivant
-                                            </button>
-                                        </div>
-                                    )}
+                                        )}
                                 </div>
 
                                 <div className="side-col">
@@ -2134,7 +2203,20 @@ export default function Index({
                                             <span />
                                         </label>
                                         <div className="hist-icon-box">
-                                            {iconEmoji(item.type_acte)}
+                                            {item.membre?.profile_photo_url ? (
+                                                <img
+                                                    src={item.membre.profile_photo_url}
+                                                    alt={item.membre?.prenom + " " + item.membre?.nom}
+                                                    style={{
+                                                        width: "100%",
+                                                        height: "100%",
+                                                        objectFit: "cover",
+                                                        borderRadius: "50%",
+                                                    }}
+                                                />
+                                            ) : (
+                                                iconEmoji(item.type_acte)
+                                            )}
                                         </div>
                                         <div className="hist-info">
                                             <div className="hist-name">
@@ -2666,33 +2748,36 @@ export default function Index({
                                     );
                                 })}
 
-                                {annFiltered.length > 0 && annTotalPages > 1 && (
-                                    <div className="pager">
-                                        <button
-                                            type="button"
-                                            className="pager-btn"
-                                            onClick={() =>
-                                                setAnnPage(annPage - 1)
-                                            }
-                                            disabled={annPage === 1}
-                                        >
-                                            Précédent
-                                        </button>
-                                        <div className="pager-info">
-                                            Page {annPage} / {annTotalPages}
+                                {annFiltered.length > 0 &&
+                                    annTotalPages > 1 && (
+                                        <div className="pager">
+                                            <button
+                                                type="button"
+                                                className="pager-btn"
+                                                onClick={() =>
+                                                    setAnnPage(annPage - 1)
+                                                }
+                                                disabled={annPage === 1}
+                                            >
+                                                Précédent
+                                            </button>
+                                            <div className="pager-info">
+                                                Page {annPage} / {annTotalPages}
+                                            </div>
+                                            <button
+                                                type="button"
+                                                className="pager-btn"
+                                                onClick={() =>
+                                                    setAnnPage(annPage + 1)
+                                                }
+                                                disabled={
+                                                    annPage === annTotalPages
+                                                }
+                                            >
+                                                Suivant
+                                            </button>
                                         </div>
-                                        <button
-                                            type="button"
-                                            className="pager-btn"
-                                            onClick={() =>
-                                                setAnnPage(annPage + 1)
-                                            }
-                                            disabled={annPage === annTotalPages}
-                                        >
-                                            Suivant
-                                        </button>
-                                    </div>
-                                )}
+                                    )}
                             </div>
 
                             {/* HISTORIQUE ANNONCES */}
@@ -2987,7 +3072,14 @@ export default function Index({
                             />
                             <DetailRow
                                 label="Date souhaitée"
-                                value={formatDate(activeActe.date_souhaitee)}
+                                value={formatDate(
+                                    activeActe.date_souhaitee ||
+                                        activeActe.details?.date_souhaitee ||
+                                        activeActe.details?.date_presentation ||
+                                        activeActe.details?.date_deces ||
+                                        activeActe.details?.date_naissance ||
+                                        activeActe.date_annonce,
+                                )}
                             />
                             <div className="modal-sep">Détails soumis</div>
                             <div className="modal-detail-box">
@@ -3245,9 +3337,23 @@ export default function Index({
                         </div>
                         <div className="modal-body">
                             <div className="modal-acte-recap">
-                                <span className="modal-acte-emoji">
-                                    {iconEmoji(activeActe.type_acte)}
-                                </span>
+                                {activeActe.membre?.profile_photo_url ? (
+                                    <img
+                                        src={activeActe.membre.profile_photo_url}
+                                        alt={activeActe.membre?.prenom + " " + activeActe.membre?.nom}
+                                        style={{
+                                            width: "60px",
+                                            height: "60px",
+                                            borderRadius: "50%",
+                                            objectFit: "cover",
+                                            marginRight: "12px",
+                                        }}
+                                    />
+                                ) : (
+                                    <span className="modal-acte-emoji">
+                                        {iconEmoji(activeActe.type_acte)}
+                                    </span>
+                                )}
                                 <div>
                                     <div className="modal-acte-name">
                                         {prettyType(activeActe.type_acte)} —{" "}
@@ -3398,9 +3504,23 @@ export default function Index({
                         </div>
                         <div className="modal-body">
                             <div className="modal-acte-recap">
-                                <span className="modal-acte-emoji">
-                                    {iconEmoji(activeActe.type_acte)}
-                                </span>
+                                {activeActe.membre?.profile_photo_url ? (
+                                    <img
+                                        src={activeActe.membre.profile_photo_url}
+                                        alt={activeActe.membre?.prenom + " " + activeActe.membre?.nom}
+                                        style={{
+                                            width: "60px",
+                                            height: "60px",
+                                            borderRadius: "50%",
+                                            objectFit: "cover",
+                                            marginRight: "12px",
+                                        }}
+                                    />
+                                ) : (
+                                    <span className="modal-acte-emoji">
+                                        {iconEmoji(activeActe.type_acte)}
+                                    </span>
+                                )}
                                 <div>
                                     <div className="modal-acte-name">
                                         {prettyType(activeActe.type_acte)} —{" "}
@@ -4250,7 +4370,9 @@ export default function Index({
                         </div>
                         <div className="modal-body">
                             <p className="modal-help">
-                                L'annonce est validée par le pasteur. Voulez-vous la publier sur le dashboard de tous les membres connectés ?
+                                L'annonce est validée par le pasteur.
+                                Voulez-vous la publier sur le dashboard de tous
+                                les membres connectés ?
                             </p>
                         </div>
                         <div className="modal-foot">
@@ -4627,7 +4749,7 @@ h1.hero-title{
 .tab-toolbar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:22px}
 .main-tabs{display:flex;gap:3px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:4px;width:fit-content;backdrop-filter:blur(12px)}
 .quick-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-.quick-dropdown{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:'Outfit',system-ui,sans-serif;min-width:220px;backdrop-filter:blur(12px)}
+.quick-dropdown{min-width:300px;height:54px;background:#ECEFF4;border:2px solid #D9DEE8;border-radius:22px;padding:0 48px 0 46px;font-size:16px;font-weight:800;color:#111827;cursor:pointer;font-family:'Outfit',system-ui,sans-serif;appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23586A84' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23374151' stroke-width='2.2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat,no-repeat;background-position:left 16px center,right 16px center;background-size:18px 18px,18px 18px}
 .quick-dropdown:focus{outline:none;border-color:var(--primary)}
 .quick-search{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-family:'Outfit',system-ui,sans-serif;min-width:280px;backdrop-filter:blur(12px)}
 .quick-search:focus{outline:none;border-color:var(--primary)}

@@ -300,6 +300,7 @@ function AppHeader({ auth, onLogout }) {
 // Layout principal
 export default function MainLayout({ children, auth }) {
     const [showGoodbyeLoader, setShowGoodbyeLoader] = useState(false);
+    const [showInfoMenu, setShowInfoMenu] = useState(false);
     const { flashAnnouncements = [] } = usePage().props;
 
     const announcements = Array.isArray(flashAnnouncements)
@@ -434,10 +435,36 @@ export default function MainLayout({ children, auth }) {
         },
     ];
 
-    const mergedTickerMessages = [
-        ...churchInfoMessages,
-        ...tickerMessages,
-    ];
+    const mergedTickerMessages = [...churchInfoMessages, ...tickerMessages];
+
+    const categorizedInfo = {
+        annonces: announcements.filter((a) =>
+            [
+                "annonce",
+                "annonce_liturgique",
+                "grace",
+                "felicitations",
+                "generale",
+            ].includes(String(a?.type_acte || "").toLowerCase()),
+        ),
+        mariage: announcements.filter(
+            (a) => String(a?.type_acte || "").toLowerCase() === "mariage",
+        ),
+        deces: announcements.filter(
+            (a) => String(a?.type_acte || "").toLowerCase() === "deces",
+        ),
+        prieres: announcements.filter(
+            (a) => String(a?.type_acte || "").toLowerCase() === "priere",
+        ),
+        infos: churchInfoMessages,
+    };
+
+    const hasExtraInfo =
+        categorizedInfo.annonces.length > 0 ||
+        categorizedInfo.mariage.length > 0 ||
+        categorizedInfo.deces.length > 0 ||
+        categorizedInfo.prieres.length > 0 ||
+        categorizedInfo.infos.length > 0;
 
     const handleLogout = () => {
         // Afficher le loader d'au revoir
@@ -463,12 +490,65 @@ export default function MainLayout({ children, auth }) {
             <AppHeader auth={auth} onLogout={handleLogout} />
 
             {mergedTickerMessages.length > 0 && (
-                <section className="w-full sticky top-16 z-40">
+                <section className="w-full sticky top-16 z-40 relative">
                     <VerticalTicker
                         messages={mergedTickerMessages}
                         interval={4000}
                         label="Flash Infos"
                     />
+
+                    {hasExtraInfo && (
+                        <div className="absolute right-3 top-1.5">
+                            <button
+                                type="button"
+                                onClick={() => setShowInfoMenu((v) => !v)}
+                                className="h-7 px-3 rounded-md bg-white/95 text-slate-800 text-xs font-semibold shadow border border-slate-200 hover:bg-white"
+                            >
+                                Plus d'info
+                            </button>
+
+                            {showInfoMenu && (
+                                <div className="mt-2 w-[340px] max-w-[92vw] bg-white rounded-lg border border-slate-200 shadow-xl p-3 text-sm text-slate-700">
+                                    <div className="font-semibold text-slate-900 mb-2">
+                                        Informations paroissiales
+                                    </div>
+
+                                    <div className="space-y-2 max-h-80 overflow-y-auto">
+                                        <InfoCategory
+                                            title="Annonce"
+                                            items={categorizedInfo.annonces.map(
+                                                (a) => buildFlashSentence(a),
+                                            )}
+                                        />
+                                        <InfoCategory
+                                            title="Mariage programmé"
+                                            items={categorizedInfo.mariage.map(
+                                                (a) => buildFlashSentence(a),
+                                            )}
+                                        />
+                                        <InfoCategory
+                                            title="Avis de deces"
+                                            items={categorizedInfo.deces.map(
+                                                (a) => buildFlashSentence(a),
+                                            )}
+                                        />
+                                        <InfoCategory
+                                            title="Horaires de prieres"
+                                            items={categorizedInfo.prieres.map(
+                                                (a) => buildFlashSentence(a),
+                                            )}
+                                        />
+                                        <InfoCategory
+                                            title="Info"
+                                            items={categorizedInfo.infos.map(
+                                                (i) => i.text,
+                                            )}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </section>
             )}
 
@@ -485,6 +565,25 @@ export default function MainLayout({ children, auth }) {
             )}
 
             <main>{children}</main>
+        </div>
+    );
+}
+
+function InfoCategory({ title, items = [] }) {
+    if (!Array.isArray(items) || items.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="rounded-md border border-slate-200 bg-slate-50 p-2">
+            <div className="text-xs uppercase tracking-wide font-bold text-slate-600 mb-1">
+                {title}
+            </div>
+            <ul className="space-y-1 list-disc pl-4 text-xs text-slate-700">
+                {items.slice(0, 5).map((item, idx) => (
+                    <li key={`${title}-${idx}`}>{item}</li>
+                ))}
+            </ul>
         </div>
     );
 }

@@ -56,7 +56,6 @@ export default function Index({
     familyMembers: rawFamilyMembers = [],
     conducteurs = {},
     annonces: rawAnnonces = [],
-    annoncesParoisse: rawAnnoncesParoisse = [],
 }) {
     /* ── acte array défensif ── */
     const localActes = Array.isArray(actes) ? actes : [];
@@ -69,7 +68,6 @@ export default function Index({
 
     /* ── état annonces ── */
     const [annonces, setAnnonces] = useState(rawAnnonces);
-    const [annoncesParoisse] = useState(rawAnnoncesParoisse);
     const [showAnnonceModal, setShowAnnonceModal] = useState(false);
     const [selectedAnnonce, setSelectedAnnonce] = useState(null);
     const [annonceStep, setAnnonceStep] = useState(1);
@@ -80,7 +78,6 @@ export default function Index({
         message: "",
         date_annonce: "",
     });
-    const [annTab, setAnnTab] = useState("mes"); // mes | paroisse
     const [annPage, setAnnPage] = useState(1);
     const [annFilter, setAnnFilter] = useState("tous"); // tous | en_cours | validees | refusees
 
@@ -477,7 +474,20 @@ export default function Index({
                                                 <div
                                                     className={`d-icon ${typeTone(acte.type_acte)}`}
                                                 >
-                                                    {typeIcon(acte.type_acte)}
+                                                    {acte.membre?.profile_photo_url ? (
+                                                        <img
+                                                            src={acte.membre.profile_photo_url}
+                                                            alt={acte.membre?.prenom + " " + acte.membre?.nom}
+                                                            style={{
+                                                                width: "100%",
+                                                                height: "100%",
+                                                                objectFit: "cover",
+                                                                borderRadius: "50%",
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        typeIcon(acte.type_acte)
+                                                    )}
                                                 </div>
                                                 <div className="d-content">
                                                     <div className="d-name">
@@ -586,7 +596,9 @@ export default function Index({
                                                 >
                                                     Voir le détail
                                                 </button>
-                                                {VALID.includes(acte.statut) && (
+                                                {VALID.includes(
+                                                    acte.statut,
+                                                ) && (
                                                     <button
                                                         type="button"
                                                         className="btn-pdf"
@@ -959,8 +971,8 @@ export default function Index({
                         <div className="ann-subtabs-bar">
                             <div className="ann-subtabs">
                                 <button
-                                    className={`ann-stab ${annTab === "mes" ? "active" : ""}`}
-                                    onClick={() => setAnnTab("mes")}
+                                    className="ann-stab active"
+                                    onClick={() => setAnnPage(1)}
                                 >
                                     Mes annonces
                                     {annStats.total > 0 && (
@@ -969,593 +981,505 @@ export default function Index({
                                         </span>
                                     )}
                                 </button>
-                                <button
-                                    className={`ann-stab ${annTab === "paroisse" ? "active" : ""}`}
-                                    onClick={() => setAnnTab("paroisse")}
-                                >
-                                    ⛪ Tableau paroissial
-                                    {annoncesParoisse.length > 0 && (
-                                        <span className="ann-stab-badge ann-stab-badge-sage">
-                                            {annoncesParoisse.length}
-                                        </span>
-                                    )}
-                                </button>
                             </div>
-                            {/* Filtres (seulement pour "mes") */}
-                            {annTab === "mes" && (
-                                <div className="ann-filters">
-                                    {[
-                                        { v: "tous", l: "Toutes" },
-                                        { v: "en_cours", l: "En cours" },
-                                        { v: "validees", l: "Validées" },
-                                        { v: "refusees", l: "Refusées" },
-                                    ].map((f) => (
-                                        <button
-                                            key={f.v}
-                                            className={`ann-filter-btn ${annFilter === f.v ? "active" : ""}`}
-                                            onClick={() => {
-                                                setAnnFilter(f.v);
-                                                setAnnPage(1);
-                                            }}
-                                        >
-                                            {f.l}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* ── MES ANNONCES ── */}
-                        {annTab === "mes" && (
-                            <div className="ann-grid-layout">
-                                {/* LISTE */}
-                                <div className="panel">
-                                    <div className="panel-head">
-                                        <div>
-                                            <div className="ph-title">
-                                                Mes annonces
-                                            </div>
-                                            <div className="ph-sub">
-                                                {annFilter === "tous"
-                                                    ? "Toutes vos annonces"
-                                                    : annFilter === "en_cours"
-                                                      ? "En attente de validation"
-                                                      : annFilter === "validees"
-                                                        ? "Annonces publiées"
-                                                        : "Annonces refusées"}
-                                            </div>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            className="ph-link"
-                                            onClick={openAnnonce}
-                                        >
-                                            + Nouvelle
-                                        </button>
-                                    </div>
-
-                                    {annFiltered.length === 0 && (
-                                        <div className="ann-empty">
-                                            <div className="ann-empty-icon">
-                                                {annFilter === "refusees"
-                                                    ? "😔"
-                                                    : "📢"}
-                                            </div>
-                                            <div className="ann-empty-title">
-                                                {annFilter === "tous"
-                                                    ? "Aucune annonce pour le moment"
-                                                    : annFilter === "en_cours"
-                                                      ? "Aucune annonce en cours"
-                                                      : annFilter === "validees"
-                                                        ? "Aucune annonce validée"
-                                                        : "Aucune annonce refusée"}
-                                            </div>
-                                            <div className="ann-empty-sub">
-                                                Partagez une prière, une action
-                                                de grâce ou des félicitations
-                                                avec la paroisse.
-                                            </div>
-                                            {annFilter === "tous" && (
-                                                <button
-                                                    type="button"
-                                                    className="btn-cta-ann"
-                                                    style={{
-                                                        width: "auto",
-                                                        marginTop: 16,
-                                                    }}
-                                                    onClick={openAnnonce}
-                                                >
-                                                    Faire ma première annonce
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {pagedAnn.map((ann) => {
-                                        const t = ANNONCE_TYPES.find(
-                                            (x) =>
-                                                x.value === ann.type_annonce ||
-                                                x.value === ann.type_acte,
-                                        );
-                                        const isValid = VALID.includes(
-                                            ann.statut,
-                                        );
-                                        const isRefuse = String(
-                                            ann.statut,
-                                        ).startsWith("REFUSEE");
-                                        const isCours = !isValid && !isRefuse;
-                                        const msg =
-                                            ann.details?.contenu ||
-                                            ann.message ||
-                                            "";
-                                        const member = ann.membre
-                                            ? `${ann.membre.prenom} ${ann.membre.nom}`
-                                            : null;
-                                        return (
-                                            <div
-                                                key={ann.id}
-                                                className={`ann-item-rf ${isRefuse ? "ann-item-refuse" : isValid ? "ann-item-valid" : ""}`}
-                                                onClick={() =>
-                                                    setSelectedAnnonce(ann)
-                                                }
-                                            >
-                                                <div
-                                                    className={`ann-item-icon atype-${t?.color}`}
-                                                >
-                                                    {t?.emoji || "📢"}
-                                                </div>
-                                                <div className="ann-item-body">
-                                                    <div className="ann-item-header">
-                                                        <span className="ann-item-name">
-                                                            {t?.label ||
-                                                                ann.type_annonce}
-                                                        </span>
-                                                        {member && (
-                                                            <span className="ann-item-who">
-                                                                — {member}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="ann-item-msg">
-                                                        {msg.slice(0, 100)}
-                                                        {msg.length > 100
-                                                            ? "…"
-                                                            : ""}
-                                                    </div>
-                                                    <div className="ann-item-meta">
-                                                        {ann.created_at && (
-                                                            <span>
-                                                                📅{" "}
-                                                                {formatDate(
-                                                                    ann.created_at,
-                                                                )}
-                                                            </span>
-                                                        )}
-                                                        {ann.date_annonce && (
-                                                            <span>
-                                                                🗓{" "}
-                                                                {formatDate(
-                                                                    ann.date_annonce,
-                                                                )}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    {/* Progress tracker */}
-                                                    <AnnonceDotTrack
-                                                        statut={ann.statut}
-                                                    />
-                                                </div>
-                                                <div className="ann-item-right">
-                                                    {isCours && (
-                                                        <span className="ann-badge ann-badge-orange">
-                                                            EN COURS
-                                                        </span>
-                                                    )}
-                                                    {isValid && (
-                                                        <span className="ann-badge ann-badge-sage">
-                                                            PUBLIÉE
-                                                        </span>
-                                                    )}
-                                                    {isRefuse && (
-                                                        <span className="ann-badge ann-badge-terra">
-                                                            REFUSÉE
-                                                        </span>
-                                                    )}
-                                                    {isValid && (
-                                                        <button
-                                                            type="button"
-                                                            className="btn-pdf btn-pdf-sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                window.open(
-                                                                    `/membre-famille/annonces/${ann.id}/fiche`,
-                                                                    "_blank",
-                                                                );
-                                                            }}
-                                                        >
-                                                            <Download
-                                                                size={11}
-                                                            />{" "}
-                                                            Télécharger fiche
-                                                        </button>
-                                                    )}
-                                                    <svg
-                                                        width="14"
-                                                        height="14"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        stroke="currentColor"
-                                                        strokeWidth="2"
-                                                        style={{
-                                                            color: "#9C9484",
-                                                        }}
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            d="M9 5l7 7-7 7"
-                                                        />
-                                                    </svg>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                    {annTotalPages > 1 && (
-                                        <div className="pager">
-                                            <button
-                                                type="button"
-                                                className="pager-btn"
-                                                onClick={() =>
-                                                    goToAnn(annPage - 1)
-                                                }
-                                                disabled={annPage === 1}
-                                            >
-                                                Précédent
-                                            </button>
-                                            <span className="pager-info">
-                                                Page {annPage} / {annTotalPages}
-                                            </span>
-                                            <button
-                                                type="button"
-                                                className="pager-btn"
-                                                onClick={() =>
-                                                    goToAnn(annPage + 1)
-                                                }
-                                                disabled={
-                                                    annPage === annTotalPages
-                                                }
-                                            >
-                                                Suivant
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* SIDEBAR */}
-                                <aside
-                                    style={{
-                                        display: "flex",
-                                        flexDirection: "column",
-                                        gap: 16,
-                                    }}
-                                >
-                                    {/* Circuit */}
-                                    <div className="panel">
-                                        <div className="panel-head">
-                                            <div
-                                                className="ph-title"
-                                                style={{ fontSize: 14 }}
-                                            >
-                                                <svg
-                                                    width="14"
-                                                    height="14"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                    strokeWidth="2"
-                                                    style={{ marginRight: 6 }}
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                    />
-                                                </svg>
-                                                Circuit de l'annonce
-                                            </div>
-                                        </div>
-                                        <div className="ann-circuit-steps">
-                                            <div className="ann-cs-step done">
-                                                <div className="ann-cs-dot done">
-                                                    <svg
-                                                        width="9"
-                                                        height="9"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        stroke="currentColor"
-                                                        strokeWidth="3"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            d="M5 13l4 4L19 7"
-                                                        />
-                                                    </svg>
-                                                </div>
-                                                <div className="ann-cs-line done" />
-                                                <div className="ann-cs-text">
-                                                    <strong>
-                                                        Vous soumettez
-                                                    </strong>
-                                                    <span>
-                                                        Annonce enregistrée
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="ann-cs-step">
-                                                <div
-                                                    className="ann-cs-dot active"
-                                                    style={{ fontSize: 12 }}
-                                                >
-                                                    📋
-                                                </div>
-                                                <div className="ann-cs-line" />
-                                                <div className="ann-cs-text">
-                                                    <strong>
-                                                        Conducteur valide
-                                                    </strong>
-                                                    <span>
-                                                        Analyse du contenu
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="ann-cs-step">
-                                                <div className="ann-cs-dot pending">
-                                                    ✝
-                                                </div>
-                                                <div className="ann-cs-line" />
-                                                <div className="ann-cs-text">
-                                                    <strong>
-                                                        Pasteur approuve
-                                                    </strong>
-                                                    <span>
-                                                        Validation finale
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="ann-cs-step">
-                                                <div
-                                                    className="ann-cs-dot pending"
-                                                    style={{ fontSize: 10 }}
-                                                >
-                                                    🌍
-                                                </div>
-                                                <div className="ann-cs-text">
-                                                    <strong>Publication</strong>
-                                                    <span>
-                                                        Visible à la paroisse
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Répartition types */}
-                                    <div className="panel">
-                                        <div className="panel-head">
-                                            <div
-                                                className="ph-title"
-                                                style={{ fontSize: 14 }}
-                                            >
-                                                <svg
-                                                    width="14"
-                                                    height="14"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                    strokeWidth="2"
-                                                    style={{ marginRight: 6 }}
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                                                    />
-                                                </svg>
-                                                Mes annonces par type
-                                            </div>
-                                        </div>
-                                        <div
-                                            style={{
-                                                padding: "14px 18px",
-                                                display: "flex",
-                                                flexDirection: "column",
-                                                gap: 10,
-                                            }}
-                                        >
-                                            {ANNONCE_TYPES.map((t) => {
-                                                const cnt = annonces.filter(
-                                                    (a) =>
-                                                        (a.type_annonce ||
-                                                            a.type_acte) ===
-                                                        t.value,
-                                                ).length;
-                                                const pct = annStats.total
-                                                    ? Math.round(
-                                                          (cnt /
-                                                              annStats.total) *
-                                                              100,
-                                                      )
-                                                    : 0;
-                                                return (
-                                                    <div
-                                                        key={t.value}
-                                                        className="ann-stat-row"
-                                                    >
-                                                        <span
-                                                            style={{
-                                                                fontSize: 18,
-                                                                width: 24,
-                                                                textAlign:
-                                                                    "center",
-                                                            }}
-                                                        >
-                                                            {t.emoji}
-                                                        </span>
-                                                        <div
-                                                            style={{
-                                                                flex: 1,
-                                                                minWidth: 0,
-                                                            }}
-                                                        >
-                                                            <div
-                                                                style={{
-                                                                    fontSize: 11.5,
-                                                                    fontWeight: 700,
-                                                                    color: "#1E1B16",
-                                                                    marginBottom: 4,
-                                                                }}
-                                                            >
-                                                                {t.label
-                                                                    .split(
-                                                                        "/",
-                                                                    )[0]
-                                                                    .trim()}
-                                                            </div>
-                                                            <div
-                                                                style={{
-                                                                    height: 4,
-                                                                    background:
-                                                                        "rgba(30,27,22,.07)",
-                                                                    borderRadius: 6,
-                                                                    overflow:
-                                                                        "hidden",
-                                                                }}
-                                                            >
-                                                                <div
-                                                                    style={{
-                                                                        height: "100%",
-                                                                        borderRadius: 6,
-                                                                        background:
-                                                                            t.color ===
-                                                                            "violet"
-                                                                                ? "#7C6FCD"
-                                                                                : t.color ===
-                                                                                    "amber"
-                                                                                  ? "#B87A20"
-                                                                                  : t.color ===
-                                                                                      "slate"
-                                                                                    ? "#909090"
-                                                                                    : t.color ===
-                                                                                        "terra"
-                                                                                      ? "#C06040"
-                                                                                      : "#4A7C5E",
-                                                                        width: `${pct}%`,
-                                                                        transition:
-                                                                            "width .5s",
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                        <span
-                                                            style={{
-                                                                fontSize: 14,
-                                                                fontWeight: 800,
-                                                                color: "#1E1B16",
-                                                                width: 20,
-                                                                textAlign:
-                                                                    "right",
-                                                            }}
-                                                        >
-                                                            {cnt}
-                                                        </span>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-
-                                    {/* CTA rapide */}
-                                    <div
-                                        className="ann-side-cta"
-                                        onClick={openAnnonce}
-                                    >
-                                        <div className="ann-side-cta-icon">
-                                            📢
-                                        </div>
-                                        <div className="ann-side-cta-text">
-                                            <div className="ann-side-cta-title">
-                                                Nouvelle annonce
-                                            </div>
-                                            <div className="ann-side-cta-sub">
-                                                Partager avec la paroisse
-                                            </div>
-                                        </div>
-                                        <svg
-                                            width="14"
-                                            height="14"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth="2.5"
-                                            style={{ color: "#A090D8" }}
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M9 5l7 7-7 7"
-                                            />
-                                        </svg>
-                                    </div>
-                                </aside>
-                            </div>
-                        )}
-
-                        {/* ── TABLEAU PAROISSIAL ── */}
-                        {annTab === "paroisse" && (
-                            <div className="paroisse-wrap">
-                                <div className="paroisse-banner">
-                                    <span style={{ fontSize: 32 }}>⛪</span>
-                                    <div>
-                                        <div className="paroisse-title">
-                                            Tableau d'affichage paroissial
-                                        </div>
-                                        <div className="paroisse-sub">
-                                            Annonces validées par le Pasteur —
-                                            visibles par toute la paroisse
-                                        </div>
-                                    </div>
-                                </div>
-                                {annoncesParoisse.length === 0 && (
-                                    <div
-                                        className="ann-empty"
-                                        style={{
-                                            background: "rgba(255,255,255,.95)",
-                                            borderRadius: 14,
-                                            padding: 40,
+                            <div className="ann-filters">
+                                {[
+                                    { v: "tous", l: "Toutes" },
+                                    { v: "en_cours", l: "En cours" },
+                                    { v: "validees", l: "Validées" },
+                                    { v: "refusees", l: "Refusées" },
+                                ].map((f) => (
+                                    <button
+                                        key={f.v}
+                                        className={`ann-filter-btn ${annFilter === f.v ? "active" : ""}`}
+                                        onClick={() => {
+                                            setAnnFilter(f.v);
+                                            setAnnPage(1);
                                         }}
                                     >
-                                        <div className="ann-empty-icon">📋</div>
-                                        <div className="ann-empty-title">
-                                            Aucune annonce paroissiale pour le
-                                            moment
+                                        {f.l}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="ann-grid-layout">
+                            {/* LISTE */}
+                            <div className="panel">
+                                <div className="panel-head">
+                                    <div>
+                                        <div className="ph-title">
+                                            Mes annonces
                                         </div>
-                                        <div className="ann-empty-sub">
-                                            Les annonces validées par le pasteur
-                                            apparaîtront ici.
+                                        <div className="ph-sub">
+                                            {annFilter === "tous"
+                                                ? "Toutes vos annonces"
+                                                : annFilter === "en_cours"
+                                                  ? "En attente de validation"
+                                                  : annFilter === "validees"
+                                                    ? "Annonces publiées"
+                                                    : "Annonces refusées"}
                                         </div>
                                     </div>
-                                )}
-                                <div className="paroisse-grid">
-                                    {annoncesParoisse.map((ann) => (
-                                        <ParoisseCard
-                                            key={ann.id}
-                                            annonce={ann}
-                                        />
-                                    ))}
+                                    <button
+                                        type="button"
+                                        className="ph-link"
+                                        onClick={openAnnonce}
+                                    >
+                                        + Nouvelle
+                                    </button>
                                 </div>
+
+                                {annFiltered.length === 0 && (
+                                    <div className="ann-empty">
+                                        <div className="ann-empty-icon">
+                                            {annFilter === "refusees"
+                                                ? "😔"
+                                                : "📢"}
+                                        </div>
+                                        <div className="ann-empty-title">
+                                            {annFilter === "tous"
+                                                ? "Aucune annonce pour le moment"
+                                                : annFilter === "en_cours"
+                                                  ? "Aucune annonce en cours"
+                                                  : annFilter === "validees"
+                                                    ? "Aucune annonce validée"
+                                                    : "Aucune annonce refusée"}
+                                        </div>
+                                        <div className="ann-empty-sub">
+                                            Partagez une prière, une action de
+                                            grâce ou des félicitations avec la
+                                            paroisse.
+                                        </div>
+                                        {annFilter === "tous" && (
+                                            <button
+                                                type="button"
+                                                className="btn-cta-ann"
+                                                style={{
+                                                    width: "auto",
+                                                    marginTop: 16,
+                                                }}
+                                                onClick={openAnnonce}
+                                            >
+                                                Faire ma première annonce
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
+                                {pagedAnn.map((ann) => {
+                                    const t = ANNONCE_TYPES.find(
+                                        (x) =>
+                                            x.value === ann.type_annonce ||
+                                            x.value === ann.type_acte,
+                                    );
+                                    const isValid = VALID.includes(ann.statut);
+                                    const isRefuse = String(
+                                        ann.statut,
+                                    ).startsWith("REFUSEE");
+                                    const isCours = !isValid && !isRefuse;
+                                    const msg =
+                                        ann.details?.contenu ||
+                                        ann.message ||
+                                        "";
+                                    const member = ann.membre
+                                        ? `${ann.membre.prenom} ${ann.membre.nom}`
+                                        : null;
+                                    return (
+                                        <div
+                                            key={ann.id}
+                                            className={`ann-item-rf ${isRefuse ? "ann-item-refuse" : isValid ? "ann-item-valid" : ""}`}
+                                            onClick={() =>
+                                                setSelectedAnnonce(ann)
+                                            }
+                                        >
+                                            <div
+                                                className={`ann-item-icon atype-${t?.color}`}
+                                            >
+                                                {t?.emoji || "📢"}
+                                            </div>
+                                            <div className="ann-item-body">
+                                                <div className="ann-item-header">
+                                                    <span className="ann-item-name">
+                                                        {t?.label ||
+                                                            ann.type_annonce}
+                                                    </span>
+                                                    {member && (
+                                                        <span className="ann-item-who">
+                                                            — {member}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="ann-item-msg">
+                                                    {msg.slice(0, 100)}
+                                                    {msg.length > 100
+                                                        ? "…"
+                                                        : ""}
+                                                </div>
+                                                <div className="ann-item-meta">
+                                                    {ann.created_at && (
+                                                        <span>
+                                                            📅{" "}
+                                                            {formatDate(
+                                                                ann.created_at,
+                                                            )}
+                                                        </span>
+                                                    )}
+                                                    {ann.date_annonce && (
+                                                        <span>
+                                                            🗓{" "}
+                                                            {formatDate(
+                                                                ann.date_annonce,
+                                                            )}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {/* Progress tracker */}
+                                                <AnnonceDotTrack
+                                                    statut={ann.statut}
+                                                />
+                                            </div>
+                                            <div className="ann-item-right">
+                                                {isCours && (
+                                                    <span className="ann-badge ann-badge-orange">
+                                                        EN COURS
+                                                    </span>
+                                                )}
+                                                {isValid && (
+                                                    <span className="ann-badge ann-badge-sage">
+                                                        PUBLIÉE
+                                                    </span>
+                                                )}
+                                                {isRefuse && (
+                                                    <span className="ann-badge ann-badge-terra">
+                                                        REFUSÉE
+                                                    </span>
+                                                )}
+                                                {isValid && (
+                                                    <button
+                                                        type="button"
+                                                        className="btn-pdf btn-pdf-sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            window.open(
+                                                                `/membre-famille/annonces/${ann.id}/fiche`,
+                                                                "_blank",
+                                                            );
+                                                        }}
+                                                    >
+                                                        <Download size={11} />{" "}
+                                                        Télécharger fiche
+                                                    </button>
+                                                )}
+                                                <svg
+                                                    width="14"
+                                                    height="14"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                    strokeWidth="2"
+                                                    style={{
+                                                        color: "#9C9484",
+                                                    }}
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        d="M9 5l7 7-7 7"
+                                                    />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {annTotalPages > 1 && (
+                                    <div className="pager">
+                                        <button
+                                            type="button"
+                                            className="pager-btn"
+                                            onClick={() => goToAnn(annPage - 1)}
+                                            disabled={annPage === 1}
+                                        >
+                                            Précédent
+                                        </button>
+                                        <span className="pager-info">
+                                            Page {annPage} / {annTotalPages}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            className="pager-btn"
+                                            onClick={() => goToAnn(annPage + 1)}
+                                            disabled={annPage === annTotalPages}
+                                        >
+                                            Suivant
+                                        </button>
+                                    </div>
+                                )}
                             </div>
-                        )}
+
+                            {/* SIDEBAR */}
+                            <aside
+                                style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 16,
+                                }}
+                            >
+                                {/* Circuit */}
+                                <div className="panel">
+                                    <div className="panel-head">
+                                        <div
+                                            className="ph-title"
+                                            style={{ fontSize: 14 }}
+                                        >
+                                            <svg
+                                                width="14"
+                                                height="14"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                style={{ marginRight: 6 }}
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                />
+                                            </svg>
+                                            Circuit de l'annonce
+                                        </div>
+                                    </div>
+                                    <div className="ann-circuit-steps">
+                                        <div className="ann-cs-step done">
+                                            <div className="ann-cs-dot done">
+                                                <svg
+                                                    width="9"
+                                                    height="9"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                    strokeWidth="3"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        d="M5 13l4 4L19 7"
+                                                    />
+                                                </svg>
+                                            </div>
+                                            <div className="ann-cs-line done" />
+                                            <div className="ann-cs-text">
+                                                <strong>Vous soumettez</strong>
+                                                <span>Annonce enregistrée</span>
+                                            </div>
+                                        </div>
+                                        <div className="ann-cs-step">
+                                            <div
+                                                className="ann-cs-dot active"
+                                                style={{ fontSize: 12 }}
+                                            >
+                                                📋
+                                            </div>
+                                            <div className="ann-cs-line" />
+                                            <div className="ann-cs-text">
+                                                <strong>
+                                                    Conducteur valide
+                                                </strong>
+                                                <span>Analyse du contenu</span>
+                                            </div>
+                                        </div>
+                                        <div className="ann-cs-step">
+                                            <div className="ann-cs-dot pending">
+                                                ✝
+                                            </div>
+                                            <div className="ann-cs-line" />
+                                            <div className="ann-cs-text">
+                                                <strong>
+                                                    Pasteur approuve
+                                                </strong>
+                                                <span>Validation finale</span>
+                                            </div>
+                                        </div>
+                                        <div className="ann-cs-step">
+                                            <div
+                                                className="ann-cs-dot pending"
+                                                style={{ fontSize: 10 }}
+                                            >
+                                                🌍
+                                            </div>
+                                            <div className="ann-cs-text">
+                                                <strong>Publication</strong>
+                                                <span>
+                                                    Visible à la paroisse
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Répartition types */}
+                                <div className="panel">
+                                    <div className="panel-head">
+                                        <div
+                                            className="ph-title"
+                                            style={{ fontSize: 14 }}
+                                        >
+                                            <svg
+                                                width="14"
+                                                height="14"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                style={{ marginRight: 6 }}
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                                                />
+                                            </svg>
+                                            Mes annonces par type
+                                        </div>
+                                    </div>
+                                    <div
+                                        style={{
+                                            padding: "14px 18px",
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            gap: 10,
+                                        }}
+                                    >
+                                        {ANNONCE_TYPES.map((t) => {
+                                            const cnt = annonces.filter(
+                                                (a) =>
+                                                    (a.type_annonce ||
+                                                        a.type_acte) ===
+                                                    t.value,
+                                            ).length;
+                                            const pct = annStats.total
+                                                ? Math.round(
+                                                      (cnt / annStats.total) *
+                                                          100,
+                                                  )
+                                                : 0;
+                                            return (
+                                                <div
+                                                    key={t.value}
+                                                    className="ann-stat-row"
+                                                >
+                                                    <span
+                                                        style={{
+                                                            fontSize: 18,
+                                                            width: 24,
+                                                            textAlign: "center",
+                                                        }}
+                                                    >
+                                                        {t.emoji}
+                                                    </span>
+                                                    <div
+                                                        style={{
+                                                            flex: 1,
+                                                            minWidth: 0,
+                                                        }}
+                                                    >
+                                                        <div
+                                                            style={{
+                                                                fontSize: 11.5,
+                                                                fontWeight: 700,
+                                                                color: "#1E1B16",
+                                                                marginBottom: 4,
+                                                            }}
+                                                        >
+                                                            {t.label
+                                                                .split("/")[0]
+                                                                .trim()}
+                                                        </div>
+                                                        <div
+                                                            style={{
+                                                                height: 4,
+                                                                background:
+                                                                    "rgba(30,27,22,.07)",
+                                                                borderRadius: 6,
+                                                                overflow:
+                                                                    "hidden",
+                                                            }}
+                                                        >
+                                                            <div
+                                                                style={{
+                                                                    height: "100%",
+                                                                    borderRadius: 6,
+                                                                    background:
+                                                                        t.color ===
+                                                                        "violet"
+                                                                            ? "#7C6FCD"
+                                                                            : t.color ===
+                                                                                "amber"
+                                                                              ? "#B87A20"
+                                                                              : t.color ===
+                                                                                  "slate"
+                                                                                ? "#909090"
+                                                                                : t.color ===
+                                                                                    "terra"
+                                                                                  ? "#C06040"
+                                                                                  : "#4A7C5E",
+                                                                    width: `${pct}%`,
+                                                                    transition:
+                                                                        "width .5s",
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <span
+                                                        style={{
+                                                            fontSize: 14,
+                                                            fontWeight: 800,
+                                                            color: "#1E1B16",
+                                                            width: 20,
+                                                            textAlign: "right",
+                                                        }}
+                                                    >
+                                                        {cnt}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* CTA rapide */}
+                                <div
+                                    className="ann-side-cta"
+                                    onClick={openAnnonce}
+                                >
+                                    <div className="ann-side-cta-icon">📢</div>
+                                    <div className="ann-side-cta-text">
+                                        <div className="ann-side-cta-title">
+                                            Nouvelle annonce
+                                        </div>
+                                        <div className="ann-side-cta-sub">
+                                            Partager avec la paroisse
+                                        </div>
+                                    </div>
+                                    <svg
+                                        width="14"
+                                        height="14"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        strokeWidth="2.5"
+                                        style={{ color: "#A090D8" }}
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M9 5l7 7-7 7"
+                                        />
+                                    </svg>
+                                </div>
+                            </aside>
+                        </div>
                     </div>
                 )}
             </div>
@@ -1788,7 +1712,9 @@ export default function Index({
                                         Après soumission :{" "}
                                         <strong>Conducteur</strong> →{" "}
                                         <strong>Pasteur</strong> →{" "}
-                                        <strong>Téléchargement du fichier</strong>
+                                        <strong>
+                                            Téléchargement du fichier
+                                        </strong>
                                     </div>
                                 </div>
                             )}
@@ -2223,7 +2149,9 @@ function AnnonceDotTrack({ statut, expanded }) {
     return (
         <div className={`ann-track ${expanded ? "ann-track-exp" : ""}`}>
             {steps.map((s, i) => {
-                const isDone = isValidated ? i <= 2 : !isRefuse && i < activeIdx;
+                const isDone = isValidated
+                    ? i <= 2
+                    : !isRefuse && i < activeIdx;
                 const isActive = !isValidated && i === activeIdx;
                 const isRef = isRefuse && isActive;
                 return (

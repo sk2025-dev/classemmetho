@@ -36,9 +36,12 @@ export default function MariageForm({
             epoux_prenom: "",
             epoux_nat: "",
             epoux_prof: "",
-            epoux_adr: "",
+            epoux_contact: "",
             epoux_membre: "",
+            epoux_eglise: "",
             epoux_baptise: "",
+            epoux_bapteme_lieu: "",
+            epoux_bapteme_date: "",
             type_mariage: "",
             date: "",
             heure: "",
@@ -146,11 +149,21 @@ export default function MariageForm({
             "details[conjoint_2]",
             memberFullName || partnerFullName,
         );
+        payload.append("details[epoux_prenom]", form.details.epoux_prenom || "");
+        payload.append("details[epoux_nom]", form.details.epoux_nom || "");
         payload.append("details[date]", form.details.date || "");
         payload.append("details[lieu]", form.details.lieu || "");
         payload.append(
             "details[type_mariage]",
             form.details.type_mariage || "",
+        );
+        payload.append(
+            "details[epoux_contact]",
+            form.details.epoux_contact || "",
+        );
+        payload.append(
+            "details[epoux_eglise]",
+            form.details.epoux_eglise || "",
         );
         payload.append(
             "details[epoux_baptise]",
@@ -216,11 +229,10 @@ export default function MariageForm({
                 epoux_prenom: "",
                 epoux_nat: "",
                 epoux_prof: "",
-                epoux_adr: "",
+                epoux_contact: "",
                 epoux_membre: "",
+                epoux_eglise: "",
                 epoux_baptise: "",
-                epoux_bapteme_lieu: "",
-                epoux_bapteme_date: "",
                 epoux_bapteme_lieu: "",
                 epoux_bapteme_date: "",
                 type_mariage: "",
@@ -415,15 +427,16 @@ export default function MariageForm({
                                     </Field>
                                 </div>
 
-                                <Field label="Adresse">
+                                <Field label="Contact (10 chiffres)">
                                     <input
-                                        value={form.details.epoux_adr}
-                                        onChange={(e) =>
-                                            setDetail(
-                                                "epoux_adr",
-                                                e.target.value,
-                                            )
-                                        }
+                                        type="tel"
+                                        placeholder="Ex: 0123456789"
+                                        value={form.details.epoux_contact}
+                                        onChange={(e) => {
+                                            const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                            setDetail("epoux_contact", value);
+                                        }}
+                                        maxLength="10"
                                     />
                                 </Field>
 
@@ -464,6 +477,20 @@ export default function MariageForm({
                                         </select>
                                     </Field>
                                 </div>
+                                {form.details.epoux_membre === "non" && (
+                                    <Field label="Église du fiancé(e)" className="mt-4">
+                                        <input
+                                            value={form.details.epoux_eglise}
+                                            onChange={(e) =>
+                                                setDetail(
+                                                    "epoux_eglise",
+                                                    e.target.value,
+                                                )
+                                            }
+                                            placeholder="Nom de l'église ou de la communauté religieuse"
+                                        />
+                                    </Field>
+                                )}
                                 {form.details.epoux_baptise === "oui" && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                         <Field label="Église de baptême *">
@@ -684,6 +711,10 @@ export default function MariageForm({
                                     <RecapRow
                                         k="Partenaire"
                                         v={recap.partenaire}
+                                    />
+                                    <RecapRow
+                                        k="Membre concerné"
+                                        v={recap.membre}
                                     />
                                 </RecapCard>
 

@@ -531,7 +531,9 @@ export default function RegisterFamille({
 
         if (!membreTemp.nom) newErrors["membre.nom"] = "Nom requis";
         if (!membreTemp.prenom) newErrors["membre.prenom"] = "Prénom requis";
-        if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email))
+        if (!membreTemp.email) 
+            newErrors["membre.email"] = "Email requis";
+        else if (!/^\S+@\S+\.\S+$/.test(membreTemp.email))
             newErrors["membre.email"] = "Adresse email invalide";
         if (!membreTemp.relation)
             newErrors["membre.relation"] = "Relation requise";
@@ -1109,6 +1111,11 @@ export default function RegisterFamille({
             membres.forEach((m, i) => {
                 membreFields.forEach((k) => {
                     const v = m[k];
+                    
+                    // Les champs requis doivent TOUJOURS être envoyés au backend
+                    const requiredFields = ["email", "nom", "prenom", "genre", "dateNaissance", "relation", "profession", "statutMarital"];
+                    const shouldSendEmpty = requiredFields.includes(k);
+                    
                     if (k === "photo") {
                         const photoValue = v || m.photoPreview || null;
                         if (photoValue instanceof File) {
@@ -1120,8 +1127,8 @@ export default function RegisterFamille({
                         ) {
                             formData.append(`membres[${i}][photo]`, photoValue);
                         }
-                    } else if (v !== null && v !== undefined && v !== "") {
-                        let valueToSend = v;
+                    } else if (shouldSendEmpty || (v !== null && v !== undefined && v !== "")) {
+                        let valueToSend = v || "";
                         // Convertir les booléens en "1"/"0"
                         if (typeof v === "boolean") {
                             valueToSend = v ? "1" : "0";
@@ -2395,6 +2402,56 @@ export default function RegisterFamille({
                                                 {getFieldError(
                                                     "membre.fonction",
                                                 )}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                        label="Adresse email"
+                                        icon={Mail}
+                                        required
+                                    >
+                                        <input
+                                            type="email"
+                                            className={STYLES.input}
+                                            value={membreTemp.email}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    email: e.target.value,
+                                                })
+                                            }
+                                            placeholder="exemple@email.com"
+                                        />
+                                        {getFieldError("membre.email") && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {getFieldError("membre.email")}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                    <FormField
+                                        label="Téléphone"
+                                        icon={Phone}
+                                    >
+                                        <input
+                                            type="text"
+                                            className={STYLES.input}
+                                            value={membreTemp.telephone}
+                                            onChange={(e) => {
+                                                const formatted = formatPhoneNumber(e.target.value);
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    telephone: formatted,
+                                                })
+                                            }}
+                                            placeholder="10 chiffres"
+                                            maxLength="10"
+                                        />
+                                        {getFieldError("membre.telephone") && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {getFieldError("membre.telephone")}
                                             </p>
                                         )}
                                     </FormField>

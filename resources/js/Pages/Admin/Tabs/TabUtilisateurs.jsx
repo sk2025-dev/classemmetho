@@ -96,6 +96,7 @@ const exportToPDF = (membres, filters = {}) => {
         { header: "Genre", dataKey: "genre" },
         { header: "Fonction", dataKey: "fonction" },
         { header: "Famille", dataKey: "famille" },
+        { header: "Code Famille", dataKey: "code_famille" },
         { header: "Date Naiss.", dataKey: "naissance" },
         { header: "Statut", dataKey: "statut" },
     ];
@@ -106,6 +107,7 @@ const exportToPDF = (membres, filters = {}) => {
         genre: m.genre === "M" ? "H." : m.genre === "F" ? "F." : "-",
         fonction: m.fonction || "-",
         famille: m.famille || "-",
+        code_famille: m.code_famille || "-",
         naissance: m.date_naissance || "-",
         statut: m.is_active ? "Actif" : "Inactif",
     }));
@@ -1943,6 +1945,7 @@ const TabUtilisateurs = ({
     onAddMember,
 }) => {
     const [search, setSearch] = useState("");
+    const [barcodeFilter, setBarcodeFilter] = useState("");
     const [statutFilter, setStatutFilter] = useState("all");
     const [classeFilter, setClasseFilter] = useState("");
     const [fonctionFilter, setFonctionFilter] = useState("");
@@ -2033,7 +2036,15 @@ const TabUtilisateurs = ({
             membre.prenom?.toLowerCase().includes(s) ||
             membre.email?.toLowerCase().includes(s) ||
             membre.identifiant?.toLowerCase().includes(s) ||
-            membre.telephone?.includes(s);
+            membre.telephone?.includes(s) ||
+            membre.code_famille?.toLowerCase().includes(s);
+
+        const normalizedBarcode = String(barcodeFilter || "")
+            .trim()
+            .toLowerCase();
+        const memberCode = String(membre.code_famille || "").toLowerCase();
+        const matchBarcode =
+            !normalizedBarcode || memberCode.includes(normalizedBarcode);
 
         let matchStatut = true;
         if (statutFilter !== "all") {
@@ -2069,6 +2080,7 @@ const TabUtilisateurs = ({
 
         return (
             matchSearch &&
+            matchBarcode &&
             matchStatut &&
             matchClasse &&
             matchFonction &&
@@ -2091,6 +2103,7 @@ const TabUtilisateurs = ({
         setCurrentPage(1);
     }, [
         search,
+        barcodeFilter,
         statutFilter,
         classeFilter,
         fonctionFilter,
@@ -2125,6 +2138,7 @@ const TabUtilisateurs = ({
 
     const resetFilters = () => {
         setSearch("");
+        setBarcodeFilter("");
         setStatutFilter("all");
         setClasseFilter("");
         setFonctionFilter("");
@@ -2385,6 +2399,31 @@ const TabUtilisateurs = ({
                                     className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-white border border-gray-300 outline-none text-gray-800 text-sm transition group-hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
+                                />
+                            </div>
+                            <div className="relative group mt-2">
+                                <svg
+                                    className="absolute left-3 top-3.5 text-gray-400 w-4 h-4 pointer-events-none"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M4 7V5a1 1 0 011-1h2M20 7V5a1 1 0 00-1-1h-2M4 17v2a1 1 0 001 1h2M20 17v2a1 1 0 01-1 1h-2M7 12h10"
+                                    />
+                                </svg>
+                                <input
+                                    placeholder="Scanner / code famille..."
+                                    className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-white border border-gray-300 outline-none text-gray-800 text-sm transition group-hover:border-indigo-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                                    value={barcodeFilter}
+                                    onChange={(e) =>
+                                        setBarcodeFilter(
+                                            e.target.value.replace(/\s+/g, ""),
+                                        )
+                                    }
                                 />
                             </div>
                         </div>
@@ -2653,6 +2692,7 @@ const TabUtilisateurs = ({
 
                     {/* Afficher les filtres actifs */}
                     {(statutFilter !== "all" ||
+                        barcodeFilter !== "" ||
                         classeFilter !== "" ||
                         fonctionFilter !== "" ||
                         roleFilter !== "" ||
@@ -2681,6 +2721,17 @@ const TabUtilisateurs = ({
                                     <button
                                         onClick={() => setGenreFilter("")}
                                         className="ml-2 text-pink-600 hover:text-pink-800 font-bold"
+                                    >
+                                        &times;
+                                    </button>
+                                </span>
+                            )}
+                            {barcodeFilter !== "" && (
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-indigo-100 text-indigo-800 font-semibold">
+                                    🧾 Code famille: {barcodeFilter}
+                                    <button
+                                        onClick={() => setBarcodeFilter("")}
+                                        className="ml-2 text-indigo-600 hover:text-indigo-800 font-bold"
                                     >
                                         &times;
                                     </button>
@@ -2782,6 +2833,7 @@ const TabUtilisateurs = ({
                                         "Date modification",
                                         "Classe",
                                         "Famille",
+                                        "Code Famille",
                                         "Relation",
                                         "Statut",
                                         "Actions",
@@ -2931,6 +2983,9 @@ const TabUtilisateurs = ({
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-700 text-center whitespace-nowrap">
                                                 {m.famille || "-"}
+                                            </td>
+                                            <td className="px-3 py-3 text-sm text-gray-700 text-center whitespace-nowrap font-semibold">
+                                                {m.code_famille || "-"}
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-700 text-center whitespace-nowrap">
                                                 {m.relation ||
@@ -3091,7 +3146,7 @@ const TabUtilisateurs = ({
                                 ) : (
                                     <tr>
                                         <td
-                                            colSpan={24}
+                                            colSpan={25}
                                             className="px-6 py-12 text-center text-gray-400 italic"
                                         >
                                             Aucun utilisateur trouvé.

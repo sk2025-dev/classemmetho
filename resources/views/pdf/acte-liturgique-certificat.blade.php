@@ -56,10 +56,10 @@
         /* ── Cadre double ── */
         .frame-outer {
             position: absolute;
-            top: 6mm;
-            left: 6mm;
-            right: 6mm;
-            bottom: 6mm;
+            top: 0mm;
+            left: 0mm;
+            right: 0mm;
+            bottom: 0mm;
             border: 5px solid #0F1E40;
         }
 
@@ -173,6 +173,29 @@
     $attestation = $attestationPhrases[$acte->type_acte ?? ''] ?? 'a reçu cet acte liturgique au sein de notre communauté.';
 
     $fullName = trim(($acte->membre->prenom ?? '') . ' ' . ($acte->membre->nom ?? '')) ?: 'Nom et Prénom';
+
+    // Pour le mariage : afficher les deux conjoints
+    $displayName = $fullName;
+    $subtitleText = "Ce certificat est décerné à";
+
+    if ($acte->type_acte === 'mariage') {
+    $details = $acte->details ?? [];
+    $conjoint1 = trim((string) ($details['conjoint_1'] ?? '')) ?: '';
+    $conjoint2 = trim((string) ($details['conjoint_2'] ?? '')) ?: $fullName;
+    $epoux_prenom_val = trim((string) ($details['epoux_prenom'] ?? ''));
+    $epoux_nom_val = trim((string) ($details['epoux_nom'] ?? ''));
+
+    // Si conjoint_1 est vide, essayer de construire à partir de epoux_nom/epoux_prenom
+    if (empty($conjoint1)) {
+    $conjoint1 = trim($epoux_prenom_val . ' ' . $epoux_nom_val) ?: '';
+    }
+
+    if (!empty($conjoint1)) {
+    $displayName = $conjoint1 . ' & ' . $conjoint2;
+    $subtitleText = "Ce certificat atteste de l'union du couple";
+    }
+    }
+
     $dateActe = optional($acte->date_souhaitee)->format('d/m/Y') ?? now()->format('d/m/Y');
     $reference = $acte->reference ?? ('ACTE-' . $acte->id);
 
@@ -209,15 +232,15 @@
         {{-- ── Bandes latérales tricolores ── --}}
         {{-- GAUCHE --}}
         <div class="band-left">
-            <div style="width:4px; height:33%; background:#6B46C1;"></div>
+            <!-- <div style="width:4px; height:33%; background:#6B46C1;"></div>
             <div style="width:4px; height:34%; background:#1E40AF;"></div>
-            <div style="width:4px; height:33%; background:#B6C01A;"></div>
+            <div style="width:4px; height:33%; background:#B6C01A;"></div> -->
         </div>
         {{-- DROITE --}}
         <div class="band-right">
-            <div style="width:4px; height:33%; background:#6B46C1;"></div>
+            <!-- <div style="width:4px; height:33%; background:#6B46C1;"></div>
             <div style="width:4px; height:34%; background:#1E40AF;"></div>
-            <div style="width:4px; height:33%; background:#B6C01A;"></div>
+            <div style="width:4px; height:33%; background:#B6C01A;"></div> -->
         </div>
 
         {{-- ══════════════════════════════════════════════════
@@ -312,15 +335,15 @@
                 <td class="col-center zone-name" style="padding:0 8mm;">
 
                     {{-- Sous-titre --}}
-                    <div style="font-size:11px; color:#5a6478; font-style:italic;
+                    <div style="font-size:15px; color:#5a6478; font-style:italic;
                             margin-bottom:4mm; letter-spacing:0.5px;">
-                        Ce certificat est décerné à
+                        {{ $subtitleText }}
                     </div>
 
                     {{-- Grand nom du bénéficiaire --}}
                     <div style="font-size:32px; font-weight:900; text-transform:uppercase;
                             letter-spacing:4px; color:#0F1E40; line-height:1.1; margin-bottom:3mm;">
-                        {{ strtoupper($fullName) }}
+                        {{ strtoupper($displayName) }}
                     </div>
 
                     {{-- Ligne décorative sous le nom --}}
@@ -333,12 +356,12 @@
                     </table>
 
                     {{-- Texte d'attestation --}}
-                    <div style="font-size:10.5px; color:#374151; line-height:1.8;
+                    <div style="font-size:18px; color:#374151; line-height:1.8;
                             text-align:center; max-width:85%; margin:0 auto;">
                         L'Église Méthodiste Jubilé de Cocody atteste solennellement que la personne
                         mentionnée ci-dessus
                         <span style="font-weight:700; color:#0F1E40;">{{ $attestation }}</span>
-                        Le présent certificat est délivré pour servir et valoir ce que de droit.
+                        Le présent certificat est délivré pour servir et valoir ce qui lui revient de droit.
                     </div>
 
                 </td>
@@ -448,8 +471,8 @@
             // Icône par défaut si type inconnu : losange décoratif
             $defaultIcon = '<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
                 <polygon points="16,4 28,16 16,28 4,16" fill="none" stroke="#B6C01A" stroke-width="2" />
-                <polygon points="16,8 24,16 16,24 8,16" fill="#6B46C1" opacity="0.3" />
-                <circle cx="16" cy="16" r="3" fill="#B6C01A" />
+                <polygon points="16,8 24,16 16,24 8,16" fill="#EB992D" opacity="0.3" />
+                <circle cx="16" cy="16" r="3" fill="#E48724" />
             </svg>';
 
             $acteIcon = $typeIcons[$acte->type_acte ?? ''] ?? $defaultIcon;
@@ -497,11 +520,8 @@
                     <table width="90%" cellpadding="0" cellspacing="0" style="margin:0 auto;">
                         <tr valign="top">
 
-                            {{-- Espace gauche (équilibre visuel) --}}
-                            <td width="30%"></td>
-
-                            {{-- Signature centrale --}}
-                            <td width="40%" style="text-align:center;">
+                            {{-- Signature à gauche --}}
+                            <td width="40%" style="text-align:left;">
 
                                 <div style="font-size:9px; font-weight:700; letter-spacing:3px;
                                         text-transform:uppercase; color:#9098b4; margin-bottom:8mm;">
@@ -512,17 +532,10 @@
                                 @if(!empty($signatureDataUri))
                                 <img src="{{ $signatureDataUri }}"
                                     style="max-width:140px; max-height:36px;
-                                            display:block; margin:0 auto 4mm;">
+                                            display:block; margin:0 0 4mm;">
                                 @else
                                 <div style="height:36px; margin-bottom:4mm;"></div>
                                 @endif
-
-                                {{-- Ligne de signature --}}
-                                <table width="180" cellpadding="0" cellspacing="0" style="margin:0 auto 3mm;">
-                                    <tr>
-                                        <td height="1" style="background:#0F1E4070; font-size:0;">&nbsp;</td>
-                                    </tr>
-                                </table>
 
                                 {{-- Nom du pasteur --}}
                                 <div style="font-size:11px; font-weight:800; text-transform:uppercase;
@@ -536,10 +549,10 @@
 
                             </td>
 
-                            {{-- Lieu & Date (aligné à droite) --}}
-                            <td width="30%" style="text-align:right; vertical-align:bottom; padding-bottom:4mm;">
-                                <div style="font-size:9.5px; color:#4b5563; font-weight:600;
-                                        line-height:2; letter-spacing:0.3px;">
+                            {{-- Lieu & Date à droite en bas --}}
+                            <td width="60%" style="text-align:right; vertical-align:bottom; padding-bottom:6mm;">
+                                <div style="font-size:10px; color:#4b5563; font-weight:600;
+                                        line-height:2.2; letter-spacing:0.3px;">
                                     Fait à Cocody<br>
                                     Le {{ $dateActe }}
                                 </div>
@@ -557,7 +570,7 @@
              ║  ZONE 5 — PIED DE PAGE  (32mm)       ║
              ║  Réf + mention légale centrée         ║
              ╚══════════════════════════════════════╝ --}}
-            <tr>
+            <!-- <tr>
                 <td class="col-side" style="padding-left:18mm; vertical-align:bottom; padding-bottom:10mm;"></td>
 
                 <td class="col-center zone-footer" style="padding:0 8mm; vertical-align:bottom; padding-bottom:10mm;">
@@ -567,7 +580,7 @@
                         <tr>
                             <td width="33%" height="1" style="background:#6B46C140; font-size:0;">&nbsp;</td>
                             <td width="34%" height="1" style="background:#B6C01A; font-size:0;">&nbsp;</td>
-                            <td width="33%" height="1" style="background:#6B46C140; font-size:0;">&nbsp;</td>
+                            <td width="33%" height="1" style="background:#F9B01C40; font-size:0;">&nbsp;</td>
                         </tr>
                     </table>
 
@@ -590,7 +603,7 @@
 
                             {{-- Mention légale centrée --}}
                             <td width="40%" style="text-align:center;">
-                                <div style="font-size:7.5px; color:#9098b4; letter-spacing:0.5px; line-height:1.5; font-style:italic;">
+                                <div style="font-size:9px; color:#9098b4; letter-spacing:0.5px; line-height:1.5; font-style:italic;">
                                     Ce document est un acte officiel de l'Église Méthodiste Jubilé de Cocody.<br>
                                     Toute falsification est passible de poursuites judiciaires.
                                 </div>
@@ -598,7 +611,7 @@
 
                             {{-- Sceau / logo discret --}}
                             <td width="30%" style="text-align:right;">
-                                <div style="font-size:7.5px; color:#9098b4; letter-spacing:0.5px; font-style:italic;">
+                                <div style="font-size:9px; color:#9098b4; letter-spacing:0.5px; font-style:italic;">
                                     emjc-paroisse.ci
                                 </div>
                             </td>
@@ -614,7 +627,7 @@
         </table>
         {{-- ══ FIN TABLE MAÎTRE ══ --}}
 
-    </div>
+    </div> -->
 </body>
 
 </html>

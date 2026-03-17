@@ -311,9 +311,9 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                                                 #{member.id}
                                             </td>
                                             <td className="px-6 py-4 text-left text-sm font-medium text-gray-900 flex items-center gap-3">
-                                                <ProfilePhoto 
-                                                    user={member} 
-                                                    size="sm" 
+                                                <ProfilePhoto
+                                                    user={member}
+                                                    size="sm"
                                                     rounded={true}
                                                 />
                                                 <span>

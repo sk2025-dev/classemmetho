@@ -97,10 +97,7 @@ export default function Index({
     const defaultCreateForm = () => ({
         type_acte: "",
         membre_id: familyMembers[0]?.id || "",
-        classe_id:
-            familyMembers[0]?.classe_id ||
-            classes[0]?.id ||
-            "",
+        classe_id: familyMembers[0]?.classe_id || classes[0]?.id || "",
         date_souhaitee: "",
         message: "",
         details: {},
@@ -133,8 +130,7 @@ export default function Index({
     const selectedActeType = ACTE_TYPES.find(
         (t) => t.value === createForm.type_acte,
     );
-    const requiredActeFields =
-        ACTE_REQUIRED_FIELDS[createForm.type_acte] || [];
+    const requiredActeFields = ACTE_REQUIRED_FIELDS[createForm.type_acte] || [];
 
     /* ── COMPUTED actes ── */
     const stats = useMemo(() => {
@@ -171,7 +167,9 @@ export default function Index({
                 a.membre?.nom,
                 a.classe?.nom,
             ].some((field) =>
-                String(field || "").toLowerCase().includes(searchNeedle),
+                String(field || "")
+                    .toLowerCase()
+                    .includes(searchNeedle),
             );
         });
     }, [localActes, quickFilter, searchNeedle]);
@@ -235,7 +233,9 @@ export default function Index({
                 a.createur?.nom,
                 a.nom_concerne,
             ].some((field) =>
-                String(field || "").toLowerCase().includes(searchNeedle),
+                String(field || "")
+                    .toLowerCase()
+                    .includes(searchNeedle),
             );
         });
     }, [localAnnonces, quickFilter, searchNeedle]);
@@ -312,7 +312,11 @@ export default function Index({
         if (!myAnnonceCreator && rawAnnonces.length > 0) {
             // Look for an annonce created by a conductor (not a responsable)
             const conductorAnnonce = rawAnnonces.find(
-                (a) => a.createur?.role === "conducteur" || a.createur?.fonction?.nom?.toLowerCase().includes("conducteur")
+                (a) =>
+                    a.createur?.role === "conducteur" ||
+                    a.createur?.fonction?.nom
+                        ?.toLowerCase()
+                        .includes("conducteur"),
             );
             if (conductorAnnonce?.createur) {
                 setMyAnnonceCreator(conductorAnnonce.createur);
@@ -325,9 +329,7 @@ export default function Index({
             ...prev,
             membre_id: familyMembers[0]?.id || prev.membre_id,
             classe_id:
-                familyMembers[0]?.classe_id ||
-                classes[0]?.id ||
-                prev.classe_id,
+                familyMembers[0]?.classe_id || classes[0]?.id || prev.classe_id,
         }));
     }, [familyMembers, classes]);
     /* ── HELPERS ── */
@@ -357,7 +359,9 @@ export default function Index({
         for (const field of requiredActeFields) {
             const value = String(createForm.details?.[field] || "").trim();
             if (!value) {
-                showToast(`Le champ \"${ACTE_DETAIL_LABELS[field] || field}\" est requis.`);
+                showToast(
+                    `Le champ \"${ACTE_DETAIL_LABELS[field] || field}\" est requis.`,
+                );
                 return;
             }
         }
@@ -620,11 +624,7 @@ export default function Index({
         }
         try {
             setAnnonceProcessing(true);
-            await getAnnonceAction(
-                statut,
-                selectedAnnonce.id,
-                annonceComment,
-            );
+            await getAnnonceAction(statut, selectedAnnonce.id, annonceComment);
             setLocalAnnonces((prev) =>
                 prev.map((a) =>
                     a.id === selectedAnnonce.id
@@ -708,11 +708,7 @@ export default function Index({
         try {
             setAnnonceProcessing(true);
             for (const id of ids)
-                await getAnnonceAction(
-                    "REFUSEE_PAR_CONDUCTEUR",
-                    id,
-                    reason,
-                );
+                await getAnnonceAction("REFUSEE_PAR_CONDUCTEUR", id, reason);
             setLocalAnnonces((prev) =>
                 prev.map((a) =>
                     ids.includes(a.id)
@@ -859,7 +855,9 @@ export default function Index({
                                         <div className="alert-text">
                                             <strong>
                                                 {stats.soumises} acte
-                                                {stats.soumises > 1 ? "s" : ""}{" "}
+                                                {stats.soumises > 1
+                                                    ? "s"
+                                                    : ""}{" "}
                                                 en attente
                                             </strong>
                                             <span>Traitez dans les 48h</span>
@@ -1002,117 +1000,117 @@ export default function Index({
                                 className={`tab ${tab === "soumises" ? "active" : ""}`}
                                 onClick={() => setTab("soumises")}
                             >
-                            <svg
-                                width="13"
-                                height="13"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"
-                                />
-                            </svg>
-                            Soumises
-                            {stats.soumises > 0 && (
-                                <span className="tab-count tab-red">
-                                    {stats.soumises}
-                                </span>
-                            )}
+                                <svg
+                                    width="13"
+                                    height="13"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"
+                                    />
+                                </svg>
+                                Soumises
+                                {stats.soumises > 0 && (
+                                    <span className="tab-count tab-red">
+                                        {stats.soumises}
+                                    </span>
+                                )}
                             </button>
                             <button
                                 className={`tab ${tab === "transmises" ? "active" : ""}`}
                                 onClick={() => setTab("transmises")}
                             >
-                            <svg
-                                width="13"
-                                height="13"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                                />
-                            </svg>
-                            Au pasteur
-                            {stats.transmises > 0 && (
-                                <span className="tab-count tab-gold">
-                                    {stats.transmises}
-                                </span>
-                            )}
+                                <svg
+                                    width="13"
+                                    height="13"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                                    />
+                                </svg>
+                                Au pasteur
+                                {stats.transmises > 0 && (
+                                    <span className="tab-count tab-gold">
+                                        {stats.transmises}
+                                    </span>
+                                )}
                             </button>
                             {/* ★ ONGLET ANNONCES ★ */}
                             <button
                                 className={`tab tab-ann ${tab === "annonces" ? "active" : ""}`}
                                 onClick={() => setTab("annonces")}
                             >
-                            <svg
-                                width="13"
-                                height="13"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
-                                />
-                            </svg>
-                            Annonces
-                            {annEnAttente.length > 0 && (
-                                <span className="tab-count tab-violet">
-                                    {annEnAttente.length}
-                                </span>
-                            )}
+                                <svg
+                                    width="13"
+                                    height="13"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
+                                    />
+                                </svg>
+                                Annonces
+                                {annEnAttente.length > 0 && (
+                                    <span className="tab-count tab-violet">
+                                        {annEnAttente.length}
+                                    </span>
+                                )}
                             </button>
                             <button
                                 className={`tab ${tab === "historique" ? "active" : ""}`}
                                 onClick={() => setTab("historique")}
                             >
-                            <svg
-                                width="13"
-                                height="13"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                            </svg>
-                            Historique
+                                <svg
+                                    width="13"
+                                    height="13"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                </svg>
+                                Historique
                             </button>
                             <button
                                 className={`tab ${tab === "stats" ? "active" : ""}`}
                                 onClick={() => setTab("stats")}
                             >
-                            <svg
-                                width="13"
-                                height="13"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                                />
-                            </svg>
-                            Statistiques
+                                <svg
+                                    width="13"
+                                    height="13"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                                    />
+                                </svg>
+                                Statistiques
                             </button>
                         </div>
                         <div className="quick-tools">
@@ -1121,24 +1119,42 @@ export default function Index({
                                 value={quickFilter}
                                 onChange={(e) => setQuickFilter(e.target.value)}
                             >
-                                <option value="all">🔍 Tous les contenus</option>
+                                <option value="all">
+                                    🔍 Tous les contenus
+                                </option>
                                 <optgroup label="Actes liturgiques">
                                     <option value="bapteme">💧 Baptême</option>
                                     <option value="mariage">💍 Mariage</option>
-                                    <option value="premiere_communion">🍞 Première Communion</option>
-                                    <option value="confirmation">✝️ Confirmation</option>
-                                    <option value="naissance">👶 Naissance</option>
+                                    <option value="premiere_communion">
+                                        🍞 Première Communion
+                                    </option>
+                                    <option value="confirmation">
+                                        ✝️ Confirmation
+                                    </option>
+                                    <option value="naissance">
+                                        👶 Naissance
+                                    </option>
                                     <option value="deces">🕯️ Décès</option>
                                 </optgroup>
                                 <optgroup label="Annonces">
                                     <option value="priere">🙏 Prière</option>
-                                    <option value="grace">🙌 Action de grâce</option>
-                                    <option value="felicitations">🎉 Félicitations</option>
-                                    <option value="generale">📢 Générale</option>
+                                    <option value="grace">
+                                        🙌 Action de grâce
+                                    </option>
+                                    <option value="felicitations">
+                                        🎉 Félicitations
+                                    </option>
+                                    <option value="generale">
+                                        📢 Générale
+                                    </option>
                                 </optgroup>
                                 <optgroup label="Mes contenus">
-                                    <option value="mes_demandes">📋 Mes demandes</option>
-                                    <option value="mes_annonces">📣 Mes annonces</option>
+                                    <option value="mes_demandes">
+                                        📋 Mes demandes
+                                    </option>
+                                    <option value="mes_annonces">
+                                        📣 Mes annonces
+                                    </option>
                                 </optgroup>
                             </select>
                             <input
@@ -1265,9 +1281,22 @@ export default function Index({
                                             <div
                                                 className={`demande-acte-icon ${tone(acte.type_acte)}`}
                                             >
-                                                <span>
-                                                    {iconEmoji(acte.type_acte)}
-                                                </span>
+                                                {acte.membre?.profile_photo_url ? (
+                                                    <img
+                                                        src={acte.membre.profile_photo_url}
+                                                        alt={acte.membre?.prenom + " " + acte.membre?.nom}
+                                                        style={{
+                                                            width: "100%",
+                                                            height: "100%",
+                                                            objectFit: "cover",
+                                                            borderRadius: "50%",
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <span>
+                                                        {iconEmoji(acte.type_acte)}
+                                                    </span>
+                                                )}
                                             </div>
                                             <div
                                                 className="demande-info"
@@ -1595,9 +1624,22 @@ export default function Index({
                                         <div
                                             className={`demande-acte-icon ${tone(acte.type_acte)}`}
                                         >
-                                            <span>
-                                                {iconEmoji(acte.type_acte)}
-                                            </span>
+                                            {acte.membre?.photo_path ? (
+                                                <img
+                                                    src={acte.membre.photo_path}
+                                                    alt={`${acte.membre?.prenom} ${acte.membre?.nom}`}
+                                                    style={{
+                                                        width: "100%",
+                                                        height: "100%",
+                                                        objectFit: "cover",
+                                                        borderRadius: "50%",
+                                                    }}
+                                                />
+                                            ) : (
+                                                <span>
+                                                    {iconEmoji(acte.type_acte)}
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="demande-info">
                                             <div className="demande-name">
@@ -1693,64 +1735,66 @@ export default function Index({
                                 </div>
                                 {/* Mini stats */}
                                 <div className="ann-hero-stats">
-                                <div className="ann-mini-stat ann-mini-orange">
-                                    <div className="ann-mini-n">
-                                        {annEnAttente.length}
+                                    <div className="ann-mini-stat ann-mini-orange">
+                                        <div className="ann-mini-n">
+                                            {annEnAttente.length}
+                                        </div>
+                                        <div className="ann-mini-l">
+                                            À traiter
+                                        </div>
                                     </div>
-                                    <div className="ann-mini-l">
-                                        À traiter
+                                    <div className="ann-mini-stat ann-mini-gold">
+                                        <div className="ann-mini-n">
+                                            {
+                                                localAnnonces.filter(
+                                                    (a) =>
+                                                        a.statut ===
+                                                        "TRANSMISE_AU_PASTEUR",
+                                                ).length
+                                            }
+                                        </div>
+                                        <div className="ann-mini-l">
+                                            Au pasteur
+                                        </div>
+                                    </div>
+                                    <div className="ann-mini-stat ann-mini-green">
+                                        <div className="ann-mini-n">
+                                            {
+                                                localAnnonces.filter((a) =>
+                                                    [
+                                                        "VALIDEE",
+                                                        "PUBLIEE",
+                                                    ].includes(a.statut),
+                                                ).length
+                                            }
+                                        </div>
+                                        <div className="ann-mini-l">
+                                            Publiées
+                                        </div>
+                                    </div>
+                                    <div className="ann-mini-stat ann-mini-red">
+                                        <div className="ann-mini-n">
+                                            {
+                                                localAnnonces.filter(
+                                                    (a) =>
+                                                        a.statut ===
+                                                        "REFUSEE_PAR_CONDUCTEUR",
+                                                ).length
+                                            }
+                                        </div>
+                                        <div className="ann-mini-l">
+                                            Refusées
+                                        </div>
+                                    </div>
+                                    <div className="ann-mini-stat ann-mini-total">
+                                        <div className="ann-mini-n">
+                                            {localAnnonces.length}
+                                        </div>
+                                        <div className="ann-mini-l">
+                                            Total reçues
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="ann-mini-stat ann-mini-gold">
-                                    <div className="ann-mini-n">
-                                        {
-                                            localAnnonces.filter(
-                                                (a) =>
-                                                    a.statut ===
-                                                    "TRANSMISE_AU_PASTEUR",
-                                            ).length
-                                        }
-                                    </div>
-                                    <div className="ann-mini-l">
-                                        Au pasteur
-                                    </div>
-                                </div>
-                                <div className="ann-mini-stat ann-mini-green">
-                                    <div className="ann-mini-n">
-                                        {
-                                            localAnnonces.filter(
-                                                (a) =>
-                                                    ["VALIDEE", "PUBLIEE"].includes(a.statut),
-                                            ).length
-                                        }
-                                    </div>
-                                    <div className="ann-mini-l">
-                                        Publiées
-                                    </div>
-                                </div>
-                                <div className="ann-mini-stat ann-mini-red">
-                                    <div className="ann-mini-n">
-                                        {
-                                            localAnnonces.filter(
-                                                (a) =>
-                                                    a.statut ===
-                                                    "REFUSEE_PAR_CONDUCTEUR",
-                                            ).length
-                                        }
-                                    </div>
-                                    <div className="ann-mini-l">
-                                        Refusées
-                                    </div>
-                                </div>
-                                <div className="ann-mini-stat ann-mini-total">
-                                    <div className="ann-mini-n">
-                                        {localAnnonces.length}
-                                    </div>
-                                    <div className="ann-mini-l">
-                                        Total reçues
-                                    </div>
-                                </div>
-                            </div>
                             </div>
 
                             {/* Corps : liste + sidebar */}
@@ -1819,8 +1863,7 @@ export default function Index({
                                             >
                                                 {annoncesSubTab === "pending"
                                                     ? "Soumises par les responsables de famille"
-                                                    : annoncesSubTab ===
-                                                          "done"
+                                                    : annoncesSubTab === "done"
                                                       ? "Transmises au pasteur ou refusées"
                                                       : "Les annonces que vous avez créées"}
                                             </div>
@@ -1948,7 +1991,7 @@ export default function Index({
                                                     "pending"
                                                         ? "Aucune annonce en attente"
                                                         : annoncesSubTab ===
-                                                              "done"
+                                                            "done"
                                                           ? "Aucune annonce traitée"
                                                           : "Vous n'avez créé aucune annonce"}
                                                 </span>
@@ -1969,8 +2012,10 @@ export default function Index({
                                                 ann.statut?.startsWith(
                                                     "REFUSEE",
                                                 );
-                                            const isPublie =
-                                                ["VALIDEE", "PUBLIEE"].includes(ann.statut);
+                                            const isPublie = [
+                                                "VALIDEE",
+                                                "PUBLIEE",
+                                            ].includes(ann.statut);
                                             const creatorName =
                                                 [
                                                     ann.createur?.prenom,
@@ -2558,9 +2603,11 @@ export default function Index({
                                 <div className="panel-body">
                                     {historique
                                         .filter((a) =>
-                                            ["VALIDEE", "PUBLIEE", "ARCHIVEE"].includes(
-                                                a.statut,
-                                            ),
+                                            [
+                                                "VALIDEE",
+                                                "PUBLIEE",
+                                                "ARCHIVEE",
+                                            ].includes(a.statut),
                                         )
                                         .slice(0, 6)
                                         .map((acte) => (
@@ -2571,11 +2618,24 @@ export default function Index({
                                                 <div
                                                     className={`demande-acte-icon ${tone(acte.type_acte)}`}
                                                 >
-                                                    <span>
-                                                        {iconEmoji(
-                                                            acte.type_acte,
-                                                        )}
-                                                    </span>
+                                                    {acte.membre?.profile_photo_url ? (
+                                                        <img
+                                                            src={acte.membre.profile_photo_url}
+                                                            alt={acte.membre?.prenom + " " + acte.membre?.nom}
+                                                            style={{
+                                                                width: "100%",
+                                                                height: "100%",
+                                                                objectFit: "cover",
+                                                                borderRadius: "50%",
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <span>
+                                                            {iconEmoji(
+                                                                acte.type_acte,
+                                                            )}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div
                                                     className="demande-info"
@@ -2802,11 +2862,13 @@ export default function Index({
                                     <div className="acte-head-icon">+</div>
                                 ) : (
                                     <div
-                                        className={`modal-head-icon ${modal === "approve"
-                                            ? "gold"
-                                            : modal === "refuse"
-                                                ? "red"
-                                                : "blue"}`}
+                                        className={`modal-head-icon ${
+                                            modal === "approve"
+                                                ? "gold"
+                                                : modal === "refuse"
+                                                  ? "red"
+                                                  : "blue"
+                                        }`}
                                     >
                                         {modal === "detail" && (
                                             <svg
@@ -2863,10 +2925,10 @@ export default function Index({
                                         {modal === "detail"
                                             ? "Détail de la demande"
                                             : modal === "approve"
-                                                ? "Valider et transmettre"
-                                                : modal === "refuse"
-                                                    ? "Refuser la demande"
-                                                    : "Créer un acte direct"}
+                                              ? "Valider et transmettre"
+                                              : modal === "refuse"
+                                                ? "Refuser la demande"
+                                                : "Créer un acte direct"}
                                     </div>
                                     {modal === "create" && (
                                         <div className="modal-sub">
@@ -2929,7 +2991,16 @@ export default function Index({
                                         </span>
                                         <span className="modal-info-val">
                                             {formatDate(
-                                                selected?.date_souhaitee,
+                                                selected?.date_souhaitee ||
+                                                    selected?.details
+                                                        ?.date_souhaitee ||
+                                                    selected?.details
+                                                        ?.date_presentation ||
+                                                    selected?.details
+                                                        ?.date_deces ||
+                                                    selected?.details
+                                                        ?.date_naissance ||
+                                                    selected?.date_annonce,
                                             )}
                                         </span>
                                     </div>
@@ -2938,12 +3009,28 @@ export default function Index({
                                             Statut
                                         </span>
                                         <span className="modal-info-val">
-                                            <span className={`badge ${
-                                                selected?.statut === "SOUMISE" ? "badge-soumise" :
-                                                selected?.statut === "TRANSMISE_AU_PASTEUR" ? "badge-transmis" :
-                                                ["VALIDEE", "PUBLIEE"].includes(selected?.statut) ? "badge-valide" :
-                                                selected?.statut?.includes("REFUSEE") ? "badge-refuse" : "badge-transmis"
-                                            }`}>
+                                            <span
+                                                className={`badge ${
+                                                    selected?.statut ===
+                                                    "SOUMISE"
+                                                        ? "badge-soumise"
+                                                        : selected?.statut ===
+                                                            "TRANSMISE_AU_PASTEUR"
+                                                          ? "badge-transmis"
+                                                          : [
+                                                                  "VALIDEE",
+                                                                  "PUBLIEE",
+                                                              ].includes(
+                                                                  selected?.statut,
+                                                              )
+                                                            ? "badge-valide"
+                                                            : selected?.statut?.includes(
+                                                                    "REFUSEE",
+                                                                )
+                                                              ? "badge-refuse"
+                                                              : "badge-transmis"
+                                                }`}
+                                            >
                                                 <span className="badge-dot" />
                                                 {prettyStatut(selected?.statut)}
                                             </span>
@@ -2953,7 +3040,9 @@ export default function Index({
                                         <div className="modal-actions-inline">
                                             <button
                                                 className="btn-modal btn-modal-gold"
-                                                onClick={() => setModal("approve")}
+                                                onClick={() =>
+                                                    setModal("approve")
+                                                }
                                             >
                                                 <svg
                                                     width="13"
@@ -2973,7 +3062,9 @@ export default function Index({
                                             </button>
                                             <button
                                                 className="btn-modal btn-modal-red"
-                                                onClick={() => setModal("refuse")}
+                                                onClick={() =>
+                                                    setModal("refuse")
+                                                }
                                             >
                                                 <svg
                                                     width="13"
@@ -2993,7 +3084,9 @@ export default function Index({
                                             </button>
                                         </div>
                                     )}
-                                    {["VALIDEE", "PUBLIEE"].includes(selected?.statut) && (
+                                    {["VALIDEE", "PUBLIEE"].includes(
+                                        selected?.statut,
+                                    ) && (
                                         <div style={{ marginTop: 16 }}>
                                             <button
                                                 style={{
@@ -3010,10 +3103,17 @@ export default function Index({
                                                     alignItems: "center",
                                                     justifyContent: "center",
                                                     gap: 8,
-                                                    transition: "background 0.2s"
+                                                    transition:
+                                                        "background 0.2s",
                                                 }}
-                                                onMouseEnter={(e) => e.target.style.backgroundColor = "#2563eb"}
-                                                onMouseLeave={(e) => e.target.style.backgroundColor = "#3b82f6"}
+                                                onMouseEnter={(e) =>
+                                                    (e.target.style.backgroundColor =
+                                                        "#2563eb")
+                                                }
+                                                onMouseLeave={(e) =>
+                                                    (e.target.style.backgroundColor =
+                                                        "#3b82f6")
+                                                }
                                                 onClick={() => {
                                                     window.location.href = `/conducteur/liturgie/${selected.id}/fiche`;
                                                 }}
@@ -3084,7 +3184,8 @@ export default function Index({
                                                 onChange={(e) =>
                                                     setCreateForm((f) => ({
                                                         ...f,
-                                                        type_acte: e.target.value,
+                                                        type_acte:
+                                                            e.target.value,
                                                         details: {},
                                                     }))
                                                 }
@@ -3109,31 +3210,32 @@ export default function Index({
                                                 onChange={(e) =>
                                                     setCreateForm((f) => ({
                                                         ...f,
-                                                        membre_id: e.target.value,
+                                                        membre_id:
+                                                            e.target.value,
                                                     }))
                                                 }
                                             >
                                                 <option value="">
                                                     — Sélectionner un membre —
                                                 </option>
-                                                {familyMembers.map(
-                                                    (member) => (
-                                                        <option
-                                                            key={member.id}
-                                                            value={member.id}
-                                                        >
-                                                            {member.prenom}{" "}
-                                                            {member.nom}
-                                                        </option>
-                                                    ),
-                                                )}
+                                                {familyMembers.map((member) => (
+                                                    <option
+                                                        key={member.id}
+                                                        value={member.id}
+                                                    >
+                                                        {member.prenom}{" "}
+                                                        {member.nom}
+                                                    </option>
+                                                ))}
                                             </select>
                                         </Field>
                                         <Field label="Date souhaitée" required>
                                             <input
                                                 className="modal-input"
                                                 type="date"
-                                                value={createForm.date_souhaitee}
+                                                value={
+                                                    createForm.date_souhaitee
+                                                }
                                                 onChange={(e) =>
                                                     setCreateForm((f) => ({
                                                         ...f,
@@ -3159,36 +3261,52 @@ export default function Index({
                                         </Field>
                                         {requiredActeFields.length > 0 && (
                                             <>
-                                                {requiredActeFields.map((field) => (
-                                                    <Field
-                                                        key={field}
-                                                        label={
-                                                            ACTE_DETAIL_LABELS[field] || field
-                                                        }
-                                                        required
-                                                    >
-                                                        <input
-                                                            className="modal-input"
-                                                            type={
-                                                                ACTE_DETAIL_INPUT_TYPES[field] ||
-                                                                "text"
+                                                {requiredActeFields.map(
+                                                    (field) => (
+                                                        <Field
+                                                            key={field}
+                                                            label={
+                                                                ACTE_DETAIL_LABELS[
+                                                                    field
+                                                                ] || field
                                                             }
-                                                            value={
-                                                                createForm.details?.[field] || ""
-                                                            }
-                                                            onChange={(e) =>
-                                                                setCreateForm((f) => ({
-                                                                    ...f,
-                                                                    details: {
-                                                                        ...(f.details || {}),
-                                                                        [field]:
-                                                                            e.target.value,
-                                                                    },
-                                                                }))
-                                                            }
-                                                        />
-                                                    </Field>
-                                                ))}
+                                                            required
+                                                        >
+                                                            <input
+                                                                className="modal-input"
+                                                                type={
+                                                                    ACTE_DETAIL_INPUT_TYPES[
+                                                                        field
+                                                                    ] || "text"
+                                                                }
+                                                                value={
+                                                                    createForm
+                                                                        .details?.[
+                                                                        field
+                                                                    ] || ""
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setCreateForm(
+                                                                        (
+                                                                            f,
+                                                                        ) => ({
+                                                                            ...f,
+                                                                            details:
+                                                                                {
+                                                                                    ...(f.details ||
+                                                                                        {}),
+                                                                                    [field]:
+                                                                                        e
+                                                                                            .target
+                                                                                            .value,
+                                                                                },
+                                                                        }),
+                                                                    )
+                                                                }
+                                                            />
+                                                        </Field>
+                                                    ),
+                                                )}
                                             </>
                                         )}
                                     </div>
@@ -3284,32 +3402,61 @@ export default function Index({
             {/* ══════════ MODAL ANNONCES ══════════ */}
             {annonceModal === "create" && (
                 <div className="modal-overlay open" onClick={closeAnnonceModal}>
-                    <div className="modal ann-modal" onClick={(e) => e.stopPropagation()}>
+                    <div
+                        className="modal ann-modal"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="modal-head ann-modal-head">
                             <div>
                                 <div className="modal-title">
                                     {annonceStep === 1 && "✦ Nouvelle annonce"}
-                                    {annonceStep === 2 && `${selectedType?.emoji || "📢"} ${selectedType?.label || "Annonce"}`}
+                                    {annonceStep === 2 &&
+                                        `${selectedType?.emoji || "📢"} ${selectedType?.label || "Annonce"}`}
                                     {annonceStep === 3 && "✓ Confirmation"}
                                 </div>
                                 <div className="modal-sub">
-                                    Étape {annonceStep} / 3 · Création directe d'une annonce paroissiale
+                                    Étape {annonceStep} / 3 · Création directe
+                                    d'une annonce paroissiale
                                 </div>
                             </div>
-                            <button type="button" className="modal-close" onClick={closeAnnonceModal}>
-                                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            <button
+                                type="button"
+                                className="modal-close"
+                                onClick={closeAnnonceModal}
+                            >
+                                <svg
+                                    width="14"
+                                    height="14"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="2.5"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
                                 </svg>
                             </button>
                         </div>
 
                         <div className="ann-steps-bar">
-                            {["Type d'annonce", "Contenu", "Confirmation"].map((label, index) => (
-                                <div key={index} className={`asb-step ${annonceStep > index + 1 ? "done" : annonceStep === index + 1 ? "active" : ""}`}>
-                                    <div className="asb-dot">{annonceStep > index + 1 ? "✓" : index + 1}</div>
-                                    <span>{label}</span>
-                                </div>
-                            ))}
+                            {["Type d'annonce", "Contenu", "Confirmation"].map(
+                                (label, index) => (
+                                    <div
+                                        key={index}
+                                        className={`asb-step ${annonceStep > index + 1 ? "done" : annonceStep === index + 1 ? "active" : ""}`}
+                                    >
+                                        <div className="asb-dot">
+                                            {annonceStep > index + 1
+                                                ? "✓"
+                                                : index + 1}
+                                        </div>
+                                        <span>{label}</span>
+                                    </div>
+                                ),
+                            )}
                         </div>
 
                         <div className="modal-body">
@@ -3327,9 +3474,18 @@ export default function Index({
                                                 }))
                                             }
                                         >
-                                            <span className="atb-emoji">{type.emoji}</span>
-                                            <span className="atb-label">{type.label}</span>
-                                            {annonceForm.type_annonce === type.value && <span className="atb-check">✓</span>}
+                                            <span className="atb-emoji">
+                                                {type.emoji}
+                                            </span>
+                                            <span className="atb-label">
+                                                {type.label}
+                                            </span>
+                                            {annonceForm.type_annonce ===
+                                                type.value && (
+                                                <span className="atb-check">
+                                                    ✓
+                                                </span>
+                                            )}
                                         </button>
                                     ))}
                                 </div>
@@ -3348,19 +3504,29 @@ export default function Index({
                                                 }))
                                             }
                                         >
-                                            <option value="">-- Sélectionnez un membre --</option>
+                                            <option value="">
+                                                -- Sélectionnez un membre --
+                                            </option>
                                             {familyMembers.map((member) => (
-                                                <option key={member.id} value={member.id}>
+                                                <option
+                                                    key={member.id}
+                                                    value={member.id}
+                                                >
                                                     {member.prenom} {member.nom}
                                                 </option>
                                             ))}
                                         </select>
                                     </Field>
-                                    <Field label="Message de l'annonce" required>
+                                    <Field
+                                        label="Message de l'annonce"
+                                        required
+                                    >
                                         <textarea
                                             className="ann-textarea"
                                             rows={4}
-                                            placeholder={getPlaceholder(annonceForm.type_annonce)}
+                                            placeholder={getPlaceholder(
+                                                annonceForm.type_annonce,
+                                            )}
                                             value={annonceForm.message}
                                             onChange={(e) =>
                                                 setAnnonceForm((prev) => ({
@@ -3369,7 +3535,9 @@ export default function Index({
                                                 }))
                                             }
                                         />
-                                        <div className="ann-chars">{annonceForm.message.length}/500</div>
+                                        <div className="ann-chars">
+                                            {annonceForm.message.length}/500
+                                        </div>
                                     </Field>
                                     <Field label="Date de l'événement" required>
                                         <input
@@ -3379,7 +3547,8 @@ export default function Index({
                                             onChange={(e) =>
                                                 setAnnonceForm((prev) => ({
                                                     ...prev,
-                                                    date_annonce: e.target.value,
+                                                    date_annonce:
+                                                        e.target.value,
                                                 }))
                                             }
                                         />
@@ -3392,7 +3561,8 @@ export default function Index({
                                             onChange={(e) =>
                                                 setAnnonceForm((prev) => ({
                                                     ...prev,
-                                                    date_publication: e.target.value,
+                                                    date_publication:
+                                                        e.target.value,
                                                 }))
                                             }
                                         />
@@ -3405,7 +3575,8 @@ export default function Index({
                                             onChange={(e) =>
                                                 setAnnonceForm((prev) => ({
                                                     ...prev,
-                                                    date_expiration: e.target.value,
+                                                    date_expiration:
+                                                        e.target.value,
                                                 }))
                                             }
                                         />
@@ -3415,38 +3586,68 @@ export default function Index({
 
                             {annonceStep === 3 && (
                                 <div className="ann-recap">
-                                    <div className={`ann-recap-type atype-${selectedType?.color}`}>
-                                        <span style={{ fontSize: 30 }}>{selectedType?.emoji}</span>
+                                    <div
+                                        className={`ann-recap-type atype-${selectedType?.color}`}
+                                    >
+                                        <span style={{ fontSize: 30 }}>
+                                            {selectedType?.emoji}
+                                        </span>
                                         <div>
-                                            <div className="art-label">{selectedType?.label}</div>
-                                            <div className="art-sub">Annonce conducteurs</div>
+                                            <div className="art-label">
+                                                {selectedType?.label}
+                                            </div>
+                                            <div className="art-sub">
+                                                Annonce conducteurs
+                                            </div>
                                         </div>
                                     </div>
                                     {annonceForm.membre_id && (
                                         <RecapRow
                                             label="Concerné(e)"
-                                            value={
-                                                (() => {
-                                                    const member = familyMembers.find(
-                                                        (fm) => String(fm.id) === String(annonceForm.membre_id),
+                                            value={(() => {
+                                                const member =
+                                                    familyMembers.find(
+                                                        (fm) =>
+                                                            String(fm.id) ===
+                                                            String(
+                                                                annonceForm.membre_id,
+                                                            ),
                                                     );
-                                                    return member ? `${member.prenom} ${member.nom}` : "Membre";
-                                                })()
-                                            }
+                                                return member
+                                                    ? `${member.prenom} ${member.nom}`
+                                                    : "Membre";
+                                            })()}
                                         />
                                     )}
                                     {annonceForm.date_annonce && (
-                                        <RecapRow label="Date" value={formatDate(annonceForm.date_annonce)} />
+                                        <RecapRow
+                                            label="Date"
+                                            value={formatDate(
+                                                annonceForm.date_annonce,
+                                            )}
+                                        />
                                     )}
                                     {annonceForm.date_publication && (
-                                        <RecapRow label="Publication" value={formatDate(annonceForm.date_publication)} />
+                                        <RecapRow
+                                            label="Publication"
+                                            value={formatDate(
+                                                annonceForm.date_publication,
+                                            )}
+                                        />
                                     )}
                                     {annonceForm.date_expiration && (
-                                        <RecapRow label="Expiration" value={formatDate(annonceForm.date_expiration)} />
+                                        <RecapRow
+                                            label="Expiration"
+                                            value={formatDate(
+                                                annonceForm.date_expiration,
+                                            )}
+                                        />
                                     )}
                                     <div className="ann-recap-msg">
                                         <div className="arm-label">Message</div>
-                                        <div className="arm-text">{annonceForm.message}</div>
+                                        <div className="arm-text">
+                                            {annonceForm.message}
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -3454,11 +3655,19 @@ export default function Index({
 
                         <div className="modal-foot">
                             {annonceStep > 1 ? (
-                                <button className="btn-modal btn-modal-ghost" type="button" onClick={() => setAnnonceStep((s) => s - 1)}>
+                                <button
+                                    className="btn-modal btn-modal-ghost"
+                                    type="button"
+                                    onClick={() => setAnnonceStep((s) => s - 1)}
+                                >
                                     ← Retour
                                 </button>
                             ) : (
-                                <button className="btn-modal btn-modal-ghost" type="button" onClick={closeAnnonceModal}>
+                                <button
+                                    className="btn-modal btn-modal-ghost"
+                                    type="button"
+                                    onClick={closeAnnonceModal}
+                                >
                                     Annuler
                                 </button>
                             )}
@@ -3467,18 +3676,28 @@ export default function Index({
                                     className="btn-modal btn-modal-green"
                                     type="button"
                                     onClick={() => {
-                                        if (annonceStep === 1 && !annonceForm.type_annonce) return;
+                                        if (
+                                            annonceStep === 1 &&
+                                            !annonceForm.type_annonce
+                                        )
+                                            return;
                                         if (annonceStep === 2) {
                                             if (!annonceForm.membre_id) {
-                                                showToast("Veuillez sélectionner un membre concerné.");
+                                                showToast(
+                                                    "Veuillez sélectionner un membre concerné.",
+                                                );
                                                 return;
                                             }
                                             if (!annonceForm.message.trim()) {
-                                                showToast("Le message est obligatoire.");
+                                                showToast(
+                                                    "Le message est obligatoire.",
+                                                );
                                                 return;
                                             }
                                             if (!annonceForm.date_annonce) {
-                                                showToast("La date de l'annonce est requise.");
+                                                showToast(
+                                                    "La date de l'annonce est requise.",
+                                                );
                                                 return;
                                             }
                                         }
@@ -3496,8 +3715,20 @@ export default function Index({
                                 >
                                     {annonceProcessing ? (
                                         <>
-                                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="spin">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                            <svg
+                                                width="13"
+                                                height="13"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                className="spin"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                                />
                                             </svg>{" "}
                                             Envoi...
                                         </>
@@ -3585,7 +3816,8 @@ export default function Index({
                                             (t) =>
                                                 t.value ===
                                                 selectedAnnonce.type_annonce,
-                                        )?.label || selectedAnnonce.type_annonce}
+                                        )?.label ||
+                                            selectedAnnonce.type_annonce}
                                     </div>
                                 </div>
                             </div>
@@ -3626,21 +3858,29 @@ export default function Index({
                                             (t) =>
                                                 t.value ===
                                                 selectedAnnonce.type_annonce,
-                                        )?.label || selectedAnnonce.type_annonce}
+                                        )?.label ||
+                                            selectedAnnonce.type_annonce}
                                     </span>
                                 </div>
-                                
-                                {(selectedAnnonce.createur?.prenom || selectedAnnonce.createur?.nom) && (
+
+                                {(selectedAnnonce.createur?.prenom ||
+                                    selectedAnnonce.createur?.nom) && (
                                     <div className="modal-info-row">
                                         <span className="modal-info-key">
                                             Créée par
                                         </span>
                                         <span className="modal-info-val">
-                                            {[selectedAnnonce.createur?.prenom, selectedAnnonce.createur?.nom].filter(Boolean).join(" ")}
+                                            {[
+                                                selectedAnnonce.createur
+                                                    ?.prenom,
+                                                selectedAnnonce.createur?.nom,
+                                            ]
+                                                .filter(Boolean)
+                                                .join(" ")}
                                         </span>
                                     </div>
                                 )}
-                                
+
                                 {selectedAnnonce.nom_concerne && (
                                     <div className="modal-info-row">
                                         <span className="modal-info-key">
@@ -3651,7 +3891,7 @@ export default function Index({
                                         </span>
                                     </div>
                                 )}
-                                
+
                                 {selectedAnnonce.classe?.nom && (
                                     <div className="modal-info-row">
                                         <span className="modal-info-key">
@@ -3662,104 +3902,167 @@ export default function Index({
                                         </span>
                                     </div>
                                 )}
-                                
+
                                 <div className="modal-info-row">
                                     <span className="modal-info-key">
                                         Statut
                                     </span>
-                                    <span className="modal-info-val" style={{ 
-                                        fontWeight: 700,
-                                        color: selectedAnnonce.statut === "SOUMISE" ? "#7c3aed" : 
-                                               selectedAnnonce.statut === "TRANSMISE_AU_PASTEUR" ? "#2563eb" :
-                                               ["VALIDEE", "PUBLIEE"].includes(selectedAnnonce.statut) ? "#16a34a" : "#dc2626"
-                                    }}>
+                                    <span
+                                        className="modal-info-val"
+                                        style={{
+                                            fontWeight: 700,
+                                            color:
+                                                selectedAnnonce.statut ===
+                                                "SOUMISE"
+                                                    ? "#7c3aed"
+                                                    : selectedAnnonce.statut ===
+                                                        "TRANSMISE_AU_PASTEUR"
+                                                      ? "#2563eb"
+                                                      : [
+                                                              "VALIDEE",
+                                                              "PUBLIEE",
+                                                          ].includes(
+                                                              selectedAnnonce.statut,
+                                                          )
+                                                        ? "#16a34a"
+                                                        : "#dc2626",
+                                        }}
+                                    >
                                         {prettyStatut(selectedAnnonce.statut)}
                                     </span>
                                 </div>
-                                
+
                                 <div className="modal-info-row">
                                     <span className="modal-info-key">
                                         Soumise le
                                     </span>
                                     <span className="modal-info-val">
-                                        {formatDateTime(selectedAnnonce.created_at)}
+                                        {formatDateTime(
+                                            selectedAnnonce.created_at,
+                                        )}
                                     </span>
                                 </div>
-                                
+
                                 {selectedAnnonce.date_annonce && (
                                     <div className="modal-info-row">
                                         <span className="modal-info-key">
                                             Date événement
                                         </span>
                                         <span className="modal-info-val">
-                                            📅 {formatDate(selectedAnnonce.date_annonce)}
+                                            📅{" "}
+                                            {formatDate(
+                                                selectedAnnonce.date_annonce,
+                                            )}
                                         </span>
                                     </div>
                                 )}
-                                
-                                {selectedAnnonce.updated_at && selectedAnnonce.updated_at !== selectedAnnonce.created_at && (
-                                    <div className="modal-info-row no-border">
-                                        <span className="modal-info-key">
-                                            Dernière modif.
-                                        </span>
-                                        <span className="modal-info-val">
-                                            {formatDateTime(selectedAnnonce.updated_at)}
-                                        </span>
-                                    </div>
-                                )}
+
+                                {selectedAnnonce.updated_at &&
+                                    selectedAnnonce.updated_at !==
+                                        selectedAnnonce.created_at && (
+                                        <div className="modal-info-row no-border">
+                                            <span className="modal-info-key">
+                                                Dernière modif.
+                                            </span>
+                                            <span className="modal-info-val">
+                                                {formatDateTime(
+                                                    selectedAnnonce.updated_at,
+                                                )}
+                                            </span>
+                                        </div>
+                                    )}
                             </div>
-                            
+
                             {/* Message */}
                             <div style={{ margin: "18px 0 8px" }}>
-                                <label className="modal-label">Message de l'annonce</label>
+                                <label className="modal-label">
+                                    Message de l'annonce
+                                </label>
                             </div>
                             <div className="ann-modal-msg">
-                                {selectedAnnonce.message || selectedAnnonce.details?.contenu || "Aucun message"}
+                                {selectedAnnonce.message ||
+                                    selectedAnnonce.details?.contenu ||
+                                    "Aucun message"}
                             </div>
-                            
+
                             {/* Circuit de validation */}
                             {selectedAnnonce.statut === "SOUMISE" && (
-                                <div style={{ 
-                                    marginTop: 16, 
-                                    padding: "12px 14px",
-                                    background: "rgba(124,58,237,.05)",
-                                    border: "1px solid rgba(124,58,237,.15)",
-                                    borderRadius: 8,
-                                    fontSize: 12,
-                                    color: "#7c3aed",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 8
-                                }}>
-                                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                <div
+                                    style={{
+                                        marginTop: 16,
+                                        padding: "12px 14px",
+                                        background: "rgba(124,58,237,.05)",
+                                        border: "1px solid rgba(124,58,237,.15)",
+                                        borderRadius: 8,
+                                        fontSize: 12,
+                                        color: "#7c3aed",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 8,
+                                    }}
+                                >
+                                    <svg
+                                        width="14"
+                                        height="14"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                        />
                                     </svg>
-                                    <span>Circuit : <strong>Conducteur</strong> → <strong>Pasteur</strong> → <strong>Publication</strong></span>
+                                    <span>
+                                        Circuit : <strong>Conducteur</strong> →{" "}
+                                        <strong>Pasteur</strong> →{" "}
+                                        <strong>Publication</strong>
+                                    </span>
                                 </div>
                             )}
-                            
-                            {selectedAnnonce.statut === "TRANSMISE_AU_PASTEUR" && (
-                                <div style={{ 
-                                    marginTop: 16, 
-                                    padding: "12px 14px",
-                                    background: "rgba(37,99,235,.05)",
-                                    border: "1px solid rgba(37,99,235,.15)",
-                                    borderRadius: 8,
-                                    fontSize: 12,
-                                    color: "#2563eb",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 8
-                                }}>
-                                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+
+                            {selectedAnnonce.statut ===
+                                "TRANSMISE_AU_PASTEUR" && (
+                                <div
+                                    style={{
+                                        marginTop: 16,
+                                        padding: "12px 14px",
+                                        background: "rgba(37,99,235,.05)",
+                                        border: "1px solid rgba(37,99,235,.15)",
+                                        borderRadius: 8,
+                                        fontSize: 12,
+                                        color: "#2563eb",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 8,
+                                    }}
+                                >
+                                    <svg
+                                        width="14"
+                                        height="14"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                        />
                                     </svg>
-                                    <span>En attente de validation par le <strong>Pasteur</strong></span>
+                                    <span>
+                                        En attente de validation par le{" "}
+                                        <strong>Pasteur</strong>
+                                    </span>
                                 </div>
                             )}
-                            
+
                             {/* Bouton télécharger fiche pour TRANSMISE_AU_PASTEUR */}
-                            {selectedAnnonce.statut === "TRANSMISE_AU_PASTEUR" && (
+                            {selectedAnnonce.statut ===
+                                "TRANSMISE_AU_PASTEUR" && (
                                 <div style={{ marginTop: 16 }}>
                                     <button
                                         style={{
@@ -3776,10 +4079,16 @@ export default function Index({
                                             alignItems: "center",
                                             justifyContent: "center",
                                             gap: 8,
-                                            transition: "background 0.2s"
+                                            transition: "background 0.2s",
                                         }}
-                                        onMouseEnter={(e) => e.target.style.backgroundColor = "#2563eb"}
-                                        onMouseLeave={(e) => e.target.style.backgroundColor = "#3b82f6"}
+                                        onMouseEnter={(e) =>
+                                            (e.target.style.backgroundColor =
+                                                "#2563eb")
+                                        }
+                                        onMouseLeave={(e) =>
+                                            (e.target.style.backgroundColor =
+                                                "#3b82f6")
+                                        }
                                         onClick={() => {
                                             window.location.href = `/conducteur/annonces/${selectedAnnonce.id}/fiche`;
                                         }}
@@ -3802,43 +4111,70 @@ export default function Index({
                                     </button>
                                 </div>
                             )}
-                            
-                            {["VALIDEE", "PUBLIEE"].includes(selectedAnnonce.statut) && (
-                                <div style={{ 
-                                    marginTop: 16, 
-                                    padding: "12px 14px",
-                                    background: "rgba(22,163,74,.05)",
-                                    border: "1px solid rgba(22,163,74,.15)",
-                                    borderRadius: 8,
-                                    fontSize: 12,
-                                    color: "#16a34a",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 8,
-                                    fontWeight: 600
-                                }}>
-                                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+
+                            {["VALIDEE", "PUBLIEE"].includes(
+                                selectedAnnonce.statut,
+                            ) && (
+                                <div
+                                    style={{
+                                        marginTop: 16,
+                                        padding: "12px 14px",
+                                        background: "rgba(22,163,74,.05)",
+                                        border: "1px solid rgba(22,163,74,.15)",
+                                        borderRadius: 8,
+                                        fontSize: 12,
+                                        color: "#16a34a",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 8,
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    <svg
+                                        width="14"
+                                        height="14"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        strokeWidth="2.5"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                        />
                                     </svg>
                                     <span>Annonce validée et publiée</span>
                                 </div>
                             )}
-                            
-                            {(selectedAnnonce.statut?.startsWith("REFUSEE")) && selectedAnnonce.commentaire_refus && (
-                                <div style={{ 
-                                    marginTop: 16, 
-                                    padding: "12px 14px",
-                                    background: "rgba(220,38,38,.05)",
-                                    border: "1px solid rgba(220,38,38,.15)",
-                                    borderLeft: "3px solid #dc2626",
-                                    borderRadius: 8,
-                                    fontSize: 12.5,
-                                    color: "#dc2626"
-                                }}>
-                                    <div style={{ fontWeight: 700, marginBottom: 6 }}>Motif du refus :</div>
-                                    <div style={{ color: "#991b1b" }}>{selectedAnnonce.commentaire_refus}</div>
-                                </div>
-                            )}
+
+                            {selectedAnnonce.statut?.startsWith("REFUSEE") &&
+                                selectedAnnonce.commentaire_refus && (
+                                    <div
+                                        style={{
+                                            marginTop: 16,
+                                            padding: "12px 14px",
+                                            background: "rgba(220,38,38,.05)",
+                                            border: "1px solid rgba(220,38,38,.15)",
+                                            borderLeft: "3px solid #dc2626",
+                                            borderRadius: 8,
+                                            fontSize: 12.5,
+                                            color: "#dc2626",
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                fontWeight: 700,
+                                                marginBottom: 6,
+                                            }}
+                                        >
+                                            Motif du refus :
+                                        </div>
+                                        <div style={{ color: "#991b1b" }}>
+                                            {selectedAnnonce.commentaire_refus}
+                                        </div>
+                                    </div>
+                                )}
 
                             {/* Boutons d'action dans le détail */}
                             {annonceModal === "detail" &&
@@ -4066,7 +4402,11 @@ function formatDateTime(value) {
     if (!value) return "—";
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return value;
-    return d.toLocaleDateString("fr-FR") + " à " + d.toLocaleTimeString("fr-FR", { hour: '2-digit', minute: '2-digit' });
+    return (
+        d.toLocaleDateString("fr-FR") +
+        " à " +
+        d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+    );
 }
 
 function Field({ label, required, children }) {
@@ -4168,7 +4508,7 @@ const styles = `
 .tab-violet{background:var(--violet);color:white}
 .tab-ann.active{color:var(--violet)}
 .quick-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-.quick-dropdown{min-width:250px;background:rgba(255,255,255,.95);border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-size:12.5px;font-weight:600;color:var(--text);cursor:pointer;outline:none}
+.quick-dropdown{min-width:300px;height:54px;background:#ECEFF4;border:2px solid #D9DEE8;border-radius:22px;padding:0 48px 0 46px;font-size:16px;font-weight:800;color:#111827;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23586A84' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23374151' stroke-width='2.2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat,no-repeat;background-position:left 16px center,right 16px center;background-size:18px 18px,18px 18px}
 .quick-dropdown:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(91,63,175,.12)}
 .quick-search{min-width:260px;background:rgba(255,255,255,.95);border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-size:12.5px;color:var(--text);outline:none}
 .quick-search:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(91,63,175,.12)}

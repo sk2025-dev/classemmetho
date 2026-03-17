@@ -1307,6 +1307,7 @@ export default function RegisterConducteur({
                                 </div>
                                 <PhotoUploadInput
                                     size="md"
+                                    enableCamera={true}
                                     initialPhotoUrl={responsable.photoPreview}
                                     onUploadStateChange={
                                         setIsResponsablePhotoUploading
@@ -2048,6 +2049,7 @@ export default function RegisterConducteur({
                                             </div>
                                             <PhotoUploadInput
                                                 size="md"
+                                                enableCamera={true}
                                                 initialPhotoUrl={
                                                     membreTemp.photoPreview
                                                 }

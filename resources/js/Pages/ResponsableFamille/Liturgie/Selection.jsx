@@ -33,7 +33,9 @@ const ACTE_OPTIONS = [
     },
 ];
 
-export default function Selection({ basePath = "/responsable-famille/liturgie" }) {
+export default function Selection({
+    basePath = "/responsable-famille/liturgie",
+}) {
     return (
         <div
             className="min-h-screen py-10 px-4"
@@ -59,7 +61,8 @@ export default function Selection({ basePath = "/responsable-famille/liturgie" }
                         Choisir le type de demande
                     </h1>
                     <p className="text-blue-100 max-w-2xl mx-auto">
-                        Selectionnez un acte. Vous serez ensuite redirige vers le formulaire correspondant.
+                        Selectionnez un acte. Vous serez ensuite redirige vers
+                        le formulaire correspondant.
                     </p>
                 </div>
 
@@ -73,13 +76,19 @@ export default function Selection({ basePath = "/responsable-famille/liturgie" }
                             <div className={`h-1.5 ${toneBar(option.tone)}`} />
                             <div className="p-5">
                                 <div className="flex items-center justify-between mb-3">
-                                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${toneBadge(option.tone)}`}>
+                                    <span
+                                        className={`text-xs font-bold px-2.5 py-1 rounded-full border ${toneBadge(option.tone)}`}
+                                    >
                                         {option.badge}
                                     </span>
                                 </div>
 
-                                <h2 className="text-xl font-bold text-gray-900 mb-2">{option.title}</h2>
-                                <p className="text-sm text-gray-600 mb-4">{option.description}</p>
+                                <h2 className="text-xl font-bold text-gray-900 mb-2">
+                                    {option.title}
+                                </h2>
+                                <p className="text-sm text-gray-600 mb-4">
+                                    {option.description}
+                                </p>
 
                                 <div className="inline-flex items-center justify-between w-full text-sm font-semibold text-slate-500">
                                     Cliquer pour ouvrir
@@ -92,8 +101,9 @@ export default function Selection({ basePath = "/responsable-famille/liturgie" }
 
                 <div className="mt-6 bg-white/95 rounded-xl p-4 border border-gray-200">
                     <p className="text-sm text-gray-700">
-                        Le dossier suit ce circuit: <strong>Conducteur</strong> puis <strong>Pasteur</strong>. Vous
-                        serez notifie a chaque etape.
+                        Le dossier suit ce circuit: <strong>Conducteur</strong>{" "}
+                        puis <strong>Pasteur</strong>. Vous serez notifie a
+                        chaque etape.
                     </p>
                 </div>
             </div>
@@ -131,5 +141,8 @@ function toneCta(tone) {
         green: "border-green-200 text-green-700 bg-green-50 group-hover:bg-green-600 group-hover:text-white",
         slate: "border-slate-200 text-slate-700 bg-slate-50 group-hover:bg-slate-600 group-hover:text-white",
     };
-    return map[tone] || "border-blue-200 text-blue-700 bg-blue-50 group-hover:bg-blue-600 group-hover:text-white";
+    return (
+        map[tone] ||
+        "border-blue-200 text-blue-700 bg-blue-50 group-hover:bg-blue-600 group-hover:text-white"
+    );
 }

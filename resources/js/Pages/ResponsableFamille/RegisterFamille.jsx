@@ -1419,6 +1419,7 @@ export default function RegisterFamille({
                                 </div>
                                 <PhotoUploadInput
                                     size="md"
+                                    enableCamera={true}
                                     initialPhotoUrl={responsable.photoPreview}
                                     onUploadStateChange={
                                         setIsResponsablePhotoUploading
@@ -2141,6 +2142,7 @@ export default function RegisterFamille({
                                             </div>
                                             <PhotoUploadInput
                                                 size="md"
+                                                enableCamera={true}
                                                 initialPhotoUrl={
                                                     membreTemp.photoPreview
                                                 }

@@ -89,23 +89,23 @@ $dateEvenementTexte = $dateAnnonceTexte !== '—' ? ucfirst($dateAnnonceTexte) :
 
 $bodyParagraphs = match ($typeKey) {
 'mariage' => [
-"La famille {$famille} sollicite une action de grâce devant l’assemblée à l’occasion du mariage de {$nomMembreConcerne}" . ($nomPartenaire !== '—' ? " et {$nomPartenaire}" : '') . ", célébré le {$dateEvenementTexte}.",
+"La famille <b><i>{$famille}</i></b> sollicite une action de grâce devant l'assemblée à l'occasion du mariage de <b><i>{$nomMembreConcerne}</i></b>" . ($nomPartenaire !== '—' ? " et <b><i>{$nomPartenaire}</i></b>" : '') . ", célébré le <b>{$dateEvenementTexte}</b>.",
 "Par cette démarche, la famille souhaite rendre gloire à Dieu pour cette union bénie et exprimer sa profonde reconnaissance à la communauté pour les prières, le soutien et l’accompagnement manifestés lors de cette heureuse célébration.",
 ],
 'bapteme' => [
-"La famille {$famille} sollicite la présentation devant l’assemblée du baptême de {$nomConcerne}, prévu le {$dateEvenementTexte}.",
-"À cette occasion, la famille confie {$nomConcerne} à la grâce et à la protection du Seigneur, et sollicite les prières et l’accompagnement spirituel de la communauté pour sa croissance dans la foi chrétienne.",
+"La famille <b><i>{$famille}</i></b> sollicite la présentation devant l'assemblée du baptême de <b><i>{$nomConcerne}</i></b>, prévu le <b>{$dateEvenementTexte}</b>.",
+"À cette occasion, la famille confie <b><i>{$nomConcerne}</i></b> à la grâce et à la protection du Seigneur, et sollicite les prières et l'accompagnement spirituel de la communauté pour sa croissance dans la foi chrétienne.",
 ],
 'grace', 'remerciement', 'felicitations' => [
-"La famille {$famille} sollicite une action de grâce devant l’assemblée, afin de rendre gloire à Dieu pour ses nombreux bienfaits et pour sa fidélité dans leur vie.",
+"La famille <b><i>{$famille}</i></b> sollicite une action de grâce devant l'assemblée, afin de rendre gloire à Dieu pour ses nombreux bienfaits et pour sa fidélité dans leur vie.",
 "Elle souhaite également exprimer sa reconnaissance pour le soutien spirituel, les prières et l’encouragement de la communauté.",
 ],
 'deces', 'funerailles' => [
-"La famille {$famille} informe la communauté du rappel à Dieu de {$nomConcerne}, survenu le {$dateEvenementTexte}.",
+"La famille <b><i>{$famille}</i></b> informe la communauté du rappel à Dieu de <b><i>{$nomConcerne}</i></b>, survenu le <b>{$dateEvenementTexte}</b>.",
 "En cette circonstance douloureuse, la famille sollicite le soutien spirituel et les prières de l’assemblée, afin que le Seigneur accorde le repos éternel au défunt et réconforte les cœurs de la famille éprouvée.",
 ],
 default => [
-"La famille {$famille} sollicite auprès de la communauté la présentation de {$objet}" . ($nomConcerne !== '—' ? " concernant {$nomConcerne}" : '') . ", prévue le {$dateEvenementTexte}.",
+"La famille <b><i>{$famille}</i></b> sollicite auprès de la communauté la présentation de {$objet}" . ($nomConcerne !== '—' ? " concernant <b><i>{$nomConcerne}</i></b>" : '') . ", prévue le <b>{$dateEvenementTexte}</b>.",
 "Par cette démarche, la famille souhaite informer l’assemblée et sollicite ses prières, son accompagnement spirituel ainsi que son soutien fraternel.",
 ],
 };
@@ -356,7 +356,7 @@ default => [
         <td>
           {{-- Objet --}}
           <div style="font-size: 12px; font-weight: 700; margin-bottom: 14px;">
-            <span style="font-weight: 700;">Type d'annonce : </span>{{ $objet }}
+            <span style="font-weight: 700;">Objet : </span>{{ $objet }}
           </div>
 
           {{-- Formule d'appel --}}
@@ -366,7 +366,7 @@ default => [
 
           @foreach($bodyParagraphs as $paragraph)
           <div class="body-text" style="margin-bottom: 12px;">
-            {{ $paragraph }}
+            {!! $paragraph !!}
           </div>
           @endforeach
 

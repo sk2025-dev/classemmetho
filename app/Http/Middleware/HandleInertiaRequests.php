@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Helpers\PhotoHelper;
+use App\Models\ActeLiturgique;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -39,6 +40,35 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'csrf_token' => csrf_token(),
+            'flashAnnouncements' => fn() => ActeLiturgique::query()
+                ->with(['membre:id,prenom,nom', 'family:id,nom'])
+                ->whereIn('statut', ['VALIDEE', 'PUBLIEE'])
+                ->where(function ($q) {
+                    $q->where('est_annonce', true)
+                        ->orWhereIn('type_acte', [
+                            'annonce',
+                            'annonce_liturgique',
+                            'priere',
+                            'grace',
+                            'felicitations',
+                            'generale',
+                            'mariage',
+                            'deces',
+                        ]);
+                })
+                ->latest()
+                ->limit(20)
+                ->get([
+                    'id',
+                    'type_acte',
+                    'details',
+                    'membre_id',
+                    'family_id',
+                    'date_souhaitee',
+                    'date_publication',
+                    'created_at',
+                    'statut',
+                ]),
             'auth' => [
                 'user' => $request->user() ? [
                     'id' => $request->user()->id,

@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\NotificationsController;
 use App\Http\Controllers\Admin\AnnonceController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\LiturgieController as AdminLiturgieController;
+use App\Http\Controllers\Admin\FamilyCodeController;
 use App\Http\Controllers\ExcelImportController;
 use App\Http\Controllers\MembreFamille\FamilyController as MembreFamilleFamilyController;
 use App\Http\Controllers\MembreFamille\ProfileController as MembreFamilleProfileController;
@@ -158,6 +159,11 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/admin/liturgie/{id}', [AdminLiturgieController::class, 'update'])->name('admin.liturgie.update');
         Route::post('/admin/liturgie/{id}/transition', [AdminLiturgieController::class, 'transition'])->name('admin.liturgie.transition');
         Route::delete('/admin/liturgie/{id}', [AdminLiturgieController::class, 'destroy'])->name('admin.liturgie.destroy');
+
+        // Codes familles
+        Route::get('/admin/families', [FamilyCodeController::class, 'index'])->name('admin.families.index');
+        Route::post('/admin/families/generate-all', [FamilyCodeController::class, 'generateAll'])->name('admin.families.generate-all');
+        Route::post('/admin/families/{id}/generate', [FamilyCodeController::class, 'generate'])->name('admin.families.generate');
 
 
         // --- Tableau de bord complet (Votre AdministrationController) ---

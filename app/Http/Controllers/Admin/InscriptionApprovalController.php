@@ -636,5 +636,3 @@ class InscriptionApprovalController extends Controller
         }
     }
 }
-
-

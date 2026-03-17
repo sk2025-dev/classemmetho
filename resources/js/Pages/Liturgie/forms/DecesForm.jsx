@@ -162,6 +162,7 @@ export default function DecesForm({
 
         payload.append("membre_id", membreIdToSend || "");
         payload.append("classe_id", form.classe_id || "");
+        payload.append("date_souhaitee", form.details.date_deces || "");
         payload.append(
             "details[nom_defunt]",
             `${form.details.prenom_defunt} ${form.details.nom_defunt}`.trim(),
@@ -199,6 +200,7 @@ export default function DecesForm({
             const msg = res.data?.message || "Declaration de deces soumise.";
             setSuccessMsg(msg);
             setSuccess(true);
+            setStep(3);
             showSuccess(msg);
         } catch (error) {
             const data = error?.response?.data || {};
@@ -279,29 +281,27 @@ export default function DecesForm({
                         <>
                             <div className="h-[3px] bg-gradient-to-r from-transparent via-slate-500 to-transparent" />
                             <div className="grid grid-cols-3 bg-slate-50 border-b border-slate-200">
-                                {[
-                                    "Soumis",
-                                    "Validation Conducteur",
-                                    "Validation Pasteur",
-                                ].map((label, idx) => {
-                                    const sn = idx + 1;
-                                    const active = step === sn;
-                                    const done = step > sn;
-                                    return (
-                                        <div
-                                            key={label}
-                                            className={`text-center py-3 text-[10px] uppercase tracking-wider font-bold border-b-2 ${
-                                                active
-                                                    ? "text-slate-700 border-slate-600"
-                                                    : done
-                                                      ? "text-amber-700 border-amber-600"
-                                                      : "text-slate-400 border-transparent"
-                                            }`}
-                                        >
-                                            {label}
-                                        </div>
-                                    );
-                                })}
+                                {["Soumis", "Defunt(e)", "Obseques"].map(
+                                    (label, idx) => {
+                                        const sn = idx + 1;
+                                        const active = step === sn;
+                                        const done = step > sn;
+                                        return (
+                                            <div
+                                                key={label}
+                                                className={`text-center py-3 text-[10px] uppercase tracking-wider font-bold border-b-2 ${
+                                                    active
+                                                        ? "text-slate-700 border-slate-600"
+                                                        : done
+                                                          ? "text-amber-700 border-amber-600"
+                                                          : "text-slate-400 border-transparent"
+                                                }`}
+                                            >
+                                                {label}
+                                            </div>
+                                        );
+                                    },
+                                )}
                             </div>
                         </>
                     )}
