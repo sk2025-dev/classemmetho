@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Link, router, useForm, Head, usePage } from "@inertiajs/react";
 import axios from "axios";
 import Select from "react-select";
@@ -1332,12 +1332,23 @@ export default function Inscriptions({
                                 </p>
                             </div>
                         </div>
-                        <Link
-                            href="/conducteur/members/create"
-                            className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition transform hover:scale-[1.02] flex items-center gap-2"
-                        >
-                            <Plus className="w-5 h-5" /> Inscrire un membre
-                        </Link>
+                        <div className="flex gap-3">
+                            <Link
+                                href="/conducteur/members/create"
+                                className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition transform hover:scale-[1.02] flex items-center gap-2"
+                            >
+                                <Plus className="w-5 h-5" /> Inscrire un membre
+                            </Link>
+                            <Link
+                                href="/conducteur/transferts"
+                                className="bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition transform hover:scale-[1.02] flex items-center gap-2"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5V21M16.5 12H3" />
+                                </svg>
+                                Transferts
+                            </Link>
+                        </div>
                     </div>
 
                     {/* STATS RAPIDES (TRANSPARENT DESIGN) */}
