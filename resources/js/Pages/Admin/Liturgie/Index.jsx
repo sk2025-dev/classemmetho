@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
-import html2pdf from 'html2pdf.js';
-import { QRCodeCanvas } from 'qrcode.react';
-import axios from 'axios';
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Head, Link, router } from "@inertiajs/react";
+import html2pdf from "html2pdf.js";
+import { QRCodeCanvas } from "qrcode.react";
+import axios from "axios";
 
 // ==================== STYLES GLOBAUX ====================
 const GLOBAL_STYLES = `
@@ -924,21 +924,35 @@ const ActeStatusBadge = ({ status }) => {
     let bgColor = "#f3f4f6";
     let textColor = "#374151";
     let borderColor = "#d1d5db";
-    
+
     // Normaliser le statut
-    const normalizedStatus = String(status || "").toLowerCase().trim();
-    
-    if (normalizedStatus.includes('validé') || normalizedStatus === 'validee' || normalizedStatus === 'publiée' || normalizedStatus === 'celebre') {
+    const normalizedStatus = String(status || "")
+        .toLowerCase()
+        .trim();
+
+    if (
+        normalizedStatus.includes("validé") ||
+        normalizedStatus === "validee" ||
+        normalizedStatus === "publiée" ||
+        normalizedStatus === "celebre"
+    ) {
         bgColor = "#dcfce7";
         textColor = "#166534";
         borderColor = "#86efac";
         label = "Validé";
-    } else if (normalizedStatus.includes('en attente') || normalizedStatus.includes('soumise') || normalizedStatus.includes('transmise')) {
+    } else if (
+        normalizedStatus.includes("en attente") ||
+        normalizedStatus.includes("soumise") ||
+        normalizedStatus.includes("transmise")
+    ) {
         bgColor = "#fef3c7";
         textColor = "#92400e";
         borderColor = "#fcd34d";
         label = "En attente";
-    } else if (normalizedStatus.includes('rejeté') || normalizedStatus.includes('refusé')) {
+    } else if (
+        normalizedStatus.includes("rejeté") ||
+        normalizedStatus.includes("refusé")
+    ) {
         bgColor = "#fee2e2";
         textColor = "#991b1b";
         borderColor = "#fca5a5";
@@ -948,17 +962,19 @@ const ActeStatusBadge = ({ status }) => {
     }
 
     return (
-        <span style={{
-            display: 'inline-flex',
-            padding: '0.25rem 0.75rem',
-            borderRadius: '9999px',
-            fontSize: '0.75rem',
-            fontWeight: '700',
-            border: `1px solid ${borderColor}`,
-            backgroundColor: bgColor,
-            color: textColor,
-            alignItems: 'center'
-        }}>
+        <span
+            style={{
+                display: "inline-flex",
+                padding: "0.25rem 0.75rem",
+                borderRadius: "9999px",
+                fontSize: "0.75rem",
+                fontWeight: "700",
+                border: `1px solid ${borderColor}`,
+                backgroundColor: bgColor,
+                color: textColor,
+                alignItems: "center",
+            }}
+        >
             {label}
         </span>
     );
@@ -969,16 +985,21 @@ function formatLongDate(dateString) {
     if (!dateString) return "—";
     const d = new Date(dateString);
     if (isNaN(d.getTime())) return dateString;
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    return d.toLocaleDateString('fr-FR', options);
+    const options = {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+    };
+    return d.toLocaleDateString("fr-FR", options);
 }
 
 function formatLongTime(dateString) {
     if (!dateString) return "—";
     const d = new Date(dateString);
     if (isNaN(d.getTime())) return dateString;
-    const hours = d.getHours().toString().padStart(2, '0');
-    const minutes = d.getMinutes().toString().padStart(2, '0');
+    const hours = d.getHours().toString().padStart(2, "0");
+    const minutes = d.getMinutes().toString().padStart(2, "0");
     return `${hours}h${minutes}`;
 }
 
@@ -986,26 +1007,29 @@ function formatDate(dateString) {
     if (!dateString) return "—";
     const d = new Date(dateString);
     if (isNaN(d.getTime())) return dateString;
-    return d.toLocaleDateString('fr-FR');
+    return d.toLocaleDateString("fr-FR");
 }
 
 function formatTime(dateString) {
     if (!dateString) return "—";
     const d = new Date(dateString);
     if (isNaN(d.getTime())) return dateString;
-    return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleTimeString("fr-FR", {
+        hour: "2-digit",
+        minute: "2-digit",
+    });
 }
 
 // --- Générateur de texte de demande (modifié : données en gras italique) ---
 function generateRequestTextHTML(acte) {
-    const type = acte.type || 'Acte liturgique';
-    const personne = acte.member || '—';
-    const dateLong = acte.date ? formatLongDate(acte.date) : '—';
-    const heureLong = acte.date ? formatLongTime(acte.date) : '—';
-    const lieu = '—'; // Pas de lieu dans les données
-    const ville = 'Abidjan';
-    const conducteur = acte.conductor || '—';
-    const pasteur = acte.pastor || '—';
+    const type = acte.type || "Acte liturgique";
+    const personne = acte.member || "—";
+    const dateLong = acte.date ? formatLongDate(acte.date) : "—";
+    const heureLong = acte.date ? formatLongTime(acte.date) : "—";
+    const lieu = "—"; // Pas de lieu dans les données
+    const ville = "Abidjan";
+    const conducteur = acte.conductor || "—";
+    const pasteur = acte.pastor || "—";
 
     return `
         <p><strong>Objet : <strong><em>${type}</em></strong></strong></p>
@@ -1033,44 +1057,46 @@ function generateRequestTextHTML(acte) {
 const CertificateDisplay = ({ acte }) => {
     // Mapping des textes par type
     const contentData = {
-        'Baptême': {
-            title: 'Certificat de Baptême',
-            text: 'Pour avoir reçu le sacrement saint du baptême au sein de notre communauté paroissiale, marquant son entrée dans la famille de Dieu.',
+        Baptême: {
+            title: "Certificat de Baptême",
+            text: "Pour avoir reçu le sacrement saint du baptême au sein de notre communauté paroissiale, marquant son entrée dans la famille de Dieu.",
         },
-        'Mariage': {
-            title: 'Certificat de Mariage',
-            text: 'Pour avoir uni leurs liens par le sacrement du mariage, témoignant de leur amour et de leur engagement devant Dieu et l’Assemblée.',
+        Mariage: {
+            title: "Certificat de Mariage",
+            text: "Pour avoir uni leurs liens par le sacrement du mariage, témoignant de leur amour et de leur engagement devant Dieu et l’Assemblée.",
         },
-        'Décès': {
-            title: 'Certificat de Funérailles',
-            text: 'Pour avoir accompagné avec dignité et prière le défunt vers la maison du Père, en présence de ses proches et de la communauté.',
+        Décès: {
+            title: "Certificat de Funérailles",
+            text: "Pour avoir accompagné avec dignité et prière le défunt vers la maison du Père, en présence de ses proches et de la communauté.",
         },
-        '1ère Communion': {
-            title: 'Certificat de 1ère Communion',
-            text: 'Pour avoir reçu pour la première fois le sacrement de l\'Eucharistie, scellant son union avec le Christ et l\'Église.',
+        "1ère Communion": {
+            title: "Certificat de 1ère Communion",
+            text: "Pour avoir reçu pour la première fois le sacrement de l'Eucharistie, scellant son union avec le Christ et l'Église.",
         },
-        'Naissance': {
-            title: 'Certificat de Naissance',
-            text: 'Pour célébrer et bénir la naissance de cet enfant au sein de notre communauté, signe d\'espérance et de vie.',
+        Naissance: {
+            title: "Certificat de Naissance",
+            text: "Pour célébrer et bénir la naissance de cet enfant au sein de notre communauté, signe d'espérance et de vie.",
         },
     };
 
     // Récupération des données, avec fallback
     const data = contentData[acte.type] || {
         title: `Certificat de ${acte.type}`,
-        text: acte.description || 'Acte liturgique célébré selon la tradition de notre Église.',
+        text:
+            acte.description ||
+            "Acte liturgique célébré selon la tradition de notre Église.",
     };
 
     // Pour le décès, on personnalise le texte avec le nom du défunt
     let bodyText = data.text;
-    if (acte.type === 'Décès') {
+    if (acte.type === "Décès") {
         bodyText = `Pour avoir accompagné avec dignité et prière le défunt ${acte.member} vers la maison du Père, en présence de ses proches et de la communauté.`;
     }
 
-    const formattedDate = new Date(acte.date).toLocaleDateString('fr-FR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
+    const formattedDate = new Date(acte.date).toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
     });
 
     return (
@@ -1102,12 +1128,14 @@ const CertificateDisplay = ({ acte }) => {
                         </div>
                     </div>
 
-                    <div className="subtitle-cert">Ce certificat est fièrement décerné à</div>
+                    <div className="subtitle-cert">
+                        Ce certificat est fièrement décerné à
+                    </div>
                     <div className="recipient-name">{acte.member}</div>
 
                     {/* Texte du corps : condition pour italique et noir si Décès */}
-                    <div 
-                        className={`body-text ${acte.type === 'Décès' ? 'body-text-italic' : ''}`}
+                    <div
+                        className={`body-text ${acte.type === "Décès" ? "body-text-italic" : ""}`}
                     >
                         {bodyText}
                     </div>
@@ -1115,11 +1143,15 @@ const CertificateDisplay = ({ acte }) => {
                     {/* Footer avec date à gauche, signature + cachet à droite */}
                     <div className="cert-footer">
                         <div className="footer-left">
-                            <div className="date-display">Fait le : {formattedDate} à Abidjan</div>
+                            <div className="date-display">
+                                Fait le : {formattedDate} à Abidjan
+                            </div>
                         </div>
                         <div className="footer-center"></div>
                         <div className="footer-right">
-                            <div className="signature-label">signature et cachet du Pasteur</div>
+                            <div className="signature-label">
+                                signature et cachet du Pasteur
+                            </div>
                             <div className="signature-block">
                                 <img
                                     src="/images/signature.jpg"
@@ -1127,7 +1159,9 @@ const CertificateDisplay = ({ acte }) => {
                                     className="stamp-img"
                                 />
                                 {/* Nom du pasteur en police standard */}
-                                <span className="signature-name-plain">{acte.pastor}</span>
+                                <span className="signature-name-plain">
+                                    {acte.pastor}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -1144,17 +1178,23 @@ const ActeDetailsModal = ({ acte }) => {
     if (!acte) return null;
 
     // Déterminer si on doit afficher le certificat (pour tous les types validés)
-    const showCertificate = acte.status === 'validated';
+    const showCertificate = acte.status === "validated";
 
     const handleDownload = () => {
         if (printRef.current) {
             const opt = {
                 // Marges : 0 pour le certificat (plein format), sinon marges normales pour la fiche
                 margin: showCertificate ? 0 : [0.5, 1.5, 0.5, 1.5],
-                filename: showCertificate ? `Certificat_${acte.type}_${acte.id}.pdf` : `Fiche_Acte_${acte.id}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
+                filename: showCertificate
+                    ? `Certificat_${acte.type}_${acte.id}.pdf`
+                    : `Fiche_Acte_${acte.id}.pdf`,
+                image: { type: "jpeg", quality: 0.98 },
                 html2canvas: { scale: 2, letterRendering: true },
-                jsPDF: { unit: 'cm', format: 'a4', orientation: showCertificate ? 'landscape' : 'portrait' }
+                jsPDF: {
+                    unit: "cm",
+                    format: "a4",
+                    orientation: showCertificate ? "landscape" : "portrait",
+                },
             };
             html2pdf().from(printRef.current).set(opt).save();
         }
@@ -1166,12 +1206,31 @@ const ActeDetailsModal = ({ acte }) => {
             <div className="modal-header">
                 <div>
                     <h2>Détails de la Demande</h2>
-                    <div className="subtitle">Réf : ACT-{acte.id} • <ActeStatusBadge status={acte.status} /></div>
+                    <div className="subtitle">
+                        Réf : ACT-{acte.id} •{" "}
+                        <ActeStatusBadge status={acte.status} />
+                    </div>
                 </div>
                 {/* Bouton de téléchargement visible UNIQUEMENT si validé */}
-                {acte.status === 'validated' && (
-                    <button onClick={handleDownload} className="btn btn-download-paper" title="Télécharger le PDF">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                {acte.status === "validated" && (
+                    <button
+                        onClick={handleDownload}
+                        className="btn btn-download-paper"
+                        title="Télécharger le PDF"
+                    >
+                        <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                            />
+                        </svg>
                         <span>Télécharger</span>
                     </button>
                 )}
@@ -1194,9 +1253,15 @@ const ActeDetailsModal = ({ acte }) => {
                                 />
                             </div>
                             <div className="fiche-church-info">
-                                <div className="fiche-church-name">Eglise Méthodiste de Côte d’Ivoire</div>
-                                <div className="fiche-district-name">District Abidjan Nord</div>
-                                <div className="fiche-temple-name">Temple du Jubilé de Cocody</div>
+                                <div className="fiche-church-name">
+                                    Eglise Méthodiste de Côte d’Ivoire
+                                </div>
+                                <div className="fiche-district-name">
+                                    District Abidjan Nord
+                                </div>
+                                <div className="fiche-temple-name">
+                                    Temple du Jubilé de Cocody
+                                </div>
                             </div>
                         </header>
 
@@ -1215,38 +1280,51 @@ const ActeDetailsModal = ({ acte }) => {
                             <div className="fiche-field-row">
                                 <span className="fiche-label">FAMILLE :</span>
                                 <span className="fiche-value">
-                                    {acte.family || '—'}
+                                    {acte.family || "—"}
                                 </span>
                             </div>
                             <div className="fiche-field-row">
                                 <span className="fiche-label">CLASSE :</span>
                                 <span className="fiche-value">
-                                    {acte.class || '—'}
+                                    {acte.class || "—"}
                                 </span>
                             </div>
                             <div className="fiche-field-row">
-                                <span className="fiche-label">DATE D'ANNONCE :</span>
+                                <span className="fiche-label">
+                                    DATE D'ANNONCE :
+                                </span>
                                 <span className="fiche-value">
-                                    {acte.date ? formatDate(acte.date) : '—'}
+                                    {acte.date ? formatDate(acte.date) : "—"}
                                 </span>
                             </div>
                             <div className="fiche-field-row">
                                 <span className="fiche-label">HEURE :</span>
                                 <span className="fiche-value">
-                                    {acte.date ? formatTime(acte.date) : '—'}
+                                    {acte.date ? formatTime(acte.date) : "—"}
                                 </span>
                             </div>
 
                             {/* Texte de demande */}
-                            <div 
+                            <div
                                 className="fiche-plain-text"
-                                dangerouslySetInnerHTML={{ __html: generateRequestTextHTML(acte) }}
+                                dangerouslySetInnerHTML={{
+                                    __html: generateRequestTextHTML(acte),
+                                }}
                             />
 
                             {/* Citations bibliques en miniature */}
                             <div className="fiche-quotes-mini">
-                                <p>Psaume 65 : 3 « O toi qui écoutes la prière ! Tous les hommes viendront à toi. »</p>
-                                <p>Jean 14 : 13-14 « …tout ce que vous demanderez en mon nom, je le ferai afin que le Père soit glorifié dans le Fils. Si vous demandez quelque chose en mon nom, je le ferai. »</p>
+                                <p>
+                                    Psaume 65 : 3 « O toi qui écoutes la prière
+                                    ! Tous les hommes viendront à toi. »
+                                </p>
+                                <p>
+                                    Jean 14 : 13-14 « …tout ce que vous
+                                    demanderez en mon nom, je le ferai afin que
+                                    le Père soit glorifié dans le Fils. Si vous
+                                    demandez quelque chose en mon nom, je le
+                                    ferai. »
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -1259,14 +1337,16 @@ const ActeDetailsModal = ({ acte }) => {
 // --- Fonction pour normaliser les types d'actes ---
 function normalizeActeType(typeRaw) {
     const typeMap = {
-        'bapteme': 'Baptême',
-        'mariage': 'Mariage',
-        'deces': 'Décès',
-        'naissance': 'Naissance',
-        'premiere_communion': '1ère Communion',
-        'confirmation': 'Confirmation'
+        bapteme: "Baptême",
+        mariage: "Mariage",
+        deces: "Décès",
+        naissance: "Naissance",
+        premiere_communion: "1ère Communion",
+        confirmation: "Confirmation",
     };
-    const normalized = String(typeRaw || '').toLowerCase().trim();
+    const normalized = String(typeRaw || "")
+        .toLowerCase()
+        .trim();
     return typeMap[normalized] || typeRaw;
 }
 
@@ -1274,28 +1354,34 @@ function normalizeActeType(typeRaw) {
 export default function ActesLiturgique({ auth, actes = [] }) {
     // États pour les actes - utiliser les vraies données du serveur
     const [allActs, setAllActs] = useState(
-        actes.map(acte => ({
+        actes.map((acte) => ({
             id: acte.id,
             type: normalizeActeType(acte.type_acte),
             date: acte.date_souhaitee || acte.created_at,
-            member: acte.membre ? `${acte.membre.prenom} ${acte.membre.nom}` : '—',
+            member: acte.membre
+                ? `${acte.membre.prenom} ${acte.membre.nom}`
+                : "—",
             memberPhoto: acte.membre?.profile_photo_url || null,
-            family: acte.family?.nom || acte.classe?.nom || '—',
-            class: acte.classe?.nom || '—',
-            conductor: acte.conducteur ? `${acte.conducteur.prenom} ${acte.conducteur.nom}` : 'À assigner',
-            pastor: acte.pasteur ? `${acte.pasteur.prenom} ${acte.pasteur.nom}` : 'À assigner',
-            description: acte.details?.notes || 'Sans description',
+            family: acte.family?.nom || acte.classe?.nom || "—",
+            class: acte.classe?.nom || "—",
+            conductor: acte.conducteur
+                ? `${acte.conducteur.prenom} ${acte.conducteur.nom}`
+                : "À assigner",
+            pastor: acte.pasteur
+                ? `${acte.pasteur.prenom} ${acte.pasteur.nom}`
+                : "À assigner",
+            description: acte.details?.notes || "Sans description",
             attachment: null,
-            status: acte.statut?.toLowerCase().replace('_', ' ') || 'pending',
+            status: acte.statut?.toLowerCase().replace("_", " ") || "pending",
             reference: acte.reference,
-            raw: acte // Conserve les données brutes pour les mises à jour
-        }))
+            raw: acte, // Conserve les données brutes pour les mises à jour
+        })),
     );
     const [filteredActs, setFilteredActs] = useState(allActs);
     const [loading, setLoading] = useState(false);
 
     // État pour le mode d'affichage (Tableau ou Grille)
-    const [viewMode, setViewMode] = useState('table');
+    const [viewMode, setViewMode] = useState("table");
 
     // États pour les filtres
     const [searchTerm, setSearchTerm] = useState("");
@@ -1325,21 +1411,23 @@ export default function ActesLiturgique({ auth, actes = [] }) {
 
         if (searchTerm) {
             const search = searchTerm.toLowerCase();
-            filtered = filtered.filter(acte =>
-                `${acte.type} ${acte.member} ${acte.family} ${acte.pastor}`.toLowerCase().includes(search)
+            filtered = filtered.filter((acte) =>
+                `${acte.type} ${acte.member} ${acte.family} ${acte.pastor}`
+                    .toLowerCase()
+                    .includes(search),
             );
         }
 
         if (typeFilter) {
-            filtered = filtered.filter(a => a.type === typeFilter);
+            filtered = filtered.filter((a) => a.type === typeFilter);
         }
 
         if (statusFilter) {
-            filtered = filtered.filter(a => a.status === statusFilter);
+            filtered = filtered.filter((a) => a.status === statusFilter);
         }
 
         if (pastorFilter) {
-            filtered = filtered.filter(a => a.pastor === pastorFilter);
+            filtered = filtered.filter((a) => a.pastor === pastorFilter);
         }
 
         setFilteredActs(filtered);
@@ -1351,32 +1439,36 @@ export default function ActesLiturgique({ auth, actes = [] }) {
     }, [applyFilters]);
 
     // Options uniques pour les filtres
-    const uniqueTypes = [...new Set(allActs.map(a => a.type))].sort();
-    const uniquePastors = [...new Set(allActs.map(a => a.pastor))].sort();
+    const uniqueTypes = [...new Set(allActs.map((a) => a.type))].sort();
+    const uniquePastors = [...new Set(allActs.map((a) => a.pastor))].sort();
 
     // --- OPÉRATIONS CRUD (COMMUNICATION BASE DE DONNÉES) ---
     const refreshActs = useCallback(async () => {
         setLoading(true);
         try {
             // Utiliser Inertia pour recharger complètement les données
-            router.get('/admin/liturgie', {}, { preserveScroll: true });
+            router.get("/admin/liturgie", {}, { preserveScroll: true });
         } catch (error) {
-            console.error('Erreur lors du chargement des actes:', error);
+            console.error("Erreur lors du chargement des actes:", error);
         } finally {
             setLoading(false);
         }
     }, []);
 
     const deleteAct = useCallback(async (id) => {
-        if (!window.confirm('Êtes-vous sûr de vouloir supprimer cet acte?')) return;
-        
+        if (!window.confirm("Êtes-vous sûr de vouloir supprimer cet acte?"))
+            return;
+
         try {
             setLoading(true);
             await axios.delete(`/admin/liturgie/${id}`);
-            setAllActs(prev => prev.filter(act => act.id !== id));
-            alert('Acte supprimé avec succès');
+            setAllActs((prev) => prev.filter((act) => act.id !== id));
+            alert("Acte supprimé avec succès");
         } catch (error) {
-            alert('Erreur lors de la suppression: ' + (error.response?.data?.message || error.message));
+            alert(
+                "Erreur lors de la suppression: " +
+                    (error.response?.data?.message || error.message),
+            );
         } finally {
             setLoading(false);
         }
@@ -1386,16 +1478,25 @@ export default function ActesLiturgique({ auth, actes = [] }) {
         try {
             setLoading(true);
             // Utiliser la route POST /transition pour changer le statut
-            await axios.post(`/admin/liturgie/${id}/transition`, { 
+            await axios.post(`/admin/liturgie/${id}/transition`, {
                 statut: newStatus,
-                commentaire: '' 
+                commentaire: "",
             });
-            setAllActs(prev => prev.map(act => 
-                act.id === id ? { ...act, status: newStatus.toLowerCase().replace('_', ' ') } : act
-            ));
-            alert('Statut mis à jour');
+            setAllActs((prev) =>
+                prev.map((act) =>
+                    act.id === id
+                        ? {
+                              ...act,
+                              status: newStatus.toLowerCase().replace("_", " "),
+                          }
+                        : act,
+                ),
+            );
+            alert("Statut mis à jour");
         } catch (error) {
-            alert('Erreur: ' + (error.response?.data?.message || error.message));
+            alert(
+                "Erreur: " + (error.response?.data?.message || error.message),
+            );
         } finally {
             setLoading(false);
         }
@@ -1419,27 +1520,58 @@ export default function ActesLiturgique({ auth, actes = [] }) {
 
     // --- EXPORTS ---
     const exportToExcel = () => {
-        if (filteredActs.length === 0) return alert("Aucune donnée à exporter.");
-        const columns = ["Type", "Membre", "Famille", "Classe", "Conducteur", "Pasteur", "Date", "Description", "Pièce", "Statut"];
-        const rows = filteredActs.map(a => [a.type, a.member, a.family, a.class, a.conductor, a.pastor, a.date, a.description, a.attachment, a.status]);
-        
+        if (filteredActs.length === 0)
+            return alert("Aucune donnée à exporter.");
+        const columns = [
+            "Type",
+            "Membre",
+            "Famille",
+            "Classe",
+            "Conducteur",
+            "Pasteur",
+            "Date",
+            "Description",
+            "Pièce",
+            "Statut",
+        ];
+        const rows = filteredActs.map((a) => [
+            a.type,
+            a.member,
+            a.family,
+            a.class,
+            a.conductor,
+            a.pastor,
+            a.date,
+            a.description,
+            a.attachment,
+            a.status,
+        ]);
+
         const csvContent = [
             columns.join(";"),
-            ...rows.map(row => row.map(cell => `"${cell}"`).join(";"))
+            ...rows.map((row) => row.map((cell) => `"${cell}"`).join(";")),
         ].join("\n");
 
-        const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+        const blob = new Blob(["\uFEFF" + csvContent], {
+            type: "text/csv;charset=utf-8;",
+        });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.setAttribute("download", `actes_liturgiques_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.setAttribute(
+            "download",
+            `actes_liturgiques_${new Date().toISOString().slice(0, 10)}.csv`,
+        );
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
     };
 
     const exportToPDF = async () => {
-        if (filteredActs.length === 0) return alert("Aucune donnée à exporter.");
-        alert("Fonctionnalité PDF globale - Veuillez installer jsPDF et jsPDF-autotable.");
+        if (filteredActs.length === 0)
+            return alert("Aucune donnée à exporter.");
+        alert(
+            "Fonctionnalité PDF globale - Veuillez installer jsPDF et jsPDF-autotable.",
+        );
     };
 
     // --- PAGINATION ---
@@ -1458,11 +1590,14 @@ export default function ActesLiturgique({ auth, actes = [] }) {
             <div className="flex items-center justify-between px-4 py-3 bg-white/50 backdrop-blur-sm border-t border-white/50">
                 <div className="flex items-center gap:2">
                     <span className="text-sm text-gray-700">
-                        Affichage de {(current - 1) * perPage + 1} à {Math.min(current * perPage, total)} sur {total} actes
+                        Affichage de {(current - 1) * perPage + 1} à{" "}
+                        {Math.min(current * perPage, total)} sur {total} actes
                     </span>
                     <select
                         value={perPage}
-                        onChange={(e) => { onPageChange(1, parseInt(e.target.value)); }}
+                        onChange={(e) => {
+                            onPageChange(1, parseInt(e.target.value));
+                        }}
                         className="input-control !py-1 !px-2 text-sm"
                     >
                         <option value={10}>10/page</option>
@@ -1471,11 +1606,29 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                     </select>
                 </div>
                 <div className="flex gap:2">
-                    <button onClick={() => onPageChange(current - 1, perPage)} disabled={current === 1} className="btn btn-secondary !py-1 !px-3 disabled:opacity-50">Précédent</button>
-                    {pages.map(page => (
-                        <button key={page} onClick={() => onPageChange(page, perPage)} className={`btn !py-1 !px-3 ${page === current ? 'btn-primary' : 'btn-secondary'}`}>{page}</button>
+                    <button
+                        onClick={() => onPageChange(current - 1, perPage)}
+                        disabled={current === 1}
+                        className="btn btn-secondary !py-1 !px-3 disabled:opacity-50"
+                    >
+                        Précédent
+                    </button>
+                    {pages.map((page) => (
+                        <button
+                            key={page}
+                            onClick={() => onPageChange(page, perPage)}
+                            className={`btn !py-1 !px-3 ${page === current ? "btn-primary" : "btn-secondary"}`}
+                        >
+                            {page}
+                        </button>
                     ))}
-                    <button onClick={() => onPageChange(current + 1, perPage)} disabled={current === totalPages} className="btn btn-secondary !py-1 !px-3 disabled:opacity-50">Suivant</button>
+                    <button
+                        onClick={() => onPageChange(current + 1, perPage)}
+                        disabled={current === totalPages}
+                        className="btn btn-secondary !py-1 !px-3 disabled:opacity-50"
+                    >
+                        Suivant
+                    </button>
                 </div>
             </div>
         );
@@ -1484,9 +1637,9 @@ export default function ActesLiturgique({ auth, actes = [] }) {
     // --- CALCUL DES STATISTIQUES (Dynamique) ---
     const stats = {
         total: filteredActs.length,
-        pending: filteredActs.filter(a => a.status === 'pending').length,
-        validated: filteredActs.filter(a => a.status === 'validated').length,
-        rejected: filteredActs.filter(a => a.status === 'rejected').length,
+        pending: filteredActs.filter((a) => a.status === "pending").length,
+        validated: filteredActs.filter((a) => a.status === "validated").length,
+        rejected: filteredActs.filter((a) => a.status === "rejected").length,
     };
 
     // Titre dynamique pour les stats
@@ -1497,42 +1650,85 @@ export default function ActesLiturgique({ auth, actes = [] }) {
         <>
             <Head title="Actes Liturgiques">
                 {/* Ajout des polices Google pour le certificat */}
-                <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Great+Vibes&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
+                <link
+                    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Great+Vibes&family=Lato:wght@300;400;700&display=swap"
+                    rel="stylesheet"
+                />
             </Head>
             <style>{GLOBAL_STYLES}</style>
 
             {/* MODAL DÉTAILS ACTE */}
             {isModalOpen && selectedAct && (
-                <div className={`modal-overlay ${isExiting ? 'closing' : ''}`} onClick={closeModal}>
-                    <div className={`modal-content ${isExiting ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
-                        
+                <div
+                    className={`modal-overlay ${isExiting ? "closing" : ""}`}
+                    onClick={closeModal}
+                >
+                    <div
+                        className={`modal-content ${isExiting ? "closing" : ""}`}
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         {/* Bouton fermer */}
-                        <button className="modal-close-btn" onClick={closeModal} title="Fermer">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        <button
+                            className="modal-close-btn"
+                            onClick={closeModal}
+                            title="Fermer"
+                        >
+                            <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
+                            </svg>
                         </button>
 
-                        <ActeDetailsModal 
-                            acte={selectedAct}
-                        />
+                        <ActeDetailsModal acte={selectedAct} />
                     </div>
                 </div>
             )}
 
             {/* CONTENU PRINCIPAL */}
-            <div className="min-h-screen py-8 px-4 animate-fade-in-up" style={{ background: "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)" }}>
+            <div
+                className="min-h-screen py-8 px-4 animate-fade-in-up"
+                style={{
+                    background:
+                        "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
+                }}
+            >
                 <div className="w-full max-w-[1800px] mx-auto">
                     {/* HEADER */}
                     <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4 w-full">
                         <div className="w-full md:w-auto flex-shrink-0">
-                            <Link href="/dashboard" className="btn btn-secondary gap-2 w-full md:w-auto justify-center">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                            <Link
+                                href="/dashboard"
+                                className="btn btn-secondary gap-2 w-full md:w-auto justify-center"
+                            >
+                                <svg
+                                    className="w-5 h-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                                    />
+                                </svg>
                                 Retour
                             </Link>
                         </div>
                         <h1 className="text-xl md:text-2xl font-bold text-white text-center flex-1 order-first md:order-none">
                             Gestion des Actes Liturgiques
                         </h1>
-                        
+
                         {/* BOUTON FAIRE UNE DEMANDE - commenté pour plus tard */}
                         {/*
                         <div className="w-full md:w-auto flex-shrink-0">
@@ -1549,44 +1745,108 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                         {/* Carte Total */}
                         <div className="bg-white/90 backdrop-blur-sm border border-white/50 p-6 rounded-xl shadow-lg flex items-center justify-between hover:transform hover:-translate-y-1 transition-transform duration-200">
                             <div>
-                                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Total {statsTitle}</p>
-                                <p className="text-3xl font-bold text-slate-800 mt-1">{stats.total}</p>
+                                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
+                                    Total {statsTitle}
+                                </p>
+                                <p className="text-3xl font-bold text-slate-800 mt-1">
+                                    {stats.total}
+                                </p>
                             </div>
                             <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                <svg
+                                    className="w-6 h-6"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                    />
+                                </svg>
                             </div>
                         </div>
 
                         {/* Carte En attente */}
                         <div className="bg-white/90 backdrop-blur-sm border border-white/50 p-6 rounded-xl shadow-lg flex items-center justify-between hover:transform hover:-translate-y-1 transition-transform duration-200">
                             <div>
-                                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">En attente</p>
-                                <p className="text-3xl font-bold text-yellow-600 mt-1">{stats.pending}</p>
+                                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
+                                    En attente
+                                </p>
+                                <p className="text-3xl font-bold text-yellow-600 mt-1">
+                                    {stats.pending}
+                                </p>
                             </div>
                             <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center">
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <svg
+                                    className="w-6 h-6"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                </svg>
                             </div>
                         </div>
 
                         {/* Carte Validé */}
                         <div className="bg-white/90 backdrop-blur-sm border border-white/50 p-6 rounded-xl shadow-lg flex items-center justify-between hover:transform hover:-translate-y-1 transition-transform duration-200">
                             <div>
-                                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Validés</p>
-                                <p className="text-3xl font-bold text-green-600 mt-1">{stats.validated}</p>
+                                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
+                                    Validés
+                                </p>
+                                <p className="text-3xl font-bold text-green-600 mt-1">
+                                    {stats.validated}
+                                </p>
                             </div>
                             <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <svg
+                                    className="w-6 h-6"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                </svg>
                             </div>
                         </div>
 
                         {/* Carte Rejeté */}
                         <div className="bg-white/90 backdrop-blur-sm border border-white/50 p-6 rounded-xl shadow-lg flex items-center justify-between hover:transform hover:-translate-y-1 transition-transform duration-200">
                             <div>
-                                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Rejetés</p>
-                                <p className="text-3xl font-bold text-red-600 mt-1">{stats.rejected}</p>
+                                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
+                                    Rejetés
+                                </p>
+                                <p className="text-3xl font-bold text-red-600 mt-1">
+                                    {stats.rejected}
+                                </p>
                             </div>
                             <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <svg
+                                    className="w-6 h-6"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                </svg>
                             </div>
                         </div>
                     </div>
@@ -1596,29 +1856,96 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                         {/* Ligne 1 : Filtres */}
                         <div className="filter-group">
                             <div className="input-search-wrapper">
-                                <svg className="input-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                                <input type="text" placeholder="Rechercher (type, membre, famille...)" className="input-control input-search" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                                <svg
+                                    className="input-search-icon"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                    />
+                                </svg>
+                                <input
+                                    type="text"
+                                    placeholder="Rechercher (type, membre, famille...)"
+                                    className="input-control input-search"
+                                    value={searchTerm}
+                                    onChange={(e) =>
+                                        setSearchTerm(e.target.value)
+                                    }
+                                />
                             </div>
 
-                            <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="input-control" style={{ minWidth: '140px' }}>
+                            <select
+                                value={typeFilter}
+                                onChange={(e) => setTypeFilter(e.target.value)}
+                                className="input-control"
+                                style={{ minWidth: "140px" }}
+                            >
                                 <option value="">Tous types</option>
-                                {uniqueTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                                {uniqueTypes.map((t) => (
+                                    <option key={t} value={t}>
+                                        {t}
+                                    </option>
+                                ))}
                             </select>
 
-                            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input-control" style={{ minWidth: '140px' }}>
+                            <select
+                                value={statusFilter}
+                                onChange={(e) =>
+                                    setStatusFilter(e.target.value)
+                                }
+                                className="input-control"
+                                style={{ minWidth: "140px" }}
+                            >
                                 <option value="">Tous statuts</option>
                                 <option value="pending">En attente</option>
                                 <option value="validated">Validé</option>
                                 <option value="rejected">Rejeté</option>
                             </select>
 
-                            <select value={pastorFilter} onChange={e => setPastorFilter(e.target.value)} className="input-control" style={{ minWidth: '140px' }}>
+                            <select
+                                value={pastorFilter}
+                                onChange={(e) =>
+                                    setPastorFilter(e.target.value)
+                                }
+                                className="input-control"
+                                style={{ minWidth: "140px" }}
+                            >
                                 <option value="">Tous pasteurs</option>
-                                {uniquePastors.map(c => <option key={c} value={c}>{c}</option>)}
+                                {uniquePastors.map((c) => (
+                                    <option key={c} value={c}>
+                                        {c}
+                                    </option>
+                                ))}
                             </select>
 
-                            <button onClick={() => { setSearchTerm(''); setTypeFilter(''); setStatusFilter(''); setPastorFilter(''); }} className="btn btn-success">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            <button
+                                onClick={() => {
+                                    setSearchTerm("");
+                                    setTypeFilter("");
+                                    setStatusFilter("");
+                                    setPastorFilter("");
+                                }}
+                                className="btn btn-success"
+                            >
+                                <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
+                                </svg>
                                 Réinitialiser
                             </button>
                         </div>
@@ -1627,34 +1954,34 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                         <div className="filter-second-row">
                             <div className="filter-nav">
                                 <button
-                                    onClick={() => setTypeFilter('')}
-                                    className={`filter-nav-btn ${typeFilter === '' ? 'active' : ''}`}
+                                    onClick={() => setTypeFilter("")}
+                                    className={`filter-nav-btn ${typeFilter === "" ? "active" : ""}`}
                                 >
                                     Tous
                                 </button>
 
                                 <button
-                                    onClick={() => setTypeFilter('Baptême')}
-                                    className={`filter-nav-btn ${typeFilter === 'Baptême' ? 'active' : ''}`}
+                                    onClick={() => setTypeFilter("Baptême")}
+                                    className={`filter-nav-btn ${typeFilter === "Baptême" ? "active" : ""}`}
                                 >
                                     Baptême
                                 </button>
 
                                 <button
-                                    onClick={() => setTypeFilter('Mariage')}
-                                    className={`filter-nav-btn ${typeFilter === 'Mariage' ? 'active' : ''}`}
+                                    onClick={() => setTypeFilter("Mariage")}
+                                    className={`filter-nav-btn ${typeFilter === "Mariage" ? "active" : ""}`}
                                 >
                                     Mariage
                                 </button>
 
                                 <button
-                                    onClick={() => setTypeFilter('Décès')}
-                                    className={`filter-nav-btn ${typeFilter === 'Décès' ? 'active' : ''}`}
+                                    onClick={() => setTypeFilter("Décès")}
+                                    className={`filter-nav-btn ${typeFilter === "Décès" ? "active" : ""}`}
                                 >
                                     Décès
                                 </button>
                             </div>
-                        
+
                             <div className="filter-actions">
                                 {/* Bouton Rafraîchir */}
                                 <button
@@ -1663,107 +1990,262 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                                     disabled={loading}
                                     title="Recharger les données depuis le serveur"
                                 >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    <svg
+                                        className="w-4 h-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                        />
                                     </svg>
-                                    {loading ? 'Chargement...' : 'Rafraîchir'}
+                                    {loading ? "Chargement..." : "Rafraîchir"}
                                 </button>
 
                                 {/* Bouton Vue Grille / Table */}
                                 <button
-                                    onClick={() => setViewMode(viewMode === 'table' ? 'grid' : 'table')}
-                                    className={`btn ${viewMode === 'grid' ? 'btn-primary' : 'btn-secondary'}`}
+                                    onClick={() =>
+                                        setViewMode(
+                                            viewMode === "table"
+                                                ? "grid"
+                                                : "table",
+                                        )
+                                    }
+                                    className={`btn ${viewMode === "grid" ? "btn-primary" : "btn-secondary"}`}
                                 >
-                                    {viewMode === 'table' ? 'Vue Fichier' : 'Vue Table'}
+                                    {viewMode === "table"
+                                        ? "Vue Fichier"
+                                        : "Vue Table"}
                                 </button>
 
-                                <button onClick={exportToExcel} className="btn btn-excel">Excel</button>
-                                <button onClick={exportToPDF} className="btn btn-pdf">PDF</button>
+                                <button
+                                    onClick={exportToExcel}
+                                    className="btn btn-excel"
+                                >
+                                    Excel
+                                </button>
+                                <button
+                                    onClick={exportToPDF}
+                                    className="btn btn-pdf"
+                                >
+                                    PDF
+                                </button>
                             </div>
                         </div>
                     </div>
 
                     {/* TABLEAU OU GRILLE (CONDITIONNEL) */}
                     <div className="table-container">
-                        
                         {/* --- VUE TABLEAU --- */}
-                        {viewMode === 'table' && (
+                        {viewMode === "table" && (
                             <div className="table-scroll">
                                 <table>
                                     <thead>
                                         <tr>
-                                            <th className="text-center">Membre Concerné</th>
-                                            <th className="text-center">Type</th>
-                                            <th className="text-center">Famille</th>
-                                            <th className="text-center">Classe</th>
-                                            <th className="text-center">Conducteur Concerné</th>
-                                            <th className="text-center">Pasteur Concerné</th>
-                                            <th className="text-center">Date Cérémonie</th>
-                                            <th className="text-center">Pièce Jointe</th>
-                                            <th className="text-center">Statut</th>
-                                            <th className="text-center">Action</th>
+                                            <th className="text-center">
+                                                Membre Concerné
+                                            </th>
+                                            <th className="text-center">
+                                                Type
+                                            </th>
+                                            <th className="text-center">
+                                                Famille
+                                            </th>
+                                            <th className="text-center">
+                                                Classe
+                                            </th>
+                                            <th className="text-center">
+                                                Conducteur Concerné
+                                            </th>
+                                            <th className="text-center">
+                                                Pasteur Concerné
+                                            </th>
+                                            <th className="text-center">
+                                                Date Cérémonie
+                                            </th>
+                                            <th className="text-center">
+                                                Pièce Jointe
+                                            </th>
+                                            <th className="text-center">
+                                                Statut
+                                            </th>
+                                            <th className="text-center">
+                                                Action
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {getPaginatedActs().length > 0 ? (
-                                            getPaginatedActs().map(acte => (
-                                                <tr key={acte.id} className="hover:bg-white/90 transition">
-                                                    <td className="text-center" style={{ padding: '0.75rem', verticalAlign: 'middle' }}>
-                                                        <div style={{ 
-                                                            display: 'flex', 
-                                                            alignItems: 'center', 
-                                                            justifyContent: 'flex-start', 
-                                                            gap: '12px',
-                                                            minHeight: '50px',
-                                                            paddingLeft: '16px',
-                                                            paddingRight: '16px'
-                                                        }}>
+                                            getPaginatedActs().map((acte) => (
+                                                <tr
+                                                    key={acte.id}
+                                                    className="hover:bg-white/90 transition"
+                                                >
+                                                    <td
+                                                        className="text-center"
+                                                        style={{
+                                                            padding: "0.75rem",
+                                                            verticalAlign:
+                                                                "middle",
+                                                        }}
+                                                    >
+                                                        <div
+                                                            style={{
+                                                                display: "flex",
+                                                                alignItems:
+                                                                    "center",
+                                                                justifyContent:
+                                                                    "flex-start",
+                                                                gap: "12px",
+                                                                minHeight:
+                                                                    "50px",
+                                                                paddingLeft:
+                                                                    "16px",
+                                                                paddingRight:
+                                                                    "16px",
+                                                            }}
+                                                        >
                                                             {acte.memberPhoto && (
-                                                                <img 
-                                                                    src={acte.memberPhoto} 
-                                                                    alt={acte.member}
+                                                                <img
+                                                                    src={
+                                                                        acte.memberPhoto
+                                                                    }
+                                                                    alt={
+                                                                        acte.member
+                                                                    }
                                                                     style={{
-                                                                        width: '40px',
-                                                                        height: '40px',
-                                                                        borderRadius: '50%',
-                                                                        objectFit: 'cover',
-                                                                        flexShrink: 0
+                                                                        width: "40px",
+                                                                        height: "40px",
+                                                                        borderRadius:
+                                                                            "50%",
+                                                                        objectFit:
+                                                                            "cover",
+                                                                        flexShrink: 0,
                                                                     }}
                                                                 />
                                                             )}
-                                                            <span style={{ fontWeight: '500' }}>{acte.member}</span>
+                                                            <span
+                                                                style={{
+                                                                    fontWeight:
+                                                                        "500",
+                                                                }}
+                                                            >
+                                                                {acte.member}
+                                                            </span>
                                                         </div>
                                                     </td>
-                                                    <td className="text-center font-medium">{acte.type}</td>
-                                                    <td className="text-center">{acte.family}</td>
-                                                    <td className="text-center">{acte.class}</td>
-                                                    <td className="text-center">{acte.conductor}</td>
-                                                    <td className="text-center">{acte.pastor}</td>
-                                                    <td className="text-center">{new Date(acte.date).toLocaleDateString('fr-FR')}</td>
+                                                    <td className="text-center font-medium">
+                                                        {acte.type}
+                                                    </td>
                                                     <td className="text-center">
-                                                        {acte.attachment ? (
-                                                            <button className="text-blue-600 hover:text-blue-800 underline">Fichier</button>
-                                                        ) : (
-                                                            <span className="text-gray-400 italic">-</span>
+                                                        {acte.family}
+                                                    </td>
+                                                    <td className="text-center">
+                                                        {acte.class}
+                                                    </td>
+                                                    <td className="text-center">
+                                                        {acte.conductor}
+                                                    </td>
+                                                    <td className="text-center">
+                                                        {acte.pastor}
+                                                    </td>
+                                                    <td className="text-center">
+                                                        {new Date(
+                                                            acte.date,
+                                                        ).toLocaleDateString(
+                                                            "fr-FR",
                                                         )}
                                                     </td>
-                                                    <td className="text-center"><ActeStatusBadge status={acte.status} /></td>
-                                                    <td className="text-center" style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center', minHeight: '50px', padding: '0.75rem' }}>
-                                                        <button 
-                                                            onClick={() => openModal(acte)} 
+                                                    <td className="text-center">
+                                                        {acte.attachment ? (
+                                                            <button className="text-blue-600 hover:text-blue-800 underline">
+                                                                Fichier
+                                                            </button>
+                                                        ) : (
+                                                            <span className="text-gray-400 italic">
+                                                                -
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="text-center">
+                                                        <ActeStatusBadge
+                                                            status={acte.status}
+                                                        />
+                                                    </td>
+                                                    <td
+                                                        className="text-center"
+                                                        style={{
+                                                            display: "flex",
+                                                            gap: "6px",
+                                                            justifyContent:
+                                                                "center",
+                                                            alignItems:
+                                                                "center",
+                                                            minHeight: "50px",
+                                                            padding: "0.75rem",
+                                                        }}
+                                                    >
+                                                        <button
+                                                            onClick={() =>
+                                                                openModal(acte)
+                                                            }
                                                             className="btn btn-view text-xs px-3 py-1.5"
                                                             disabled={loading}
                                                         >
-                                                            <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                                            <svg
+                                                                className="w-4 h-4 inline mr-1"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={
+                                                                        2
+                                                                    }
+                                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                                />
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={
+                                                                        2
+                                                                    }
+                                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                                />
+                                                            </svg>
                                                             Voir
                                                         </button>
-                                                        <button 
-                                                            onClick={() => deleteAct(acte.id)}
+                                                        <button
+                                                            onClick={() =>
+                                                                deleteAct(
+                                                                    acte.id,
+                                                                )
+                                                            }
                                                             className="btn btn-danger text-xs px-3 py-1.5"
                                                             disabled={loading}
                                                             title="Supprimer"
                                                         >
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                            <svg
+                                                                className="w-4 h-4"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={
+                                                                        2
+                                                                    }
+                                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                                />
+                                                            </svg>
                                                             Suppr.
                                                         </button>
                                                     </td>
@@ -1771,7 +2253,10 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                                             ))
                                         ) : (
                                             <tr>
-                                                <td colSpan={10} className="text-center py-12 text-gray-400 italic">
+                                                <td
+                                                    colSpan={10}
+                                                    className="text-center py-12 text-gray-400 italic"
+                                                >
                                                     Aucun acte trouvé.
                                                 </td>
                                             </tr>
@@ -1782,37 +2267,80 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                         )}
 
                         {/* --- VUE ENVELOPPES (GRILLE) --- */}
-                        {viewMode === 'grid' && (
+                        {viewMode === "grid" && (
                             <div className="grid-view">
                                 {getPaginatedActs().length > 0 ? (
-                                    getPaginatedActs().map(acte => {
-                                        let sealColor = 'var(--primary)';
-                                        if (acte.status === 'validated') sealColor = 'var(--success)';
-                                        if (acte.status === 'rejected') sealColor = 'var(--danger)';
-                                        if (acte.status === 'pending') sealColor = 'var(--warning)';
+                                    getPaginatedActs().map((acte) => {
+                                        let sealColor = "var(--primary)";
+                                        if (acte.status === "validated")
+                                            sealColor = "var(--success)";
+                                        if (acte.status === "rejected")
+                                            sealColor = "var(--danger)";
+                                        if (acte.status === "pending")
+                                            sealColor = "var(--warning)";
 
                                         return (
-                                            <div 
-                                                key={acte.id} 
+                                            <div
+                                                key={acte.id}
                                                 className="envelope-card"
                                                 onClick={() => openModal(acte)}
                                                 title="Cliquez pour ouvrir la demande"
                                             >
                                                 <div className="envelope-flap"></div>
                                                 <div className="envelope-inside">
-                                                    <div className="envelope-seal" style={{ backgroundColor: sealColor }}>
-                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                                    <div
+                                                        className="envelope-seal"
+                                                        style={{
+                                                            backgroundColor:
+                                                                sealColor,
+                                                        }}
+                                                    >
+                                                        <svg
+                                                            className="w-5 h-5"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={2}
+                                                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                                            />
+                                                        </svg>
                                                     </div>
                                                 </div>
                                                 <div className="envelope-content">
-                                                    <div className="envelope-type">{acte.type}</div>
-                                                    <div className="envelope-name">{acte.member}</div>
+                                                    <div className="envelope-type">
+                                                        {acte.type}
+                                                    </div>
+                                                    <div className="envelope-name">
+                                                        {acte.member}
+                                                    </div>
                                                     <div className="envelope-meta">
-                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                                        {new Date(acte.date).toLocaleDateString('fr-FR')}
+                                                        <svg
+                                                            className="w-3 h-3"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={2}
+                                                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                                            />
+                                                        </svg>
+                                                        {new Date(
+                                                            acte.date,
+                                                        ).toLocaleDateString(
+                                                            "fr-FR",
+                                                        )}
                                                     </div>
                                                     <div className="mt-2">
-                                                        <ActeStatusBadge status={acte.status} />
+                                                        <ActeStatusBadge
+                                                            status={acte.status}
+                                                        />
                                                     </div>
                                                 </div>
                                             </div>
@@ -1825,7 +2353,7 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                                 )}
                             </div>
                         )}
-                        
+
                         {/* PAGINATION */}
                         <Pagination
                             total={filteredActs.length}
@@ -1833,7 +2361,8 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                             perPage={itemsPerPage}
                             onPageChange={(newPage, newPerPage) => {
                                 setCurrentPage(newPage);
-                                if (newPerPage !== itemsPerPage) setItemsPerPage(newPerPage);
+                                if (newPerPage !== itemsPerPage)
+                                    setItemsPerPage(newPerPage);
                             }}
                         />
                     </div>

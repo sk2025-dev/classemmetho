@@ -101,7 +101,7 @@ export default function VerticalTicker({
 
     return (
         <>
-            <style jsx global>{`
+            <style>{`
                 @keyframes slideInFromTop {
                     0% {
                         opacity: 0;

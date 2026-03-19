@@ -111,7 +111,7 @@ export default function Dashboard({
             title: "Trésorerie",
             desc: "FIMECO, Autres cotisations",
             icon: "tresorerie",
-            href: "/admin/tresorerie",
+            href: "/responsable-famille/tresorerie",
             color: "text-yellow-600",
             bg: "bg-yellow-100",
         },

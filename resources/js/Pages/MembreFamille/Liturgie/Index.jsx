@@ -474,15 +474,26 @@ export default function Index({
                                                 <div
                                                     className={`d-icon ${typeTone(acte.type_acte)}`}
                                                 >
-                                                    {acte.membre?.profile_photo_url ? (
+                                                    {acte.membre
+                                                        ?.profile_photo_url ? (
                                                         <img
-                                                            src={acte.membre.profile_photo_url}
-                                                            alt={acte.membre?.prenom + " " + acte.membre?.nom}
+                                                            src={
+                                                                acte.membre
+                                                                    .profile_photo_url
+                                                            }
+                                                            alt={
+                                                                acte.membre
+                                                                    ?.prenom +
+                                                                " " +
+                                                                acte.membre?.nom
+                                                            }
                                                             style={{
                                                                 width: "100%",
                                                                 height: "100%",
-                                                                objectFit: "cover",
-                                                                borderRadius: "50%",
+                                                                objectFit:
+                                                                    "cover",
+                                                                borderRadius:
+                                                                    "50%",
                                                             }}
                                                         />
                                                     ) : (

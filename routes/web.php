@@ -6,13 +6,16 @@ use Inertia\Inertia;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Conducteur\DashboardController as ConducteurDashboardController;
 use App\Http\Controllers\Conducteur\InscriptionsController as ConducteurInscriptionsController;
+use App\Http\Controllers\Conducteur\TresorerieController as ConducteurTresorerieController;
 use App\Http\Controllers\Conducteur\RegisterMemberController as RegisterMemberController;
 use App\Http\Controllers\Conducteur\QuickMemberController;
 use App\Http\Controllers\ResponsableFamille\DashboardController as ResponsableFamilleDashboardController;
 use App\Http\Controllers\ResponsableFamille\InscriptionsController as ResponsableFamilleInscriptionsController;
 use App\Http\Controllers\ResponsableFamille\MemberController as ResponsableFamilleMemberController;
 use App\Http\Controllers\Pasteur\DashboardController as PasteurDashboardController;
+use App\Http\Controllers\Pasteur\TresorerieController as PasteurTresorerieController;
 use App\Http\Controllers\MembreFamille\DashboardController as MembreFamilleDashboardController;
+use App\Http\Controllers\MembreFamille\FinancesController as MembreFamilleFinancesController;
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\Profile\ChangePasswordController;
 use App\Http\Controllers\Admin\AdministrationController;
@@ -21,6 +24,7 @@ use App\Http\Controllers\Admin\ClasseController;
 use App\Http\Controllers\Admin\FonctionController;
 use App\Http\Controllers\Admin\NotificationsController;
 use App\Http\Controllers\Admin\AnnonceController;
+use App\Http\Controllers\Admin\TresorerieController as AdminTresorerieController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\LiturgieController as AdminLiturgieController;
 use App\Http\Controllers\Admin\FamilyCodeController;
@@ -31,6 +35,7 @@ use App\Http\Controllers\MembreFamille\LiturgieController as MembreFamilleLiturg
 use App\Http\Controllers\Conducteur\LiturgieController as ConducteurLiturgieController;
 use App\Http\Controllers\Pasteur\LiturgieController as PasteurLiturgieController;
 use App\Http\Controllers\ResponsableFamille\LiturgieController as ResponsableFamilleLiturgieController;
+use App\Http\Controllers\ResponsableFamille\TresorerieController as ResponsableFamilleTresorerieController;
 use App\Http\Controllers\VerificationCertificatController;
 
 Route::get('/', function () {
@@ -160,6 +165,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/admin/liturgie/{id}/transition', [AdminLiturgieController::class, 'transition'])->name('admin.liturgie.transition');
         Route::delete('/admin/liturgie/{id}', [AdminLiturgieController::class, 'destroy'])->name('admin.liturgie.destroy');
 
+        // Routes module Trésorerie (Admin)
+        Route::get('/admin/tresorerie', [AdminTresorerieController::class, 'index'])
+            ->name('admin.tresorerie.index');
+
         // Codes familles
         Route::get('/admin/families', [FamilyCodeController::class, 'index'])->name('admin.families.index');
         Route::post('/admin/families/generate-all', [FamilyCodeController::class, 'generateAll'])->name('admin.families.generate-all');
@@ -251,6 +260,22 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/conducteur/annonces/{id}/publier', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'publier'])->name('conducteur.annonces.publier');
         Route::post('/conducteur/annonces/{id}/archiver', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'archiver'])->name('conducteur.annonces.archiver');
         Route::get('/conducteur/annonces/{id}/fiche', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'fiche'])->name('conducteur.annonces.fiche');
+
+        // Routes module Trésorerie (Conducteur)
+        Route::get('/conducteur/tresorerie', [ConducteurTresorerieController::class, 'index'])
+            ->name('conducteur.tresorerie.index');
+        Route::post('/conducteur/tresorerie/cotisations', [ConducteurTresorerieController::class, 'storeCotisation'])
+            ->name('conducteur.tresorerie.cotisations.store');
+        Route::get('/conducteur/tresorerie/cotisations/{cotisation}', [ConducteurTresorerieController::class, 'showCotisation'])
+            ->name('conducteur.tresorerie.cotisations.show');
+        Route::put('/conducteur/tresorerie/cotisations/{cotisation}', [ConducteurTresorerieController::class, 'updateCotisation'])
+            ->name('conducteur.tresorerie.cotisations.update');
+        Route::delete('/conducteur/tresorerie/cotisations/{cotisation}', [ConducteurTresorerieController::class, 'destroyCotisation'])
+            ->name('conducteur.tresorerie.cotisations.destroy');
+        Route::post('/conducteur/tresorerie/collectes', [ConducteurTresorerieController::class, 'storeCollecte'])
+            ->name('conducteur.tresorerie.collectes.store');
+        Route::post('/conducteur/tresorerie/paiements', [ConducteurTresorerieController::class, 'storePaiement'])
+            ->name('conducteur.tresorerie.paiements.store');
     });
 
     // Tableau de bord Responsable de Famille
@@ -280,7 +305,17 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/responsable-famille/annonces/{id}', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'update'])->name('responsable_famille.annonces.update');
         Route::delete('/responsable-famille/annonces/{id}', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'destroy'])->name('responsable_famille.annonces.destroy');
 
-        // Props Inertia dans le contrôleur
+        // Routes module Tresorerie (ResponsableFamille)
+        Route::get('/responsable-famille/tresorerie', [ResponsableFamilleTresorerieController::class, 'index'])
+            ->name('responsable_famille.tresorerie.index');
+        Route::post('/responsable-famille/tresorerie/paiements', [ResponsableFamilleTresorerieController::class, 'storePaiement'])
+            ->name('responsable_famille.tresorerie.paiements.store');
+        Route::post('/responsable-famille/tresorerie/paiements/initiate', [ResponsableFamilleTresorerieController::class, 'initiatePaiement'])
+            ->name('responsable_famille.tresorerie.paiements.initiate');
+        Route::post('/responsable-famille/tresorerie/dons', [ResponsableFamilleTresorerieController::class, 'storeDon'])
+            ->name('responsable_famille.tresorerie.dons.store');
+        Route::get('/responsable-famille/tresorerie/paiement/{paiement}/verify', [ResponsableFamilleTresorerieController::class, 'verifyPaiement'])
+            ->name('responsable_famille.tresorerie.paiement.verify');
 
     });
 
@@ -313,6 +348,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/pasteur/annonces/{id}/rejeter', [\App\Http\Controllers\Pasteur\AnnonceController::class, 'rejeter'])->name('pasteur.annonces.rejeter');
         Route::post('/pasteur/annonces/{id}/publier', [\App\Http\Controllers\Pasteur\AnnonceController::class, 'publier'])->name('pasteur.annonces.publier');
         Route::post('/pasteur/annonces/{id}/archiver', [\App\Http\Controllers\Pasteur\AnnonceController::class, 'archiver'])->name('pasteur.annonces.archiver');
+
+        // Routes module Trésorerie (Pasteur)
+        Route::get('/pasteur/tresorerie', [PasteurTresorerieController::class, 'index'])
+            ->name('pasteur.tresorerie.index');
     });
 
     // Tableau de bord Membre de Famille
@@ -329,6 +368,18 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/membre-famille/liturgie/{id}/certificat', [MembreFamilleLiturgieController::class, 'certificat'])->name('membre_famille.liturgie.certificat');
         Route::post('/membre-famille/annonces', [\App\Http\Controllers\MembreFamille\AnnonceController::class, 'store'])->name('membre_famille.annonces.store');
         Route::get('/membre-famille/annonces/{id}/fiche', [\App\Http\Controllers\MembreFamille\AnnonceController::class, 'fiche'])->name('membre_famille.annonces.fiche');
+
+        // Routes module Finances (MembreFamille)
+        Route::get('/membre-famille/tresorerie', [MembreFamilleFinancesController::class, 'index'])
+            ->name('membre_famille.finances.index');
+        Route::post('/membre-famille/finances/paiements', [MembreFamilleFinancesController::class, 'storePaiement'])
+            ->name('membre_famille.finances.paiements.store');
+        Route::post('/membre-famille/finances/paiements/initiate', [MembreFamilleFinancesController::class, 'initiatePaiement'])
+            ->name('membre_famille.finances.paiements.initiate');
+        Route::post('/membre-famille/finances/dons', [MembreFamilleFinancesController::class, 'storeDon'])
+            ->name('membre_famille.finances.dons.store');
+        Route::get('/membre-famille/finances/paiement/{paiement}/verify', [MembreFamilleFinancesController::class, 'verifyPaiement'])
+            ->name('membre_famille.finances.paiement.verify');
     });
 
     // Route pour changer le mot de passe

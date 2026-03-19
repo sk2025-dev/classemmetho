@@ -1707,21 +1707,34 @@ export default function Index({
                                                     <span />
                                                 </label>
                                                 <div className="acte-emoji-box">
-                                                    {acte.membre?.profile_photo_url ? (
+                                                    {acte.membre
+                                                        ?.profile_photo_url ? (
                                                         <img
-                                                            src={acte.membre.profile_photo_url}
-                                                            alt={acte.membre?.prenom + " " + acte.membre?.nom}
+                                                            src={
+                                                                acte.membre
+                                                                    .profile_photo_url
+                                                            }
+                                                            alt={
+                                                                acte.membre
+                                                                    ?.prenom +
+                                                                " " +
+                                                                acte.membre?.nom
+                                                            }
                                                             className="member-photo"
                                                             style={{
                                                                 width: "100%",
                                                                 height: "100%",
-                                                                objectFit: "cover",
-                                                                borderRadius: "50%",
+                                                                objectFit:
+                                                                    "cover",
+                                                                borderRadius:
+                                                                    "50%",
                                                             }}
                                                         />
                                                     ) : (
                                                         <span className="photo-fallback">
-                                                            {iconEmoji(acte.type_acte)}
+                                                            {iconEmoji(
+                                                                acte.type_acte,
+                                                            )}
                                                         </span>
                                                     )}
                                                 </div>
@@ -2205,8 +2218,15 @@ export default function Index({
                                         <div className="hist-icon-box">
                                             {item.membre?.profile_photo_url ? (
                                                 <img
-                                                    src={item.membre.profile_photo_url}
-                                                    alt={item.membre?.prenom + " " + item.membre?.nom}
+                                                    src={
+                                                        item.membre
+                                                            .profile_photo_url
+                                                    }
+                                                    alt={
+                                                        item.membre?.prenom +
+                                                        " " +
+                                                        item.membre?.nom
+                                                    }
                                                     style={{
                                                         width: "100%",
                                                         height: "100%",
@@ -3339,8 +3359,14 @@ export default function Index({
                             <div className="modal-acte-recap">
                                 {activeActe.membre?.profile_photo_url ? (
                                     <img
-                                        src={activeActe.membre.profile_photo_url}
-                                        alt={activeActe.membre?.prenom + " " + activeActe.membre?.nom}
+                                        src={
+                                            activeActe.membre.profile_photo_url
+                                        }
+                                        alt={
+                                            activeActe.membre?.prenom +
+                                            " " +
+                                            activeActe.membre?.nom
+                                        }
                                         style={{
                                             width: "60px",
                                             height: "60px",
@@ -3506,8 +3532,14 @@ export default function Index({
                             <div className="modal-acte-recap">
                                 {activeActe.membre?.profile_photo_url ? (
                                     <img
-                                        src={activeActe.membre.profile_photo_url}
-                                        alt={activeActe.membre?.prenom + " " + activeActe.membre?.nom}
+                                        src={
+                                            activeActe.membre.profile_photo_url
+                                        }
+                                        alt={
+                                            activeActe.membre?.prenom +
+                                            " " +
+                                            activeActe.membre?.nom
+                                        }
                                         style={{
                                             width: "60px",
                                             height: "60px",

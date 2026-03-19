@@ -21,10 +21,10 @@ class DatabaseSeeder extends Seeder
             VillesSeeder::class,
             ClassesSeeder::class,
             FonctionSeeder::class,
+            TresorerieSeeder::class,
         ]);
 
 
         $this->command->info('Base de données remplie avec succès!');
     }
 }
-

@@ -1281,10 +1281,19 @@ export default function Index({
                                             <div
                                                 className={`demande-acte-icon ${tone(acte.type_acte)}`}
                                             >
-                                                {acte.membre?.profile_photo_url ? (
+                                                {acte.membre
+                                                    ?.profile_photo_url ? (
                                                     <img
-                                                        src={acte.membre.profile_photo_url}
-                                                        alt={acte.membre?.prenom + " " + acte.membre?.nom}
+                                                        src={
+                                                            acte.membre
+                                                                .profile_photo_url
+                                                        }
+                                                        alt={
+                                                            acte.membre
+                                                                ?.prenom +
+                                                            " " +
+                                                            acte.membre?.nom
+                                                        }
                                                         style={{
                                                             width: "100%",
                                                             height: "100%",
@@ -1294,7 +1303,9 @@ export default function Index({
                                                     />
                                                 ) : (
                                                     <span>
-                                                        {iconEmoji(acte.type_acte)}
+                                                        {iconEmoji(
+                                                            acte.type_acte,
+                                                        )}
                                                     </span>
                                                 )}
                                             </div>
@@ -2618,15 +2629,26 @@ export default function Index({
                                                 <div
                                                     className={`demande-acte-icon ${tone(acte.type_acte)}`}
                                                 >
-                                                    {acte.membre?.profile_photo_url ? (
+                                                    {acte.membre
+                                                        ?.profile_photo_url ? (
                                                         <img
-                                                            src={acte.membre.profile_photo_url}
-                                                            alt={acte.membre?.prenom + " " + acte.membre?.nom}
+                                                            src={
+                                                                acte.membre
+                                                                    .profile_photo_url
+                                                            }
+                                                            alt={
+                                                                acte.membre
+                                                                    ?.prenom +
+                                                                " " +
+                                                                acte.membre?.nom
+                                                            }
                                                             style={{
                                                                 width: "100%",
                                                                 height: "100%",
-                                                                objectFit: "cover",
-                                                                borderRadius: "50%",
+                                                                objectFit:
+                                                                    "cover",
+                                                                borderRadius:
+                                                                    "50%",
                                                             }}
                                                         />
                                                     ) : (

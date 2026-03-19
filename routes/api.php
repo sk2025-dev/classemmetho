@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\InscriptionController;
+use App\Http\Controllers\Api\PayDunyaWebhookController;
 use App\Http\Controllers\Api\ClasseController;
 use App\Http\Controllers\Api\FamilleController;
 use App\Http\Controllers\Api\VilleController;
@@ -13,6 +14,10 @@ use App\Http\Controllers\API\MemberController;
 use App\Http\Controllers\AuthenticatedRegistrationController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\ExcelImportController;
+use App\Http\Controllers\Admin\TresorerieController as AdminTresorerieController;
+use App\Http\Controllers\Conducteur\TresorerieController as ConducteurTresorerieController;
+use App\Http\Controllers\MembreFamille\FinancesController as MembreFamilleFinancesController;
+use App\Http\Controllers\ResponsableFamille\TresorerieController as ResponsableFamilleTresorerieController;
 
 // Routes publiques (sans authentification)
 Route::get('/classes', [ClasseController::class, 'index']);
@@ -53,7 +58,45 @@ Route::middleware(['auth:web'])->group(function () {
 
     // Route API standard documentée pour suppression photo
     Route::delete('/photo/delete', [PhotoController::class, 'delete']);
+
+    // Trésorerie - Responsable de famille
+    Route::middleware('role:responsable_famille')
+        ->prefix('responsable-famille/tresorerie')
+        ->group(function () {
+            Route::post('/paiements', [ResponsableFamilleTresorerieController::class, 'storePaiement']);
+            Route::post('/paiements/initiate', [ResponsableFamilleTresorerieController::class, 'initiatePaiement']);
+            Route::post('/dons', [ResponsableFamilleTresorerieController::class, 'storeDon']);
+        });
+
+    // Trésorerie - Admin
+    Route::middleware('role:admin')
+        ->prefix('admin/tresorerie')
+        ->group(function () {
+            Route::post('/cotisations', [AdminTresorerieController::class, 'storeCotisation']);
+            Route::put('/cotisations/{cotisation}', [AdminTresorerieController::class, 'updateCotisation']);
+
+            Route::post('/campagnes', [AdminTresorerieController::class, 'storeCampagne']);
+            Route::put('/campagnes/{campagne}', [AdminTresorerieController::class, 'updateCampagne']);
+            Route::post('/campagnes/{campagne}/close', [AdminTresorerieController::class, 'closeCampagne']);
+        });
+
+    // Trésorerie - Membre de famille
+    Route::middleware('role:membre_famille')
+        ->prefix('membre-famille/finances')
+        ->group(function () {
+            Route::post('/paiements', [MembreFamilleFinancesController::class, 'storePaiement']);
+            Route::post('/dons', [MembreFamilleFinancesController::class, 'storeDon']);
+        });
+
+    // Trésorerie - Conducteur
+    Route::middleware('role:conducteur')
+        ->prefix('conducteur/tresorerie')
+        ->group(function () {
+            Route::post('/cotisations', [ConducteurTresorerieController::class, 'storeCotisation']);
+        });
 });
 
 // Inclure les routes d'approbation des inscriptions
 require_once __DIR__ . '/api_inscriptions_approval.php';
+// === WEBHOOKS (sans authentification) ===
+Route::post('/paydunya/webhook', [PayDunyaWebhookController::class, 'handle'])->name('paydunya.webhook');

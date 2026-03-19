@@ -531,8 +531,7 @@ export default function RegisterFamille({
 
         if (!membreTemp.nom) newErrors["membre.nom"] = "Nom requis";
         if (!membreTemp.prenom) newErrors["membre.prenom"] = "Prénom requis";
-        if (!membreTemp.email) 
-            newErrors["membre.email"] = "Email requis";
+        if (!membreTemp.email) newErrors["membre.email"] = "Email requis";
         else if (!/^\S+@\S+\.\S+$/.test(membreTemp.email))
             newErrors["membre.email"] = "Adresse email invalide";
         if (!membreTemp.relation)
@@ -1111,11 +1110,20 @@ export default function RegisterFamille({
             membres.forEach((m, i) => {
                 membreFields.forEach((k) => {
                     const v = m[k];
-                    
+
                     // Les champs requis doivent TOUJOURS être envoyés au backend
-                    const requiredFields = ["email", "nom", "prenom", "genre", "dateNaissance", "relation", "profession", "statutMarital"];
+                    const requiredFields = [
+                        "email",
+                        "nom",
+                        "prenom",
+                        "genre",
+                        "dateNaissance",
+                        "relation",
+                        "profession",
+                        "statutMarital",
+                    ];
                     const shouldSendEmpty = requiredFields.includes(k);
-                    
+
                     if (k === "photo") {
                         const photoValue = v || m.photoPreview || null;
                         if (photoValue instanceof File) {
@@ -1127,7 +1135,10 @@ export default function RegisterFamille({
                         ) {
                             formData.append(`membres[${i}][photo]`, photoValue);
                         }
-                    } else if (shouldSendEmpty || (v !== null && v !== undefined && v !== "")) {
+                    } else if (
+                        shouldSendEmpty ||
+                        (v !== null && v !== undefined && v !== "")
+                    ) {
                         let valueToSend = v || "";
                         // Convertir les booléens en "1"/"0"
                         if (typeof v === "boolean") {
@@ -2385,13 +2396,32 @@ export default function RegisterFamille({
                                         icon={Users}
                                     >
                                         <Select2Fonction
-                                            value={Array.isArray(membreTemp.fonction) ? membreTemp.fonction : (membreTemp.fonction ? [membreTemp.fonction] : [])}
+                                            value={
+                                                Array.isArray(
+                                                    membreTemp.fonction,
+                                                )
+                                                    ? membreTemp.fonction
+                                                    : membreTemp.fonction
+                                                      ? [membreTemp.fonction]
+                                                      : []
+                                            }
                                             onChange={(e) => {
                                                 if (!e.target.value) return;
-                                                const fonctionValue = Array.isArray(e.target.value) ? e.target.value : [e.target.value];
+                                                const fonctionValue =
+                                                    Array.isArray(
+                                                        e.target.value,
+                                                    )
+                                                        ? e.target.value
+                                                        : [e.target.value];
                                                 setMembreTemp({
                                                     ...membreTemp,
-                                                    fonction: fonctionValue.length === 1 ? fonctionValue[0] : fonctionValue.join(","),
+                                                    fonction:
+                                                        fonctionValue.length ===
+                                                        1
+                                                            ? fonctionValue[0]
+                                                            : fonctionValue.join(
+                                                                  ",",
+                                                              ),
                                                 });
                                             }}
                                             options={churchRoles}
@@ -2431,27 +2461,29 @@ export default function RegisterFamille({
                                             </p>
                                         )}
                                     </FormField>
-                                    <FormField
-                                        label="Téléphone"
-                                        icon={Phone}
-                                    >
+                                    <FormField label="Téléphone" icon={Phone}>
                                         <input
                                             type="text"
                                             className={STYLES.input}
                                             value={membreTemp.telephone}
                                             onChange={(e) => {
-                                                const formatted = formatPhoneNumber(e.target.value);
+                                                const formatted =
+                                                    formatPhoneNumber(
+                                                        e.target.value,
+                                                    );
                                                 setMembreTemp({
                                                     ...membreTemp,
                                                     telephone: formatted,
-                                                })
+                                                });
                                             }}
                                             placeholder="10 chiffres"
                                             maxLength="10"
                                         />
                                         {getFieldError("membre.telephone") && (
                                             <p className="text-red-500 text-xs mt-1">
-                                                {getFieldError("membre.telephone")}
+                                                {getFieldError(
+                                                    "membre.telephone",
+                                                )}
                                             </p>
                                         )}
                                     </FormField>

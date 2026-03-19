@@ -90,6 +90,7 @@ class AnnonceController extends Controller
             'type_acte' => $type,
             'statut' => ActeLiturgique::STATUT_VALIDEE,
             'details' => $details,
+            'date_souhaitee' => $validated['date_annonce'] ?? now(),
             'date_publication' => $datePublication,
             'date_expiration' => $validated['date_expiration'] ?? null,
             'membre_id' => $validated['membre_id'] ?? null,
