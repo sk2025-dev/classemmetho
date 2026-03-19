@@ -14,6 +14,7 @@ import {
     X,
     CheckCircle,
     Trash2,
+    Move,
 } from "lucide-react";
 import ProfilePhoto from "@/Components/ProfilePhoto";
 
@@ -212,6 +213,15 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
 
                     <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
                         <button
+                            onClick={() => router.get("/pasteur/transferts")}
+                            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg transition-all text-sm shadow-sm"
+                            title="Transférer"
+                        >
+                            <Move className="w-4 h-4" />
+                            <span className="hidden sm:inline">Transférer</span>
+                        </button>
+
+                        <button
                             onClick={() => router.get("/pasteur/family/edit")}
                             className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-200 hover:border-gray-400 transition-all text-sm shadow-sm"
                         >
@@ -296,6 +306,12 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                                         <th className="px-6 py-4 text-left">
                                             Rôle
                                         </th>
+                                        <th className="px-6 py-4 text-left">
+                                            Code Famille
+                                        </th>
+                                        <th className="px-6 py-4 text-left">
+                                            Code Membre
+                                        </th>
                                         <th className="px-6 py-4 text-center">
                                             Détails
                                         </th>
@@ -344,6 +360,16 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                                                 <StatusBadge
                                                     role={member.role}
                                                 />
+                                            </td>
+                                            <td className="px-6 py-4 text-left text-sm">
+                                                <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
+                                                    {family?.code_famille || "N/A"}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-left text-sm">
+                                                <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-xs font-semibold text-blue-700">
+                                                    {member.code_membre || "N/A"}
+                                                </span>
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <div className="flex items-center justify-center gap-2">

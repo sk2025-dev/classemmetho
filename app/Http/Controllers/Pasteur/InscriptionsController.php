@@ -47,6 +47,7 @@ class InscriptionsController extends Controller
             $familyData = [
                 'id' => $family->id,
                 'nom' => $family->nom,
+                'code_famille' => $family->code_famille,
                 'email' => $family->email,
                 'telephone' => $family->telephone,
                 'adresse' => $family->adresse,
@@ -73,6 +74,7 @@ class InscriptionsController extends Controller
                     'prenom' => $m->prenom,
                     'email' => $m->email,
                     'telephone' => $m->telephone,
+                    'code_membre' => $m->code_membre,
                     'created_at' => optional($m->created_at)->format('d/m/Y H:i'),
                     'updated_at' => optional($m->updated_at ?? $m->created_at)->format('d/m/Y H:i'),
                     'genre' => $m->genre,

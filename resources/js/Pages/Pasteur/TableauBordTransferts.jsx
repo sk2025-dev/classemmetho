@@ -2,8 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { usePage, router } from '@inertiajs/react';
 import {
   CheckCircle, Clock, XCircle,
-  Eye, Plus, User, UsersRound, Inbox, Search, X, Info,
-  Layers
+  Eye, Plus, User, UsersRound, Inbox, Search, X, Info, Layers
 } from 'lucide-react';
 
 const fontStyle = `
@@ -32,7 +31,7 @@ const fontStyle = `
   .modal-enter { animation: scaleIn 0.25s ease both; }
   .toast-enter { animation: toastIn 0.3s ease both; }
 
-  /* ── Transfer Card ── */
+  /* ── Transfer Card — premium ── */
   .transfer-card {
     background: #fff;
     border: 1px solid #e8edf3;
@@ -66,8 +65,7 @@ const fontStyle = `
   /* ── Status Pill ── */
   .status-pill {
     display: inline-flex; align-items: center;
-    padding: 3px 10px;
-    border-radius: 100px;
+    padding: 3px 10px; border-radius: 100px;
     font-size: 11px; font-weight: 600;
     letter-spacing: 0.02em; text-transform: uppercase;
   }
@@ -80,18 +78,12 @@ const fontStyle = `
     box-shadow: 0 4px 20px rgba(0,0,0,0.1);
   }
   .input-field {
-    background: #fff;
-    border: 1.5px solid #ddd;
-    border-radius: 10px;
-    color: #111;
+    background: #fff; border: 1.5px solid #ddd;
+    border-radius: 10px; color: #111;
     transition: border-color 0.2s, box-shadow 0.2s;
   }
   .input-field::placeholder { color: #aaa; }
-  .input-field:focus {
-    outline: none;
-    border-color: #f97316;
-    box-shadow: 0 0 0 3px rgba(249,115,22,0.13);
-  }
+  .input-field:focus { outline: none; border-color: #f97316; box-shadow: 0 0 0 3px rgba(249,115,22,0.13); }
   select.input-field:focus { outline: none; border-color: #f97316; box-shadow: 0 0 0 3px rgba(249,115,22,0.13); }
 
   /* ── Modal ── */
@@ -145,7 +137,7 @@ const StatusBadge = ({ status }) => {
 };
 
 // ─────────────────────────────────────────
-// STEP PROGRESS BAR — 3 étapes horizontales
+// STEP PROGRESS BAR — 3 étapes
 // ─────────────────────────────────────────
 const StepProgressBar = ({ status }) => {
   const isRefused = status === 'REFUSEE';
@@ -163,15 +155,13 @@ const StepProgressBar = ({ status }) => {
         const done   = !isRefused && currentIdx >= step.doneFrom;
         const active = !isRefused && !done && currentIdx >= step.doneFrom - 1;
         const isLast = i === steps.length - 1;
-
-        const dotColor  = isRefused ? '#ef4444' : done ? '#22c55e' : active ? '#f97316' : '#d1d5db';
+        const dotColor   = isRefused ? '#ef4444' : done ? '#22c55e' : active ? '#f97316' : '#d1d5db';
         const labelColor = done ? '#15803d' : active ? '#ea580c' : '#9ca3af';
         const lineColor  = isRefused ? '#fca5a5' : (done && !isLast) ? '#22c55e' : '#e5e7eb';
 
         return (
           <React.Fragment key={step.label}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-              {/* Dot avec halo */}
               <div style={{ position: 'relative', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {(done || active) && (
                   <div style={{
@@ -191,7 +181,6 @@ const StepProgressBar = ({ status }) => {
                   )}
                 </div>
               </div>
-              {/* Label */}
               <span style={{ fontSize: 9, fontWeight: 700, color: labelColor, textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
                 {step.label}
               </span>
@@ -207,14 +196,13 @@ const StepProgressBar = ({ status }) => {
 };
 
 // ─────────────────────────────────────────
-// TRANSFER CARD — redesign éditorial premium
+// TRANSFER CARD — premium éditorial
 // ─────────────────────────────────────────
 const TransferCard = ({ t, onClick, delay = 0 }) => {
   const isRefused = t.status === 'REFUSEE';
   const isDone    = ['TERMINEE', 'VALIDEE_ACCUEIL'].includes(t.status);
   const isFamily  = !t.member && !!t.family;
 
-  // Palette dynamique selon statut
   const palette = isRefused
     ? { accent: '#ef4444', accentLight: '#fff1f2', accentMid: '#fca5a5', accentText: '#991b1b', gradFrom: '#fef2f2', gradTo: '#fff' }
     : isDone
@@ -230,39 +218,23 @@ const TransferCard = ({ t, onClick, delay = 0 }) => {
       style={{ animationDelay: `${delay}ms` }}
       onClick={onClick}
     >
-      {/* ── Header avec fond dégradé coloré ── */}
+      {/* ── Header dégradé coloré ── */}
       <div style={{
         background: `linear-gradient(135deg, ${palette.gradFrom} 0%, ${palette.gradTo} 100%)`,
         borderBottom: `1px solid ${palette.accentMid}44`,
         padding: '18px 20px 16px',
-        position: 'relative',
-        overflow: 'hidden',
+        position: 'relative', overflow: 'hidden',
       }}>
-        {/* Cercle décoratif en arrière-plan */}
-        <div style={{
-          position: 'absolute', top: -24, right: -24,
-          width: 88, height: 88, borderRadius: '50%',
-          background: palette.accent, opacity: 0.07,
-          pointerEvents: 'none',
-        }} />
-        <div style={{
-          position: 'absolute', top: 8, right: 8,
-          width: 40, height: 40, borderRadius: '50%',
-          background: palette.accent, opacity: 0.05,
-          pointerEvents: 'none',
-        }} />
+        {/* Cercles décoratifs */}
+        <div style={{ position: 'absolute', top: -24, right: -24, width: 88, height: 88, borderRadius: '50%', background: palette.accent, opacity: 0.07, pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: 8, right: 8, width: 40, height: 40, borderRadius: '50%', background: palette.accent, opacity: 0.05, pointerEvents: 'none' }} />
 
-        {/* Ligne colorée gauche */}
-        <div style={{
-          position: 'absolute', left: 0, top: 0, bottom: 0,
-          width: 3,
-          background: `linear-gradient(180deg, ${palette.accent}, ${palette.accent}66)`,
-          borderRadius: '0 2px 2px 0',
-        }} />
+        {/* Barre verticale colorée */}
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: `linear-gradient(180deg, ${palette.accent}, ${palette.accent}66)`, borderRadius: '0 2px 2px 0' }} />
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingLeft: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {/* Avatar grand format */}
+            {/* Avatar */}
             <div style={{
               width: 44, height: 44, borderRadius: 12, flexShrink: 0,
               background: palette.accent,
@@ -295,33 +267,27 @@ const TransferCard = ({ t, onClick, delay = 0 }) => {
         </div>
       </div>
 
-      {/* ── Corps de la carte ── */}
+      {/* ── Corps ── */}
       <div style={{ padding: '14px 20px 16px' }}>
 
-        {/* ── Trajet : Source → Destination ── */}
+        {/* Trajet */}
         <div style={{ marginBottom: 14 }}>
           <p style={{ fontSize: 9.5, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
             Trajet de transfert
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {/* Classe source */}
-            <div style={{
-              flex: 1, minWidth: 0,
-              background: '#f8fafc', border: '1px solid #e2e8f0',
-              borderRadius: 8, padding: '7px 10px',
-            }}>
+            {/* Source */}
+            <div style={{ flex: 1, minWidth: 0, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '7px 10px' }}>
               <p style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Depuis</p>
               <p style={{ fontSize: 12, fontWeight: 600, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
                 {t.classe_source?.nom || '—'}
               </p>
             </div>
 
-            {/* Flèche centrale */}
+            {/* Flèche */}
             <div style={{
-              width: 28, height: 28, flexShrink: 0,
-              background: palette.accent,
-              borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 28, height: 28, flexShrink: 0, background: palette.accent,
+              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: `0 2px 8px ${palette.accent}40`,
             }}>
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
@@ -329,12 +295,8 @@ const TransferCard = ({ t, onClick, delay = 0 }) => {
               </svg>
             </div>
 
-            {/* Classe cible */}
-            <div style={{
-              flex: 1, minWidth: 0,
-              background: palette.accentLight, border: `1px solid ${palette.accentMid}`,
-              borderRadius: 8, padding: '7px 10px',
-            }}>
+            {/* Destination */}
+            <div style={{ flex: 1, minWidth: 0, background: palette.accentLight, border: `1px solid ${palette.accentMid}`, borderRadius: 8, padding: '7px 10px' }}>
               <p style={{ fontSize: 9, fontWeight: 700, color: palette.accent, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Vers</p>
               <p style={{ fontSize: 12, fontWeight: 700, color: palette.accentText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
                 {t.classe_cible?.nom || '—'}
@@ -342,13 +304,11 @@ const TransferCard = ({ t, onClick, delay = 0 }) => {
             </div>
           </div>
 
-          {/* Motif si présent */}
+          {/* Motif */}
           {t.reason && (
             <div style={{
-              marginTop: 8,
-              background: '#fafafa', border: '1px dashed #e2e8f0',
-              borderRadius: 7, padding: '7px 10px',
-              display: 'flex', gap: 7, alignItems: 'flex-start',
+              marginTop: 8, background: '#fafafa', border: '1px dashed #e2e8f0',
+              borderRadius: 7, padding: '7px 10px', display: 'flex', gap: 7, alignItems: 'flex-start',
             }}>
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
                 <path d="M8 2a6 6 0 100 12A6 6 0 008 2zm0 4v4m0 2h.01" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round"/>
@@ -360,14 +320,10 @@ const TransferCard = ({ t, onClick, delay = 0 }) => {
           )}
         </div>
 
-        {/* ── Séparateur dégradé ── */}
-        <div style={{
-          height: 1,
-          background: 'linear-gradient(90deg, transparent, #e2e8f0 30%, #e2e8f0 70%, transparent)',
-          marginBottom: 14,
-        }} />
+        {/* Séparateur dégradé */}
+        <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, #e2e8f0 30%, #e2e8f0 70%, transparent)', marginBottom: 14 }} />
 
-        {/* ── Progression ── */}
+        {/* Progression */}
         <div style={{ marginBottom: 14 }}>
           <p style={{ fontSize: 9.5, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
             Progression
@@ -375,18 +331,14 @@ const TransferCard = ({ t, onClick, delay = 0 }) => {
           <StepProgressBar status={t.status} />
         </div>
 
-        {/* ── Footer ── */}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          paddingTop: 10, borderTop: '1px solid #f1f5f9',
-        }}>
+        {/* Footer */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
           {t.created_at ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <Clock style={{ width: 11, height: 11, color: '#cbd5e1' }} />
               <span style={{ fontSize: 10.5, color: '#94a3b8', fontFamily: 'DM Mono, monospace' }}>{t.created_at}</span>
             </div>
           ) : <div />}
-
           <span className="card-action-hint" style={{
             fontSize: 11, fontWeight: 700, color: palette.accent,
             display: 'flex', alignItems: 'center', gap: 4,
@@ -397,7 +349,6 @@ const TransferCard = ({ t, onClick, delay = 0 }) => {
             Voir détails
           </span>
         </div>
-
       </div>
     </div>
   );
@@ -407,16 +358,16 @@ const TransferCard = ({ t, onClick, delay = 0 }) => {
 // TIMELINE (modal détails)
 // ─────────────────────────────────────────
 const TransferTimeline = ({ transfer }) => {
-  const isRefused   = transfer.status === 'REFUSEE';
-  const statusOrder = ['SOUMISE','EN_ATTENTE_SOURCE','VALIDEE_SOURCE','EN_ATTENTE_ACCUEIL','VALIDEE_ACCUEIL','TERMINEE'];
+  const isRefused    = transfer.status === 'REFUSEE';
+  const statusOrder  = ['SOUMISE','EN_ATTENTE_SOURCE','VALIDEE_SOURCE','EN_ATTENTE_ACCUEIL','VALIDEE_ACCUEIL','TERMINEE'];
   const currentIndex = statusOrder.indexOf(transfer.status);
   const steps = [
-    { label: 'Soumission',         date: transfer.created_at,          person: transfer.member?.name || transfer.family?.name || '—', done: currentIndex >= 0, active: currentIndex === 0 || currentIndex === 1 },
-    { label: 'Validation Source',  date: transfer.validated_source_at,  person: transfer.validated_source_by,  done: currentIndex >= 2, active: currentIndex === 2 || currentIndex === 3 },
+    { label: 'Soumission',        date: transfer.created_at,          person: transfer.member?.name || transfer.family?.name || '—', done: currentIndex >= 0, active: currentIndex === 0 || currentIndex === 1 },
+    { label: 'Validation Source', date: transfer.validated_source_at,  person: transfer.validated_source_by,  done: currentIndex >= 2, active: currentIndex === 2 || currentIndex === 3 },
     { label: isRefused ? 'Refusé' : 'Validation Accueil', date: transfer.validated_accueil_at, person: transfer.validated_accueil_by, done: currentIndex >= 4, active: currentIndex === 4 || currentIndex === 5, refused: isRefused },
   ];
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
       {steps.map((step, i) => {
         const isLast = i === steps.length - 1;
         let dotClass = 'tl-idle';
@@ -426,7 +377,7 @@ const TransferTimeline = ({ transfer }) => {
         return (
           <div key={i} style={{ display: 'flex', gap: 12 }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div className={`${dotClass}`} style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid', flexShrink: 0, marginTop: 2 }} />
+              <div className={dotClass} style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid', flexShrink: 0, marginTop: 2 }} />
               {!isLast && <div style={{ width: 1, flex: 1, minHeight: 28, marginTop: 4, background: step.done ? '#22c55e' : '#e5e7eb' }} />}
             </div>
             <div style={{ paddingBottom: 16 }}>
@@ -443,7 +394,7 @@ const TransferTimeline = ({ transfer }) => {
 };
 
 // ─────────────────────────────────────────
-// STAT CARD (blanc)
+// STAT CARD
 // ─────────────────────────────────────────
 const StatCard = ({ icon: Icon, label, value, iconBg, iconColor, delay = 0 }) => (
   <div className="stat-card card-enter" style={{ padding: '18px 20px', animationDelay: `${delay}ms` }}>
@@ -523,17 +474,14 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
   };
 
   const handleNextStep = () => {
-    if (modalStep === 1 && !formData.type) return;
-    if (modalStep === 2) {
-      if (formData.type === 'member' && !formData.member_id) return;
-      if (!formData.target_class_id) return;
-    }
+    if (modalStep === 2 && formData.type === 'member' && !formData.member_id) return;
+    if (modalStep === 2 && !formData.target_class_id) return;
     setModalStep(s => s + 1);
   };
 
   const handleSubmit = () => {
     setProcessing(true);
-    router.post('/responsable-famille/transferts', {
+    router.post('/pasteur/transferts', {
       type: formData.type,
       user_id: formData.type === 'member' ? parseInt(formData.member_id) : null,
       target_class_id: parseInt(formData.target_class_id),
@@ -609,7 +557,7 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
                     placeholder="Rechercher un membre ou une famille…"
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
-                    style={{ width: '100%', paddingLeft: 40, paddingRight: 16, paddingTop: 10, paddingBottom: 10, fontSize: 13.5, color: '#111', boxSizing: 'border-box' }}
+                    style={{ width: '100%', paddingLeft: 40, paddingRight: 16, paddingTop: 10, paddingBottom: 10, fontSize: 13.5, color: '#111', boxSizing: 'border-box', fontWeight: 400 }}
                   />
                 </div>
                 <select
@@ -663,8 +611,6 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
           onClick={resetModal}
         >
           <div className="modal-box modal-enter" style={{ width: '100%', maxWidth: 480 }} onClick={e => e.stopPropagation()}>
-
-            {/* Header modal */}
             <div style={{ background: 'linear-gradient(135deg, #f97316, #ea580c)', padding: '24px 28px 20px' }}>
               <p style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
                 Étape {modalStep} sur 3
@@ -673,14 +619,13 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
               <StepDots current={modalStep} total={3} />
             </div>
 
-            {/* Body modal */}
             <div style={{ padding: '24px 28px', minHeight: 200 }}>
               {modalStep === 1 && (
                 <div>
                   <p style={{ fontSize: 13, fontWeight: 600, color: '#555', marginBottom: 16 }}>Qui concerne ce transfert ?</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {[
-                      { value: 'member', label: 'Un Membre',       icon: User,       desc: "Transfert individuel d'un membre" },
+                      { value: 'member', label: 'Un Membre',        icon: User,       desc: "Transfert individuel d'un membre" },
                       { value: 'family', label: 'Toute la Famille', icon: UsersRound, desc: 'Transfert groupé de la famille' },
                     ].map(opt => (
                       <div
@@ -715,12 +660,7 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
                   {formData.type === 'member' && (
                     <div>
                       <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Membre</label>
-                      <select
-                        value={formData.member_id}
-                        onChange={e => setFormData({ ...formData, member_id: e.target.value })}
-                        className="input-field"
-                        style={{ width: '100%', padding: '10px 14px', fontSize: 13, color: '#111' }}
-                      >
+                      <select value={formData.member_id} onChange={e => setFormData({ ...formData, member_id: e.target.value })} className="input-field" style={{ width: '100%', padding: '10px 14px', fontSize: 13, color: '#111' }}>
                         <option value="">Sélectionner un membre…</option>
                         {members.map(m => <option key={m.id} value={m.id}>{m.nom} {m.prenom}</option>)}
                       </select>
@@ -728,12 +668,7 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
                   )}
                   <div>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Classe cible</label>
-                    <select
-                      value={formData.target_class_id}
-                      onChange={e => setFormData({ ...formData, target_class_id: e.target.value })}
-                      className="input-field"
-                      style={{ width: '100%', padding: '10px 14px', fontSize: 13, color: '#111' }}
-                    >
+                    <select value={formData.target_class_id} onChange={e => setFormData({ ...formData, target_class_id: e.target.value })} className="input-field" style={{ width: '100%', padding: '10px 14px', fontSize: 13, color: '#111' }}>
                       <option value="">Sélectionner une classe…</option>
                       {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
                     </select>
@@ -742,14 +677,7 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
                       Motif <span style={{ color: '#bbb', fontWeight: 400, textTransform: 'none' }}>(optionnel)</span>
                     </label>
-                    <textarea
-                      value={formData.reason}
-                      onChange={e => setFormData({ ...formData, reason: e.target.value })}
-                      rows={3}
-                      className="input-field"
-                      placeholder="Expliquez la raison du transfert…"
-                      style={{ width: '100%', padding: '10px 14px', fontSize: 13, color: '#111', resize: 'none', boxSizing: 'border-box' }}
-                    />
+                    <textarea value={formData.reason} onChange={e => setFormData({ ...formData, reason: e.target.value })} rows={3} className="input-field" placeholder="Expliquez la raison du transfert…" style={{ width: '100%', padding: '10px 14px', fontSize: 13, color: '#111', resize: 'none', boxSizing: 'border-box' }} />
                   </div>
                 </div>
               )}
@@ -760,10 +688,7 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
                   <div style={{ background: '#f9f9f9', border: '1px solid #ebebeb', borderRadius: 12, overflow: 'hidden' }}>
                     {[
                       { key: 'Type', val: formData.type === 'member' ? 'Membre' : 'Famille' },
-                      ...(formData.type === 'member' ? [{
-                        key: 'Membre',
-                        val: (() => { const m = members.find(m => String(m.id) === formData.member_id); return m ? `${m.nom} ${m.prenom}` : '—'; })()
-                      }] : []),
+                      ...(formData.type === 'member' ? [{ key: 'Membre', val: (() => { const m = members.find(m => String(m.id) === formData.member_id); return m ? `${m.nom} ${m.prenom}` : '—'; })() }] : []),
                       { key: 'Classe cible', val: classes.find(c => String(c.id) === formData.target_class_id)?.nom || '—' },
                       ...(formData.reason ? [{ key: 'Motif', val: formData.reason }] : []),
                     ].map((row, i, arr) => (
@@ -780,23 +705,14 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
               )}
             </div>
 
-            {/* Footer modal */}
             <div style={{ padding: '16px 28px', borderTop: '1px solid #f0f0f0', background: '#fafafa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <button
-                onClick={() => modalStep > 1 ? setModalStep(modalStep - 1) : resetModal()}
-                style={{ fontSize: 13, fontWeight: 500, color: '#777', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 4px' }}
-              >
+              <button onClick={() => modalStep > 1 ? setModalStep(modalStep - 1) : resetModal()} style={{ fontSize: 13, fontWeight: 500, color: '#777', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 4px' }}>
                 {modalStep > 1 ? '← Retour' : 'Annuler'}
               </button>
-              {modalStep < 3 ? (
-                <button onClick={handleNextStep} className="btn-primary" style={{ padding: '9px 20px', fontSize: 13, border: 'none', cursor: 'pointer' }}>
-                  Continuer →
-                </button>
-              ) : (
-                <button onClick={handleSubmit} disabled={processing} className="btn-confirm" style={{ padding: '9px 20px', fontSize: 13, border: 'none', cursor: 'pointer' }}>
-                  {processing ? 'Envoi…' : '✓ Confirmer'}
-                </button>
-              )}
+              {modalStep < 3
+                ? <button onClick={handleNextStep} className="btn-primary" style={{ padding: '9px 20px', fontSize: 13, border: 'none', cursor: 'pointer' }}>Continuer →</button>
+                : <button onClick={handleSubmit} disabled={processing} className="btn-confirm" style={{ padding: '9px 20px', fontSize: 13, border: 'none', cursor: 'pointer' }}>{processing ? 'Envoi…' : '✓ Confirmer'}</button>
+              }
             </div>
           </div>
         </div>
@@ -821,10 +737,7 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <StatusBadge status={selectedTransfer.status} />
-                <button
-                  onClick={() => setSelectedTransfer(null)}
-                  style={{ background: '#f5f5f5', border: 'none', borderRadius: 8, padding: 7, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                >
+                <button onClick={() => setSelectedTransfer(null)} style={{ background: '#f5f5f5', border: 'none', borderRadius: 8, padding: 7, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                   <X style={{ width: 14, height: 14, color: '#666' }} />
                 </button>
               </div>
@@ -843,7 +756,6 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
                   </div>
                 ))}
               </div>
-
               <div>
                 <p style={{ fontSize: 11, fontWeight: 600, color: '#bbb', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>Progression</p>
                 <TransferTimeline transfer={selectedTransfer} />

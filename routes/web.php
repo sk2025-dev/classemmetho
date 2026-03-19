@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
@@ -298,7 +298,10 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Tableau de bord Pasteur
-    Route::middleware('role:pasteur')->group(function () {
+Route::get('/pasteur/transferts', [\App\Http\Controllers\Pasteur\TransferController::class, 'index'])->name('pasteur.transferts.index');
+        Route::post('/pasteur/transferts', [\App\Http\Controllers\Pasteur\TransferController::class, 'store'])->name('pasteur.transferts.store');
+
+        Route::middleware('role:pasteur')->group(function () {
         Route::get('/pasteur/dashboard', [PasteurDashboardController::class, 'index'])->name('pasteur.dashboard');
         // Liste des inscriptions pour le pasteur (module controller)
         Route::get('/pasteur/inscriptions', [\App\Http\Controllers\Pasteur\InscriptionsController::class, 'index'])

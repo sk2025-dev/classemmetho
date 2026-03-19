@@ -23,12 +23,12 @@ class TransferController extends Controller
         // Récupérer les demandes en attente de validation par ce conducteur
         $pendingTransfers = ClassTransferRequest::with([
             'family',
-            'user',
+            'user.family',
             'sourceClass',
             'targetClass',
             'validatedBySource',
             'validatedByAccueil',
-            'createdBy',
+            'createdBy.family',
         ])
             ->where(function ($query) use ($user) {
                 // Soit en attente de validation source (conducteur source)
@@ -52,6 +52,9 @@ class TransferController extends Controller
                     'member' => $transfer->type === 'member' && $transfer->user ? [
                         'id' => $transfer->user->id,
                         'name' => $transfer->user->nom . ' ' . $transfer->user->prenom,
+                        'email' => $transfer->user->email,
+                        'telephone' => $transfer->user->telephone,
+                        'code_membre' => $transfer->user->code_membre,
                     ] : null,
                     'family' => $transfer->type === 'family' && $transfer->family ? [
                         'id' => $transfer->family->id,
@@ -71,18 +74,31 @@ class TransferController extends Controller
                     'validated_source_at' => $transfer->validated_by_source_at ? $transfer->validated_by_source_at->format('Y-m-d H:i') : null,
                     'validated_accueil_by' => $transfer->validatedByAccueil ? $transfer->validatedByAccueil->nom . ' ' . $transfer->validatedByAccueil->prenom : null,
                     'validated_accueil_at' => $transfer->validated_by_accueil_at ? $transfer->validated_by_accueil_at->format('Y-m-d H:i') : null,
+                    'famille_source' => $transfer->family ? [
+                        'id' => $transfer->family->id,
+                        'nom' => $transfer->family->nom,
+                        'code_famille' => $transfer->family->code_famille,
+                    ] : ($transfer->user && $transfer->user->family ? [
+                        'id' => $transfer->user->family->id,
+                        'nom' => $transfer->user->family->nom,
+                        'code_famille' => $transfer->user->family->code_famille,
+                    ] : ($transfer->createdBy && $transfer->createdBy->family ? [
+                        'id' => $transfer->createdBy->family->id,
+                        'nom' => $transfer->createdBy->family->nom,
+                        'code_famille' => $transfer->createdBy->family->code_famille,
+                    ] : null)),
                 ];
             });
 
         // Récupérer les demandes approuvées/refusées par ce conducteur
         $processedTransfers = ClassTransferRequest::with([
             'family',
-            'user',
+            'user.family',
             'sourceClass',
             'targetClass',
             'validatedBySource',
             'validatedByAccueil',
-            'createdBy',
+            'createdBy.family',
         ])
             ->where(function ($query) use ($user) {
                 // Soit validées source par ce conducteur
@@ -94,14 +110,25 @@ class TransferController extends Controller
             ->limit(10)
             ->get()
             ->map(function ($transfer) {
+                // Debug log pour les transferts traités
+                \Log::debug('ProcessedTransfer - User family relation:', [
+                    'transfer_id' => $transfer->id,
+                    'user_family_id' => $transfer->user?->family_id,
+                    'user_family_nom' => $transfer->user?->family?->nom,
+                ]);
+
                 return [
                     'id' => $transfer->id,
                     'reference' => $transfer->reference,
                     'status' => $transfer->status,
                     'type' => $transfer->type,
+                    'reason' => $transfer->reason,
                     'member' => $transfer->type === 'member' && $transfer->user ? [
                         'id' => $transfer->user->id,
                         'name' => $transfer->user->nom . ' ' . $transfer->user->prenom,
+                        'email' => $transfer->user->email,
+                        'telephone' => $transfer->user->telephone,
+                        'code_membre' => $transfer->user->code_membre,
                     ] : null,
                     'family' => $transfer->type === 'family' && $transfer->family ? [
                         'id' => $transfer->family->id,
@@ -116,6 +143,24 @@ class TransferController extends Controller
                         'nom' => $transfer->targetClass->nom,
                     ],
                     'created_at' => $transfer->created_at->format('Y-m-d H:i'),
+                    'created_by' => $transfer->createdBy ? $transfer->createdBy->nom . ' ' . $transfer->createdBy->prenom : null,
+                    'validated_source_by' => $transfer->validatedBySource ? $transfer->validatedBySource->nom . ' ' . $transfer->validatedBySource->prenom : null,
+                    'validated_source_at' => $transfer->validated_by_source_at ? $transfer->validated_by_source_at->format('Y-m-d H:i') : null,
+                    'validated_accueil_by' => $transfer->validatedByAccueil ? $transfer->validatedByAccueil->nom . ' ' . $transfer->validatedByAccueil->prenom : null,
+                    'validated_accueil_at' => $transfer->validated_by_accueil_at ? $transfer->validated_by_accueil_at->format('Y-m-d H:i') : null,
+                    'famille_source' => $transfer->family ? [
+                        'id' => $transfer->family->id,
+                        'nom' => $transfer->family->nom,
+                        'code_famille' => $transfer->family->code_famille,
+                    ] : ($transfer->user && $transfer->user->family ? [
+                        'id' => $transfer->user->family->id,
+                        'nom' => $transfer->user->family->nom,
+                        'code_famille' => $transfer->user->family->code_famille,
+                    ] : ($transfer->createdBy && $transfer->createdBy->family ? [
+                        'id' => $transfer->createdBy->family->id,
+                        'nom' => $transfer->createdBy->family->nom,
+                        'code_famille' => $transfer->createdBy->family->code_famille,
+                    ] : null)),
                 ];
             });
 
@@ -207,14 +252,22 @@ class TransferController extends Controller
             if ($transfer->type === 'member') {
                 // Pour un transfert de membre, créer une nouvelle famille et le rendre responsable
                 $member = User::findOrFail($transfer->user_id);
+                $originalFamily = $member->family_id ? Family::find($member->family_id) : null;
 
-                // Créer une nouvelle famille pour le membre
+                // Créer une nouvelle famille pour le membre (copier certaines infos de la famille d'origine)
                 $newFamily = Family::create([
-                    'nom' => $member->nom . ' ' . $member->prenom,
+                    'nom' => $member->nom,
                     'email' => $member->email,
                     'classe_id' => $transfer->target_class_id,
                     'responsable_id' => $transfer->user_id,
-                    'code_famille' => 'FAM-' . strtoupper(substr(uniqid(), -6)),
+// Auto-généré par le modèle Family (CF + incrémentation)
+
+                    // Copier adresse et téléphone de la famille d'origine si elle existe
+                    'adresse' => $originalFamily ? $originalFamily->adresse : null,
+                    'quartier' => $originalFamily ? $originalFamily->quartier : null,
+                    'telephone' => $originalFamily ? $originalFamily->telephone : null,
+                    'telephone2' => $originalFamily ? $originalFamily->telephone2 : null,
+                    'ville_id' => $originalFamily ? $originalFamily->ville_id : null,
                 ]);
 
                 // Mettre à jour le membre: classe + famille + rôle

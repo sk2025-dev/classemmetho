@@ -1584,6 +1584,12 @@ export default function Inscriptions({
                                                         Famille
                                                     </th>
                                                     <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                                Code Famille
+                                                    </th>
+                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                        Code Membre
+                                                    </th>
+                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
                                                         Rôle
                                                     </th>
                                                     <th className="p-5 text-xs font-bold uppercase tracking-wider">
@@ -1618,6 +1624,8 @@ export default function Inscriptions({
                                                                             family
                                                                                 .responsable
                                                                                 .nom,
+                                                                        code_famille:
+                                                                            family.code_famille,
                                                                         is_responsable: true,
                                                                     },
                                                                 );
@@ -1648,6 +1656,8 @@ export default function Inscriptions({
                                                                                             .responsable
                                                                                             ?.nom ||
                                                                                         "Famille",
+                                                                                    code_famille:
+                                                                                        family.code_famille,
                                                                                 },
                                                                             );
                                                                         }
@@ -1760,6 +1770,12 @@ export default function Inscriptions({
                                                                                 "Famille"}
                                                                         </span>
                                                                     </div>
+                                                                </td>
+                                                                <td className="p-5 text-slate-600">
+                                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
+                                                                        {member.code_famille ||
+                                                                            "N/A"}
+                                                                    </span>
                                                                 </td>
                                                                 <td className="p-5">
                                                                     <span
@@ -1944,6 +1960,9 @@ export default function Inscriptions({
                                                 Famille
                                             </th>
                                             <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                Code Famille
+                                            </th>
+                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
                                                 Email
                                             </th>
                                             <th className="p-5 text-xs font-bold uppercase tracking-wider">
@@ -1973,7 +1992,7 @@ export default function Inscriptions({
                                         {filteredItems.length === 0 ? (
                                             <tr>
                                                 <td
-                                                    colSpan="11"
+                                                    colSpan="12"
                                                     className="p-12 text-center text-slate-500"
                                                 >
                                                     Aucun membre créé.
@@ -2056,6 +2075,13 @@ export default function Inscriptions({
                                                                         : member.famille_id
                                                                           ? `Famille #${member.famille_id}`
                                                                           : "Aucune famille"}
+                                                                </td>
+                                                                <td className="p-5 text-slate-600">
+                                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
+                                                                        {memberFamily
+                                                                            ? memberFamily.code_famille || "N/A"
+                                                                            : "N/A"}
+                                                                    </span>
                                                                 </td>
                                                                 <td className="p-5 text-slate-600">
                                                                     {
@@ -2291,11 +2317,14 @@ export default function Inscriptions({
                                                 Fonction
                                             </th>
                                             <th className="p-6 text-sm font-bold uppercase tracking-wider">
-                                                Rôle
-                                            </th>
-                                            <th className="p-6 text-sm font-bold uppercase tracking-wider">
-                                                Date de création
-                                            </th>
+                                                        Rôle
+                                                    </th>
+                                                    <th className="p-6 text-sm font-bold uppercase tracking-wider">
+                                                        Code Membre
+                                                    </th>
+                                                    <th className="p-6 text-sm font-bold uppercase tracking-wider">
+                                                        Date de création
+                                                    </th>
                                             <th className="p-6 text-sm font-bold uppercase tracking-wider">
                                                 {activeTab === "rejected"
                                                     ? "Refusé par"
@@ -2432,6 +2461,11 @@ export default function Inscriptions({
                                                                             "conducteur"
                                                                           ? "Conducteur"
                                                                           : item.role}
+                                                                </span>
+                                                            </td>
+                                                            <td className="p-6 text-slate-600">
+                                                                <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
+                                                                    {item.code_membre || 'N/A'}
                                                                 </span>
                                                             </td>
                                                             <td className="p-6 text-sm text-slate-600">

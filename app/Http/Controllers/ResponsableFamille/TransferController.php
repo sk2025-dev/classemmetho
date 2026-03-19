@@ -64,17 +64,18 @@ class TransferController extends Controller
                 ];
             });
 
-        // Récupérer tous les membres de la famille (autres que le responsable)
+        // Récupérer tous les membres de la famille (autres que le responsable et autres responsables)
         $members = User::where('family_id', $user->family_id)
             ->where('id', '!=', $user->id)
+            ->where('is_family_responsible', false)
             ->select('id', 'nom', 'prenom', 'email', 'classe_id')
             ->get();
 
-        // Récupérer toutes les classes disponibles
-        $classes = Classe::all();
-
         // Récupérer la famille
         $family = Family::findOrFail($user->family_id);
+
+        // Récupérer toutes les classes disponibles sauf celle d'origine de la famille
+        $classes = Classe::where('id', '!=', $family->classe_id)->get();
 
         return Inertia::render('ResponsableFamille/TableauBordTransferts', [
             'transfers' => $transfers,
@@ -117,6 +118,13 @@ class TransferController extends Controller
                     DB::rollBack();
                     return redirect()->back()->with('error', 'Le membre n\'appartient pas à cette famille');
                 }
+
+                // Empêcher le transfert si c'est un responsable de famille ou si son transfert laisserait la famille sans responsable
+                if ($member->is_family_responsible || ($member->id === $user->id && $user->is_family_responsible)) {
+                    DB::rollBack();
+                    return redirect()->back()->with('error', 'Le responsable de famille ne peut pas être transféré. Désignez d\'abord un nouveau responsable.');
+                }
+
                 $sourceClassId = $member->classe_id;
             } else {
                 // Pour une demande familiale, utiliser la classe du responsable comme référence
@@ -215,10 +223,34 @@ class TransferController extends Controller
 
             // Effectuer le transfert
             if ($transfer->type === 'member') {
-                // Transférer le membre spécifique
-                User::where('id', $transfer->user_id)->update(['classe_id' => $transfer->target_class_id]);
+                // Pour un transfert de membre, créer une nouvelle famille et le rendre responsable
+                $member = User::findOrFail($transfer->user_id);
+                $originalFamily = $member->family_id ? Family::find($member->family_id) : null;
+
+                // Créer une nouvelle famille pour le membre (copier certaines infos de la famille d'origine)
+                $newFamily = Family::create([
+                    'nom' => $member->nom,
+                    'email' => $member->email,
+                    'classe_id' => $transfer->target_class_id,
+                    'responsable_id' => $transfer->user_id,
+// Auto-généré par le modèle Family (CF + incrémentation)
+
+                    // Copier adresse et téléphone de la famille d'origine si elle existe
+                    'adresse' => $originalFamily ? $originalFamily->adresse : null,
+                    'quartier' => $originalFamily ? $originalFamily->quartier : null,
+                    'telephone' => $originalFamily ? $originalFamily->telephone : null,
+                    'telephone2' => $originalFamily ? $originalFamily->telephone2 : null,
+                    'ville_id' => $originalFamily ? $originalFamily->ville_id : null,
+                ]);
+
+                // Mettre à jour le membre: classe + famille + rôle
+                $member->update([
+                    'classe_id' => $transfer->target_class_id,
+                    'family_id' => $newFamily->id,
+                    'role' => 'responsable_famille', // Devient responsable de sa nouvelle famille
+                ]);
             } else {
-                // Transférer tous les membres de la famille
+                // Pour un transfert familial, juste changer la classe des membres
                 User::where('family_id', $transfer->family_id)
                     ->where('id', '!=', $user->id)
                     ->update(['classe_id' => $transfer->target_class_id]);

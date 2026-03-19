@@ -93,13 +93,24 @@ class Family extends Model
     }
 
     /**
-     * Génère un code unique pour la famille (ex: FAM-2026-AB3XY)
+     * Génère un code famille au format CF + incrémentation
+     * Ex: CF1, CF2, CF3, ...
+     * Chaque nouvelle famille reçoit un nouveau numéro
      */
     public static function generateCode(): string
     {
-        do {
-            $code = 'FAM-' . now()->year . '-' . strtoupper(Str::random(5));
-        } while (static::withTrashed()->where('code_famille', $code)->exists());
+        // Compter le nombre total de familles (non supprimées) pour obtenir le prochain numéro
+        $count = static::count();
+        $nextNumber = $count + 1;
+
+        // Générer le code au format CF + numéro
+        $code = 'CF' . $nextNumber;
+
+        // S'assurer que le code est unique (sécurité supplémentaire)
+        while (static::withTrashed()->where('code_famille', $code)->exists()) {
+            $nextNumber++;
+            $code = 'CF' . $nextNumber;
+        }
 
         return $code;
     }

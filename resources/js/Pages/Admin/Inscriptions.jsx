@@ -296,6 +296,12 @@ export default function Inscriptions() {
                                     Ville
                                 </th>
                                 <th className="px-4 py-3 text-left font-semibold text-white">
+                                    Code Famille
+                                </th>
+                                <th className="px-4 py-3 text-left font-semibold text-white">
+                                    Code Membre
+                                </th>
+                                <th className="px-4 py-3 text-left font-semibold text-white">
                                     Date
                                 </th>
                                 <th className="px-4 py-3 text-left font-semibold text-white">
@@ -317,9 +323,9 @@ export default function Inscriptions() {
                                             {startIndex + idx + 1}
                                         </td>
                                         <td className="px-4 py-3 whitespace-nowrap flex items-center gap-3">
-                                            <ProfilePhoto 
-                                                user={inscription} 
-                                                size="md" 
+                                            <ProfilePhoto
+                                                user={inscription}
+                                                size="md"
                                                 rounded={true}
                                             />
                                             <span className="font-medium text-gray-900">
@@ -357,6 +363,16 @@ export default function Inscriptions() {
                                         </td>
                                         <td className="px-4 py-3 text-gray-700">
                                             {inscription.ville || "N/A"}
+                                        </td>
+                                        <td className="px-4 py-3 text-gray-700">
+                                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
+                                                {inscription.code_famille || 'N/A'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-gray-700">
+                                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
+                                                {inscription.code_membre || 'N/A'}
+                                            </span>
                                         </td>
                                         <td className="px-4 py-3 text-gray-500">
                                             {inscription.created_at}

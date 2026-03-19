@@ -74,14 +74,38 @@ class ClassTransferRequest extends Model
     }
 
     /**
-     * Generate unique reference
+     * Generate unique reference with format TRF + incrementation
+     * Ex: TRF1, TRF2, TRF3, ...
      */
     public static function generateReference()
     {
-        do {
-            $reference = 'TRF-' . strtoupper(uniqid());
-        } while (self::where('reference', $reference)->exists());
+        // Compter le nombre total de transferts (non supprimés) pour obtenir le prochain numéro
+        $count = static::count();
+        $nextNumber = $count + 1;
+
+        // Générer la référence au format TRF + numéro
+        $reference = 'TRF' . $nextNumber;
+
+        // S'assurer que la référence est unique (sécurité supplémentaire)
+        while (static::withTrashed()->where('reference', $reference)->exists()) {
+            $nextNumber++;
+            $reference = 'TRF' . $nextNumber;
+        }
 
         return $reference;
+    }
+
+    /**
+     * Auto-génère une référence lors de la création si absente
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function (ClassTransferRequest $transfer) {
+            if (empty($transfer->reference)) {
+                $transfer->reference = static::generateReference();
+            }
+        });
     }
 }
