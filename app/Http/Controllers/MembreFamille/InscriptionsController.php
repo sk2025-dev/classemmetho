@@ -50,6 +50,7 @@ class InscriptionsController extends Controller
                 $familyData = [
                     'id' => $family->id,
                     'nom' => $family->nom,
+                    'code_famille' => $family->code_famille,
                     'email' => $family->email,
                     'telephone' => $family->telephone,
                     'adresse' => $family->adresse,
@@ -58,13 +59,15 @@ class InscriptionsController extends Controller
                 ];
 
                 // Mapper les membres avec leurs relations
-                $members = $allMembers->map(function ($member) {
+                $members = $allMembers->map(function ($member) use ($family) {
                     return [
                         'id' => $member->id,
                         'nom' => $member->nom,
                         'prenom' => $member->prenom,
                         'email' => $member->email,
                         'telephone' => $member->telephone,
+                        'code_famille' => $family->code_famille,
+                        'code_membre' => $member->code_membre,
                         'genre' => $member->genre,
                         'date_naissance' => $member->date_naissance,
                         'fonction_name' => $member->fonction?->nom ?? '—',

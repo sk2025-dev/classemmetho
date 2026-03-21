@@ -226,6 +226,12 @@ export default function Inscriptions({ family, members, familyStats }) {
                                         <th className="px-6 py-4 text-left">
                                             Rôle
                                         </th>
+                                        <th className="px-6 py-4 text-left">
+                                            Code Famille
+                                        </th>
+                                        <th className="px-6 py-4 text-left">
+                                            Code Membre
+                                        </th>
                                         <th className="px-6 py-4 text-center">
                                             Actions
                                         </th>
@@ -287,6 +293,16 @@ export default function Inscriptions({ family, members, familyStats }) {
                                                                 : "membre"
                                                         }
                                                     />
+                                                </td>
+                                                <td className="px-6 py-4 text-left text-sm">
+                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
+                                                        {member.code_famille || "N/A"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-left text-sm">
+                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-xs font-semibold text-blue-700">
+                                                        {member.code_membre || "N/A"}
+                                                    </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
                                                     <div className="flex items-center justify-center gap-2">

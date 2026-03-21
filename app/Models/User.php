@@ -26,6 +26,7 @@ class User extends Authenticatable
     protected $fillable = [
         // === IDENTIFIANTS DE BASE ===
         'identifier',
+        'code_membre',
         'email',
         'password',
         'remember_token',
@@ -93,6 +94,10 @@ class User extends Authenticatable
             if (empty($user->identifier)) {
                 $user->identifier = static::generateIdentifier($user->nom ?? '', $user->prenom ?? '', $user->date_naissance ?? null);
             }
+            // Générer un `code_membre` automatique si non fourni
+            if (empty($user->code_membre)) {
+                $user->code_membre = static::generateCodeMembre();
+            }
         });
 
         // Empêcher le changement de family_id si déjà défini
@@ -108,6 +113,29 @@ class User extends Authenticatable
                 throw new \Exception('Cannot unlock family_id once locked! User #' . $user->id);
             }
         });
+    }
+
+    /**
+     * Génère un code membre au format A + incrémentation
+     * Ex: A1, A2, A3, ...
+     * Chaque nouvel utilisateur reçoit un nouveau numéro
+     */
+    public static function generateCodeMembre(): string
+    {
+        // Compter le nombre total d'utilisateurs (non supprimés) pour obtenir le prochain numéro
+        $count = static::count();
+        $nextNumber = $count + 1;
+
+        // Générer le code au format A + numéro
+        $code = 'A' . $nextNumber;
+
+        // S'assurer que le code est unique (sécurité supplémentaire)
+        while (static::withTrashed()->where('code_membre', $code)->exists()) {
+            $nextNumber++;
+            $code = 'A' . $nextNumber;
+        }
+
+        return $code;
     }
 
     /**

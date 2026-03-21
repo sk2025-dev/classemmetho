@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
@@ -257,6 +257,12 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/conducteur/annonces/{id}/valider', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'valider'])->name('conducteur.annonces.valider');
         Route::post('/conducteur/annonces/{id}/transmettre', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'transmettreAuPasteur'])->name('conducteur.annonces.transmettre');
         Route::post('/conducteur/annonces/{id}/rejeter', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'rejeter'])->name('conducteur.annonces.rejeter');
+
+        // Routes pour les demandes de transfert (validation par conducteur)
+        Route::get('/conducteur/transferts', [\App\Http\Controllers\Conducteur\TransferController::class, 'index'])->name('conducteur.transferts.index');
+        Route::post('/conducteur/transferts/{id}/approve-source', [\App\Http\Controllers\Conducteur\TransferController::class, 'approveAsSource'])->name('conducteur.transferts.approve_source');
+        Route::post('/conducteur/transferts/{id}/approve-accueil', [\App\Http\Controllers\Conducteur\TransferController::class, 'approveAsAccueil'])->name('conducteur.transferts.approve_accueil');
+        Route::post('/conducteur/transferts/{id}/refuse', [\App\Http\Controllers\Conducteur\TransferController::class, 'refuse'])->name('conducteur.transferts.refuse');
         Route::post('/conducteur/annonces/{id}/publier', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'publier'])->name('conducteur.annonces.publier');
         Route::post('/conducteur/annonces/{id}/archiver', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'archiver'])->name('conducteur.annonces.archiver');
         Route::get('/conducteur/annonces/{id}/fiche', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'fiche'])->name('conducteur.annonces.fiche');
@@ -305,21 +311,21 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/responsable-famille/annonces/{id}', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'update'])->name('responsable_famille.annonces.update');
         Route::delete('/responsable-famille/annonces/{id}', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'destroy'])->name('responsable_famille.annonces.destroy');
 
-        // Routes module Tresorerie (ResponsableFamille)
-        Route::get('/responsable-famille/tresorerie', [ResponsableFamilleTresorerieController::class, 'index'])
-            ->name('responsable_famille.tresorerie.index');
-        Route::post('/responsable-famille/tresorerie/paiements', [ResponsableFamilleTresorerieController::class, 'storePaiement'])
-            ->name('responsable_famille.tresorerie.paiements.store');
-        Route::post('/responsable-famille/tresorerie/paiements/initiate', [ResponsableFamilleTresorerieController::class, 'initiatePaiement'])
-            ->name('responsable_famille.tresorerie.paiements.initiate');
-        Route::post('/responsable-famille/tresorerie/dons', [ResponsableFamilleTresorerieController::class, 'storeDon'])
-            ->name('responsable_famille.tresorerie.dons.store');
-        Route::get('/responsable-famille/tresorerie/paiement/{paiement}/verify', [ResponsableFamilleTresorerieController::class, 'verifyPaiement'])
-            ->name('responsable_famille.tresorerie.paiement.verify');
+        // Route de tableau de bord des transferts
+        Route::get('/responsable-famille/transferts', [\App\Http\Controllers\ResponsableFamille\TransferController::class, 'index'])->name('responsable_famille.transferts.index');
+        // Route de création de demande de transfert
+        Route::post('/responsable-famille/transferts', [\App\Http\Controllers\ResponsableFamille\TransferController::class, 'store'])->name('responsable_famille.transferts.store');
+        // Route de transfert de classe (ancien endpoint pour compatibilité)
+        Route::post('/responsable-famille/transfer', [\App\Http\Controllers\ResponsableFamille\TransferController::class, 'transfer'])->name('responsable_famille.transfer');
+
+        // Props Inertia dans le contrôleur
 
     });
 
     // Tableau de bord Pasteur
+    Route::get('/pasteur/transferts', [\App\Http\Controllers\Pasteur\TransferController::class, 'index'])->name('pasteur.transferts.index');
+    Route::post('/pasteur/transferts', [\App\Http\Controllers\Pasteur\TransferController::class, 'store'])->name('pasteur.transferts.store');
+
     Route::middleware('role:pasteur')->group(function () {
         Route::get('/pasteur/dashboard', [PasteurDashboardController::class, 'index'])->name('pasteur.dashboard');
         // Liste des inscriptions pour le pasteur (module controller)

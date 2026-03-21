@@ -337,6 +337,7 @@ class InscriptionsController extends Controller
                         'first_name' => $member->prenom,
                         'email' => $member->email,
                         'phone' => $member->telephone,
+                        'code_membre' => $member->code_membre,
                         'genre' => $member->genre ?? null,
                         'role' => $member->role,
                         'status' => $this->normalizeUserStatus($member->statut ?? $member->status ?? null),
@@ -382,6 +383,7 @@ class InscriptionsController extends Controller
                         return [
                             'id' => $family->id,
                             'nom' => $family->nom,
+                            'code_famille' => $family->code_famille,
                             'responsable_id' => $family->responsable_id,
                             'responsable' => [
                                 'id' => $family->responsable->id,
@@ -401,6 +403,7 @@ class InscriptionsController extends Controller
                                     'id' => $user->id,
                                     'nom' => $user->nom ?? '',
                                     'prenom' => $user->prenom ?? '',
+                                    'code_membre' => $user->code_membre,
                                     'profile_photo_url' => $user->profile_photo_url
                                         ?: PhotoHelper::getPhotoUrl(
                                             $user->photo_path ?? null,

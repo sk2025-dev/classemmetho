@@ -82,6 +82,8 @@ class InscriptionsController extends Controller
                 'telephone' => $displayTelephone,
                 'classe' => $classe,
                 'ville' => $villeName,
+                'code_famille' => $data['famille']['code_famille'] ?? 'N/A',
+                'code_membre' => $data['responsable']['code_membre'] ?? 'N/A',
                 'created_at' => $inscription->created_at->format('d/m/Y H:i'),
                 'profile_photo_url' => $fullInscription->profile_photo_url
                     ?: PhotoHelper::getPhotoUrl(

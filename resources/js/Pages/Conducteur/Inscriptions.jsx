@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Link, router, useForm, Head, usePage } from "@inertiajs/react";
 import axios from "axios";
 import Select from "react-select";
@@ -1332,12 +1332,23 @@ export default function Inscriptions({
                                 </p>
                             </div>
                         </div>
-                        <Link
-                            href="/conducteur/members/create"
-                            className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition transform hover:scale-[1.02] flex items-center gap-2"
-                        >
-                            <Plus className="w-5 h-5" /> Inscrire un membre
-                        </Link>
+                        <div className="flex gap-3">
+                            <Link
+                                href="/conducteur/members/create"
+                                className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition transform hover:scale-[1.02] flex items-center gap-2"
+                            >
+                                <Plus className="w-5 h-5" /> Inscrire un membre
+                            </Link>
+                            <Link
+                                href="/conducteur/transferts"
+                                className="bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition transform hover:scale-[1.02] flex items-center gap-2"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5V21M16.5 12H3" />
+                                </svg>
+                                Transferts
+                            </Link>
+                        </div>
                     </div>
 
                     {/* STATS RAPIDES (TRANSPARENT DESIGN) */}
@@ -1573,6 +1584,12 @@ export default function Inscriptions({
                                                         Famille
                                                     </th>
                                                     <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                                Code Famille
+                                                    </th>
+                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                        Code Membre
+                                                    </th>
+                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
                                                         Rôle
                                                     </th>
                                                     <th className="p-5 text-xs font-bold uppercase tracking-wider">
@@ -1607,6 +1624,8 @@ export default function Inscriptions({
                                                                             family
                                                                                 .responsable
                                                                                 .nom,
+                                                                        code_famille:
+                                                                            family.code_famille,
                                                                         is_responsable: true,
                                                                     },
                                                                 );
@@ -1637,6 +1656,8 @@ export default function Inscriptions({
                                                                                             .responsable
                                                                                             ?.nom ||
                                                                                         "Famille",
+                                                                                    code_famille:
+                                                                                        family.code_famille,
                                                                                 },
                                                                             );
                                                                         }
@@ -1749,6 +1770,12 @@ export default function Inscriptions({
                                                                                 "Famille"}
                                                                         </span>
                                                                     </div>
+                                                                </td>
+                                                                <td className="p-5 text-slate-600">
+                                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
+                                                                        {member.code_famille ||
+                                                                            "N/A"}
+                                                                    </span>
                                                                 </td>
                                                                 <td className="p-5">
                                                                     <span
@@ -1933,6 +1960,9 @@ export default function Inscriptions({
                                                 Famille
                                             </th>
                                             <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                Code Famille
+                                            </th>
+                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
                                                 Email
                                             </th>
                                             <th className="p-5 text-xs font-bold uppercase tracking-wider">
@@ -1962,7 +1992,7 @@ export default function Inscriptions({
                                         {filteredItems.length === 0 ? (
                                             <tr>
                                                 <td
-                                                    colSpan="11"
+                                                    colSpan="12"
                                                     className="p-12 text-center text-slate-500"
                                                 >
                                                     Aucun membre créé.
@@ -2045,6 +2075,13 @@ export default function Inscriptions({
                                                                         : member.famille_id
                                                                           ? `Famille #${member.famille_id}`
                                                                           : "Aucune famille"}
+                                                                </td>
+                                                                <td className="p-5 text-slate-600">
+                                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
+                                                                        {memberFamily
+                                                                            ? memberFamily.code_famille || "N/A"
+                                                                            : "N/A"}
+                                                                    </span>
                                                                 </td>
                                                                 <td className="p-5 text-slate-600">
                                                                     {
@@ -2280,11 +2317,14 @@ export default function Inscriptions({
                                                 Fonction
                                             </th>
                                             <th className="p-6 text-sm font-bold uppercase tracking-wider">
-                                                Rôle
-                                            </th>
-                                            <th className="p-6 text-sm font-bold uppercase tracking-wider">
-                                                Date de création
-                                            </th>
+                                                        Rôle
+                                                    </th>
+                                                    <th className="p-6 text-sm font-bold uppercase tracking-wider">
+                                                        Code Membre
+                                                    </th>
+                                                    <th className="p-6 text-sm font-bold uppercase tracking-wider">
+                                                        Date de création
+                                                    </th>
                                             <th className="p-6 text-sm font-bold uppercase tracking-wider">
                                                 {activeTab === "rejected"
                                                     ? "Refusé par"
@@ -2421,6 +2461,11 @@ export default function Inscriptions({
                                                                             "conducteur"
                                                                           ? "Conducteur"
                                                                           : item.role}
+                                                                </span>
+                                                            </td>
+                                                            <td className="p-6 text-slate-600">
+                                                                <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
+                                                                    {item.code_membre || 'N/A'}
                                                                 </span>
                                                             </td>
                                                             <td className="p-6 text-sm text-slate-600">

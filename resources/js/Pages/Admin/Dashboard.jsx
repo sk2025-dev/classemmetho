@@ -138,14 +138,6 @@ export default function Dashboard({ role, pendingInscriptions = 0, auth }) {
             bg: "bg-purple-100",
         },
         {
-            title: "Codes Familles",
-            desc: "Génération & recherche par code",
-            icon: "annuaire",
-            href: "/admin/families",
-            color: "text-emerald-600",
-            bg: "bg-emerald-100",
-        },
-        {
             title: "Sondage",
             desc: "Participez aux sondages",
             icon: "sondage",

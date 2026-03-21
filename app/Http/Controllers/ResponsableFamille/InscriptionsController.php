@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Family;
+use App\Models\Classe; // AJOUT : Import du modèle Classe
 use App\Helpers\PhotoHelper;
 
 class InscriptionsController extends Controller
@@ -17,6 +18,10 @@ class InscriptionsController extends Controller
         // Récupérer la famille du responsable
         $family = Family::where('responsable_id', $user->id)
             ->first();
+
+        // AJOUT : Récupérer toutes les classes pour le modal de transfert
+        // On sélectionne seulement l'ID et le nom pour alléger la requête
+        $classes = Classe::orderBy('nom')->get(['id', 'nom']);
 
         // Statistiques de la famille
         $familyStats = [];
@@ -45,6 +50,7 @@ class InscriptionsController extends Controller
             $familyData = [
                 'id' => $family->id,
                 'nom' => $family->nom,
+                'code_famille' => $family->code_famille,
                 'email' => $family->email,
                 'telephone' => $family->telephone,
                 'adresse' => $family->adresse,
@@ -71,6 +77,7 @@ class InscriptionsController extends Controller
                     'prenom' => $m->prenom,
                     'email' => $m->email,
                     'telephone' => $m->telephone,
+                    'code_membre' => $m->code_membre,
                     'created_at' => optional($m->created_at)->format('d/m/Y H:i'),
                     'updated_at' => optional($m->updated_at ?? $m->created_at)->format('d/m/Y H:i'),
                     'genre' => $m->genre,
@@ -90,6 +97,7 @@ class InscriptionsController extends Controller
             'family' => $familyData,
             'familyStats' => $familyStats,
             'members' => $members,
+            'classes' => $classes, // AJOUT : On passe les classes à la vue
         ]);
     }
 }

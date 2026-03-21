@@ -2,10 +2,6 @@ import React, { useState } from "react";
 import { Link, router } from "@inertiajs/react";
 import {
     Users,
-    Mail,
-    Phone,
-    Calendar,
-    MapPin,
     ArrowLeft,
     Download,
     Eye,
@@ -14,13 +10,14 @@ import {
     X,
     CheckCircle,
     Trash2,
+    Move,
+    ArrowRightCircle,
 } from "lucide-react";
 import ProfilePhoto from "@/Components/ProfilePhoto";
 
-// Composant Badge pour le Rôle avec style moderne
+// Composant Badge pour le Rôle
 const StatusBadge = ({ role }) => {
     const isResp = role === "responsable";
-
     return (
         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold shadow-sm transition-transform hover:scale-105
             ${isResp
@@ -49,10 +46,13 @@ const GenreBadge = ({ genre }) => {
     );
 };
 
-export default function Inscriptions({ family, members, familyStats, auth }) {
-    const [expandedMember, setExpandedMember] = useState(null);
+export default function Inscriptions({ family, members, familyStats, auth, classes = [] }) {
+    // États principaux
     const [searchTerm, setSearchTerm] = useState("");
 
+
+
+    // Filtrage pour la liste principale (Tableau)
     const filteredMembers = members.filter(
         (member) =>
             member.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -86,6 +86,8 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
         document.body.removeChild(link);
     };
 
+
+
     return (
         <div className="min-h-screen" style={{
             background: "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
@@ -111,7 +113,7 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                     </p>
                 </div>
 
-                {/* Stats Cards - Style Glassmorphism */}
+                {/* Stats Cards */}
                 {familyStats && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                         {[
@@ -149,7 +151,17 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                         />
                     </div>
 
-                    <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
+                    <div className="flex items-center gap-2 w-full lg:w-auto justify-end flex-wrap">
+                        {/* Bouton Transfert */}
+                        <button
+                            onClick={() => router.get('/responsable-famille/transferts')}
+                            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg transition-all text-sm shadow-sm"
+                            title="Transférer"
+                        >
+                            <Move className="w-4 h-4" />
+                            <span className="hidden sm:inline">Transférer</span>
+                        </button>
+
                         <button
                             onClick={() => router.get('/responsable-famille/family/edit')}
                             className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-200 hover:border-gray-400 transition-all text-sm shadow-sm"
@@ -163,8 +175,6 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                             disabled={!family}
                             className="flex items-center justify-center gap-2 px-4 py-2.5 text-white font-medium rounded-lg transition-all text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             style={{ backgroundColor: "#1E40AF" }}
-                            onMouseEnter={(e) => family && (e.target.style.backgroundColor = "#1a3a8a")}
-                            onMouseLeave={(e) => family && (e.target.style.backgroundColor = "#1E40AF")}
                         >
                             <Plus className="w-4 h-4" />
                             <span className="hidden sm:inline">Ajouter</span>
@@ -174,8 +184,6 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                             onClick={exportToCSV}
                             className="flex items-center justify-center gap-2 px-4 py-2.5 text-white font-medium rounded-lg transition-all text-sm shadow-sm"
                             style={{ backgroundColor: "#B6C01A" }}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = "#a8b01a"}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = "#B6C01A"}
                             title="Exporter CSV"
                         >
                             <Download className="w-4 h-4" />
@@ -200,6 +208,8 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                                         <th className="px-6 py-4 text-left">Profession</th>
                                         <th className="px-6 py-4 text-left">Fonction Église</th>
                                         <th className="px-6 py-4 text-left">Rôle</th>
+                                        <th className="px-6 py-4 text-left">Code Famille</th>
+                                        <th className="px-6 py-4 text-left">Code Membre</th>
                                         <th className="px-6 py-4 text-center">Détails</th>
                                     </tr>
                                 </thead>
@@ -209,13 +219,11 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                                             <td className="px-6 py-4 text-left text-sm font-medium text-gray-600">
                                                 #{member.id}
                                             </td>
-                                            <td className="px-6 py-4 text-left text-sm font-medium text-gray-900 flex items-center gap-3">
-                                                <ProfilePhoto 
-                                                    user={member} 
-                                                    size="sm" 
-                                                    rounded={true}
-                                                />
-                                                <span>{member.prenom} {member.nom}</span>
+                                            <td className="px-6 py-4 text-left text-sm font-medium text-gray-900">
+                                                <div className="flex items-center gap-3">
+                                                    <ProfilePhoto user={member} size="sm" rounded={true} />
+                                                    <span>{member.prenom} {member.nom}</span>
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4 text-left text-sm">
                                                 <GenreBadge genre={member.genre} />
@@ -237,6 +245,16 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                                             </td>
                                             <td className="px-6 py-4 text-left text-sm">
                                                 <StatusBadge role={member.is_responsable ? "responsable" : "membre"} />
+                                            </td>
+                                            <td className="px-6 py-4 text-left text-sm">
+                                                <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
+                                                    {family?.code_famille || "N/A"}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-left text-sm">
+                                                <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
+                                                    {member.code_membre || 'N/A'}
+                                                </span>
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <div className="flex items-center justify-center gap-2">
@@ -283,7 +301,7 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                                 Votre famille n'a pas encore d'autres membres enregistrés.
                             </p>
                             <Link
-                                href="/responsable-famille/members/store?family_id=${family.id}`, formData,"
+                                href={`/responsable-famille/members/create?family_id=${family?.id}`}
                                 className="inline-block px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                             >
                                 Inscrire un Membre

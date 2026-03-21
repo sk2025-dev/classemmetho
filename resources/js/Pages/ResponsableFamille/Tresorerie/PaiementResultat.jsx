@@ -94,7 +94,14 @@ export default function PaiementResultat({
                     >
                         <ArrowLeft size={18} />
                     </Link>
-                    <h1 style={{ color: "white", fontSize: 20, fontWeight: 700, margin: 0 }}>
+                    <h1
+                        style={{
+                            color: "white",
+                            fontSize: 20,
+                            fontWeight: 700,
+                            margin: 0,
+                        }}
+                    >
                         Résultat de paiement
                     </h1>
                 </div>
@@ -208,7 +215,14 @@ export default function PaiementResultat({
                         </button>
 
                         {showDetails && (
-                            <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+                            <div
+                                style={{
+                                    marginTop: 16,
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 12,
+                                }}
+                            >
                                 {paiement.member_name && (
                                     <div
                                         style={{
@@ -218,8 +232,15 @@ export default function PaiementResultat({
                                             borderBottom: "0.5px solid #eee",
                                         }}
                                     >
-                                        <span style={{ color: "#888" }}>Membre</span>
-                                        <span style={{ fontWeight: 600, color: "#1a1a2e" }}>
+                                        <span style={{ color: "#888" }}>
+                                            Membre
+                                        </span>
+                                        <span
+                                            style={{
+                                                fontWeight: 600,
+                                                color: "#1a1a2e",
+                                            }}
+                                        >
                                             {paiement.member_name}
                                         </span>
                                     </div>
@@ -234,8 +255,15 @@ export default function PaiementResultat({
                                             borderBottom: "0.5px solid #eee",
                                         }}
                                     >
-                                        <span style={{ color: "#888" }}>Cotisation</span>
-                                        <span style={{ fontWeight: 600, color: "#1a1a2e" }}>
+                                        <span style={{ color: "#888" }}>
+                                            Cotisation
+                                        </span>
+                                        <span
+                                            style={{
+                                                fontWeight: 600,
+                                                color: "#1a1a2e",
+                                            }}
+                                        >
                                             {paiement.cotisation_nom}
                                         </span>
                                     </div>
@@ -250,8 +278,15 @@ export default function PaiementResultat({
                                             borderBottom: "0.5px solid #eee",
                                         }}
                                     >
-                                        <span style={{ color: "#888" }}>Année</span>
-                                        <span style={{ fontWeight: 600, color: "#1a1a2e" }}>
+                                        <span style={{ color: "#888" }}>
+                                            Année
+                                        </span>
+                                        <span
+                                            style={{
+                                                fontWeight: 600,
+                                                color: "#1a1a2e",
+                                            }}
+                                        >
                                             {paiement.year}
                                         </span>
                                     </div>
@@ -266,7 +301,9 @@ export default function PaiementResultat({
                                             borderBottom: "0.5px solid #eee",
                                         }}
                                     >
-                                        <span style={{ color: "#888" }}>Référence</span>
+                                        <span style={{ color: "#888" }}>
+                                            Référence
+                                        </span>
                                         <span
                                             style={{
                                                 fontWeight: 600,
@@ -286,8 +323,15 @@ export default function PaiementResultat({
                                             justifyContent: "space-between",
                                         }}
                                     >
-                                        <span style={{ color: "#888" }}>Date</span>
-                                        <span style={{ fontWeight: 600, color: "#1a1a2e" }}>
+                                        <span style={{ color: "#888" }}>
+                                            Date
+                                        </span>
+                                        <span
+                                            style={{
+                                                fontWeight: 600,
+                                                color: "#1a1a2e",
+                                            }}
+                                        >
                                             {paiement.date_paiement}
                                         </span>
                                     </div>
