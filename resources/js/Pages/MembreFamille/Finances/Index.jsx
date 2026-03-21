@@ -171,10 +171,14 @@ export default function MembreFamilleFinances({
 
     const dueCotisations = cotisations.filter((c) => c.du > 0);
     const selectedCotisation =
-        dueCotisations.find((c) => String(c.id) === String(selectedCotisationId)) ||
+        dueCotisations.find(
+            (c) => String(c.id) === String(selectedCotisationId),
+        ) ||
         dueCotisations[0] ||
         null;
-    const selectedMontant = selectedCotisation ? Number(selectedCotisation.du) : 0;
+    const selectedMontant = selectedCotisation
+        ? Number(selectedCotisation.du)
+        : 0;
 
     const totalCotisations = cotisations.reduce((sum, c) => sum + c.du, 0);
 
@@ -184,7 +188,11 @@ export default function MembreFamilleFinances({
     };
 
     const handleSubmitPaiement = async () => {
-        if (totalCotisations <= 0 || isSubmittingPayment || !selectedCotisation) {
+        if (
+            totalCotisations <= 0 ||
+            isSubmittingPayment ||
+            !selectedCotisation
+        ) {
             return;
         }
 
@@ -199,20 +207,23 @@ export default function MembreFamilleFinances({
 
             const response =
                 paymentMethod === "MOBILE_MONEY"
-                    ? await fetch("/membre-famille/finances/paiements/initiate", {
-                          method: "POST",
-                          headers: {
-                              "Content-Type": "application/json",
-                              "X-CSRF-TOKEN": getCsrfToken(),
-                              Accept: "application/json",
+                    ? await fetch(
+                          "/membre-famille/finances/paiements/initiate",
+                          {
+                              method: "POST",
+                              headers: {
+                                  "Content-Type": "application/json",
+                                  "X-CSRF-TOKEN": getCsrfToken(),
+                                  Accept: "application/json",
+                              },
+                              credentials: "same-origin",
+                              body: JSON.stringify({
+                                  ...basePayload,
+                                  mode_paiement: "MOBILE_MONEY",
+                                  provider: mobileProvider,
+                              }),
                           },
-                          credentials: "same-origin",
-                          body: JSON.stringify({
-                              ...basePayload,
-                              mode_paiement: "MOBILE_MONEY",
-                              provider: mobileProvider,
-                          }),
-                      })
+                      )
                     : await fetch("/membre-famille/finances/paiements", {
                           method: "POST",
                           headers: {
@@ -558,17 +569,32 @@ export default function MembreFamilleFinances({
                                                     Type de cotisation
                                                 </label>
                                                 <select
-                                                    value={selectedCotisation?.id ?? ""}
+                                                    value={
+                                                        selectedCotisation?.id ??
+                                                        ""
+                                                    }
                                                     onChange={(e) =>
-                                                        setSelectedCotisationId(e.target.value)
+                                                        setSelectedCotisationId(
+                                                            e.target.value,
+                                                        )
                                                     }
                                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                                                 >
-                                                    {dueCotisations.map((cot) => (
-                                                        <option key={cot.id} value={cot.id}>
-                                                            {cot.nom} — {(cot.du / 1000).toFixed(0)}K F CFA
-                                                        </option>
-                                                    ))}
+                                                    {dueCotisations.map(
+                                                        (cot) => (
+                                                            <option
+                                                                key={cot.id}
+                                                                value={cot.id}
+                                                            >
+                                                                {cot.nom} —{" "}
+                                                                {(
+                                                                    cot.du /
+                                                                    1000
+                                                                ).toFixed(0)}
+                                                                K F CFA
+                                                            </option>
+                                                        ),
+                                                    )}
                                                 </select>
                                             </div>
 
@@ -580,12 +606,26 @@ export default function MembreFamilleFinances({
                                                     <select
                                                         value={selectedYear}
                                                         onChange={(e) =>
-                                                            setSelectedYear(Number(e.target.value))
+                                                            setSelectedYear(
+                                                                Number(
+                                                                    e.target
+                                                                        .value,
+                                                                ),
+                                                            )
                                                         }
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                                                     >
-                                                        {[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1].map((y) => (
-                                                            <option key={y} value={y}>
+                                                        {[
+                                                            new Date().getFullYear() -
+                                                                1,
+                                                            new Date().getFullYear(),
+                                                            new Date().getFullYear() +
+                                                                1,
+                                                        ].map((y) => (
+                                                            <option
+                                                                key={y}
+                                                                value={y}
+                                                            >
                                                                 {y}
                                                             </option>
                                                         ))}
@@ -675,26 +715,51 @@ export default function MembreFamilleFinances({
                                                     ))}
                                                 </div>
 
-                                                {paymentMethod === "MOBILE_MONEY" && (
+                                                {paymentMethod ===
+                                                    "MOBILE_MONEY" && (
                                                     <div className="mt-4 grid grid-cols-3 gap-3">
                                                         {[
-                                                            { id: "wave", label: "Wave", logo: "/images/wave.jpg" },
-                                                            { id: "orange", label: "Orange", logo: "/images/OM-logo.jpg" },
-                                                            { id: "mtn", label: "MTN", logo: "/images/mtn-logo.png" },
+                                                            {
+                                                                id: "wave",
+                                                                label: "Wave",
+                                                                logo: "/images/wave.jpg",
+                                                            },
+                                                            {
+                                                                id: "orange",
+                                                                label: "Orange",
+                                                                logo: "/images/OM-logo.jpg",
+                                                            },
+                                                            {
+                                                                id: "mtn",
+                                                                label: "MTN",
+                                                                logo: "/images/mtn-logo.png",
+                                                            },
                                                         ].map((provider) => (
                                                             <button
-                                                                key={provider.id}
+                                                                key={
+                                                                    provider.id
+                                                                }
                                                                 type="button"
-                                                                onClick={() => setMobileProvider(provider.id)}
+                                                                onClick={() =>
+                                                                    setMobileProvider(
+                                                                        provider.id,
+                                                                    )
+                                                                }
                                                                 className={`p-3 rounded-lg border transition ${mobileProvider === provider.id ? "border-teal-600 bg-teal-50" : "border-gray-300 bg-white"}`}
                                                             >
                                                                 <img
-                                                                    src={provider.logo}
-                                                                    alt={provider.label}
+                                                                    src={
+                                                                        provider.logo
+                                                                    }
+                                                                    alt={
+                                                                        provider.label
+                                                                    }
                                                                     className="h-8 mx-auto object-contain"
                                                                 />
                                                                 <div className="text-xs font-semibold mt-2 text-gray-700">
-                                                                    {provider.label}
+                                                                    {
+                                                                        provider.label
+                                                                    }
                                                                 </div>
                                                             </button>
                                                         ))}
@@ -710,7 +775,8 @@ export default function MembreFamilleFinances({
                                                 <CreditCard size={20} />{" "}
                                                 {isSubmittingPayment
                                                     ? "Traitement..."
-                                                    : paymentMethod === "MOBILE_MONEY"
+                                                    : paymentMethod ===
+                                                        "MOBILE_MONEY"
                                                       ? `Payer avec ${mobileProvider.toUpperCase()}`
                                                       : "Enregistrer le paiement"}
                                             </button>

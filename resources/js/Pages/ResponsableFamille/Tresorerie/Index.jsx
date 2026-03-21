@@ -835,10 +835,7 @@ function TabPaiement({ membres, cotisations, familyInfo }) {
                 );
                 if (!res.ok) {
                     const error = await res.json();
-                    alert(
-                        error.message ||
-                            "Erreur initiation paiement"
-                    );
+                    alert(error.message || "Erreur initiation paiement");
                     setIsSubmitting(false);
                     return;
                 }
@@ -864,7 +861,9 @@ function TabPaiement({ membres, cotisations, familyInfo }) {
                         payMethod === "especes" ? cashForm.fonction : null,
                     date_remise: payMethod === "especes" ? cashForm.date : null,
                     reference_virement:
-                        payMethod === "virement" ? virementForm.reference : null,
+                        payMethod === "virement"
+                            ? virementForm.reference
+                            : null,
                     banque_emettrice:
                         payMethod === "virement" ? virementForm.banque : null,
                 };
@@ -984,7 +983,13 @@ function TabPaiement({ membres, cotisations, familyInfo }) {
                         value={montant}
                         disabled
                     />
-                    <p style={{ fontSize: 11, color: "#888", margin: "4px 0 0" }}>
+                    <p
+                        style={{
+                            fontSize: 11,
+                            color: "#888",
+                            margin: "4px 0 0",
+                        }}
+                    >
                         Montant fixe selon la cotisation
                     </p>
                 </div>
@@ -1550,7 +1555,8 @@ function TabPaiement({ membres, cotisations, familyInfo }) {
                 <div
                     style={{
                         padding: "10px 14px",
-                        background: payMethod === "mobile" ? "#e6f1fb" : "#e6f1fb",
+                        background:
+                            payMethod === "mobile" ? "#e6f1fb" : "#e6f1fb",
                         borderRadius: 10,
                         fontSize: 12,
                         color: "#185fa5",
@@ -1564,7 +1570,6 @@ function TabPaiement({ membres, cotisations, familyInfo }) {
         </div>
     );
 }
-
 
 function TabDons({ membres, donsFamille }) {
     const [selectedCampagne, setSelectedCampagne] = useState(null);
@@ -1966,7 +1971,8 @@ function TabHistorique({ historique, membres, cotisations, onOpenReceipt }) {
             historique.filter((p) => {
                 const byType = !filterType || p.type === filterType;
                 const byMembre = !filterMembre || p.membre === filterMembre;
-                const byStatus = !filterStatus || p.payment_status === filterStatus;
+                const byStatus =
+                    !filterStatus || p.payment_status === filterStatus;
                 return byType && byMembre && byStatus;
             }),
         [historique, filterType, filterMembre, filterStatus],
@@ -2115,11 +2121,15 @@ function TabHistorique({ historique, membres, cotisations, onOpenReceipt }) {
                     </thead>
                     <tbody>
                         {filtered.map((p) => {
-                            const statusBadge = getStatusBadge(p.payment_status);
+                            const statusBadge = getStatusBadge(
+                                p.payment_status,
+                            );
                             return (
                                 <tr
                                     key={p.id}
-                                    style={{ borderBottom: "0.5px solid #f5f5f5" }}
+                                    style={{
+                                        borderBottom: "0.5px solid #f5f5f5",
+                                    }}
                                 >
                                     <td
                                         style={{
@@ -2721,4 +2731,3 @@ export default function ResponsableFamilleFinances({
         </div>
     );
 }
-
