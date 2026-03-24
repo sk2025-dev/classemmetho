@@ -24,6 +24,7 @@ use App\Http\Controllers\Admin\ClasseController;
 use App\Http\Controllers\Admin\FonctionController;
 use App\Http\Controllers\Admin\NotificationsController;
 use App\Http\Controllers\Admin\AnnonceController;
+use App\Http\Controllers\Admin\ProgrammesController;
 use App\Http\Controllers\Admin\TresorerieController as AdminTresorerieController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\LiturgieController as AdminLiturgieController;
@@ -69,9 +70,9 @@ Route::get('/login', function () {
 
 Route::post('/login', [\App\Http\Controllers\Auth\LoginController::class, 'login'])->name('login.attempt');
 
-// Routes authentifiÃ©es
+// Routes authentifiées
 Route::middleware(['auth'])->group(function () {
-    // Route de dÃ©connexion
+    // Route de déconnexion
     Route::post('/logout', [\App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
     // Profil utilisateur
     Route::get('/profile', [\App\Http\Controllers\Profile\ProfileController::class, 'show'])->name('profile.show');
@@ -80,7 +81,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/profile/password', [\App\Http\Controllers\Profile\ProfileController::class, 'changePassword'])->name('profile.password');
     Route::post('/profile/signature', [\App\Http\Controllers\Profile\ProfileController::class, 'updateSignature'])->name('profile.signature');
 
-    // Route gÃ©nÃ©rique /dashboard redirige selon le rÃ´le connectÃ©
+    // Route générique /dashboard redirige selon le rôle connecté
     Route::get('/dashboard', function () {
         $user = Auth::user();
         if (!$user) return redirect()->route('login');
@@ -102,7 +103,7 @@ Route::middleware(['auth'])->group(function () {
     })->name('dashboard');
 });
 
-// Routes d'inscription personnalisÃ©es
+// Routes d'inscription personnalisées
 Route::get('/register/famille', function () {
     return Inertia::render('ResponsableFamille/RegisterFamille');
 })->name('register.famille');
@@ -126,7 +127,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
         ->middleware('verified');
 });
 
-// Routes authentifiÃ©es
+// Routes authentifiées
 Route::middleware(['auth'])->group(function () {
     // Tableau de bord Admin
     Route::middleware('role:admin')->group(function () {
@@ -134,9 +135,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/inscriptions', [\App\Http\Controllers\Admin\InscriptionsController::class, 'index'])->name('admin.inscriptions');
         Route::get('/admin/inscriptions/{id}/approval-log', [\App\Http\Controllers\Admin\InscriptionApprovalController::class, 'approvalLog'])->name('admin.inscriptions.approval_log');
         Route::get('/admin/inscriptions/type-selection', [\App\Http\Controllers\Admin\InscriptionsController::class, 'typeSelection'])->name('admin.inscriptions.type-selection');
-        // Route pour importer via Excel (Admin - AuthentifiÃ©)
+        // Route pour importer via Excel (Admin - Authentifié)
         Route::post('/admin/inscriptions/import-excel', [ExcelImportController::class, 'import'])->name('admin.inscriptions.import-excel');
-        // Routes pour crÃ©er inscriptions directement
+        // Routes pour créer inscriptions directement
         Route::get('/admin/inscriptions/famille/create', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'createFamilyForm'])->name('admin.inscriptions.famille.create');
         Route::get('/admin/inscriptions/conducteur/create', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'createConductorForm'])->name('admin.inscriptions.conducteur.create');
         Route::get('/admin/inscriptions/pasteur/create', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'createPastorForm'])->name('admin.inscriptions.pasteur.create');
@@ -184,7 +185,7 @@ Route::middleware(['auth'])->group(function () {
 
 
         // --- Tableau de bord complet (Votre AdministrationController) ---
-        // J'utilise 'administration' comme nom de route pour Ã©viter conflit avec 'dashboard'
+        // J'utilise 'administration' comme nom de route pour éviter conflit avec 'dashboard'
         Route::get('/administration', [AdministrationController::class, 'index'])->name('administration');
 
         // --- Actions Legacy (Approve/Reject) ---
@@ -207,15 +208,20 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/admin/membres/{id}', [AdministrationController::class, 'destroyMembre'])->name('admin.membres.destroy');
         Route::patch('/admin/membres/{id}/status', [UserManagementController::class, 'updateStatus'])->name('admin.membres.status');
 
-        // Routes pour les dÃ©tails
+        // Routes pour les détails
         Route::get('/inscriptions/{id}', [AdministrationController::class, 'getInscriptionDetails'])
             ->name('admin.inscriptions.details');
         Route::get('/actes/{id}', [AdministrationController::class, 'getActeDetails'])
             ->name('admin.actes.details');
 
-        // Route pour mettre Ã jour le statut
+        // Route pour mettre à jour le statut
         Route::put('/status/{id}/{type}', [AdministrationController::class, 'updateStatus'])
             ->name('admin.updateStatus');
+
+        // ===== PROGRAMMES =====
+        Route::get('/admin/programmes', [ProgrammesController::class, 'index'])->name('admin.programmes');
+        Route::post('/admin/programmes/agenda', [ProgrammesController::class, 'storeAgenda'])->name('admin.programmes.agenda');
+        Route::post('/admin/programmes/event', [ProgrammesController::class, 'storeEvent'])->name('admin.programmes.event');
     });
 
     // Tableau de bord Conducteur
@@ -232,11 +238,11 @@ Route::middleware(['auth'])->group(function () {
         })->name('conducteur.register');
         Route::post('/conducteur/register', [RegisterMemberController::class, 'store'])->name('conducteur.register.store');
 
-        // Formulaire de crÃ©ation de membre/responsable de famille
+        // Formulaire de création de membre/responsable de famille
         Route::get('/conducteur/members/create', [RegisterMemberController::class, 'create'])->name('conducteur.members.create');
         Route::post('/conducteur/members', [RegisterMemberController::class, 'store'])->name('conducteur.members.store');
 
-        // Endpoint simplifiÃ© pour ajouter rapidement un simple membre
+        // Endpoint simplifié pour ajouter rapidement un simple membre
         Route::post('/conducteur/quick-member', [QuickMemberController::class, 'store'])->name('conducteur.quick_member.store');
 
         Route::put('/conducteur/members/{memberId}', [ConducteurInscriptionsController::class, 'update'])->name('conducteur.members.update');
@@ -248,7 +254,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/conducteur/inscriptions/{inscriptionId}', [ConducteurInscriptionsController::class, 'updateInscription'])->name('conducteur.inscriptions.update');
         Route::delete('/conducteur/inscriptions/{memberId}', [ConducteurInscriptionsController::class, 'destroy'])->name('conducteur.inscriptions.destroy');
 
-        // Endpoint: rÃ©cupÃ©rer/crÃ©er UserSacrement pour un utilisateur
+        // Endpoint: récupérer/créer UserSacrement pour un utilisateur
         Route::get('/users/{id}/sacrements', [\App\Http\Controllers\UserSacrementController::class, 'show'])->name('users.sacrements');
 
         // Routes module Actes Liturgiques (Conducteur)
@@ -352,7 +358,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/pasteur/inscriptions', [\App\Http\Controllers\Pasteur\InscriptionsController::class, 'index'])
             ->name('pasteur.inscriptions');
 
-        // Routes pasteur pour gÃ©rer sa famille et ses membres
+        // Routes pasteur pour gérer sa famille et ses membres
         Route::get('/pasteur/family/edit', [\App\Http\Controllers\Pasteur\FamilyController::class, 'edit'])->name('pasteur.family.edit');
         Route::post('/pasteur/family/update', [\App\Http\Controllers\Pasteur\FamilyController::class, 'update'])->name('pasteur.family.update');
         Route::get('/pasteur/members/create', [\App\Http\Controllers\Pasteur\MemberController::class, 'create'])->name('pasteur.members.create');

@@ -157,7 +157,7 @@ export default function Dashboard({ role, pendingInscriptions = 0, auth }) {
             title: "Programme d'Activité",
             desc: "Calendrier des événements",
             icon: "programme",
-            href: "/admin/activites",
+            href: "/admin/programmes",
             color: "text-red-600",
             bg: "bg-red-100",
         },
