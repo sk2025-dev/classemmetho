@@ -10,6 +10,7 @@ use App\Models\ClassTransferRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class TransferController extends Controller
@@ -52,10 +53,14 @@ class TransferController extends Controller
                         'id' => $transfer->sourceClass->id,
                         'nom' => $transfer->sourceClass->nom,
                     ],
-                    'classe_cible' => [
+                    'classe_cible' => $transfer->targetClass ? [
                         'id' => $transfer->targetClass->id,
                         'nom' => $transfer->targetClass->nom,
-                    ],
+                    ] : null,
+                    'external_destination' => $transfer->destination_city
+                        ? trim($transfer->destination_city . ($transfer->destination_country ? " • {$transfer->destination_country}" : ''))
+                        : null,
+                    'destination_note' => $transfer->destination_note,
                     'created_at' => $transfer->created_at->format('Y-m-d'),
                     'validated_source_by' => $transfer->validatedBySource ? $transfer->validatedBySource->nom . ' ' . $transfer->validatedBySource->prenom : null,
                     'validated_source_at' => $transfer->validated_by_source_at ? $transfer->validated_by_source_at->format('Y-m-d') : null,
@@ -94,9 +99,17 @@ class TransferController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'type' => 'required|in:member,family',
+            'type' => ['required', Rule::in(['member', 'family', 'external'])],
             'user_id' => 'nullable|integer|exists:users,id',
-            'target_class_id' => 'required|integer|exists:classes,id',
+            'target_class_id' => [
+                Rule::requiredIf(fn () => $request->input('type') !== 'external'),
+                'nullable',
+                'integer',
+                'exists:classes,id',
+            ],
+            'destination_city' => 'required_if:type,external|string|max:255',
+            'destination_country' => 'required_if:type,external|string|max:255',
+            'destination_note' => 'nullable|string|max:500',
             'reason' => 'nullable|string|max:500',
         ]);
 
@@ -127,7 +140,7 @@ class TransferController extends Controller
 
                 $sourceClassId = $member->classe_id;
             } else {
-                // Pour une demande familiale, utiliser la classe du responsable comme référence
+                // Pour les demandes familiales ou externes, utiliser la classe du responsable comme référence
                 $sourceClassId = $user->classe_id;
             }
 
@@ -136,9 +149,12 @@ class TransferController extends Controller
                 'family_id' => $user->family_id,
                 'user_id' => $validated['type'] === 'member' ? $validated['user_id'] : null,
                 'source_class_id' => $sourceClassId,
-                'target_class_id' => $validated['target_class_id'],
+                'target_class_id' => $validated['type'] === 'external' ? null : $validated['target_class_id'],
                 'type' => $validated['type'],
                 'reason' => $validated['reason'] ?? null,
+                'destination_city' => $validated['destination_city'] ?? null,
+                'destination_country' => $validated['destination_country'] ?? null,
+                'destination_note' => $validated['destination_note'] ?? null,
                 'status' => 'EN_ATTENTE_SOURCE',
                 'reference' => ClassTransferRequest::generateReference(),
                 'created_by_id' => $user->id,

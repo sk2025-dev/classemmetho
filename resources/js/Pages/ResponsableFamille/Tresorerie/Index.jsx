@@ -217,7 +217,7 @@ const FALLBACK_NOTIFICATIONS = [
    HELPERS
 ───────────────────────────────────────── */
 const fmt = (n) => new Intl.NumberFormat("fr-FR").format(n);
-const fmtK = (n) => `${Math.round(n / 1000)}K`;
+const fmtCurrency = (n) => `${fmt(n)} F`;
 
 const getCsrfToken = () =>
     document
@@ -720,7 +720,7 @@ function TabMembres({ membres }) {
                                         color: "#e24b4a",
                                     }}
                                 >
-                                    {fmtK(m.cotisationDue)}
+                                    {fmtCurrency(m.cotisationDue)}
                                 </td>
                                 <td
                                     style={{
@@ -729,7 +729,7 @@ function TabMembres({ membres }) {
                                         color: "#1d9e75",
                                     }}
                                 >
-                                    {fmtK(m.paiements)}
+                                    {fmtCurrency(m.paiements)}
                                 </td>
                                 <td style={{ padding: "11px 12px" }}>
                                     <Badge
@@ -2924,7 +2924,7 @@ function TabHistorique({ historique, membres, cotisations, onOpenReceipt }) {
                                             color: "#3b2a8a",
                                         }}
                                     >
-                                        {fmtK(p.montant)}
+                                        {fmtCurrency(p.montant)}
                                     </td>
                                     <td
                                         style={{
@@ -3342,7 +3342,7 @@ export default function ResponsableFamilleFinances({
                     {[
                         {
                             label: "Cotisations payées",
-                            value: `${fmtK(totalPaid)}`,
+                            value: `${fmtCurrency(totalPaid)}`,
                             color: "#1d9e75",
                             border: "#1d9e75",
                             sub: "Famille entière",
@@ -3350,7 +3350,7 @@ export default function ResponsableFamilleFinances({
                         },
                         {
                             label: "À payer",
-                            value: `${fmtK(totalDues)}`,
+                            value: `${fmtCurrency(totalDues)}`,
                             color: totalDues > 0 ? "#e24b4a" : "#185fa5",
                             border: totalDues > 0 ? "#e24b4a" : "#185fa5",
                             sub: totalDues > 0 ? "Action requise" : "À jour ✓",
@@ -3365,7 +3365,7 @@ export default function ResponsableFamilleFinances({
                         },
                         {
                             label: "Dons collectés",
-                            value: `${fmtK(totalDons)}`,
+                            value: `${fmtCurrency(totalDons)}`,
                             color: "#7f77dd",
                             border: "#7f77dd",
                             sub: "Solidarité familiale",

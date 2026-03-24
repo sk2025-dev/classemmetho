@@ -304,7 +304,7 @@ const TransferCard = ({ transfer, onApprove, onRefuse, delay = 0 }) => {
             </div>
             <div style={{ flex:1, minWidth:0, background:accentLight, border:`1px solid ${accentMid}`, borderRadius:8, padding:'7px 10px' }}>
               <p style={{ fontSize:9, fontWeight:700, color:accent, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2 }}>Vers</p>
-              <p style={{ fontSize:12, fontWeight:700, color:accentText, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', margin:0 }}>{transfer.classe_cible?.nom || '—'}</p>
+              <p style={{ fontSize:12, fontWeight:700, color:accentText, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', margin:0 }}>{transfer.external_destination || transfer.classe_cible?.nom || '—'}</p>
             </div>
           </div>
         </div>
@@ -564,7 +564,7 @@ export default function Transfers() {
                               <div style={{ width:20, height:20, borderRadius:'50%', background:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                                 <ArrowRight style={{ width:11, height:11, color:'#94a3b8' }} />
                               </div>
-                              <span style={{ fontWeight:700, color:'#0f172a', fontSize:13 }}>{t.classe_cible?.nom}</span>
+                               <span style={{ fontWeight:700, color:'#0f172a', fontSize:13 }}>{t.external_destination || t.classe_cible?.nom || '—'}</span>
                             </div>
                           </td>
                           <td><span className="mono" style={{ fontSize:12, color:'#94a3b8' }}>{t.created_at}</span></td>

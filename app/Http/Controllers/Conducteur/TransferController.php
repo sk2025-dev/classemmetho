@@ -64,10 +64,14 @@ class TransferController extends Controller
                         'id' => $transfer->sourceClass->id,
                         'nom' => $transfer->sourceClass->nom,
                     ],
-                    'classe_cible' => [
+                    'classe_cible' => $transfer->targetClass ? [
                         'id' => $transfer->targetClass->id,
                         'nom' => $transfer->targetClass->nom,
-                    ],
+                    ] : null,
+                    'external_destination' => $transfer->destination_city
+                        ? trim($transfer->destination_city . ($transfer->destination_country ? " • {$transfer->destination_country}" : ''))
+                        : null,
+                    'destination_note' => $transfer->destination_note,
                     'created_at' => $transfer->created_at->format('Y-m-d H:i'),
                     'created_by' => $transfer->createdBy ? $transfer->createdBy->nom . ' ' . $transfer->createdBy->prenom : null,
                     'validated_source_by' => $transfer->validatedBySource ? $transfer->validatedBySource->nom . ' ' . $transfer->validatedBySource->prenom : null,
@@ -138,10 +142,14 @@ class TransferController extends Controller
                         'id' => $transfer->sourceClass->id,
                         'nom' => $transfer->sourceClass->nom,
                     ],
-                    'classe_cible' => [
+                    'classe_cible' => $transfer->targetClass ? [
                         'id' => $transfer->targetClass->id,
                         'nom' => $transfer->targetClass->nom,
-                    ],
+                    ] : null,
+                    'external_destination' => $transfer->destination_city
+                        ? trim($transfer->destination_city . ($transfer->destination_country ? " • {$transfer->destination_country}" : ''))
+                        : null,
+                    'destination_note' => $transfer->destination_note,
                     'created_at' => $transfer->created_at->format('Y-m-d H:i'),
                     'created_by' => $transfer->createdBy ? $transfer->createdBy->nom . ' ' . $transfer->createdBy->prenom : null,
                     'validated_source_by' => $transfer->validatedBySource ? $transfer->validatedBySource->nom . ' ' . $transfer->validatedBySource->prenom : null,
@@ -200,6 +208,26 @@ class TransferController extends Controller
         // Vérifier que la demande est EN_ATTENTE_SOURCE
         if ($transfer->status !== 'EN_ATTENTE_SOURCE') {
             return redirect()->back()->with('error', 'Cette demande ne peut pas être approuvée à ce stade');
+        }
+
+        if ($transfer->type === 'external') {
+            try {
+                DB::beginTransaction();
+
+                $transfer->update([
+                    'status' => 'TERMINEE',
+                    'validated_by_source_id' => $user->id,
+                    'validated_by_source_at' => now(),
+                    'validated_by_accueil_id' => $user->id,
+                    'validated_by_accueil_at' => now(),
+                ]);
+
+                DB::commit();
+                return redirect()->back()->with('success', 'Transfert hors communauté validé et clôturé.');
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return redirect()->back()->with('error', 'Erreur : ' . $e->getMessage());
+            }
         }
 
         try {

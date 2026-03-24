@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { usePage, router } from '@inertiajs/react';
 import {
   CheckCircle, Clock, XCircle,
-  Eye, Plus, User, UsersRound, Inbox, Search, X, Info,
+  Eye, Plus, User, UsersRound, Inbox, Search, X, Info, MapPin,
   Layers
 } from 'lucide-react';
 
@@ -336,9 +336,9 @@ const TransferCard = ({ t, onClick, delay = 0 }) => {
               borderRadius: 8, padding: '7px 10px',
             }}>
               <p style={{ fontSize: 9, fontWeight: 700, color: palette.accent, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Vers</p>
-              <p style={{ fontSize: 12, fontWeight: 700, color: palette.accentText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
-                {t.classe_cible?.nom || '—'}
-              </p>
+               <p style={{ fontSize: 12, fontWeight: 700, color: palette.accentText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
+                 {t.external_destination || t.classe_cible?.nom || '—'}
+               </p>
             </div>
           </div>
 
@@ -498,7 +498,15 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
   const [selectedTransfer, setSelectedTransfer] = useState(null);
   const [isModalOpen,      setIsModalOpen]      = useState(false);
   const [modalStep,        setModalStep]        = useState(1);
-  const [formData,         setFormData]         = useState({ type: 'member', member_id: '', target_class_id: '', reason: '' });
+  const [formData,         setFormData]         = useState({
+    type: 'member',
+    member_id: '',
+    target_class_id: '',
+    reason: '',
+    destination_city: '',
+    destination_country: '',
+    destination_note: '',
+  });
   const [processing,       setProcessing]       = useState(false);
 
   const stats = useMemo(() => ({
@@ -519,14 +527,26 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
   const resetModal = () => {
     setIsModalOpen(false);
     setModalStep(1);
-    setFormData({ type: 'member', member_id: '', target_class_id: '', reason: '' });
+    setFormData({
+      type: 'member',
+      member_id: '',
+      target_class_id: '',
+      reason: '',
+      destination_city: '',
+      destination_country: '',
+      destination_note: '',
+    });
   };
 
   const handleNextStep = () => {
     if (modalStep === 1 && !formData.type) return;
     if (modalStep === 2) {
       if (formData.type === 'member' && !formData.member_id) return;
-      if (!formData.target_class_id) return;
+      if (formData.type === 'external') {
+        if (!formData.destination_city || !formData.destination_country) return;
+      } else {
+        if (!formData.target_class_id) return;
+      }
     }
     setModalStep(s => s + 1);
   };
@@ -536,7 +556,10 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
     router.post('/responsable-famille/transferts', {
       type: formData.type,
       user_id: formData.type === 'member' ? parseInt(formData.member_id) : null,
-      target_class_id: parseInt(formData.target_class_id),
+      target_class_id: formData.type === 'external' ? null : parseInt(formData.target_class_id),
+      destination_city: formData.type === 'external' ? formData.destination_city : null,
+      destination_country: formData.type === 'external' ? formData.destination_country : null,
+      destination_note: formData.type === 'external' ? formData.destination_note || null : null,
       reason: formData.reason || null,
     }, {
       onFinish: () => { setProcessing(false); resetModal(); },
@@ -679,16 +702,25 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
                 <div>
                   <p style={{ fontSize: 13, fontWeight: 600, color: '#555', marginBottom: 16 }}>Qui concerne ce transfert ?</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {[
-                      { value: 'member', label: 'Un Membre',       icon: User,       desc: "Transfert individuel d'un membre" },
-                      { value: 'family', label: 'Toute la Famille', icon: UsersRound, desc: 'Transfert groupé de la famille' },
-                    ].map(opt => (
-                      <div
-                        key={opt.value}
-                        className={`step-option ${formData.type === opt.value ? 'selected' : ''}`}
-                        style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px' }}
-                        onClick={() => setFormData({ ...formData, type: opt.value, member_id: '' })}
-                      >
+                     {[
+                       { value: 'member', label: 'Un Membre',       icon: User,       desc: "Transfert individuel d'un membre" },
+                       { value: 'family', label: 'Toute la Famille', icon: UsersRound, desc: 'Transfert groupé de la famille' },
+                       { value: 'external', label: 'Hors communauté', icon: MapPin, desc: 'Sortie vers une autre ville ou pays' },
+                     ].map(opt => (
+                       <div
+                         key={opt.value}
+                         className={`step-option ${formData.type === opt.value ? 'selected' : ''}`}
+                         style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px' }}
+                         onClick={() => setFormData({
+                           ...formData,
+                           type: opt.value,
+                           member_id: '',
+                           target_class_id: '',
+                           destination_city: '',
+                           destination_country: '',
+                           destination_note: '',
+                         })}
+                       >
                         <div style={{ background: formData.type === opt.value ? '#fff7ed' : '#f5f5f5', borderRadius: 10, padding: 8 }}>
                           <opt.icon style={{ width: 18, height: 18, color: formData.type === opt.value ? '#f97316' : '#9ca3af' }} />
                         </div>
@@ -726,18 +758,58 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
                       </select>
                     </div>
                   )}
-                  <div>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Classe cible</label>
-                    <select
-                      value={formData.target_class_id}
-                      onChange={e => setFormData({ ...formData, target_class_id: e.target.value })}
-                      className="input-field"
-                      style={{ width: '100%', padding: '10px 14px', fontSize: 13, color: '#111' }}
-                    >
-                      <option value="">Sélectionner une classe…</option>
-                      {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-                    </select>
-                  </div>
+
+                  {formData.type !== 'external' ? (
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Classe cible</label>
+                      <select
+                        value={formData.target_class_id}
+                        onChange={e => setFormData({ ...formData, target_class_id: e.target.value })}
+                        className="input-field"
+                        style={{ width: '100%', padding: '10px 14px', fontSize: 13, color: '#111' }}
+                      >
+                        <option value="">Sélectionner une classe…</option>
+                        {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                      </select>
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Ville de destination</label>
+                        <input
+                          type="text"
+                          value={formData.destination_city}
+                          onChange={e => setFormData({ ...formData, destination_city: e.target.value })}
+                          className="input-field"
+                          placeholder="Ex: Abidjan"
+                          style={{ width: '100%', padding: '10px 14px', fontSize: 13, color: '#111', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Pays de destination</label>
+                        <input
+                          type="text"
+                          value={formData.destination_country}
+                          onChange={e => setFormData({ ...formData, destination_country: e.target.value })}
+                          className="input-field"
+                          placeholder="Ex: Sénégal"
+                          style={{ width: '100%', padding: '10px 14px', fontSize: 13, color: '#111', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Détails complémentaires</label>
+                        <textarea
+                          value={formData.destination_note}
+                          onChange={e => setFormData({ ...formData, destination_note: e.target.value })}
+                          rows={2}
+                          className="input-field"
+                          placeholder="Optionnel : précisez l'église d'accueil, contact, etc."
+                          style={{ width: '100%', padding: '10px 14px', fontSize: 13, color: '#111', resize: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    </>
+                  )}
+
                   <div>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
                       Motif <span style={{ color: '#bbb', fontWeight: 400, textTransform: 'none' }}>(optionnel)</span>
@@ -758,15 +830,18 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
                 <div>
                   <p style={{ fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>Récapitulatif</p>
                   <div style={{ background: '#f9f9f9', border: '1px solid #ebebeb', borderRadius: 12, overflow: 'hidden' }}>
-                    {[
-                      { key: 'Type', val: formData.type === 'member' ? 'Membre' : 'Famille' },
-                      ...(formData.type === 'member' ? [{
-                        key: 'Membre',
-                        val: (() => { const m = members.find(m => String(m.id) === formData.member_id); return m ? `${m.nom} ${m.prenom}` : '—'; })()
-                      }] : []),
-                      { key: 'Classe cible', val: classes.find(c => String(c.id) === formData.target_class_id)?.nom || '—' },
-                      ...(formData.reason ? [{ key: 'Motif', val: formData.reason }] : []),
-                    ].map((row, i, arr) => (
+                      {[
+                        { key: 'Type', val: formData.type === 'member' ? 'Membre' : (formData.type === 'external' ? 'Hors communauté' : 'Famille') },
+                        ...(formData.type === 'member' ? [{
+                          key: 'Membre',
+                          val: (() => { const m = members.find(m => String(m.id) === formData.member_id); return m ? `${m.nom} ${m.prenom}` : '—'; })()
+                        }] : []),
+                        formData.type === 'external'
+                          ? { key: 'Destination', val: formData.destination_city ? `${formData.destination_city}${formData.destination_country ? ` • ${formData.destination_country}` : ''}` : '—' }
+                          : { key: 'Classe cible', val: classes.find(c => String(c.id) === formData.target_class_id)?.nom || '—' },
+                        ...(formData.destination_note ? [{ key: 'Détails', val: formData.destination_note }] : []),
+                        ...(formData.reason ? [{ key: 'Motif', val: formData.reason }] : []),
+                      ].map((row, i, arr) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '11px 16px', borderBottom: i < arr.length - 1 ? '1px solid #ebebeb' : 'none' }}>
                         <span style={{ fontSize: 13, color: '#999' }}>{row.key}</span>
                         <span style={{ fontSize: 13, fontWeight: 600, color: '#111', textAlign: 'right', maxWidth: '60%' }}>{row.val}</span>
@@ -834,7 +909,8 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
               <div style={{ background: '#f9f9f9', border: '1px solid #ebebeb', borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[
                   { label: 'Source',      value: selectedTransfer.classe_source?.nom, color: '#555' },
-                  { label: 'Destination', value: selectedTransfer.classe_cible?.nom,  color: '#ea580c', bold: true },
+                  { label: 'Destination', value: selectedTransfer.external_destination || selectedTransfer.classe_cible?.nom || '—',  color: '#ea580c', bold: true },
+                  ...(selectedTransfer.destination_note ? [{ label: 'Détails', value: selectedTransfer.destination_note, color: '#777' }] : []),
                   ...(selectedTransfer.reason ? [{ label: 'Motif', value: selectedTransfer.reason, color: '#777', italic: true }] : []),
                 ].map((row, i) => (
                   <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>

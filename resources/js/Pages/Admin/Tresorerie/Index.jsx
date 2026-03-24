@@ -11,6 +11,9 @@ import {
     ArrowLeft,
 } from "lucide-react";
 
+const fmt = (n) => new Intl.NumberFormat("fr-FR").format(n);
+const fmtCurrency = (n) => `${fmt(n)} F`;
+
 export default function AdminTresorerie({
     stats: statsProp,
     cotisations: cotisationsProp,
@@ -314,10 +317,7 @@ export default function AdminTresorerie({
                                     Cotisations totales
                                 </p>
                                 <p className="text-3xl font-bold text-gray-900 mt-2">
-                                    {(
-                                        stats.cotisationsTotales / 1000000
-                                    ).toFixed(1)}
-                                    M
+                                    {fmtCurrency(stats.cotisationsTotales ?? 0)}
                                 </p>
                             </div>
                             <DollarSign className="text-blue-600" size={32} />
@@ -354,7 +354,7 @@ export default function AdminTresorerie({
                                     Dons collectés
                                 </p>
                                 <p className="text-3xl font-bold text-gray-900 mt-2">
-                                    {(stats.donsTotaux / 1000000).toFixed(2)}M
+                                    {fmtCurrency(stats.donsTotaux ?? 0)}
                                 </p>
                             </div>
                             <PieChart className="text-purple-600" size={32} />
@@ -529,11 +529,9 @@ export default function AdminTresorerie({
                                                                 {paiement.type}
                                                             </td>
                                                             <td className="px-4 py-3 font-semibold text-gray-900">
-                                                                {(
-                                                                    paiement.montant /
-                                                                    1000
-                                                                ).toFixed(0)}
-                                                                K
+                                                            {fmtCurrency(
+                                                                paiement.montant,
+                                                            )}
                                                             </td>
                                                             <td className="px-4 py-3 text-gray-600">
                                                                 {paiement.mode}

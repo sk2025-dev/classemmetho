@@ -299,7 +299,7 @@ const TransferCard = ({ t, onClick, delay = 0 }) => {
             <div style={{ flex: 1, minWidth: 0, background: palette.accentLight, border: `1px solid ${palette.accentMid}`, borderRadius: 8, padding: '7px 10px' }}>
               <p style={{ fontSize: 9, fontWeight: 700, color: palette.accent, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Vers</p>
               <p style={{ fontSize: 12, fontWeight: 700, color: palette.accentText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
-                {t.classe_cible?.nom || '—'}
+                {t.external_destination || t.classe_cible?.nom || '—'}
               </p>
             </div>
           </div>
@@ -747,7 +747,8 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
               <div style={{ background: '#f9f9f9', border: '1px solid #ebebeb', borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[
                   { label: 'Source',      value: selectedTransfer.classe_source?.nom, color: '#555' },
-                  { label: 'Destination', value: selectedTransfer.classe_cible?.nom,  color: '#ea580c', bold: true },
+                  { label: 'Destination', value: selectedTransfer.external_destination || selectedTransfer.classe_cible?.nom || '—',  color: '#ea580c', bold: true },
+                  ...(selectedTransfer.destination_note ? [{ label: 'Détails', value: selectedTransfer.destination_note, color: '#777' }] : []),
                   ...(selectedTransfer.reason ? [{ label: 'Motif', value: selectedTransfer.reason, color: '#777', italic: true }] : []),
                 ].map((row, i) => (
                   <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>

@@ -596,12 +596,6 @@ const KpiCard = ({ icon: Icon, label, value, sub, color, trend }) => {
 };
 
 const fmt = (v) => Number(v || 0).toLocaleString("fr-FR") + " F";
-const fmtK = (v) => {
-    const n = Number(v || 0);
-    if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
-    if (n >= 1000) return (n / 1000).toFixed(0) + "K";
-    return n + " F";
-};
 const modePill = (mode) => {
     const map = {
         MOBILE_MONEY: { color: "purple", label: "Mobile Money" },
@@ -1262,7 +1256,7 @@ export default function ConducteurTresorerie({
                         icon={Wallet}
                         color="amber"
                         label="Retard cumulé"
-                        value={fmtK(retardTotal)}
+                        value={fmt(retardTotal)}
                         sub="F CFA non versés"
                     />
                     <KpiCard
@@ -1270,7 +1264,7 @@ export default function ConducteurTresorerie({
                         color="purple"
                         label="Collectes actives"
                         value={collectesActives.length}
-                        sub={`${fmtK(totalCollecte)} collectés`}
+                        sub={`${fmt(totalCollecte)} collectés`}
                     />
                 </div>
                 <div
@@ -1468,7 +1462,7 @@ export default function ConducteurTresorerie({
                                                                 color: "#A32D2D",
                                                             }}
                                                         >
-                                                            {fmtK(f.montantDu)}{" "}
+                                                            {fmt(f.montantDu)}{" "}
                                                             en retard
                                                         </p>
                                                     </div>
@@ -1671,11 +1665,11 @@ export default function ConducteurTresorerie({
                                                                 color: "#27500A",
                                                             }}
                                                         >
-                                                            {fmtK(c.collecte)}
+                                                            {fmt(c.collecte)}
                                                         </b>
                                                     </span>
                                                     <span>
-                                                        / {fmtK(c.objectif)}
+                                                        / {fmt(c.objectif)}
                                                     </span>
                                                 </div>
                                                 <ProgressBar

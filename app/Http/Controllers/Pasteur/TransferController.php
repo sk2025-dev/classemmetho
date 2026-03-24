@@ -52,10 +52,14 @@ class TransferController extends Controller
                         'id' => $transfer->sourceClass->id,
                         'nom' => $transfer->sourceClass->nom,
                     ],
-                    'classe_cible' => [
+                    'classe_cible' => $transfer->targetClass ? [
                         'id' => $transfer->targetClass->id,
                         'nom' => $transfer->targetClass->nom,
-                    ],
+                    ] : null,
+                    'external_destination' => $transfer->destination_city
+                        ? trim($transfer->destination_city . ($transfer->destination_country ? " • {$transfer->destination_country}" : ''))
+                        : null,
+                    'destination_note' => $transfer->destination_note,
                     'created_at' => $transfer->created_at->format('Y-m-d'),
                     'validated_source_by' => $transfer->validatedBySource ? $transfer->validatedBySource->nom . ' ' . $transfer->validatedBySource->prenom : null,
                     'validated_source_at' => $transfer->validated_by_source_at ? $transfer->validated_by_source_at->format('Y-m-d') : null,
@@ -155,4 +159,3 @@ class TransferController extends Controller
         }
     }
 }
-

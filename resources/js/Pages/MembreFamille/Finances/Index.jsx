@@ -9,6 +9,9 @@ import {
     X,
 } from "lucide-react";
 
+const fmt = (n) => new Intl.NumberFormat("fr-FR").format(n);
+const fmtCurrency = (n) => `${fmt(n)} F`;
+
 export default function MembreFamilleFinances({
     familyInfo: familyInfoProp,
     cotisations: cotisationsProp,
@@ -375,7 +378,7 @@ export default function MembreFamilleFinances({
                                         Montant attendu
                                     </p>
                                     <p className="font-bold text-gray-900 mt-1">
-                                        {(expected / 1000).toFixed(0)}K
+                                        {fmtCurrency(expected)}
                                     </p>
                                 </div>
                                 <div>
@@ -401,7 +404,7 @@ export default function MembreFamilleFinances({
                                         Payé
                                     </p>
                                     <p className="font-bold text-green-600 mt-1">
-                                        {(Number(cot.paye) / 1000).toFixed(0)}K
+                                        {fmtCurrency(Number(cot.paye))}
                                     </p>
                                 </div>
                                 <div>
@@ -413,7 +416,9 @@ export default function MembreFamilleFinances({
                                     >
                                         {Number(cot.du) === 0
                                             ? "A jour"
-                                            : `Reste ${(Number(cot.du) / 1000).toFixed(0)}K`}
+                                            : `Reste ${fmtCurrency(
+                                                  Number(cot.du),
+                                              )}`}
                                     </p>
                                 </div>
                             </div>
@@ -487,13 +492,12 @@ export default function MembreFamilleFinances({
                                     Cotisations payées
                                 </p>
                                 <p className="text-3xl font-bold text-green-600 mt-2">
-                                    {(
+                                    {fmtCurrency(
                                         cotisations.reduce(
                                             (sum, c) => sum + c.paye,
                                             0,
-                                        ) / 1000
-                                    ).toFixed(0)}
-                                    K
+                                        ),
+                                    )}
                                 </p>
                             </div>
                             <DollarSign className="text-green-500" size={32} />
@@ -514,7 +518,7 @@ export default function MembreFamilleFinances({
                                 <p
                                     className={`text-3xl font-bold mt-2 ${totalCotisations > 0 ? "text-red-600" : "text-blue-600"}`}
                                 >
-                                    {(totalCotisations / 1000).toFixed(0)}K
+                                    {fmtCurrency(totalCotisations)}
                                 </p>
                             </div>
                             <CreditCard
@@ -540,13 +544,12 @@ export default function MembreFamilleFinances({
                                     Dons cette année
                                 </p>
                                 <p className="text-3xl font-bold text-purple-600 mt-2">
-                                    {(
+                                    {fmtCurrency(
                                         donsFamille.reduce(
                                             (sum, d) => sum + d.montant,
                                             0,
-                                        ) / 1000
-                                    ).toFixed(0)}
-                                    K
+                                        ),
+                                    )}
                                 </p>
                             </div>
                             <Heart className="text-purple-500" size={32} />
@@ -598,10 +601,7 @@ export default function MembreFamilleFinances({
                                             Montant total à régulariser
                                         </p>
                                         <p className="text-2xl font-bold text-orange-600 mt-2">
-                                            {(totalCotisations / 1000).toFixed(
-                                                0,
-                                            )}{" "}
-                                            K F CFA
+                                            {fmtCurrency(totalCotisations)}
                                         </p>
                                         <button
                                             onClick={() =>
@@ -633,10 +633,7 @@ export default function MembreFamilleFinances({
                                             Montant total à régulariser
                                         </p>
                                         <p className="text-2xl font-bold text-orange-600 mt-2">
-                                            {(totalCotisations / 1000).toFixed(
-                                                0,
-                                            )}{" "}
-                                            K F CFA
+                                            {fmtCurrency(totalCotisations)}
                                         </p>
                                         <button
                                             onClick={() =>
@@ -706,11 +703,7 @@ export default function MembreFamilleFinances({
                                                                 value={cot.id}
                                                             >
                                                                 {cot.nom} —{" "}
-                                                                {(
-                                                                    cot.du /
-                                                                    1000
-                                                                ).toFixed(0)}
-                                                                K F CFA
+                                                                 {fmtCurrency(cot.du)}
                                                             </option>
                                                         ),
                                                     )}
@@ -957,16 +950,14 @@ export default function MembreFamilleFinances({
                                                         </p>
                                                         <p className="text-xs text-gray-600 mt-1">
                                                             Objectif :{" "}
-                                                            {(
-                                                                campagne.objectif /
-                                                                1000000
-                                                            ).toFixed(1)}
-                                                            M - Collecté :{" "}
-                                                            {(
-                                                                campagne.collecte /
-                                                                1000000
-                                                            ).toFixed(1)}
-                                                            M (
+                                                            {fmtCurrency(
+                                                                campagne.objectif,
+                                                            )}{" "}
+                                                            - Collecté :{" "}
+                                                            {fmtCurrency(
+                                                                campagne.collecte,
+                                                            )}{" "}
+                                                            (
                                                             {
                                                                 campagne.progression
                                                             }
@@ -982,7 +973,7 @@ export default function MembreFamilleFinances({
                                                         </div>
                                                         <input
                                                             type="number"
-                                                            placeholder="Montant (K F CFA)"
+                                                            placeholder="Montant (F CFA)"
                                                             className="w-full mt-3 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                                         />
                                                     </div>
@@ -1068,11 +1059,9 @@ export default function MembreFamilleFinances({
                                                             {paiement.type}
                                                         </td>
                                                         <td className="px-4 py-3 font-bold text-teal-600">
-                                                            {(
-                                                                paiement.montant /
-                                                                1000
-                                                            ).toFixed(0)}
-                                                            K
+                                                            {fmtCurrency(
+                                                                paiement.montant,
+                                                            )}
                                                         </td>
                                                         <td className="px-4 py-3 text-gray-600">
                                                             {paiement.mode}
