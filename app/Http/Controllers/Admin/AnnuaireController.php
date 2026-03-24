@@ -29,7 +29,7 @@ class AnnuaireController extends Controller
             // Props attendues par la vue Admin/Annuaire/Index.jsx
             'members' => $data['data'],
             'classes' => $data['classes'] ?? [],
-            'families' => [],
+            'families' => $data['families'] ?? [],
             'view' => $request->get('view', 'all'),
             'cotisations' => [],
             'user' => [
@@ -39,8 +39,15 @@ class AnnuaireController extends Controller
             'stats' => $data['stats'],
             'filters' => $request->only(['search', 'classe', 'famille', 'statut', 'role', 'perPage', 'view']),
             'filterOptions' => [
-                'classes' => $data['classes'] ?? [],
-                'familles' => [],
+                'classes' => $data['classOptions'] ?? [],
+                'familles' => collect($data['families'] ?? [])
+                    ->map(fn($family) => [
+                        'id' => $family['id'],
+                        'nom' => $family['nom'],
+                        'code_famille' => $family['code_famille'] ?? null,
+                    ])
+                    ->values()
+                    ->toArray(),
                 'statuts' => [
                     ['value' => 'active', 'label' => 'Actif'],
                     ['value' => 'inactive', 'label' => 'Inactif'],

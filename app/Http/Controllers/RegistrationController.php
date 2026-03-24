@@ -665,6 +665,7 @@ class RegistrationController extends Controller
                 'familyData.ville_id' => 'nullable|integer|exists:villes,id',
                 'selectedRoles'    => 'nullable|array',
                 'selectedRoles.*.id' => 'nullable|integer|exists:fonctions,id',
+                'responsable.lienParente' => 'nullable|string|max:255',
             ], [], [
                 'nom'          => 'Nom',
                 'prenom'       => 'Prénom',
@@ -718,6 +719,8 @@ class RegistrationController extends Controller
                         $normalizedMembers[$index]['photo_path'] = $this->resolvePhotoPathFromUrl($member['photo']);
                         $normalizedMembers[$index]['photo_url']  = $member['photo'];
                     }
+                    $normalizedMembers[$index]['relation'] =
+                        $member['relation'] ?? ($member['lienParente'] ?? null);
                 }
 
                 $familleData = [
@@ -729,6 +732,13 @@ class RegistrationController extends Controller
                     'telephone2' => $familleInput['telephone2'] ?? $validated['telephone2'] ?? null,
                     'classe_id' => $familleInput['classe_id'] ?? $validated['classe_id'],
                 ];
+
+                $responsableRelation =
+                    $responsableInput['relation'] ??
+                    $responsableInput['lienParente'] ??
+                    $validated['relation'] ??
+                    data_get($validated, 'responsable.lienParente') ??
+                    null;
 
                 $responsableData = [
                     'nom'               => $responsableInput['nom'] ?? $validated['nom'],
@@ -742,6 +752,8 @@ class RegistrationController extends Controller
                     'profession_detail' => $responsableInput['profession_detail'] ?? ($validated['profession_detail'] ?? null),
                     'profession'        => $responsableInput['profession'] ?? ($validated['fonction'] ?? null),
                     'fonction'          => $responsableInput['fonction'] ?? ($validated['fonction'] ?? null),
+                    'relation'          => $responsableRelation,
+                    'lienParente'       => $responsableRelation,
                     'statutMarital'     => $responsableInput['statutMarital'] ?? ($validated['statutMarital'] ?? null),
                     'dateMariage'       => $responsableInput['dateMariage'] ?? ($validated['dateMariageniv'] ?? null),
                     'lieuMariage'       => $responsableInput['lieuMariage'] ?? ($validated['lieuMariagePerso'] ?? null),

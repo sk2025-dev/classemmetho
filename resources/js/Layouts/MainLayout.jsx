@@ -307,6 +307,8 @@ export default function MainLayout({ children, auth }) {
         ? flashAnnouncements
         : [];
 
+    const TRUNCATE_DEFAULT = 120;
+
     const getAnnonceTitle = (annonce) => {
         const details = annonce?.details;
         if (typeof details === "string") {
@@ -410,14 +412,31 @@ export default function MainLayout({ children, auth }) {
         return `${source} a publie une annonce.`;
     };
 
+    const truncateText = (text, limit = TRUNCATE_DEFAULT) => {
+        const raw = String(text ?? "");
+        if (raw.length <= limit) {
+            return raw;
+        }
+        const cut = raw.slice(0, limit).trim();
+        const trimmed = cut.endsWith(",") || cut.endsWith(";")
+            ? cut.slice(0, -1).trim()
+            : cut;
+        return `${trimmed}…`;
+    };
+
+    const composeTickerMessage = (annonce) => {
+        const sentence = buildFlashSentence(annonce);
+        if (!sentence) return null;
+        return {
+            id: annonce.id,
+            text: truncateText(sentence),
+            fullText: sentence,
+        };
+    };
+
     const tickerMessages = announcements
-        .map((annonce) => {
-            return {
-                id: annonce.id,
-                text: buildFlashSentence(annonce),
-            };
-        })
-        .filter((message) => message.text);
+        .map(composeTickerMessage)
+        .filter((message) => message && message.text);
 
     // Infos eglise fictives demandees pour enrichir le flash info dashboard.
     const churchInfoMessages = [
@@ -516,25 +535,37 @@ export default function MainLayout({ children, auth }) {
                                         <InfoCategory
                                             title="Annonce"
                                             items={categorizedInfo.annonces.map(
-                                                (a) => buildFlashSentence(a),
+                                                (a) =>
+                                                    truncateText(
+                                                        buildFlashSentence(a),
+                                                    ),
                                             )}
                                         />
                                         <InfoCategory
                                             title="Mariage programmé"
                                             items={categorizedInfo.mariage.map(
-                                                (a) => buildFlashSentence(a),
+                                                (a) =>
+                                                    truncateText(
+                                                        buildFlashSentence(a),
+                                                    ),
                                             )}
                                         />
                                         <InfoCategory
                                             title="Avis de deces"
                                             items={categorizedInfo.deces.map(
-                                                (a) => buildFlashSentence(a),
+                                                (a) =>
+                                                    truncateText(
+                                                        buildFlashSentence(a),
+                                                    ),
                                             )}
                                         />
                                         <InfoCategory
                                             title="Horaires de prieres"
                                             items={categorizedInfo.prieres.map(
-                                                (a) => buildFlashSentence(a),
+                                                (a) =>
+                                                    truncateText(
+                                                        buildFlashSentence(a),
+                                                    ),
                                             )}
                                         />
                                         <InfoCategory

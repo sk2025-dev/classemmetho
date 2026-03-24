@@ -715,6 +715,7 @@ class InscriptionsController extends Controller
                 'date_naissance' => 'required|date',
                 'genre' => 'required|string|max:10',
                 'classe_id' => 'required|integer',
+                'fonction_id' => 'nullable|integer|exists:fonctions,id',
                 'employment_status' => 'required|in:TRAVAILLEUR,RETRAITE,ETUDIANT,SANS_EMPLOI',
                 'profession_detail' => 'required|string|max:255',
                 'statut_marital' => 'required|string|max:255',
@@ -789,6 +790,7 @@ class InscriptionsController extends Controller
                 'classe_id' => $classeId,
                 'date_naissance' => $validated['date_naissance'] ?? null,
                 'genre' => $validated['genre'] ?? null,
+                'fonction_id' => $validated['fonction_id'] ?? null,
                 'role' => $validated['role'] ?? 'membre',
                 'statut' => $statut,
                 'statut_marital' => $validated['statut_marital'] ?? null,
@@ -796,6 +798,7 @@ class InscriptionsController extends Controller
                 'lieu_mariage' => $validated['lieu_mariage'] ?? null,
                 'date_divorce' => $validated['date_divorce'] ?? null,
                 'date_deces' => $validated['date_deces'] ?? null,
+                'relation' => $validated['relation'] ?? null,
                 'password' => Hash::make(Str::random(16)),
             ]);
 

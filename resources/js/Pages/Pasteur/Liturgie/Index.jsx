@@ -2351,70 +2351,6 @@ export default function Index({
                     {/* ════════════════ TAB ANNONCES ════════════════ */}
                     {activeTab === "annonces" && (
                         <div className="ann-tab-root">
-                            {/* HÉRO */}
-                            <div className="ann-hero">
-                                <div className="ann-hero-left">
-                                    <div className="ann-hero-pulse">
-                                        <svg
-                                            width="26"
-                                            height="26"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth="1.8"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
-                                            />
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <div className="ann-hero-title">
-                                            Validation des annonces paroissiales
-                                        </div>
-                                        <div className="ann-hero-sub">
-                                            Annonces transmises par les
-                                            conducteurs · Votre approbation les
-                                            publie sur le tableau paroissial
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="ann-hero-stats">
-                                    <div className="ann-mini-stat ann-mini-orange">
-                                        <div className="ann-mini-n">
-                                            {annStats.pending}
-                                        </div>
-                                        <div className="ann-mini-l">
-                                            En attente
-                                        </div>
-                                    </div>
-                                    <div className="ann-mini-stat ann-mini-sage">
-                                        <div className="ann-mini-n">
-                                            {annStats.validees}
-                                        </div>
-                                        <div className="ann-mini-l">
-                                            Validées
-                                        </div>
-                                    </div>
-                                    <div className="ann-mini-stat ann-mini-terra">
-                                        <div className="ann-mini-n">
-                                            {annStats.refusees}
-                                        </div>
-                                        <div className="ann-mini-l">
-                                            Refusées
-                                        </div>
-                                    </div>
-                                    <div className="ann-mini-stat ann-mini-sky">
-                                        <div className="ann-mini-n">
-                                            {annStats.total}
-                                        </div>
-                                        <div className="ann-mini-l">Total</div>
-                                    </div>
-                                </div>
-                            </div>
-
                             {/* ANNONCES EN ATTENTE */}
                             <div className="panel layout-full">
                                 <div className="panel-head">
@@ -4646,7 +4582,7 @@ const styles = `
 .pastor-page::before{content:'';position:fixed;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,0.07) 1px,transparent 1px);background-size:28px 28px;pointer-events:none;z-index:0}
 .pastor-page::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 10% 10%,rgba(124,111,205,0.1),transparent 55%),radial-gradient(ellipse 50% 40% at 90% 90%,rgba(182,192,26,0.08),transparent 50%);pointer-events:none;z-index:0}
 .main{position:relative;z-index:1;min-height:100vh}
-.content{padding:28px 38px;max-width:1400px}
+.content{padding:28px 38px}
 
 /* ════════════════════════════════════
    ★ HERO HEADER — Titre Validation
@@ -4845,16 +4781,8 @@ h1.hero-title{
 .hist-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}.hist-date{font-size:10.5px;color:var(--text3)}
 .btn-pdf{font-size:10px;font-weight:700;color:var(--gold);background:var(--gold-dim);border:1px solid var(--gold-border);padding:3px 9px;border-radius:5px;cursor:pointer;font-family:inherit}
 
-/* ANNONCES TAB */
-.ann-tab-root{display:flex;flex-direction:column;gap:20px}
-.ann-hero{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;background:linear-gradient(135deg,rgba(222,217,232,0.96) 100%,rgba(30,64,175,.14) 60%,rgba(235,241,237,0.91) 100%);border:1px solid rgba(124,58,237,.2);border-radius:14px;padding:20px 26px;box-shadow:0 8px 28px rgba(124,58,237,.1)}
-.ann-hero-left{display:flex;align-items:center;gap:16px}
-.ann-hero-pulse{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,rgba(229,224,238,0.91),rgba(193,196,206,0.91));border:1px solid rgba(225,220,235,0.9);display:flex;align-items:center;justify-content:center;color:white;flex-shrink:0}
-.ann-hero-title{font-size:19px;font-weight:800;color:white;text-shadow:0 1px 4px rgba(0,0,0,.2)}.ann-hero-sub{font-size:11.5px;color:rgba(255,255,255,.6);margin-top:4px;line-height:1.5}
-.ann-hero-stats{display:flex;gap:10px;flex-wrap:wrap}
-.ann-mini-stat{text-align:center;padding:10px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.2);min-width:64px;backdrop-filter:blur(8px)}
-.ann-mini-n{font-size:20px;font-weight:800;line-height:1}.ann-mini-l{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;margin-top:3px;opacity:.75}
-.ann-mini-orange{background:rgba(236,105,35,.86);color:#e8a060;border-color:rgba(32,21,232,.91)}.ann-mini-sage{background:rgba(74,124,94,.12);color:#70B888;border-color:rgba(74,124,94,.18)}.ann-mini-terra{background:rgba(192,96,64,.12);color:#D89080;border-color:rgba(192,96,64,.18)}.ann-mini-sky{background:rgba(58,124,168,.12);color:#D8AD80EA;border-color:rgba(58,124,168,.18)}
+  /* ANNONCES TAB */
+  .ann-tab-root{display:flex;flex-direction:column;gap:20px}
 
 /* FILTRES */
 .ann-filters-bar{display:flex;gap:4px;flex-wrap:wrap;padding:12px 22px;border-bottom:1px solid var(--border)}

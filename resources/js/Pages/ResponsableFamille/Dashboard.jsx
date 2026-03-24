@@ -151,7 +151,7 @@ export default function Dashboard({
             title: "Annuaire",
             desc: "Annuaire de la communauté",
             icon: "annuaire",
-            href: "/admin/annuaire",
+            href: "/responsable-famille/annuaire",
             color: "text-teal-600",
             bg: "bg-teal-100",
         },

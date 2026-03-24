@@ -43,6 +43,14 @@ class Classe extends Model
     }
 
     /**
+     * Le conducteur responsable de cette classe.
+     */
+    public function conducteur()
+    {
+        return $this->belongsTo(User::class, 'conducteur');
+    }
+
+    /**
      * Relations pour l'audit
      */
     public function deletedBy()

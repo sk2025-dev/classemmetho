@@ -24,8 +24,10 @@ class AnnuaireService
         return [
             'data' => $data,
             'stats' => $this->getStats($request, $roleScope),
-            'classes' => Classe::where('status', 'active')->get(['id', 'nom']),
+            'classes' => $this->getClassesWithMembers($request, $roleScope),
+            'classOptions' => Classe::where('status', 'active')->get(['id', 'nom']),
             'roles' => User::where('role', '!=', 'admin')->distinct()->pluck('role')->filter(),
+            'families' => $this->getFamiliesWithMembers($request, $roleScope),
         ];
     }
 
@@ -68,6 +70,16 @@ class AnnuaireService
             $selectColumns[] = 'is_active';
         }
 
+        if (in_array('relation', $usersColumns, true)) {
+            $selectColumns[] = 'relation';
+        }
+        if (in_array('adresse', $usersColumns, true)) {
+            $selectColumns[] = 'adresse';
+        }
+        if (in_array('quartier', $usersColumns, true)) {
+            $selectColumns[] = 'quartier';
+        }
+
         $query = User::with(['classe', 'fonction', 'family'])
             ->select($selectColumns)
             ->where('role', '!=', 'admin');
@@ -78,7 +90,21 @@ class AnnuaireService
         switch ($roleScope) {
             case 'conducteur':
                 if ($authUserId !== null) {
-                    $query->whereHas('classe.conducteur', fn($q) => $q->where('id', $authUserId));
+                    $authUser = User::find($authUserId);
+                    $classeIds = [];
+                    if ($authUser?->classe_id) {
+                        $classeIds[] = $authUser->classe_id;
+                    }
+                    if ($authUser?->identifier) {
+                        $conductedClassIds = Classe::where('conducteur', $authUser->identifier)->pluck('id')->toArray();
+                        $classeIds = array_merge($classeIds, $conductedClassIds);
+                    }
+                    $classeIds = array_filter(array_unique($classeIds));
+                    if (!empty($classeIds)) {
+                        $query->whereIn('classe_id', $classeIds);
+                    } else {
+                        $query->where('classe_id', 0);
+                    }
                 }
                 break;
             case 'responsable_famille':
@@ -165,6 +191,99 @@ class AnnuaireService
             ->pluck('count', 'role');
 
         return $stats;
+    }
+
+    protected function getClassesWithMembers(Request $request, string $roleScope): array
+    {
+        $query = Classe::with([
+            'users' => function ($query) {
+                $query->select(
+                    'id',
+                    'prenom',
+                    'nom',
+                    'telephone',
+                    'family_id',
+                    'classe_id',
+                    'profile_photo_url'
+                )->with(['family:id,code_famille']);
+            },
+        ])->where('status', 'active')->orderBy('nom');
+
+        if ($request->filled('classe')) {
+            $query->where('id', $request->classe);
+        }
+
+        $classes = $query->get();
+
+        return $classes->map(function (Classe $classe) {
+            $members = $classe->users->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'prenoms' => $user->prenom,
+                    'nom' => $user->nom,
+                    'telephone' => $user->telephone,
+                    'photo' => $user->profile_photo_url,
+                    'famille' => $user->family?->code_famille,
+                ];
+            });
+
+            return [
+                'id' => $classe->id,
+                'nom' => $classe->nom,
+                'members' => $members->toArray(),
+            ];
+        })->toArray();
+    }
+
+    protected function getFamiliesWithMembers(Request $request, string $roleScope): array
+    {
+        $query = Family::with([
+            'users' => function ($q) {
+                $q->select(
+                    'id',
+                    'prenom',
+                    'nom',
+                    'telephone',
+                    'profile_photo_url',
+                    'classe_id',
+                    'family_id'
+                )->with(['classe:id,nom']);
+            },
+        ])->orderBy('nom');
+
+        if ($request->filled('classe')) {
+            $query->where('classe_id', $request->classe);
+        }
+        if ($request->filled('famille')) {
+            $query->where('id', $request->famille);
+        }
+
+        if ($roleScope === 'responsable_famille' && Auth::id()) {
+            $query->where('responsable_id', Auth::id());
+        }
+
+        $families = $query->get();
+
+        return $families->map(function (Family $family) {
+            $members = $family->users->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'prenoms' => $user->prenom,
+                    'nom' => $user->nom,
+                    'telephone' => $user->telephone,
+                    'photo' => $user->profile_photo_url,
+                    'classeMethodiste' => $user->classe?->nom,
+                ];
+            })->values();
+
+            return [
+                'id' => $family->id,
+                'nom' => $family->nom,
+                'code_famille' => $family->code_famille,
+                'count' => $members->count(),
+                'members' => $members->toArray(),
+            ];
+        })->toArray();
     }
 
     protected function formatUser(User $user): array

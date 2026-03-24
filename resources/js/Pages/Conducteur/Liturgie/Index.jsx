@@ -4474,7 +4474,7 @@ const styles = `
 .conductor-page::before{content:"";position:fixed;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,0.1) 1px,transparent 1px);background-size:28px 28px;pointer-events:none;z-index:0;}
 .conductor-page::after{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 0% 0%,rgba(139,92,246,0.12),transparent 50%),radial-gradient(ellipse 60% 40% at 100% 100%,rgba(182,192,26,0.1),transparent 50%);pointer-events:none;z-index:0;}
 .main{min-height:100vh;position:relative;z-index:1}
-.page-content{padding:28px 38px;max-width:1400px}
+.page-content{padding:28px 38px}
 
 /* ── TOP ── */
 .top-actions{display:flex;align-items:center;gap:16px;margin-bottom:24px}

@@ -913,6 +913,21 @@ export default function RegisterConducteur({
             formData.append(`responsable[${k}]`, valueToSend ?? "");
         });
 
+        formData.append(
+            "employment_status",
+            responsable.employment_status || "",
+        );
+        formData.append(
+            "profession_detail",
+            responsable.profession_detail || "",
+        );
+        if (Array.isArray(selectedRolesResponsable)) {
+            selectedRolesResponsable.forEach((roleId, index) => {
+                if (!roleId) return;
+                formData.append(`selectedRoles[${index}][id]`, roleId);
+            });
+        }
+
         // --- 2bis. Champs religieux dans spirituel ---
         const spirituel = {
             baptise: responsable.baptise ? "true" : "false",

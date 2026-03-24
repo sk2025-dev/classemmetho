@@ -1008,6 +1008,13 @@ export default function RegisterFamille({
             }
         });
 
+        if (Array.isArray(selectedRolesResponsable)) {
+            selectedRolesResponsable.forEach((roleId, index) => {
+                if (!roleId) return;
+                formData.append(`selectedRoles[${index}][id]`, roleId);
+            });
+        }
+
         // --- 3. Membres ---
         if (membres.length > 0) {
             membres.forEach((m, i) => {

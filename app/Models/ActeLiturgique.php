@@ -57,6 +57,7 @@ class ActeLiturgique extends Model
     public const TYPE_PRIERE = 'priere';
     public const TYPE_GRACE = 'grace';
     public const TYPE_GENERALE = 'generale';
+    public const TYPE_FELICITATIONS = 'felicitations';
 
     public const ANNOUNCE_TYPES = [
         self::TYPE_ANNOUNCE,
@@ -64,6 +65,7 @@ class ActeLiturgique extends Model
         self::TYPE_PRIERE,
         self::TYPE_GRACE,
         self::TYPE_GENERALE,
+        self::TYPE_FELICITATIONS,
     ];
 
     // Constantes pour les statuts

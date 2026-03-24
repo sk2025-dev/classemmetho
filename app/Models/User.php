@@ -45,6 +45,7 @@ class User extends Authenticatable
         'profession',
         'employment_status',
         'profession_detail',
+        'relation',
 
         // === RELATIONS ET SYSTÈME ===
         'family_id',

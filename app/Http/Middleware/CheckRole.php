@@ -21,12 +21,17 @@ class CheckRole
             return redirect('/login');
         }
 
-        $userRole = auth()->user()->role;
+        $userRole = trim((string) auth()->user()->role);
 
         // Mapper pasteur -> responsable_famille pour accès aux fonctionnalités identiques
-        $effectiveRole = ($userRole === 'pasteur') ? 'responsable_famille' : $userRole;
+        $effectiveRole = $userRole;
+        if (in_array($userRole, ['pasteur', 'responsable'], true)) {
+            $effectiveRole = 'responsable_famille';
+        }
 
-        if (in_array($effectiveRole, $roles) || in_array($userRole, $roles)) {
+        \Log::info('role check', compact('userRole', 'effectiveRole', 'roles'));
+
+        if (in_array($effectiveRole, $roles, true) || in_array($userRole, $roles, true)) {
             return $next($request);
         }
 

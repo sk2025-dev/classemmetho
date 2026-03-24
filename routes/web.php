@@ -4,16 +4,20 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Conducteur\AnnuaireController as ConducteurAnnuaireController;
 use App\Http\Controllers\Conducteur\DashboardController as ConducteurDashboardController;
 use App\Http\Controllers\Conducteur\InscriptionsController as ConducteurInscriptionsController;
 use App\Http\Controllers\Conducteur\TresorerieController as ConducteurTresorerieController;
 use App\Http\Controllers\Conducteur\RegisterMemberController as RegisterMemberController;
 use App\Http\Controllers\Conducteur\QuickMemberController;
 use App\Http\Controllers\ResponsableFamille\DashboardController as ResponsableFamilleDashboardController;
+use App\Http\Controllers\ResponsableFamille\AnnuaireController as ResponsableFamilleAnnuaireController;
 use App\Http\Controllers\ResponsableFamille\InscriptionsController as ResponsableFamilleInscriptionsController;
 use App\Http\Controllers\ResponsableFamille\MemberController as ResponsableFamilleMemberController;
+use App\Http\Controllers\Pasteur\AnnuaireController as PasteurAnnuaireController;
 use App\Http\Controllers\Pasteur\DashboardController as PasteurDashboardController;
 use App\Http\Controllers\Pasteur\TresorerieController as PasteurTresorerieController;
+use App\Http\Controllers\MembreFamille\AnnuaireController as MembreFamilleAnnuaireController;
 use App\Http\Controllers\MembreFamille\DashboardController as MembreFamilleDashboardController;
 use App\Http\Controllers\MembreFamille\FinancesController as MembreFamilleFinancesController;
 use App\Http\Controllers\RegistrationController;
@@ -226,6 +230,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Tableau de bord Conducteur
     Route::middleware('role:conducteur')->group(function () {
+        Route::get('/conducteur/annuaire', [ConducteurAnnuaireController::class, 'index'])->name('conducteur.annuaire.index');
         Route::get('/conducteur/dashboard', [ConducteurDashboardController::class, 'index'])->name('conducteur.dashboard');
         Route::post('/conducteur/dashboard/inscriptions/{inscriptionId}/approve', [ConducteurDashboardController::class, 'approveInscription'])->name('conducteur.dashboard.inscriptions.approve');
         Route::post('/conducteur/dashboard/inscriptions/{inscriptionId}/reject', [ConducteurDashboardController::class, 'rejectInscription'])->name('conducteur.dashboard.inscriptions.reject');
@@ -300,6 +305,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Tableau de bord Responsable de Famille
     Route::middleware('role:responsable_famille')->group(function () {
+        Route::get('/responsable-famille/annuaire', [ResponsableFamilleAnnuaireController::class, 'index'])->name('responsable_famille.annuaire.index');
         Route::get('/responsable-famille/dashboard', [ResponsableFamilleDashboardController::class, 'index'])->name('responsable_famille.dashboard');
         Route::get('/responsable-famille/inscriptions', [ResponsableFamilleInscriptionsController::class, 'index'])->name('responsable_famille.inscriptions');
         Route::get('/responsable-famille/family/edit', [\App\Http\Controllers\ResponsableFamille\FamilyController::class, 'edit'])->name('responsable_famille.family.edit');
@@ -353,6 +359,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/pasteur/transferts', [\App\Http\Controllers\Pasteur\TransferController::class, 'store'])->name('pasteur.transferts.store');
 
     Route::middleware('role:pasteur')->group(function () {
+        Route::get('/pasteur/annuaire', [PasteurAnnuaireController::class, 'index'])->name('pasteur.annuaire.index');
         Route::get('/pasteur/dashboard', [PasteurDashboardController::class, 'index'])->name('pasteur.dashboard');
         // Liste des inscriptions pour le pasteur (module controller)
         Route::get('/pasteur/inscriptions', [\App\Http\Controllers\Pasteur\InscriptionsController::class, 'index'])
@@ -388,6 +395,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Tableau de bord Membre de Famille
     Route::middleware(['auth', 'role:membre_famille'])->group(function () {
+        Route::get('/membre-famille/annuaire', [MembreFamilleAnnuaireController::class, 'index'])->name('membre_famille.annuaire.index');
         Route::get('/membre-famille/dashboard', [MembreFamilleDashboardController::class, 'index'])->name('membre_famille.dashboard');
         Route::get('/membre-famille/inscriptions', [\App\Http\Controllers\MembreFamille\InscriptionsController::class, 'index'])->name('membre_famille.inscriptions');
         Route::get('/membre-famille/family', [MembreFamilleFamilyController::class, 'index'])->name('membre_famille.family');

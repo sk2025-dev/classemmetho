@@ -98,6 +98,8 @@ export default function VerticalTicker({
     }
 
     const currentMessage = messages[currentIndex];
+    const displayText = currentMessage?.text || "";
+    const titleText = currentMessage?.fullText || displayText;
 
     return (
         <>
@@ -122,12 +124,12 @@ export default function VerticalTicker({
                 <div style={STYLES.label}>{label}</div>
                 <div style={STYLES.ticker}>
                     <div
-                        key={`${currentMessage.id}-${animKey}`}
-                        className="vertical-ticker-message"
-                        style={STYLES.message}
-                        title={currentMessage.text}
+                         key={`${currentMessage.id}-${animKey}`}
+                         className="vertical-ticker-message"
+                         style={STYLES.message}
+                         title={titleText}
                     >
-                        {currentMessage.text}
+                        {displayText}
                     </div>
                 </div>
             </div>
