@@ -184,7 +184,8 @@ class RegistrationController extends Controller
                     'responsable_date_naissance'          => $data['responsable']['dateNaissance'] ?? null,
                     'responsable_genre'                   => $data['responsable']['genre'] ?? null,
                     'responsable_lien_parente'            => $data['responsable']['lienParente'] ?? null,
-                    'responsable_profession'              => $data['responsable']['profession'] ?? null,
+                    'responsable_profession'              => $data['responsable']['profession_detail'] ?? $input['responsable']['profession_detail'] ?? null,
+                    'responsable_employment_status'       => $data['responsable']['employment_status'] ?? $input['responsable']['employment_status'] ?? null,
                     'responsable_fonction'                => $data['responsable']['fonction'] ?? null,
                     'responsable_statut_marital'          => $data['responsable']['statutMarital'] ?? null,
                     'responsable_date_mariage'            => $data['responsable']['dateMariage'] ?? null,
@@ -213,7 +214,23 @@ class RegistrationController extends Controller
                             'telephone2' => $data['famille']['telephone2'] ?? null,
                             'classe_id' => $data['famille']['classe_id'] ?? null,
                         ],
-                        'responsable' => [],
+                        'responsable' => [
+                            'nom'                  => $data['responsable']['nom'] ?? $input['responsable']['nom'] ?? null,
+                            'prenom'               => $data['responsable']['prenom'] ?? $input['responsable']['prenom'] ?? null,
+                            'email'                => $data['responsable']['email'] ?? $input['responsable']['email'] ?? null,
+                            'tel'                  => $data['responsable']['tel'] ?? $input['responsable']['tel'] ?? null,
+                            'telephone2'           => $data['responsable']['telephone2'] ?? $input['responsable']['telephone2'] ?? null,
+                            'dateNaissance'        => $data['responsable']['dateNaissance'] ?? $input['responsable']['dateNaissance'] ?? null,
+                            'genre'                => $data['responsable']['genre'] ?? $input['responsable']['genre'] ?? null,
+                            'relation'             => $data['responsable']['lienParente'] ?? $input['responsable']['lienParente'] ?? null,
+                            'lienParente'          => $data['responsable']['lienParente'] ?? $input['responsable']['lienParente'] ?? null,
+                            'profession'           => $data['responsable']['profession_detail'] ?? $input['responsable']['profession_detail'] ?? null,
+                            'profession_detail'    => $data['responsable']['profession_detail'] ?? $input['responsable']['profession_detail'] ?? null,
+                            'employment_status'    => $data['responsable']['employment_status'] ?? $input['responsable']['employment_status'] ?? null,
+                            'fonction'             => $data['responsable']['fonction'] ?? $input['responsable']['fonction'] ?? null,
+                            'statutMarital'        => $data['responsable']['statutMarital'] ?? $input['responsable']['statutMarital'] ?? null,
+                            'baptise'              => $data['responsable']['baptise'] ?? $input['responsable']['baptise'] ?? false,
+                        ],
                         'membres'     => $data['membres'] ?? [],
                         'selectedRoles' => $data['selectedRoles'] ?? [],
                         'ip_address'  => request()->ip(),
@@ -412,10 +429,16 @@ class RegistrationController extends Controller
             $errors['responsable.genre'] = ['Le genre doit être Masculin (M) ou Féminin (F).'];
         }
 
-        if (empty($responsable['profession'])) {
-            $errors['responsable.profession'] = ['La profession du responsable est obligatoire.'];
-        } elseif (strlen($responsable['profession']) > 100) {
-            $errors['responsable.profession'] = ['La profession ne peut pas dépasser 100 caractères.'];
+        if (empty($responsable['employment_status'])) {
+            $errors['responsable.employment_status'] = ['Le statut d\'emploi du responsable est obligatoire.'];
+        } elseif (!in_array($responsable['employment_status'], ['TRAVAILLEUR', 'RETRAITE', 'ETUDIANT', 'SANS_EMPLOI'])) {
+            $errors['responsable.employment_status'] = ['Le statut d\'emploi sélectionné n\'est pas valide.'];
+        }
+
+        if (empty($responsable['profession_detail'])) {
+            $errors['responsable.profession_detail'] = ['La profession du responsable est obligatoire.'];
+        } elseif (strlen($responsable['profession_detail']) > 255) {
+            $errors['responsable.profession_detail'] = ['La profession ne peut pas dépasser 255 caractères.'];
         }
 
         if (empty($responsable['statutMarital'])) {
@@ -466,6 +489,18 @@ class RegistrationController extends Controller
 
                 if (!empty($membre['genre']) && !in_array($membre['genre'], ['M', 'F'])) {
                     $errors["membres.{$i}.genre"] = ['Le genre du membre doit être M ou F.'];
+                }
+
+                if (empty($membre['employment_status'])) {
+                    $errors["membres.{$i}.employment_status"] = ['Le statut d\'emploi du membre est obligatoire.'];
+                } elseif (!in_array($membre['employment_status'], ['TRAVAILLEUR', 'RETRAITE', 'ETUDIANT', 'SANS_EMPLOI'])) {
+                    $errors["membres.{$i}.employment_status"] = ['Le statut d\'emploi sélectionné n\'est pas valide.'];
+                }
+
+                if (empty($membre['profession_detail'])) {
+                    $errors["membres.{$i}.profession_detail"] = ['La profession du membre est obligatoire.'];
+                } elseif (strlen($membre['profession_detail']) > 255) {
+                    $errors["membres.{$i}.profession_detail"] = ['La profession ne peut pas dépasser 255 caractères.'];
                 }
 
                 if (!empty($membre['photo']) && is_object($membre['photo']) && method_exists($membre['photo'], 'isValid')) {
@@ -599,6 +634,12 @@ class RegistrationController extends Controller
                 'ville'        => 'nullable|string|max:100',
                 'ville_id'     => 'nullable|integer|exists:villes,id',
                 'fonction'     => 'nullable|string|max:255',
+                'employment_status' => 'required|in:TRAVAILLEUR,RETRAITE,ETUDIANT,SANS_EMPLOI',
+                'profession_detail' => 'required|string|max:255',
+                'responsable.employment_status' => 'required|in:TRAVAILLEUR,RETRAITE,ETUDIANT,SANS_EMPLOI',
+                'responsable.profession_detail' => 'required|string|max:255',
+                'membres.*.employment_status' => 'required|in:TRAVAILLEUR,RETRAITE,ETUDIANT,SANS_EMPLOI',
+                'membres.*.profession_detail' => 'required|string|max:255',
                 'statutMarital' => 'nullable|string',
                 'dateMariageniv' => 'nullable|date_format:Y-m-d',
                 'lieuMariagePerso' => 'nullable|string|max:255',
@@ -697,6 +738,8 @@ class RegistrationController extends Controller
                     'telephone2'        => $responsableInput['telephone2'] ?? ($validated['telephone2'] ?? null),
                     'dateNaissance'     => $responsableInput['dateNaissance'] ?? $validated['dateNaissance'],
                     'genre'             => $responsableInput['genre'] ?? $validated['genre'],
+                    'employment_status' => $responsableInput['employment_status'] ?? ($validated['employment_status'] ?? null),
+                    'profession_detail' => $responsableInput['profession_detail'] ?? ($validated['profession_detail'] ?? null),
                     'profession'        => $responsableInput['profession'] ?? ($validated['fonction'] ?? null),
                     'fonction'          => $responsableInput['fonction'] ?? ($validated['fonction'] ?? null),
                     'statutMarital'     => $responsableInput['statutMarital'] ?? ($validated['statutMarital'] ?? null),
@@ -730,6 +773,8 @@ class RegistrationController extends Controller
                     'responsable_prenom' => $responsableData['prenom'] ?? $validated['prenom'],
                     'responsable_email' => $responsableData['email'] ?? ($validated['email'] ?? null),
                     'responsable_tel'  => $this->formatPhone($responsableData['tel'] ?? $validated['telephone']),
+                    'responsable_employment_status' => $responsableData['employment_status'] ?? null,
+                    'responsable_profession'        => $responsableData['profession_detail'] ?? null,
                     'email'            => $validated['email'] ?? null,
                     'telephone'        => $this->formatPhone($validated['telephone']),
                     'telephone2'       => !empty($validated['telephone2']) ? $this->formatPhone($validated['telephone2']) : null,

@@ -8,6 +8,7 @@ use App\Models\Cotisation;
 use App\Models\Don;
 use App\Models\Paiement;
 use App\Services\PayDunyaService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -47,7 +48,11 @@ class FinancesController extends Controller
 
         $cotisationsBase = Cotisation::query()
             ->where('statut', Cotisation::STATUT_ACTIVE)
-            ->where('target_scope', Cotisation::TARGET_SCOPE_INDIVIDUELLE)
+            ->where(function ($query) {
+                $query->whereNull('target_scope')
+                    ->orWhere('target_scope', Cotisation::TARGET_SCOPE_FAMILLE)
+                    ->orWhere('target_scope', Cotisation::TARGET_SCOPE_INDIVIDUELLE);
+            })
             ->where(function ($query) use ($family) {
                 $query->whereNull('classe_id')
                     ->orWhere('classe_id', $family->classe_id);
@@ -55,32 +60,49 @@ class FinancesController extends Controller
             ->orderBy('nom')
             ->get();
 
-        $paiementsMembre = Paiement::query()
+        $paiementsFamille = Paiement::query()
+            ->where('family_id', $family->id)
+            ->get();
+
+        $paiementsMembre = $paiementsFamille
+            ->where('user_id', $user->id)
+            ->values();
+
+        $historiquePaiementsSource = Paiement::query()
             ->where('family_id', $family->id)
             ->where('user_id', $user->id)
             ->with('cotisation:id,nom')
             ->orderByDesc('date_paiement')
             ->get();
 
-        $cotisations = $cotisationsBase->map(function (Cotisation $cotisation) use ($paiementsMembre) {
-            $paye = (int) $paiementsMembre
-                ->where('cotisation_id', $cotisation->id)
-                ->sum('montant');
+        $cotisations = $cotisationsBase->map(function (Cotisation $cotisation) use ($user, $paiementsFamille, $paiementsMembre) {
+            $expected = $this->resolveExpectedAmountForMember($cotisation, $user);
+            $isIndividualScope = $cotisation->target_scope === Cotisation::TARGET_SCOPE_INDIVIDUELLE;
 
-            $du = max(0, (int) $cotisation->montant - $paye);
+            $paye = $isIndividualScope
+                ? (int) $paiementsMembre->where('cotisation_id', $cotisation->id)->sum('montant')
+                : (int) $paiementsFamille->where('cotisation_id', $cotisation->id)->sum('montant');
+
+            $du = max(0, $expected - $paye);
+            $isFimeco = str_contains(mb_strtolower((string) $cotisation->nom), 'fimeco');
 
             return [
                 'id' => $cotisation->id,
                 'nom' => $cotisation->nom,
-                'montant' => (int) $cotisation->montant,
+                'montant' => $expected,
                 'periodicite' => ucfirst(strtolower($cotisation->periodicite)),
+                'target_scope' => $cotisation->target_scope,
+                'type_finance' => $isFimeco ? 'FIMECO' : 'COTISATION',
+                'montant_attendu' => $expected,
                 'paye' => $paye,
                 'du' => $du,
-                'reliquat' => max(0, $paye - (int) $cotisation->montant),
+                'reliquat' => max(0, $paye - $expected),
+                'date_echeance' => optional($cotisation->date_echeance)->format('Y-m-d'),
+                'late_after_days' => (int) ($cotisation->late_after_days ?? 2),
             ];
         })->values();
 
-        $historiquePaiements = $paiementsMembre
+        $historiquePaiements = $historiquePaiementsSource
             ->take(50)
             ->map(function (Paiement $paiement) {
                 return [
@@ -171,15 +193,47 @@ class FinancesController extends Controller
             'note' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        if (!empty($validated['cotisation_id'])) {
-            $cotisation = Cotisation::query()->find($validated['cotisation_id']);
-            if (!$cotisation || $cotisation->target_scope !== Cotisation::TARGET_SCOPE_INDIVIDUELLE) {
-                return response()->json(['message' => 'Cette cotisation ne peut pas être payée individuellement.'], 422);
-            }
-        }
-
         if (!$user->family_id) {
             return response()->json(['message' => 'Aucune famille associée.'], 422);
+        }
+
+        $paymentStatus = Paiement::STATUT_PAYE;
+
+        if (!empty($validated['cotisation_id'])) {
+            /** @var Cotisation|null $cotisation */
+            $cotisation = Cotisation::query()->find($validated['cotisation_id']);
+            if (!$cotisation || !$this->isCotisationPayableByMember($cotisation, $user)) {
+                return response()->json(['message' => 'Cette cotisation n\'est pas disponible pour votre profil.'], 422);
+            }
+
+            $expectedAmount = $this->resolveExpectedAmountForMember($cotisation, $user);
+            $isIndividualScope = $cotisation->target_scope === Cotisation::TARGET_SCOPE_INDIVIDUELLE;
+
+            $alreadyPaid = (int) Paiement::query()
+                ->where('family_id', $user->family_id)
+                ->when($isIndividualScope, fn($query) => $query->where('user_id', $user->id))
+                ->where('cotisation_id', $cotisation->id)
+                ->sum('montant');
+
+            $remainingBefore = max(0, $expectedAmount - $alreadyPaid);
+            if ($remainingBefore === 0) {
+                return response()->json(['message' => 'Cette cotisation est déjà réglée.'], 422);
+            }
+
+            if ((int) $validated['montant'] > $remainingBefore) {
+                return response()->json([
+                    'message' => 'Le montant dépasse le reste à payer (' . number_format($remainingBefore, 0, ',', ' ') . ' F CFA).',
+                ], 422);
+            }
+
+            $remainingAfter = max(0, $remainingBefore - (int) $validated['montant']);
+            if ($remainingAfter > 0) {
+                $paidAt = !empty($validated['date_paiement'])
+                    ? Carbon::parse($validated['date_paiement'])
+                    : null;
+                $isLate = $cotisation->isLate($paidAt);
+                $paymentStatus = $isLate ? Paiement::STATUT_EN_RETARD : Paiement::STATUT_PARTIELLEMENT_PAYE;
+            }
         }
 
         $paiement = Paiement::create([
@@ -192,7 +246,7 @@ class FinancesController extends Controller
             'provider' => $validated['provider'] ?? null,
             'date_paiement' => $validated['date_paiement'],
             'reference_recu' => 'RECU-' . now()->format('YmdHis') . '-' . strtoupper(substr(md5((string) random_int(1, 9999999)), 0, 6)),
-            'statut' => Paiement::STATUT_PAYE,
+            'statut' => $paymentStatus,
             'payment_status' => Paiement::PAYMENT_STATUS_PAYE,
             'note' => $validated['note'] ?? null,
         ]);
@@ -220,9 +274,30 @@ class FinancesController extends Controller
             'date_paiement' => ['required', 'date'],
         ]);
 
+        /** @var Cotisation|null $cotisation */
         $cotisation = Cotisation::query()->find($validated['cotisation_id']);
-        if (!$cotisation || $cotisation->target_scope !== Cotisation::TARGET_SCOPE_INDIVIDUELLE || $cotisation->statut !== Cotisation::STATUT_ACTIVE) {
-            return response()->json(['message' => 'Cette cotisation ne peut pas être payée individuellement.'], 422);
+        if (!$cotisation || !$this->isCotisationPayableByMember($cotisation, $user)) {
+            return response()->json(['message' => 'Cette cotisation n\'est pas disponible pour votre profil.'], 422);
+        }
+
+        $expectedAmount = $this->resolveExpectedAmountForMember($cotisation, $user);
+        $isIndividualScope = $cotisation->target_scope === Cotisation::TARGET_SCOPE_INDIVIDUELLE;
+
+        $alreadyPaid = (int) Paiement::query()
+            ->where('family_id', $user->family_id)
+            ->when($isIndividualScope, fn($query) => $query->where('user_id', $user->id))
+            ->where('cotisation_id', $cotisation->id)
+            ->sum('montant');
+
+        $remainingBefore = max(0, $expectedAmount - $alreadyPaid);
+        if ($remainingBefore === 0) {
+            return response()->json(['message' => 'Cette cotisation est déjà réglée.'], 422);
+        }
+
+        if ((int) $validated['montant'] > $remainingBefore) {
+            return response()->json([
+                'message' => 'Le montant dépasse le reste à payer (' . number_format($remainingBefore, 0, ',', ' ') . ' F CFA).',
+            ], 422);
         }
 
         $paiement = Paiement::create([
@@ -340,5 +415,32 @@ class FinancesController extends Controller
             'message' => 'Don enregistré avec succès.',
             'data' => $don,
         ], 201);
+    }
+
+    private function resolveExpectedAmountForMember(Cotisation $cotisation, $user): int
+    {
+        if ($cotisation->target_scope === Cotisation::TARGET_SCOPE_INDIVIDUELLE) {
+            return max(0, (int) $cotisation->resolveAmountForUser($user));
+        }
+
+        return max(0, (int) $cotisation->montant);
+    }
+
+    private function isCotisationPayableByMember(Cotisation $cotisation, $user): bool
+    {
+        if ($cotisation->statut !== Cotisation::STATUT_ACTIVE) {
+            return false;
+        }
+
+        if ($cotisation->classe_id !== null && (int) $cotisation->classe_id !== (int) $user->classe_id) {
+            return false;
+        }
+
+        $scope = $cotisation->target_scope;
+        if ($scope === Cotisation::TARGET_SCOPE_INDIVIDUELLE) {
+            return $this->resolveExpectedAmountForMember($cotisation, $user) >= 100;
+        }
+
+        return $scope === null || $scope === Cotisation::TARGET_SCOPE_FAMILLE;
     }
 }

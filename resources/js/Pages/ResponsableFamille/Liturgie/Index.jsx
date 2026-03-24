@@ -36,12 +36,6 @@ const ANNONCE_TYPES = [
         color: "slate",
     },
     {
-        value: "felicitations",
-        label: "Félicitations",
-        emoji: "🎉",
-        color: "terra",
-    },
-    {
         value: "generale",
         label: "Annonce générale",
         emoji: "📢",
@@ -54,7 +48,6 @@ const ANNONCE_ACTE_TYPES = [
     "annonce_liturgique",
     "priere",
     "grace",
-    "felicitations",
     "generale",
 ];
 
@@ -423,26 +416,6 @@ export default function Index({
                         <ArrowLeft size={16} /> Retour
                     </Link>
                     <div style={{ display: "flex", gap: 8 }}>
-                        <Link
-                            href="/responsable-famille/liturgie/nouvelle"
-                            className="btn-annonce-top"
-                        >
-                            <svg
-                                width="15"
-                                height="15"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth="2.5"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
-                                />
-                            </svg>
-                            Faire une nouvelle demande d'acte
-                        </Link>
                         <button
                             type="button"
                             className="btn-terra"
@@ -604,9 +577,6 @@ export default function Index({
                                 <option value="priere">🙏 Prière</option>
                                 <option value="grace">
                                     🙌 Action de grâce
-                                </option>
-                                <option value="felicitations">
-                                    🎉 Félicitations
                                 </option>
                                 <option value="generale">📢 Générale</option>
                             </optgroup>
@@ -2560,8 +2530,6 @@ function getPlaceholder(type) {
         priere: "Ex : Nous sollicitons les prières de la communauté pour la guérison de…",
         grace: "Ex : La famille Kouassi rend grâce à Dieu pour la naissance de…",
         deces: "Ex : La famille a la douleur de vous annoncer le rappel à Dieu de…",
-        felicitations:
-            "Ex : Nous félicitons chaleureusement les époux… pour leur union sacrée.",
         generale: "Rédigez votre annonce à destination de l'assemblée…",
     };
     return p[type] || "Rédigez votre message…";

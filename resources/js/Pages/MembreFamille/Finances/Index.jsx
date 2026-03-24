@@ -6,7 +6,7 @@ import {
     Heart,
     Download,
     ArrowLeft,
-    ArrowRight,
+    X,
 } from "lucide-react";
 
 export default function MembreFamilleFinances({
@@ -16,14 +16,18 @@ export default function MembreFamilleFinances({
     donsFamille: donsFamilleProp,
     campagnesActives: campagnesActivesProp,
 }) {
-    const [activeTab, setActiveTab] = useState("consultation");
+    const [activeTab, setActiveTab] = useState("fimeco");
     const [paymentMethod, setPaymentMethod] = useState("MOBILE_MONEY");
     const [mobileProvider, setMobileProvider] = useState("wave");
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [selectedCotisationId, setSelectedCotisationId] = useState("");
+    const [paymentAmount, setPaymentAmount] = useState("");
     const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
     const [freeDonAmount, setFreeDonAmount] = useState("");
     const [isSubmittingDon, setIsSubmittingDon] = useState(false);
+    const [isDonModalOpen, setIsDonModalOpen] = useState(false);
+    const [donPaymentMethod, setDonPaymentMethod] = useState("MOBILE_MONEY");
+    const [donMobileProvider, setDonMobileProvider] = useState("wave");
 
     const fallbackFamilyInfo = {
         nom: "Famille Koné",
@@ -165,20 +169,34 @@ export default function MembreFamilleFinances({
 
     const cotisations = cotisationsRaw.map((c) => ({
         ...c,
+        type_finance:
+            c.type_finance ||
+            (String(c.nom || "")
+                .toLowerCase()
+                .includes("fimeco")
+                ? "FIMECO"
+                : "COTISATION"),
         paye: c.paye ?? c.payé ?? 0,
         du: c.du ?? c.dû ?? 0,
     }));
 
-    const dueCotisations = cotisations.filter((c) => c.du > 0);
+    const fimecoCotisations = cotisations.filter(
+        (c) => c.type_finance === "FIMECO",
+    );
+    const autresCotisations = cotisations.filter(
+        (c) => c.type_finance !== "FIMECO",
+    );
+    const payableCotisations = cotisations.filter((c) => Number(c.du) > 0);
     const selectedCotisation =
-        dueCotisations.find(
+        payableCotisations.find(
             (c) => String(c.id) === String(selectedCotisationId),
         ) ||
-        dueCotisations[0] ||
+        payableCotisations[0] ||
         null;
-    const selectedMontant = selectedCotisation
+    const defaultSelectedAmount = selectedCotisation
         ? Number(selectedCotisation.du)
         : 0;
+    const selectedMontant = Number(paymentAmount || defaultSelectedAmount || 0);
 
     const totalCotisations = cotisations.reduce((sum, c) => sum + c.du, 0);
 
@@ -193,6 +211,16 @@ export default function MembreFamilleFinances({
             isSubmittingPayment ||
             !selectedCotisation
         ) {
+            return;
+        }
+
+        if (selectedMontant < 100) {
+            alert("Le montant minimum de paiement est 100 F CFA.");
+            return;
+        }
+
+        if (selectedMontant > Number(selectedCotisation.du)) {
+            alert("Le montant ne peut pas dépasser le reste à payer.");
             return;
         }
 
@@ -283,7 +311,11 @@ export default function MembreFamilleFinances({
                     campagne_id: null,
                     montant: amount,
                     type: "LIBRE",
-                    mode_paiement: paymentMethod,
+                    mode_paiement: donPaymentMethod,
+                    provider:
+                        donPaymentMethod === "MOBILE_MONEY"
+                            ? donMobileProvider
+                            : null,
                     date_don: new Date().toISOString().slice(0, 10),
                     note: "Don libre depuis l'espace membre famille",
                 }),
@@ -295,12 +327,122 @@ export default function MembreFamilleFinances({
 
             alert("Don enregistré avec succès.");
             setFreeDonAmount("");
+            setIsDonModalOpen(false);
             window.location.reload();
         } catch (error) {
             alert("Échec de l'enregistrement du don.");
         } finally {
             setIsSubmittingDon(false);
         }
+    };
+
+    const renderCotisationsList = (list, emptyMessage) => {
+        if (!list.length) {
+            return (
+                <div className="p-8 bg-gray-50 border border-gray-200 rounded-lg text-center text-gray-600">
+                    {emptyMessage}
+                </div>
+            );
+        }
+
+        return (
+            <div className="space-y-4">
+                {list.map((cot) => {
+                    const expected = Number(
+                        cot.montant_attendu ?? cot.montant ?? cot.paye + cot.du,
+                    );
+                    const progress =
+                        expected > 0
+                            ? Math.min(100, (Number(cot.paye) / expected) * 100)
+                            : 0;
+
+                    return (
+                        <div
+                            key={cot.id}
+                            className="p-4 border border-gray-200 rounded-lg hover:border-teal-400 transition-colors"
+                        >
+                            <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-3">
+                                <div>
+                                    <p className="text-xs text-gray-600 font-semibold">
+                                        Cotisation
+                                    </p>
+                                    <p className="font-bold text-gray-900 mt-1">
+                                        {cot.nom}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-600 font-semibold">
+                                        Montant attendu
+                                    </p>
+                                    <p className="font-bold text-gray-900 mt-1">
+                                        {(expected / 1000).toFixed(0)}K
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-600 font-semibold">
+                                        Fréquence
+                                    </p>
+                                    <p className="font-bold text-gray-900 mt-1">
+                                        {cot.periodicite}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-600 font-semibold">
+                                        Portée
+                                    </p>
+                                    <p className="font-bold text-gray-900 mt-1">
+                                        {cot.target_scope === "INDIVIDUELLE"
+                                            ? "Individuelle"
+                                            : "Famille"}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-600 font-semibold">
+                                        Payé
+                                    </p>
+                                    <p className="font-bold text-green-600 mt-1">
+                                        {(Number(cot.paye) / 1000).toFixed(0)}K
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-600 font-semibold">
+                                        Statut
+                                    </p>
+                                    <p
+                                        className={`font-bold mt-1 ${Number(cot.du) === 0 ? "text-green-600" : "text-red-600"}`}
+                                    >
+                                        {Number(cot.du) === 0
+                                            ? "A jour"
+                                            : `Reste ${(Number(cot.du) / 1000).toFixed(0)}K`}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+                                <div
+                                    className="bg-teal-600 h-2 rounded-full transition-all"
+                                    style={{ width: `${progress}%` }}
+                                ></div>
+                            </div>
+
+                            {Number(cot.du) > 0 && (
+                                <button
+                                    onClick={() => {
+                                        setSelectedCotisationId(String(cot.id));
+                                        setPaymentAmount(String(cot.du));
+                                        setActiveTab("paiement");
+                                    }}
+                                    className="px-4 py-2 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors inline-flex items-center gap-2"
+                                >
+                                    <CreditCard size={16} /> Payer cette
+                                    cotisation
+                                </button>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        );
     };
 
     return (
@@ -419,7 +561,8 @@ export default function MembreFamilleFinances({
                 <div className="bg-white rounded-lg shadow-md overflow-hidden">
                     <div className="flex border-b border-gray-200">
                         {[
-                            { id: "consultation", label: "📋 Consultation" },
+                            { id: "fimeco", label: "🏦 FIMECO" },
+                            { id: "cotisations", label: "📋 Mes cotisations" },
                             { id: "paiement", label: "💳 Paiement" },
                             { id: "dons", label: "❤️ Dons" },
                             { id: "historique", label: "📜 Historique" },
@@ -439,93 +582,68 @@ export default function MembreFamilleFinances({
                     </div>
 
                     <div className="p-6">
-                        {activeTab === "consultation" && (
+                        {activeTab === "fimeco" && (
                             <div>
                                 <h3 className="text-lg font-bold text-gray-900 mb-6">
-                                    État de vos cotisations
+                                    Cotisations FIMECO
                                 </h3>
-                                <div className="space-y-4">
-                                    {cotisations.map((cot, idx) => (
-                                        <div
-                                            key={idx}
-                                            className="p-4 border border-gray-200 rounded-lg hover:border-teal-400 transition-colors"
-                                        >
-                                            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-3">
-                                                <div>
-                                                    <p className="text-xs text-gray-600 font-semibold">
-                                                        Cotisation
-                                                    </p>
-                                                    <p className="font-bold text-gray-900 mt-1">
-                                                        {cot.nom}
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs text-gray-600 font-semibold">
-                                                        Montant
-                                                    </p>
-                                                    <p className="font-bold text-gray-900 mt-1">
-                                                        {(
-                                                            cot.montant / 1000
-                                                        ).toFixed(0)}
-                                                        K
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs text-gray-600 font-semibold">
-                                                        Fréquence
-                                                    </p>
-                                                    <p className="font-bold text-gray-900 mt-1">
-                                                        {cot.periodicite}
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs text-gray-600 font-semibold">
-                                                        Payé
-                                                    </p>
-                                                    <p className="font-bold text-green-600 mt-1">
-                                                        {(
-                                                            cot.paye / 1000
-                                                        ).toFixed(0)}
-                                                        K
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs text-gray-600 font-semibold">
-                                                        Status
-                                                    </p>
-                                                    <p
-                                                        className={`font-bold mt-1 ${cot.du === 0 ? "text-green-600" : "text-red-600"}`}
-                                                    >
-                                                        {cot.du === 0
-                                                            ? "✓ À jour"
-                                                            : "⚠️ En retard"}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className="w-full bg-gray-200 rounded-full h-2">
-                                                <div
-                                                    className="bg-teal-600 h-2 rounded-full transition-all"
-                                                    style={{
-                                                        width: `${(cot.paye / (cot.paye + cot.du || 1)) * 100}%`,
-                                                    }}
-                                                ></div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                {renderCotisationsList(
+                                    fimecoCotisations,
+                                    "Aucune cotisation FIMECO active pour le moment.",
+                                )}
 
                                 {totalCotisations > 0 && (
                                     <div className="mt-6 p-4 bg-orange-50 border-l-4 border-orange-500 rounded">
                                         <p className="font-semibold text-orange-900">
-                                            ⚠️ Montant total à régulariser
+                                            Montant total à régulariser
                                         </p>
                                         <p className="text-2xl font-bold text-orange-600 mt-2">
                                             {(totalCotisations / 1000).toFixed(
                                                 0,
-                                            )}
+                                            )}{" "}
                                             K F CFA
                                         </p>
-                                        <button className="mt-4 px-6 py-2 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors inline-flex items-center gap-2">
+                                        <button
+                                            onClick={() =>
+                                                setActiveTab("paiement")
+                                            }
+                                            className="mt-4 px-6 py-2 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors inline-flex items-center gap-2"
+                                        >
+                                            <CreditCard size={18} /> Payer
+                                            maintenant
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab === "cotisations" && (
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900 mb-6">
+                                    Toutes les autres cotisations
+                                </h3>
+                                {renderCotisationsList(
+                                    autresCotisations,
+                                    "Aucune autre cotisation active pour le moment.",
+                                )}
+
+                                {totalCotisations > 0 && (
+                                    <div className="mt-6 p-4 bg-orange-50 border-l-4 border-orange-500 rounded">
+                                        <p className="font-semibold text-orange-900">
+                                            Montant total à régulariser
+                                        </p>
+                                        <p className="text-2xl font-bold text-orange-600 mt-2">
+                                            {(totalCotisations / 1000).toFixed(
+                                                0,
+                                            )}{" "}
+                                            K F CFA
+                                        </p>
+                                        <button
+                                            onClick={() =>
+                                                setActiveTab("paiement")
+                                            }
+                                            className="mt-4 px-6 py-2 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors inline-flex items-center gap-2"
+                                        >
                                             <CreditCard size={18} /> Payer
                                             maintenant
                                         </button>
@@ -559,7 +677,7 @@ export default function MembreFamilleFinances({
                                     </div>
                                 ) : (
                                     <div className="space-y-6">
-                                        {/* Cotisation individuelle à payer */}
+                                        {/* Cotisation à payer */}
                                         <div className="p-6 border-2 border-dashed border-orange-300 rounded-lg bg-orange-50">
                                             <h4 className="font-bold text-gray-900 mb-4">
                                                 Sélectionnez votre cotisation
@@ -573,14 +691,15 @@ export default function MembreFamilleFinances({
                                                         selectedCotisation?.id ??
                                                         ""
                                                     }
-                                                    onChange={(e) =>
+                                                    onChange={(e) => {
                                                         setSelectedCotisationId(
                                                             e.target.value,
-                                                        )
-                                                    }
+                                                        );
+                                                        setPaymentAmount("");
+                                                    }}
                                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                                                 >
-                                                    {dueCotisations.map(
+                                                    {payableCotisations.map(
                                                         (cot) => (
                                                             <option
                                                                 key={cot.id}
@@ -636,10 +755,26 @@ export default function MembreFamilleFinances({
                                                         Montant à payer
                                                     </label>
                                                     <input
+                                                        type="number"
+                                                        min={100}
+                                                        max={
+                                                            Number(
+                                                                selectedCotisation?.du,
+                                                            ) || undefined
+                                                        }
                                                         value={selectedMontant}
-                                                        disabled
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 font-bold text-orange-700"
+                                                        onChange={(e) =>
+                                                            setPaymentAmount(
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white font-bold text-orange-700"
                                                     />
+                                                    <p className="text-xs text-gray-600 mt-2">
+                                                        Vous pouvez payer
+                                                        partiellement, sans
+                                                        dépasser le reste dû.
+                                                    </p>
                                                 </div>
                                             </div>
 
@@ -862,33 +997,25 @@ export default function MembreFamilleFinances({
                                             Don libre
                                         </h4>
                                         <div className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-dashed border-purple-300 rounded-lg">
-                                            <p className="text-gray-700 mb-4 font-semibold">
-                                                Montant de votre don
-                                            </p>
-                                            <input
-                                                type="number"
-                                                placeholder="Entrez le montant en F CFA"
-                                                value={freeDonAmount}
-                                                onChange={(e) =>
-                                                    setFreeDonAmount(
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                            />
                                             <p className="text-xs text-gray-600 mt-3">
                                                 Votre contribution est
                                                 volontaire et soutient les
                                                 projets communautaires.
                                             </p>
                                             <button
-                                                onClick={handleSubmitDonLibre}
-                                                disabled={isSubmittingDon}
+                                                onClick={() => {
+                                                    setFreeDonAmount("");
+                                                    setDonPaymentMethod(
+                                                        "MOBILE_MONEY",
+                                                    );
+                                                    setDonMobileProvider(
+                                                        "wave",
+                                                    );
+                                                    setIsDonModalOpen(true);
+                                                }}
                                                 className="w-full mt-4 px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 disabled:bg-purple-300 transition-colors"
                                             >
-                                                {isSubmittingDon
-                                                    ? "Enregistrement..."
-                                                    : "Faire un don"}
+                                                Faire un don libre
                                             </button>
                                         </div>
                                     </div>
@@ -975,6 +1102,98 @@ export default function MembreFamilleFinances({
                     </div>
                 </div>
             </div>
+
+            {isDonModalOpen && (
+                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
+                    <div className="w-full max-w-md bg-white rounded-xl shadow-2xl overflow-hidden">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+                            <h4 className="text-lg font-bold text-gray-900">
+                                Don libre
+                            </h4>
+                            <button
+                                onClick={() => setIsDonModalOpen(false)}
+                                className="p-1 rounded hover:bg-gray-100 text-gray-500"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="p-5 space-y-4">
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-800 mb-2">
+                                    Montant (F CFA)
+                                </label>
+                                <input
+                                    type="number"
+                                    min={100}
+                                    placeholder="Entrez le montant"
+                                    value={freeDonAmount}
+                                    onChange={(e) =>
+                                        setFreeDonAmount(e.target.value)
+                                    }
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-800 mb-2">
+                                    Mode de paiement
+                                </label>
+                                <select
+                                    value={donPaymentMethod}
+                                    onChange={(e) =>
+                                        setDonPaymentMethod(e.target.value)
+                                    }
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                >
+                                    <option value="MOBILE_MONEY">
+                                        Mobile Money
+                                    </option>
+                                    <option value="ESPECES">Espèces</option>
+                                    <option value="VIREMENT">Virement</option>
+                                </select>
+                            </div>
+
+                            {donPaymentMethod === "MOBILE_MONEY" && (
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-800 mb-2">
+                                        Opérateur
+                                    </label>
+                                    <select
+                                        value={donMobileProvider}
+                                        onChange={(e) =>
+                                            setDonMobileProvider(e.target.value)
+                                        }
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                    >
+                                        <option value="wave">Wave</option>
+                                        <option value="orange">Orange</option>
+                                        <option value="mtn">MTN</option>
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="px-5 py-4 border-t border-gray-200 flex gap-3">
+                            <button
+                                onClick={() => setIsDonModalOpen(false)}
+                                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50"
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                onClick={handleSubmitDonLibre}
+                                disabled={isSubmittingDon}
+                                className="flex-1 px-4 py-2 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700 disabled:bg-purple-300"
+                            >
+                                {isSubmittingDon
+                                    ? "Enregistrement..."
+                                    : "Valider le don"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -77,8 +77,12 @@ class InscriptionApprovalController extends Controller
                             'telephone2' => $inscription->telephone2 ?? ($inscription->responsable_telephone2 ?? ($inscription->data['responsable']['telephone2'] ?? null)),
                             'date_naissance' => $inscription->date_naissance ?? ($inscription->data['responsable']['dateNaissance'] ?? null),
                             'genre' => $inscription->genre ?? ($inscription->responsable_genre ?? ($inscription->data['responsable']['genre'] ?? null)),
+                            'relation' => $this->resolveRelation($inscription->data['responsable'] ?? [], $inscription->responsable_lien_parente ?? null),
                             'adresse' => $inscription->data['person']['adresse'] ?? null,
                             'fonction_professionnelle' => $inscription->data['person']['fonction_professionnelle'] ?? null,
+                            'profession' => $this->resolveProfessionDetail($inscription->data['responsable'] ?? [], $inscription->data['person']['fonction_professionnelle'] ?? null),
+                            'employment_status' => $this->resolveEmploymentStatus($inscription->data['responsable']['employment_status'] ?? null),
+                            'profession_detail' => $this->resolveProfessionDetail($inscription->data['responsable'] ?? [], $inscription->data['person']['fonction_professionnelle'] ?? null),
                             'fonction_id' => $inscription->data['person']['fonction'] ?? null,
                             'classe_id' => $inscription->classe_id,
                             'photo_path' => $inscription->photo_path,
@@ -196,9 +200,11 @@ class InscriptionApprovalController extends Controller
                     'classe_id' => $family?->classe_id ?? $inscription->data['classe_id'] ?? null,
                     'is_family_responsible' => in_array($role, ['responsable']),
                     'last_login_at' => null,
-                    'profession' => $inscription->data['profession'] ?? null,
+                    'profession' => $this->resolveProfessionDetail($inscription->data['responsable'] ?? $inscription->data, $inscription->data['profession'] ?? null),
+                    'employment_status' => $this->resolveEmploymentStatus($inscription->data['responsable']['employment_status'] ?? ($inscription->data['employment_status'] ?? null)),
+                    'profession_detail' => $this->resolveProfessionDetail($inscription->data['responsable'] ?? $inscription->data, $inscription->data['profession'] ?? null),
                     'fonction_id' => $inscription->data['fonction_id'] ?? null,
-                    'relation' => $inscription->data['relation'] ?? null,
+                    'relation' => $this->resolveRelation($inscription->data['responsable'] ?? $inscription->data, $inscription->responsable_lien_parente ?? null),
                     'role' => ($role === 'responsable') ? 'responsable_famille' : 'membre_famille',
                 ]);
 
@@ -408,8 +414,12 @@ class InscriptionApprovalController extends Controller
                             'telephone2' => $inscription->telephone2 ?? ($inscription->responsable_telephone2 ?? ($inscription->data['responsable']['telephone2'] ?? null)),
                             'date_naissance' => $inscription->date_naissance ?? ($inscription->data['responsable']['dateNaissance'] ?? null),
                             'genre' => $inscription->genre ?? ($inscription->responsable_genre ?? ($inscription->data['responsable']['genre'] ?? null)),
+                            'relation' => $this->resolveRelation($inscription->data['responsable'] ?? [], $inscription->responsable_lien_parente ?? null),
                             'adresse' => $inscription->data['person']['adresse'] ?? null,
                             'fonction_professionnelle' => $inscription->data['person']['fonction_professionnelle'] ?? null,
+                            'profession' => $this->resolveProfessionDetail($inscription->data['responsable'] ?? [], $inscription->data['person']['fonction_professionnelle'] ?? null),
+                            'employment_status' => $this->resolveEmploymentStatus($inscription->data['responsable']['employment_status'] ?? null),
+                            'profession_detail' => $this->resolveProfessionDetail($inscription->data['responsable'] ?? [], $inscription->data['person']['fonction_professionnelle'] ?? null),
                             'fonction_id' => $inscription->data['person']['fonction'] ?? null,
                             'classe_id' => $inscription->classe_id,
                             'photo_path' => $inscription->photo_path,
@@ -692,6 +702,14 @@ class InscriptionApprovalController extends Controller
         $tel2Conducteur = $inscriptionConducteur->responsable_telephone2 ?? $inscriptionConducteur->telephone2;
         $dateNaissanceConducteur = $inscriptionConducteur->responsable_date_naissance ?? $inscriptionConducteur->date_naissance;
         $genreConducteur = $inscriptionConducteur->responsable_genre ?? $inscriptionConducteur->genre;
+        $employmentStatusConducteur = $this->resolveEmploymentStatus(
+            $inscriptionConducteur->data['responsable']['employment_status'] ?? ($inscriptionConducteur->data['employment_status'] ?? null),
+            $inscriptionConducteur->responsable_employment_status ?? null
+        );
+        $professionDetailConducteur = $this->resolveProfessionDetail(
+            $inscriptionConducteur->data['responsable'] ?? [],
+            $inscriptionConducteur->responsable_profession ?? null
+        );
 
         // 1. Créer la famille du conducteur
         $family = Family::create([
@@ -725,6 +743,10 @@ class InscriptionApprovalController extends Controller
             'telephone2' => $tel2Conducteur,
             'date_naissance' => $dateNaissanceConducteur,
             'genre' => $genreConducteur,
+            'relation' => $this->resolveRelation($inscriptionConducteur->data['responsable'] ?? [], $inscriptionConducteur->responsable_lien_parente ?? null),
+            'profession' => $professionDetailConducteur,
+            'employment_status' => $employmentStatusConducteur,
+            'profession_detail' => $professionDetailConducteur,
             'photo_path' => $inscriptionConducteur->photo_path,
             'identifier' => $identifierConducteur,
             'password' => bcrypt($tempPasswordConducteur),
@@ -784,6 +806,10 @@ class InscriptionApprovalController extends Controller
                     'telephone2' => $membreData['telephone2'] ?? null,
                     'date_naissance' => $membreData['dateNaissance'] ?? null,
                     'genre' => $membreData['genre'] ?? null,
+                    'relation' => $this->resolveRelation($membreData),
+                    'profession' => $this->resolveProfessionDetail($membreData),
+                    'employment_status' => $this->resolveEmploymentStatus($membreData['employment_status'] ?? null),
+                    'profession_detail' => $this->resolveProfessionDetail($membreData),
                     'photo_path' => $membreData['photo_path'] ?? null,
                     'identifier' => $identifierMembre,
                     'password' => bcrypt($tempPasswordMembre),
@@ -850,6 +876,14 @@ class InscriptionApprovalController extends Controller
         );
 
         $tempPasswordResponsable = '11111';
+        $responsableEmploymentStatus = $this->resolveEmploymentStatus(
+            $inscriptionResponsable->data['responsable']['employment_status'] ?? ($inscriptionResponsable->data['employment_status'] ?? null),
+            $inscriptionResponsable->responsable_employment_status ?? null
+        );
+        $responsableProfessionDetail = $this->resolveProfessionDetail(
+            $inscriptionResponsable->data['responsable'] ?? [],
+            $inscriptionResponsable->responsable_profession ?? null
+        );
 
         $userResponsable = User::create([
             'nom' => $inscriptionResponsable->responsable_nom,
@@ -859,6 +893,10 @@ class InscriptionApprovalController extends Controller
             'telephone2' => $inscriptionResponsable->responsable_telephone2,
             'date_naissance' => $inscriptionResponsable->responsable_date_naissance,
             'genre' => $inscriptionResponsable->responsable_genre,
+            'relation' => $this->resolveRelation($inscriptionResponsable->data['responsable'] ?? [], $inscriptionResponsable->responsable_lien_parente ?? null),
+            'profession' => $responsableProfessionDetail,
+            'employment_status' => $responsableEmploymentStatus,
+            'profession_detail' => $responsableProfessionDetail,
             'photo_path' => $inscriptionResponsable->photo_path,
             'identifier' => $identifierResponsable,
             'password' => bcrypt($tempPasswordResponsable),
@@ -932,6 +970,10 @@ class InscriptionApprovalController extends Controller
                     'telephone2' => $membreData['telephone2'] ?? null,
                     'date_naissance' => $membreData['dateNaissance'] ?? null,
                     'genre' => $membreData['genre'] ?? null,
+                    'relation' => $this->resolveRelation($membreData),
+                    'profession' => $this->resolveProfessionDetail($membreData),
+                    'employment_status' => $this->resolveEmploymentStatus($membreData['employment_status'] ?? null),
+                    'profession_detail' => $this->resolveProfessionDetail($membreData),
                     'photo_path' => $membreData['photo_path'] ?? null,
                     'identifier' => $identifierMembre,
                     'password' => bcrypt($tempPasswordMembre),
@@ -1045,6 +1087,10 @@ class InscriptionApprovalController extends Controller
             'ville_id' => $inscription->ville_id,
             'is_family_responsible' => ($role === 'responsable'),
             'last_login_at' => null,
+            'relation' => $this->resolveRelation($inscription->data['responsable'] ?? $inscription->data, $inscription->responsable_lien_parente ?? null),
+            'profession' => $this->resolveProfessionDetail($inscription->data['responsable'] ?? $inscription->data, $inscription->responsable_profession ?? null),
+            'employment_status' => $this->resolveEmploymentStatus($inscription->data['responsable']['employment_status'] ?? ($inscription->data['employment_status'] ?? null), $inscription->responsable_employment_status ?? null),
+            'profession_detail' => $this->resolveProfessionDetail($inscription->data['responsable'] ?? $inscription->data, $inscription->responsable_profession ?? null),
             'role' => ($role === 'responsable') ? 'responsable_famille' : 'membre_famille',
         ]);
 
@@ -1266,5 +1312,45 @@ class InscriptionApprovalController extends Controller
             'family_id' => $familyId,
             'classe_id' => $classeId,
         ];
+    }
+
+    private function resolveEmploymentStatus(?string $value, ?string $fallback = null): ?string
+    {
+        $candidate = $value ?? $fallback;
+        if (!is_string($candidate) || trim($candidate) === '') {
+            return null;
+        }
+
+        $normalized = strtoupper(trim($candidate));
+        $allowed = ['TRAVAILLEUR', 'RETRAITE', 'ETUDIANT', 'SANS_EMPLOI'];
+
+        return in_array($normalized, $allowed, true) ? $normalized : null;
+    }
+
+    private function resolveProfessionDetail(array $personData, ?string $fallback = null): ?string
+    {
+        $value = $personData['profession_detail']
+            ?? $personData['profession']
+            ?? $fallback;
+
+        if (!is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        return trim($value);
+    }
+
+    private function resolveRelation(array $personData, ?string $fallback = null): ?string
+    {
+        $value = $personData['relation']
+            ?? $personData['lienParente']
+            ?? $personData['lien_parente']
+            ?? $fallback;
+
+        if (!is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        return trim($value);
     }
 }

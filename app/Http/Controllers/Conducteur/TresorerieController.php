@@ -9,6 +9,7 @@ use App\Models\Family;
 use App\Models\NotificationFinanciere;
 use App\Models\Paiement;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -54,7 +55,7 @@ class TresorerieController extends Controller
 
         $families = Family::query()
             ->where('classe_id', $classeId)
-            ->with(['users:id,family_id,nom,prenom,role'])
+            ->with(['users:id,family_id,nom,prenom,role,genre,employment_status'])
             ->get();
 
         $familyIds = $families->pluck('id');
@@ -189,10 +190,15 @@ class TresorerieController extends Controller
                     'montant' => (int) $cotisation->montant,
                     'periodicite' => $cotisation->periodicite,
                     'target_scope' => $cotisation->target_scope ?? Cotisation::TARGET_SCOPE_FAMILLE,
+                    'target_genders' => $cotisation->target_genders ?? [],
+                    'target_employment_statuses' => $cotisation->target_employment_statuses ?? [],
+                    'target_rules' => $cotisation->target_rules ?? [],
                     'statut' => $cotisation->statut,
                     'description' => $cotisation->description,
                     'date_debut' => optional($cotisation->date_debut)->format('Y-m-d'),
                     'date_fin' => optional($cotisation->date_fin)->format('Y-m-d'),
+                    'date_echeance' => optional($cotisation->date_echeance)->format('Y-m-d'),
+                    'late_after_days' => (int) ($cotisation->late_after_days ?? 2),
                 ];
             })
             ->values();
@@ -211,6 +217,11 @@ class TresorerieController extends Controller
                     'nom' => $cotisation->nom,
                     'target_scope' => $cotisation->target_scope ?? Cotisation::TARGET_SCOPE_FAMILLE,
                     'montant' => (int) $cotisation->montant,
+                    'target_rules' => $cotisation->target_rules ?? [],
+                    'target_genders' => $cotisation->target_genders ?? [],
+                    'target_employment_statuses' => $cotisation->target_employment_statuses ?? [],
+                    'date_echeance' => optional($cotisation->date_echeance)->format('Y-m-d'),
+                    'late_after_days' => (int) ($cotisation->late_after_days ?? 2),
                 ];
             })
             ->values();
@@ -250,6 +261,9 @@ class TresorerieController extends Controller
                 'id' => $member->id,
                 'nom' => trim(($member->prenom ?? '') . ' ' . ($member->nom ?? '')),
                 'famille' => $member->family?->nom ?? 'Sans famille',
+                'role' => $member->role,
+                'genre' => $member->genre,
+                'employment_status' => $member->employment_status,
                 'statut' => $due === 0 ? 'A JOUR' : 'EN ATTENTE',
                 'totalPaye' => $paid,
                 'totalDu' => $due,
@@ -345,12 +359,64 @@ class TresorerieController extends Controller
         $validated = $request->validate([
             'nom' => ['required', 'string', 'max:255'],
             'montant' => ['required', 'integer', 'min:100'],
-            'periodicite' => ['required', 'in:MENSUEL,TRIMESTRIEL,ANNUEL,UNIQUE'],
+            'periodicite' => ['required', 'in:HEBDOMADAIRE,MENSUEL,TRIMESTRIEL,ANNUEL,UNIQUE'],
             'target_scope' => ['required', 'in:FAMILLE,INDIVIDUELLE'],
             'description' => ['nullable', 'string', 'max:1000'],
             'date_debut' => ['nullable', 'date'],
             'date_fin' => ['nullable', 'date'],
+            'date_echeance' => ['nullable', 'date'],
+            'late_after_days' => ['nullable', 'integer', 'min:0', 'max:31'],
+            'target_rules' => ['nullable', 'array'],
+            'target_rules.*.type' => ['required_with:target_rules', 'in:GENRE,EMPLOI,ENFANT'],
+            'target_rules.*.value' => ['nullable', 'string', 'max:50'],
+            'target_rules.*.amount' => ['required_with:target_rules', 'integer', 'min:100'],
+            'target_rules.*.priority' => ['nullable', 'integer', 'min:1'],
         ]);
+
+        $rules = collect($validated['target_rules'] ?? [])
+            ->map(function (array $rule, int $index) {
+                return [
+                    'type' => strtoupper((string) ($rule['type'] ?? '')),
+                    'value' => strtoupper(trim((string) ($rule['value'] ?? ''))),
+                    'amount' => (int) ($rule['amount'] ?? 0),
+                    'priority' => (int) ($rule['priority'] ?? ($index + 1)),
+                ];
+            })
+            ->filter(function (array $rule) {
+                if ($rule['amount'] < 100) {
+                    return false;
+                }
+
+                if ($rule['type'] === Cotisation::RULE_TYPE_ENFANT) {
+                    return true;
+                }
+
+                return $rule['value'] !== '';
+            })
+            ->sortBy('priority')
+            ->values();
+
+        if (($validated['target_scope'] ?? '') === Cotisation::TARGET_SCOPE_INDIVIDUELLE && $rules->isEmpty()) {
+            return response()->json([
+                'message' => 'Ajoutez au moins une regle de ciblage pour une cotisation individuelle.',
+            ], 422);
+        }
+
+        $targetGenders = $rules
+            ->where('type', Cotisation::RULE_TYPE_GENRE)
+            ->pluck('value')
+            ->filter(fn($v) => in_array($v, ['M', 'F'], true))
+            ->unique()
+            ->values()
+            ->all();
+
+        $targetEmploymentStatuses = $rules
+            ->where('type', Cotisation::RULE_TYPE_EMPLOI)
+            ->pluck('value')
+            ->filter(fn($v) => in_array($v, Cotisation::EMPLOYMENT_STATUSES, true))
+            ->unique()
+            ->values()
+            ->all();
 
         $cotisation = Cotisation::create([
             'nom' => $validated['nom'],
@@ -363,6 +429,11 @@ class TresorerieController extends Controller
             'description' => $validated['description'] ?? null,
             'date_debut' => $validated['date_debut'] ?? now()->toDateString(),
             'date_fin' => $validated['date_fin'] ?? null,
+            'date_echeance' => $validated['date_echeance'] ?? null,
+            'late_after_days' => (int) ($validated['late_after_days'] ?? 2),
+            'target_rules' => $rules->all(),
+            'target_genders' => $targetGenders,
+            'target_employment_statuses' => $targetEmploymentStatuses,
         ]);
 
         return response()->json([
@@ -382,13 +453,61 @@ class TresorerieController extends Controller
         $validated = $request->validate([
             'nom' => ['sometimes', 'string', 'max:255'],
             'montant' => ['sometimes', 'integer', 'min:100'],
-            'periodicite' => ['sometimes', 'in:MENSUEL,TRIMESTRIEL,ANNUEL,UNIQUE'],
+            'periodicite' => ['sometimes', 'in:HEBDOMADAIRE,MENSUEL,TRIMESTRIEL,ANNUEL,UNIQUE'],
             'target_scope' => ['sometimes', 'in:FAMILLE,INDIVIDUELLE'],
             'statut' => ['sometimes', 'in:ACTIVE,SUSPENDUE,ANNULEE'],
             'description' => ['nullable', 'string', 'max:1000'],
             'date_debut' => ['nullable', 'date'],
             'date_fin' => ['nullable', 'date'],
+            'date_echeance' => ['nullable', 'date'],
+            'late_after_days' => ['nullable', 'integer', 'min:0', 'max:31'],
+            'target_rules' => ['nullable', 'array'],
+            'target_rules.*.type' => ['required_with:target_rules', 'in:GENRE,EMPLOI,ENFANT'],
+            'target_rules.*.value' => ['nullable', 'string', 'max:50'],
+            'target_rules.*.amount' => ['required_with:target_rules', 'integer', 'min:100'],
+            'target_rules.*.priority' => ['nullable', 'integer', 'min:1'],
         ]);
+
+        if (array_key_exists('target_rules', $validated)) {
+            $rules = collect($validated['target_rules'] ?? [])
+                ->map(function (array $rule, int $index) {
+                    return [
+                        'type' => strtoupper((string) ($rule['type'] ?? '')),
+                        'value' => strtoupper(trim((string) ($rule['value'] ?? ''))),
+                        'amount' => (int) ($rule['amount'] ?? 0),
+                        'priority' => (int) ($rule['priority'] ?? ($index + 1)),
+                    ];
+                })
+                ->filter(function (array $rule) {
+                    if ($rule['amount'] < 100) {
+                        return false;
+                    }
+
+                    if ($rule['type'] === Cotisation::RULE_TYPE_ENFANT) {
+                        return true;
+                    }
+
+                    return $rule['value'] !== '';
+                })
+                ->sortBy('priority')
+                ->values();
+
+            $validated['target_rules'] = $rules->all();
+            $validated['target_genders'] = $rules
+                ->where('type', Cotisation::RULE_TYPE_GENRE)
+                ->pluck('value')
+                ->filter(fn($v) => in_array($v, ['M', 'F'], true))
+                ->unique()
+                ->values()
+                ->all();
+            $validated['target_employment_statuses'] = $rules
+                ->where('type', Cotisation::RULE_TYPE_EMPLOI)
+                ->pluck('value')
+                ->filter(fn($v) => in_array($v, Cotisation::EMPLOYMENT_STATUSES, true))
+                ->unique()
+                ->values()
+                ->all();
+        }
 
         $cotisation->update($validated);
 
@@ -432,6 +551,11 @@ class TresorerieController extends Controller
                 'description' => $cotisation->description,
                 'date_debut' => optional($cotisation->date_debut)->format('Y-m-d'),
                 'date_fin' => optional($cotisation->date_fin)->format('Y-m-d'),
+                'date_echeance' => optional($cotisation->date_echeance)->format('Y-m-d'),
+                'late_after_days' => (int) ($cotisation->late_after_days ?? 2),
+                'target_rules' => $cotisation->target_rules ?? [],
+                'target_genders' => $cotisation->target_genders ?? [],
+                'target_employment_statuses' => $cotisation->target_employment_statuses ?? [],
             ],
         ]);
     }
@@ -490,15 +614,59 @@ class TresorerieController extends Controller
             return response()->json(['message' => 'Ce membre n\'a pas de famille associee.'], 422);
         }
 
+        $paymentStatus = Paiement::STATUT_PAYE;
+        $resolvedCotisationId = $validated['cotisation_id'] ?? null;
+
+        if ($resolvedCotisationId) {
+            /** @var Cotisation $cotisation */
+            $cotisation = Cotisation::query()->findOrFail($resolvedCotisationId);
+
+            if ($cotisation->classe_id !== null && (int) $cotisation->classe_id !== (int) $user->classe_id) {
+                return response()->json(['message' => 'Cette cotisation n\'est pas disponible dans votre classe.'], 403);
+            }
+
+            $expectedAmount = $cotisation->resolveAmountForUser($member);
+            if (!$expectedAmount || $expectedAmount < 100) {
+                return response()->json(['message' => 'Aucune regle de cotisation ne cible ce membre.'], 422);
+            }
+
+            $alreadyPaid = (int) Paiement::query()
+                ->where('user_id', $member->id)
+                ->where('cotisation_id', $cotisation->id)
+                ->sum('montant');
+
+            $remainingBefore = max(0, $expectedAmount - $alreadyPaid);
+            if ($remainingBefore === 0) {
+                return response()->json(['message' => 'Cette cotisation est deja reglee pour ce membre.'], 422);
+            }
+
+            if ((int) $validated['montant'] > $remainingBefore) {
+                return response()->json([
+                    'message' => 'Le montant depasse le reste a payer (' . number_format($remainingBefore, 0, ',', ' ') . ' F CFA).',
+                ], 422);
+            }
+
+            $remainingAfter = max(0, $remainingBefore - (int) $validated['montant']);
+
+            if ($remainingAfter > 0) {
+                $isLate = false;
+                if ($cotisation->date_echeance) {
+                    $lateAt = Carbon::parse($cotisation->date_echeance)->addDays((int) ($cotisation->late_after_days ?? 2))->startOfDay();
+                    $isLate = Carbon::parse($validated['date_paiement'])->startOfDay()->greaterThan($lateAt);
+                }
+                $paymentStatus = $isLate ? Paiement::STATUT_EN_RETARD : Paiement::STATUT_PARTIELLEMENT_PAYE;
+            }
+        }
+
         $paiement = Paiement::create([
             'family_id' => $member->family_id,
             'user_id' => $member->id,
-            'cotisation_id' => $validated['cotisation_id'] ?? null,
+            'cotisation_id' => $resolvedCotisationId,
             'montant' => $validated['montant'],
             'mode_paiement' => $validated['mode_paiement'],
             'date_paiement' => $validated['date_paiement'],
             'reference_recu' => 'RECU-' . now()->format('YmdHis') . '-' . strtoupper(substr(md5((string) random_int(1, 9999999)), 0, 6)),
-            'statut' => Paiement::STATUT_PAYE,
+            'statut' => $paymentStatus,
             'note' => $validated['note'] ?? 'Paiement saisi par conducteur',
         ]);
 

@@ -35,12 +35,12 @@ $objet = match ($typeKey) {
 default => $typeActe,
 };
 
-// Date & heure de l'annonce
-$_dateCarbon = $acte->date_souhaitee ? Carbon::parse($acte->date_souhaitee) : null;
-$dateAnnonce = $_dateCarbon ? $_dateCarbon->format('d/m/Y') : now()->format('d/m/Y');
+$dateCandidate = $acte->date_souhaitee;
+$_dateCarbon = $dateCandidate ? Carbon::parse($dateCandidate) : null;
+$dateAnnonce = $_dateCarbon ? $_dateCarbon->format('d/m/Y') : '—';
 $dateAnnonceTexte = $_dateCarbon
-? $_dateCarbon->locale('fr')->isoFormat('dddd D MMMM YYYY')
-: now()->locale('fr')->isoFormat('dddd D MMMM YYYY');
+    ? $_dateCarbon->locale('fr')->isoFormat('dddd D MMMM YYYY')
+    : '—';
 $heureAnnonce = $details['heure'] ?? ($_dateCarbon ? $_dateCarbon->format('H\hi') : '—');
 $lieuAnnonce = $details['lieu'] ?? $details['lieu_deces'] ?? '—';
 
@@ -85,7 +85,8 @@ return 'data:' . $mime . ';base64,' . base64_encode($raw);
 $signatureConducteurDataUri = $signatureConducteurDataUri ?? $toSignatureDataUri($conducteur->signature_path ?? null);
 $signaturePasteurDataUri = $signaturePasteurDataUri ?? $toSignatureDataUri($pasteur->signature_path ?? null);
 
-$dateEvenementTexte = $dateAnnonceTexte !== '—' ? ucfirst($dateAnnonceTexte) : $dateAnnonce;
+$dateEvenementTexte = $_dateCarbon ? ucfirst($dateAnnonceTexte) : '—';
+$messageContent = trim((string) ($details['contenu'] ?? $details['titre'] ?? ''));
 
 $bodyParagraphs = match ($typeKey) {
 'mariage' => [
@@ -369,6 +370,13 @@ default => [
             {!! $paragraph !!}
           </div>
           @endforeach
+
+          @if(!empty($messageContent))
+          <div class="body-text" style="margin-bottom: 12px;">
+            <strong>Message transmis à l'assemblée :</strong><br>
+            {!! nl2br(e($messageContent)) !!}
+          </div>
+          @endif
 
           {{-- Formule de politesse --}}
           <div class="body-text" style="margin-bottom: 12px;">

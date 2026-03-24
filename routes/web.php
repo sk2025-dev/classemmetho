@@ -148,6 +148,14 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('/admin/administration', [\App\Http\Controllers\Admin\AdministrationController::class, 'index'])->name('admin.administration');
 
+        // ===== MODULE ANNUAIRE (Admin - accès global) =====
+        Route::middleware('role:admin')->prefix('admin/annuaire')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\AnnuaireController::class, 'index'])->name('admin.annuaire.index');
+            Route::get('/search', [\App\Http\Controllers\Admin\AnnuaireController::class, 'search'])->name('admin.annuaire.search');
+            Route::get('/export', [\App\Http\Controllers\Admin\AnnuaireController::class, 'export'])->name('admin.annuaire.export');
+            Route::get('/stats', [\App\Http\Controllers\Admin\AnnuaireController::class, 'stats'])->name('admin.annuaire.stats');
+        });
+
         // Routes pour les classes
         Route::resource('/admin/classes', \App\Http\Controllers\Admin\ClasseController::class);
         Route::patch('/admin/classes/{classe}/status', [\App\Http\Controllers\Admin\ClasseController::class, 'toggleStatus'])->name('classes.toggle-status');
@@ -310,6 +318,18 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/responsable-famille/annonces/{id}/edit', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'edit'])->name('responsable_famille.annonces.edit');
         Route::put('/responsable-famille/annonces/{id}', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'update'])->name('responsable_famille.annonces.update');
         Route::delete('/responsable-famille/annonces/{id}', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'destroy'])->name('responsable_famille.annonces.destroy');
+
+        // Routes module Tresorerie (ResponsableFamille)
+        Route::get('/responsable-famille/tresorerie', [ResponsableFamilleTresorerieController::class, 'index'])
+            ->name('responsable_famille.tresorerie.index');
+        Route::post('/responsable-famille/tresorerie/paiements', [ResponsableFamilleTresorerieController::class, 'storePaiement'])
+            ->name('responsable_famille.tresorerie.paiements.store');
+        Route::post('/responsable-famille/tresorerie/paiements/initiate', [ResponsableFamilleTresorerieController::class, 'initiatePaiement'])
+            ->name('responsable_famille.tresorerie.paiements.initiate');
+        Route::post('/responsable-famille/tresorerie/dons', [ResponsableFamilleTresorerieController::class, 'storeDon'])
+            ->name('responsable_famille.tresorerie.dons.store');
+        Route::get('/responsable-famille/tresorerie/paiement/{paiement}/verify', [ResponsableFamilleTresorerieController::class, 'verifyPaiement'])
+            ->name('responsable_famille.tresorerie.paiement.verify');
 
         // Route de tableau de bord des transferts
         Route::get('/responsable-famille/transferts', [\App\Http\Controllers\ResponsableFamille\TransferController::class, 'index'])->name('responsable_famille.transferts.index');

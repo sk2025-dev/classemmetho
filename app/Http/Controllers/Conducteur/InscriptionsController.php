@@ -715,7 +715,8 @@ class InscriptionsController extends Controller
                 'date_naissance' => 'required|date',
                 'genre' => 'required|string|max:10',
                 'classe_id' => 'required|integer',
-                'profession' => 'required|string|max:255',
+                'employment_status' => 'required|in:TRAVAILLEUR,RETRAITE,ETUDIANT,SANS_EMPLOI',
+                'profession_detail' => 'required|string|max:255',
                 'statut_marital' => 'required|string|max:255',
 
                 // Champs religieux optionnels mais si cochés, date/lieu requis

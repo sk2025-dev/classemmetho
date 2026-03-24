@@ -304,6 +304,7 @@ export default function RegisterFamille({
             dateNaissance: "",
             genre: "",
             lienParente: "",
+            employment_status: "",
             profession: "",
             fonction: "",
             statutMarital: "",
@@ -370,6 +371,7 @@ export default function RegisterFamille({
             dateMariageReligieux: "",
             lieuMariageReligieux: "",
             fonction: "",
+            employment_status: "",
             profession: "",
             photo: null,
             photoPreview: null,
@@ -551,6 +553,8 @@ export default function RegisterFamille({
         if (!membreTemp.genre) newErrors["membre.genre"] = "Genre requis";
         if (!membreTemp.statutMarital)
             newErrors["membre.statutMarital"] = "Statut marital requis";
+        if (!membreTemp.employment_status)
+            newErrors["membre.employment_status"] = "Statut d'emploi requis";
         if (!membreTemp.profession)
             newErrors["membre.profession"] = "Profession requise";
 
@@ -639,6 +643,7 @@ export default function RegisterFamille({
                 dateMariageReligieux: "",
                 lieuMariageReligieux: "",
                 fonction: "",
+                employment_status: "",
                 profession: "",
                 photo: null,
                 photoPreview: null,
@@ -684,6 +689,7 @@ export default function RegisterFamille({
             dateMariageReligieux: "",
             lieuMariageReligieux: "",
             fonction: "",
+            employment_status: "",
             profession: "",
             photo: null,
             photoPreview: null,
@@ -768,6 +774,9 @@ export default function RegisterFamille({
                 newErrors["responsable.dateNaissance"] =
                     "La date ne doit pas être dans le futur";
             if (!responsable.genre) newErrors["responsable.genre"] = "Requis";
+            if (!responsable.employment_status)
+                newErrors["responsable.employment_status"] =
+                    "Statut d'emploi requis";
             if (!responsable.profession)
                 newErrors["responsable.profession"] = "Requis";
             if (!responsable.statutMarital)
@@ -853,6 +862,9 @@ export default function RegisterFamille({
         if (!responsable.dateNaissance)
             validationErrors["responsable.dateNaissance"] =
                 "Date de naissance requise";
+        if (!responsable.employment_status)
+            validationErrors["responsable.employment_status"] =
+                "Statut d'emploi du responsable requis";
 
         // Valider le statut marital du responsable
         if (responsable.statutMarital === "marie") {
@@ -929,6 +941,12 @@ export default function RegisterFamille({
                     if (!m.statutMarital) {
                         memberErrors.push(
                             `Membre ${idx + 1}: Statut marital requis`,
+                        );
+                        memberHasErrors = true;
+                    }
+                    if (!m.employment_status) {
+                        memberErrors.push(
+                            `Membre ${idx + 1}: Statut d'emploi requis`,
                         );
                         memberHasErrors = true;
                     }
@@ -1015,6 +1033,7 @@ export default function RegisterFamille({
             "telephone2",
             "dateNaissance",
             "genre",
+            "employment_status",
             "profession",
             "statutMarital",
             "lienParente",
@@ -1084,6 +1103,7 @@ export default function RegisterFamille({
                 "genre",
                 "dateNaissance",
                 "statutMarital",
+                "employment_status",
                 "profession",
                 "lienParente",
                 "fonction",
@@ -1119,6 +1139,7 @@ export default function RegisterFamille({
                         "genre",
                         "dateNaissance",
                         "relation",
+                        "employment_status",
                         "profession",
                         "statutMarital",
                     ];
@@ -1229,6 +1250,7 @@ export default function RegisterFamille({
                 dateNaissance: "",
                 genre: "",
                 lienParente: "",
+                employment_status: "",
                 profession: "",
                 fonction: "",
                 statutMarital: "",
@@ -1279,6 +1301,7 @@ export default function RegisterFamille({
                 dateMariageReligieux: "",
                 lieuMariageReligieux: "",
                 fonction: "",
+                employment_status: "",
                 profession: "",
                 photo: null,
                 photoPreview: null,
@@ -1732,26 +1755,42 @@ export default function RegisterFamille({
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
-                                label="Profession"
+                                label="Statut d'emploi"
                                 icon={Briefcase}
                                 required
-                                hint="ex: Infirmier, Comptable"
                             >
-                                <input
+                                <select
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none"
-                                    value={responsable.profession}
+                                    value={responsable.employment_status || ""}
                                     onChange={(e) =>
                                         setResponsable({
                                             ...responsable,
-                                            profession: e.target.value,
+                                            employment_status: e.target.value,
                                         })
                                     }
-                                    placeholder="ex: Enseignant, Commerçant"
-                                />
-                                {getFieldError("responsable.profession") && (
+                                >
+                                    <option value="">
+                                        Sélectionner un statut
+                                    </option>
+                                    <option value="TRAVAILLEUR">
+                                        Travailleur(euse)
+                                    </option>
+                                    <option value="RETRAITE">
+                                        Retraité(e)
+                                    </option>
+                                    <option value="ETUDIANT">
+                                        Étudiant(e)
+                                    </option>
+                                    <option value="SANS_EMPLOI">
+                                        Sans emploi
+                                    </option>
+                                </select>
+                                {getFieldError(
+                                    "responsable.employment_status",
+                                ) && (
                                     <p className="text-red-500 text-xs mt-1">
                                         {getFieldError(
-                                            "responsable.profession",
+                                            "responsable.employment_status",
                                         )}
                                     </p>
                                 )}
@@ -1778,6 +1817,34 @@ export default function RegisterFamille({
                                     options={churchRoles}
                                     placeholder="Sélectionner des fonctions..."
                                 />
+                            </FormField>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                                label="Profession"
+                                icon={Briefcase}
+                                required
+                                hint="ex: Infirmier, Comptable"
+                            >
+                                <input
+                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none"
+                                    value={responsable.profession}
+                                    onChange={(e) =>
+                                        setResponsable({
+                                            ...responsable,
+                                            profession: e.target.value,
+                                        })
+                                    }
+                                    placeholder="ex: Enseignant, Commerçant"
+                                />
+                                {getFieldError("responsable.profession") && (
+                                    <p className="text-red-500 text-xs mt-1">
+                                        {getFieldError(
+                                            "responsable.profession",
+                                        )}
+                                    </p>
+                                )}
                             </FormField>
                         </div>
 
@@ -2368,25 +2435,46 @@ export default function RegisterFamille({
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField
-                                        label="Profession"
+                                        label="Statut d'emploi"
                                         icon={Briefcase}
                                         required
                                     >
-                                        <input
+                                        <select
                                             className={STYLES.input}
-                                            value={membreTemp.profession}
+                                            value={
+                                                membreTemp.employment_status ||
+                                                ""
+                                            }
                                             onChange={(e) =>
                                                 setMembreTemp({
                                                     ...membreTemp,
-                                                    profession: e.target.value,
+                                                    employment_status:
+                                                        e.target.value,
                                                 })
                                             }
-                                            placeholder="Ex: Enseignant..."
-                                        />
-                                        {getFieldError("membre.profession") && (
+                                        >
+                                            <option value="">
+                                                Sélectionner un statut
+                                            </option>
+                                            <option value="TRAVAILLEUR">
+                                                Travailleur(euse)
+                                            </option>
+                                            <option value="RETRAITE">
+                                                Retraité(e)
+                                            </option>
+                                            <option value="ETUDIANT">
+                                                Étudiant(e)
+                                            </option>
+                                            <option value="SANS_EMPLOI">
+                                                Sans emploi
+                                            </option>
+                                        </select>
+                                        {getFieldError(
+                                            "membre.employment_status",
+                                        ) && (
                                             <p className="text-red-500 text-xs mt-1">
                                                 {getFieldError(
-                                                    "membre.profession",
+                                                    "membre.employment_status",
                                                 )}
                                             </p>
                                         )}
@@ -2419,70 +2507,36 @@ export default function RegisterFamille({
                                                         fonctionValue.length ===
                                                         1
                                                             ? fonctionValue[0]
-                                                            : fonctionValue.join(
-                                                                  ",",
-                                                              ),
+                                                            : fonctionValue,
                                                 });
                                             }}
                                             options={churchRoles}
-                                            placeholder="Sélectionner des fonctions..."
+                                            placeholder="Sélectionner une fonction..."
                                         />
-                                        {getFieldError("membre.fonction") && (
-                                            <p className="text-red-500 text-xs mt-1">
-                                                {getFieldError(
-                                                    "membre.fonction",
-                                                )}
-                                            </p>
-                                        )}
                                     </FormField>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField
-                                        label="Adresse email"
-                                        icon={Mail}
+                                        label="Profession"
+                                        icon={Briefcase}
                                         required
                                     >
                                         <input
-                                            type="email"
                                             className={STYLES.input}
-                                            value={membreTemp.email}
+                                            value={membreTemp.profession}
                                             onChange={(e) =>
                                                 setMembreTemp({
                                                     ...membreTemp,
-                                                    email: e.target.value,
+                                                    profession: e.target.value,
                                                 })
                                             }
-                                            placeholder="exemple@email.com"
+                                            placeholder="Ex: Enseignant..."
                                         />
-                                        {getFieldError("membre.email") && (
-                                            <p className="text-red-500 text-xs mt-1">
-                                                {getFieldError("membre.email")}
-                                            </p>
-                                        )}
-                                    </FormField>
-                                    <FormField label="Téléphone" icon={Phone}>
-                                        <input
-                                            type="text"
-                                            className={STYLES.input}
-                                            value={membreTemp.telephone}
-                                            onChange={(e) => {
-                                                const formatted =
-                                                    formatPhoneNumber(
-                                                        e.target.value,
-                                                    );
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    telephone: formatted,
-                                                });
-                                            }}
-                                            placeholder="10 chiffres"
-                                            maxLength="10"
-                                        />
-                                        {getFieldError("membre.telephone") && (
+                                        {getFieldError("membre.profession") && (
                                             <p className="text-red-500 text-xs mt-1">
                                                 {getFieldError(
-                                                    "membre.telephone",
+                                                    "membre.profession",
                                                 )}
                                             </p>
                                         )}

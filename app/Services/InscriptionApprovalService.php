@@ -126,6 +126,17 @@ class InscriptionApprovalService
         $responsableDateNaissance = $inscription->responsable_date_naissance ?? ($responsableData['dateNaissance'] ?? null);
         $responsableGenre = $inscription->responsable_genre ?? ($responsableData['genre'] ?? null);
         $responsableProfession = $inscription->responsable_profession ?? ($responsableData['profession'] ?? null);
+        $responsableEmploymentStatus = $this->resolveEmploymentStatus(
+            $responsableData,
+            $inscription->responsable_employment_status ?? null
+        );
+        $responsableProfessionDetail = $this->resolveProfessionDetail(
+            $responsableData,
+            $inscription->responsable_profession ?? null
+        );
+        if (empty($responsableProfession) && !empty($responsableProfessionDetail)) {
+            $responsableProfession = $responsableProfessionDetail;
+        }
         $classeId = $inscription->classe_id ?? ($familleData['classe_id'] ?? null);
         $villeId = $familleData['ville_id'] ?? ($familleData['ville'] ?? null);
 
@@ -149,6 +160,8 @@ class InscriptionApprovalService
             'relation' => $responsableData['lienParente'] ?? ($responsableData['relation'] ?? null),
             'adresse' => $familleData['adresse'] ?? null,
             'profession' => $responsableProfession,
+            'employment_status' => $responsableEmploymentStatus,
+            'profession_detail' => $responsableProfessionDetail,
             'fonction_id' => $responsableData['fonction'] ?? null,
             'photo_path' => $inscription->photo_path,
             'profile_photo_url' => $inscription->profile_photo_url,
@@ -192,7 +205,9 @@ class InscriptionApprovalService
                     'genre' => $membreData['genre'] ?? null,
                     'relation' => $membreData['relation'] ?? ($membreData['lienParente'] ?? null),
                     'adresse' => $familleData['adresse'] ?? null,
-                    'profession' => $membreData['profession'] ?? null,
+                    'profession' => $this->resolveProfessionDetail($membreData),
+                    'employment_status' => $this->resolveEmploymentStatus($membreData),
+                    'profession_detail' => $this->resolveProfessionDetail($membreData),
                     'fonction_id' => $membreData['fonction'] ?? null,
                     'photo_path' => $membreData['photo_path'] ?? ($membreData['photo'] ?? null),
                     'profile_photo_url' => $membreData['photo_url'] ?? null,
@@ -248,6 +263,17 @@ class InscriptionApprovalService
         $responsableDateNaissance = $inscription->responsable_date_naissance ?? ($responsableData['dateNaissance'] ?? null);
         $responsableGenre = $inscription->responsable_genre ?? ($responsableData['genre'] ?? null);
         $responsableProfession = $inscription->responsable_profession ?? ($responsableData['profession'] ?? null);
+        $responsableEmploymentStatus = $this->resolveEmploymentStatus(
+            $responsableData,
+            $inscription->responsable_employment_status ?? null
+        );
+        $responsableProfessionDetail = $this->resolveProfessionDetail(
+            $responsableData,
+            $inscription->responsable_profession ?? null
+        );
+        if (empty($responsableProfession) && !empty($responsableProfessionDetail)) {
+            $responsableProfession = $responsableProfessionDetail;
+        }
         $classeId = $inscription->classe_id ?? ($familleData['classe_id'] ?? null);
         $villeId = $familleData['ville_id'] ?? ($familleData['ville'] ?? null);
 
@@ -272,6 +298,8 @@ class InscriptionApprovalService
             'relation' => $responsableData['lienParente'] ?? ($responsableData['relation'] ?? null),
             'adresse' => $familleData['adresse'] ?? null,
             'profession' => $responsableProfession,
+            'employment_status' => $responsableEmploymentStatus,
+            'profession_detail' => $responsableProfessionDetail,
             'fonction_id' => $responsableData['fonction'] ?? null,
             'photo_path' => $inscription->photo_path,
             'profile_photo_url' => $inscription->profile_photo_url,
@@ -314,7 +342,9 @@ class InscriptionApprovalService
                     'genre' => $membreData['genre'] ?? null,
                     'relation' => $membreData['relation'] ?? ($membreData['lienParente'] ?? null),
                     'adresse' => $familleData['adresse'] ?? null,
-                    'profession' => $membreData['profession'] ?? null,
+                    'profession' => $this->resolveProfessionDetail($membreData),
+                    'employment_status' => $this->resolveEmploymentStatus($membreData),
+                    'profession_detail' => $this->resolveProfessionDetail($membreData),
                     'fonction_id' => $membreData['fonction'] ?? null,
                     'photo_path' => $membreData['photo_path'] ?? ($membreData['photo'] ?? null),
                     'profile_photo_url' => $membreData['photo_url'] ?? null,
@@ -506,5 +536,31 @@ class InscriptionApprovalService
         }
 
         return true;
+    }
+
+    private function resolveEmploymentStatus(array $personData, ?string $fallback = null): ?string
+    {
+        $value = $personData['employment_status'] ?? $fallback;
+        if (!is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        $normalized = strtoupper(trim($value));
+        $allowed = ['TRAVAILLEUR', 'RETRAITE', 'ETUDIANT', 'SANS_EMPLOI'];
+
+        return in_array($normalized, $allowed, true) ? $normalized : null;
+    }
+
+    private function resolveProfessionDetail(array $personData, ?string $fallback = null): ?string
+    {
+        $value = $personData['profession_detail']
+            ?? $personData['profession']
+            ?? $fallback;
+
+        if (!is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        return trim($value);
     }
 }

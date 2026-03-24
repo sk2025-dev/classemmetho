@@ -417,7 +417,12 @@ export default function AdminPage({
 
                 <div className="flex justify-center">
                     <nav className="bg-white p-1 rounded-lg shadow-md border">
-                        {["utilisateurs", "classes", "fonctions"].map((tab) => (
+                        {[
+                            "utilisateurs",
+                            "annuaire",
+                            "classes",
+                            "fonctions",
+                        ].map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
@@ -443,10 +448,10 @@ export default function AdminPage({
             <div className="relative z-10 flex-1 flex flex-col pt-4 overflow-hidden px-4 sm:px-6 lg:px-8 pb-8">
                 {activeTab === "utilisateurs" && (
                     <TabUtilisateurs
-                        rawData={initialDataByType} // Statistiques des inscriptions (cartes)
-                        membres={membresData} // Liste des membres (tableau)
-                        availableClasses={initialAvailableClasses} // ✅ Listes pour Select2
-                        availableFonctions={initialAvailableFonctions} // ✅ Listes pour Select2
+                        rawData={initialDataByType}
+                        membres={membresData}
+                        availableClasses={initialAvailableClasses}
+                        availableFonctions={initialAvailableFonctions}
                         onEditMember={handleUpdateMember}
                         onDeleteMember={handleDeleteMember}
                         onToggleMember={handleToggleMember}
@@ -454,12 +459,14 @@ export default function AdminPage({
                     />
                 )}
 
+                {activeTab === "annuaire" && <TabAnnuaire />}
+
                 {activeTab === "classes" && (
                     <TabClasses
                         key={`classes-${classesData?.length || 0}`}
                         rawData={{
                             ...initialDataByType,
-                            classes: classesData, // ✅ Utiliser l'état mis à jour avec données complètes
+                            classes: classesData,
                         }}
                         membresData={initialMembres}
                         famillesData={initialMembersByFamily}
@@ -521,4 +528,3 @@ export default function AdminPage({
         </div>
     );
 }
-

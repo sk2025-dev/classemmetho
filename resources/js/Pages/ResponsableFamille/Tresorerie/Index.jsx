@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { Head, Link } from "@inertiajs/react";
 import {
     CreditCard,
@@ -16,6 +16,7 @@ import {
     X,
     ChevronDown,
 } from "lucide-react";
+import { PaymentModal } from "../../../Components/PaymentModal";
 
 /* ─────────────────────────────────────────
    FALLBACK DATA
@@ -154,6 +155,29 @@ const FALLBACK_DONS = [
     },
 ];
 
+const FALLBACK_CAMPAGNES = [
+    {
+        id: 1,
+        titre: "Rénovation temple",
+        scope: "CLASSE",
+        statut: "ACTIVE",
+        objectif: 500000,
+        collecte: 220000,
+        date_debut: "01/03/2026",
+        date_fin: "31/05/2026",
+    },
+    {
+        id: 2,
+        titre: "Solidarité paroissiale",
+        scope: "GLOBAL",
+        statut: "ACTIVE",
+        objectif: 800000,
+        collecte: 350000,
+        date_debut: "01/02/2026",
+        date_fin: "30/06/2026",
+    },
+];
+
 const FALLBACK_NOTIFICATIONS = [
     {
         id: 1,
@@ -186,37 +210,6 @@ const FALLBACK_NOTIFICATIONS = [
         message: "Campagne Rentrée 2025 clôturée — 450 000 F collectés",
         date: "28/02/2026",
         lu: true,
-    },
-];
-
-const CAMPAGNES_DONS = [
-    {
-        id: "global",
-        label: "Don libre",
-        desc: "Contribution générale à l'église",
-        tag: "Global",
-        color: "#534ab7",
-    },
-    {
-        id: "classe",
-        label: "Classe Romains",
-        desc: "Solidarité de classe",
-        tag: "Classe",
-        color: "#0f6e56",
-    },
-    {
-        id: "renovation",
-        label: "Rénovation temple",
-        desc: "Campagne travaux en cours",
-        tag: "Campagne",
-        color: "#854f0b",
-    },
-    {
-        id: "construction",
-        label: "Projet Construction",
-        desc: "Extension du bâtiment paroissial",
-        tag: "Campagne",
-        color: "#854f0b",
     },
 ];
 
@@ -774,16 +767,217 @@ function TabMembres({ membres }) {
     );
 }
 
+function TabCotisations({ title, cotisations, onPayCotisation }) {
+    const totalReste = cotisations.reduce(
+        (sum, c) => sum + Number(c.montant_restant || 0),
+        0,
+    );
+
+    return (
+        <div>
+            <h3 style={sectionTitle}>{title}</h3>
+
+            {cotisations.length === 0 ? (
+                <div
+                    style={{
+                        padding: "18px 16px",
+                        borderRadius: 10,
+                        background: "#f8f8fc",
+                        color: "#888",
+                        fontSize: 13,
+                    }}
+                >
+                    Aucune cotisation disponible.
+                </div>
+            ) : (
+                <>
+                    <div
+                        style={{
+                            overflowX: "auto",
+                        }}
+                    >
+                        <table
+                            style={{
+                                width: "100%",
+                                borderCollapse: "collapse",
+                                fontSize: 13,
+                            }}
+                        >
+                            <thead>
+                                <tr style={{ background: "#f8f8fc" }}>
+                                    {[
+                                        "Cotisation",
+                                        "Périodicité",
+                                        "Attendu",
+                                        "Payé",
+                                        "Reste",
+                                        "Action",
+                                    ].map((h) => (
+                                        <th
+                                            key={h}
+                                            style={{
+                                                padding: "8px 10px",
+                                                textAlign: "left",
+                                                color: "#888",
+                                                fontWeight: 500,
+                                                fontSize: 11,
+                                                borderBottom: "1px solid #eee",
+                                            }}
+                                        >
+                                            {h}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {cotisations.map((cot) => (
+                                    <tr
+                                        key={cot.id}
+                                        style={{
+                                            borderBottom: "0.5px solid #f5f5f5",
+                                        }}
+                                    >
+                                        <td
+                                            style={{
+                                                padding: "9px 10px",
+                                                fontWeight: 600,
+                                                color: "#1a1a2e",
+                                            }}
+                                        >
+                                            {cot.nom}
+                                        </td>
+                                        <td
+                                            style={{
+                                                padding: "9px 10px",
+                                                color: "#666",
+                                            }}
+                                        >
+                                            {cot.periodicite}
+                                        </td>
+                                        <td
+                                            style={{
+                                                padding: "9px 10px",
+                                                color: "#3b2a8a",
+                                                fontWeight: 600,
+                                            }}
+                                        >
+                                            {fmt(
+                                                Number(
+                                                    cot.montant_attendu || 0,
+                                                ),
+                                            )}{" "}
+                                            F
+                                        </td>
+                                        <td
+                                            style={{
+                                                padding: "9px 10px",
+                                                color: "#1d9e75",
+                                                fontWeight: 600,
+                                            }}
+                                        >
+                                            {fmt(Number(cot.montant_paye || 0))}{" "}
+                                            F
+                                        </td>
+                                        <td
+                                            style={{
+                                                padding: "9px 10px",
+                                                color:
+                                                    Number(
+                                                        cot.montant_restant ||
+                                                            0,
+                                                    ) > 0
+                                                        ? "#e24b4a"
+                                                        : "#1d9e75",
+                                                fontWeight: 700,
+                                            }}
+                                        >
+                                            {fmt(
+                                                Number(
+                                                    cot.montant_restant || 0,
+                                                ),
+                                            )}{" "}
+                                            F
+                                        </td>
+                                        <td style={{ padding: "9px 10px" }}>
+                                            {Number(cot.montant_restant || 0) >
+                                            0 ? (
+                                                <button
+                                                    onClick={() =>
+                                                        onPayCotisation(
+                                                            cot.id,
+                                                            Number(
+                                                                cot.montant_restant ||
+                                                                    cot.montant ||
+                                                                    0,
+                                                            ),
+                                                        )
+                                                    }
+                                                    style={{
+                                                        border: "none",
+                                                        background: "#3b2a8a",
+                                                        color: "white",
+                                                        borderRadius: 8,
+                                                        padding: "6px 10px",
+                                                        fontSize: 11,
+                                                        fontWeight: 600,
+                                                        cursor: "pointer",
+                                                    }}
+                                                >
+                                                    Payer
+                                                </button>
+                                            ) : (
+                                                <Badge color="green">
+                                                    À jour
+                                                </Badge>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div
+                        style={{
+                            marginTop: 14,
+                            padding: "10px 12px",
+                            background: "#fff8f0",
+                            borderLeft: "4px solid #ef9f27",
+                            borderRadius: 8,
+                            fontSize: 12,
+                            color: "#7a4a00",
+                        }}
+                    >
+                        Reste total à régulariser:{" "}
+                        <strong>{fmt(totalReste)} F CFA</strong>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}
+
 /* ─────────────────────────────────────────
    TAB — PAIEMENT
 ───────────────────────────────────────── */
-function TabPaiement({ membres, cotisations, familyInfo }) {
+function TabPaiement({
+    membres,
+    cotisations,
+    familyInfo,
+    preselectedCotisationId,
+    preselectedAmount,
+}) {
     const [selectedMembre, setSelectedMembre] = useState(membres[0]?.id ?? "");
     const [selectedCotisation, setSelectedCotisation] = useState(
-        cotisations[0]?.id ?? "",
+        preselectedCotisationId || cotisations[0]?.id || "",
     );
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-    const [montant, setMontant] = useState(cotisations[0]?.montant ?? 0);
+    const [montant, setMontant] = useState(
+        preselectedAmount ||
+            cotisations[0]?.montant_restant ||
+            cotisations[0]?.montant ||
+            0,
+    );
     const [payMethod, setPayMethod] = useState("mobile");
     const [mobileProvider, setMobileProvider] = useState("wave");
     const [cashForm, setCashForm] = useState({
@@ -798,11 +992,35 @@ function TabPaiement({ membres, cotisations, familyInfo }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [success, setSuccess] = useState(false);
 
+    // États pour le PaymentModal
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [paymentUrl, setPaymentUrl] = useState(null);
+    const [paymentPaiementId, setPaymentPaiementId] = useState(null);
+    const [paymentResult, setPaymentResult] = useState(null);
+
+    useEffect(() => {
+        if (preselectedCotisationId) {
+            setSelectedCotisation(preselectedCotisationId);
+        }
+        if (preselectedAmount) {
+            setMontant(preselectedAmount);
+        }
+    }, [preselectedCotisationId, preselectedAmount]);
+
     const handleCotisationChange = (e) => {
         const id = Number(e.target.value);
         setSelectedCotisation(id);
         const cot = cotisations.find((c) => c.id === id);
-        if (cot) setMontant(cot.montant);
+        if (cot) {
+            setMontant(
+                Number(
+                    cot.montant_restant ||
+                        cot.montant_attendu ||
+                        cot.montant ||
+                        0,
+                ),
+            );
+        }
     };
 
     const handleSubmit = async () => {
@@ -840,9 +1058,11 @@ function TabPaiement({ membres, cotisations, familyInfo }) {
                     return;
                 }
                 const data = await res.json();
-                // Redirection vers PayDunya
-                if (data.redirect_url) {
-                    window.location.href = data.redirect_url;
+                // Ouvrir le modal au lieu de rediriger
+                if (data.redirect_url && data.paiement_id) {
+                    setPaymentUrl(data.redirect_url);
+                    setPaymentPaiementId(data.paiement_id);
+                    setIsPaymentModalOpen(true);
                 }
             } else {
                 // Paiement manuel (espèces/virement)
@@ -950,7 +1170,8 @@ function TabPaiement({ membres, cotisations, familyInfo }) {
                     >
                         {cotisations.map((c) => (
                             <option key={c.id} value={c.id}>
-                                {c.nom} — {fmt(c.montant)} F
+                                {c.nom} — Reste{" "}
+                                {fmt(Number(c.montant_restant || 0))} F
                             </option>
                         ))}
                     </select>
@@ -981,7 +1202,9 @@ function TabPaiement({ membres, cotisations, familyInfo }) {
                         type="number"
                         style={inputStyle}
                         value={montant}
-                        disabled
+                        onChange={(e) =>
+                            setMontant(Number(e.target.value || 0))
+                        }
                     />
                     <p
                         style={{
@@ -990,7 +1213,7 @@ function TabPaiement({ membres, cotisations, familyInfo }) {
                             margin: "4px 0 0",
                         }}
                     >
-                        Montant fixe selon la cotisation
+                        Montant pré-rempli sur le reste à payer (modifiable)
                     </p>
                 </div>
 
@@ -1563,28 +1786,194 @@ function TabPaiement({ membres, cotisations, familyInfo }) {
                     }}
                 >
                     {payMethod === "mobile"
-                        ? "💳 Vous serez redirigé vers PayDunya pour confirmer le paiement."
+                        ? "💳 Confirmez votre paiement dans la fenêtre de paiement sécurisée."
                         : "📝 Vous enregistrez manuellement ce paiement dans le système."}
                 </div>
             </div>
+
+            {/* PaymentModal */}
+            <PaymentModal
+                isOpen={isPaymentModalOpen}
+                paymentUrl={paymentUrl}
+                paiementId={paymentPaiementId}
+                onClose={() => {
+                    setIsPaymentModalOpen(false);
+                    setPaymentUrl(null);
+                    setPaymentPaiementId(null);
+                }}
+                onSuccess={(result) => {
+                    setPaymentResult({
+                        status: "success",
+                        message: "Paiement réussi !",
+                        data: result,
+                    });
+                }}
+                onError={(error) => {
+                    setPaymentResult({
+                        status: "error",
+                        message: error || "Erreur lors du paiement",
+                    });
+                }}
+            />
+
+            {/* Résultat du paiement modal */}
+            {paymentResult && (
+                <div
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        background: "rgba(0, 0, 0, 0.6)",
+                        zIndex: 1001,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "20px",
+                    }}
+                    onClick={() => setPaymentResult(null)}
+                >
+                    <div
+                        style={{
+                            background: "white",
+                            borderRadius: "12px",
+                            padding: "32px",
+                            maxWidth: "400px",
+                            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+                            textAlign: "center",
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {paymentResult.status === "success" ? (
+                            <>
+                                <div
+                                    style={{
+                                        width: "64px",
+                                        height: "64px",
+                                        background: "#eaf3de",
+                                        borderRadius: "50%",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        margin: "0 auto 20px",
+                                    }}
+                                >
+                                    <CheckCircle
+                                        size={36}
+                                        style={{ color: "#1d9e75" }}
+                                    />
+                                </div>
+                                <h2
+                                    style={{
+                                        fontSize: "20px",
+                                        fontWeight: "600",
+                                        color: "#1a1a2e",
+                                        marginBottom: "12px",
+                                    }}
+                                >
+                                    {paymentResult.message}
+                                </h2>
+                                <p
+                                    style={{
+                                        fontSize: "14px",
+                                        color: "#888",
+                                        marginBottom: "24px",
+                                    }}
+                                >
+                                    Votre transaction a été traitée avec succès.
+                                </p>
+                            </>
+                        ) : (
+                            <>
+                                <div
+                                    style={{
+                                        width: "64px",
+                                        height: "64px",
+                                        background: "#fcebeb",
+                                        borderRadius: "50%",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        margin: "0 auto 20px",
+                                    }}
+                                >
+                                    <AlertTriangle
+                                        size={36}
+                                        style={{ color: "#e24b4a" }}
+                                    />
+                                </div>
+                                <h2
+                                    style={{
+                                        fontSize: "20px",
+                                        fontWeight: "600",
+                                        color: "#1a1a2e",
+                                        marginBottom: "12px",
+                                    }}
+                                >
+                                    Erreur de paiement
+                                </h2>
+                                <p
+                                    style={{
+                                        fontSize: "14px",
+                                        color: "#888",
+                                        marginBottom: "24px",
+                                    }}
+                                >
+                                    {paymentResult.message}
+                                </p>
+                            </>
+                        )}
+                        <button
+                            onClick={() => setPaymentResult(null)}
+                            style={{
+                                background: "#3b2a8a",
+                                color: "white",
+                                border: "none",
+                                padding: "10px 24px",
+                                borderRadius: "8px",
+                                fontSize: "14px",
+                                fontWeight: "600",
+                                cursor: "pointer",
+                            }}
+                        >
+                            Fermer
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
 
-function TabDons({ membres, donsFamille }) {
+function TabDons({ membres, donsFamille, campagnesActives, familyInfo }) {
     const [selectedCampagne, setSelectedCampagne] = useState(null);
     const [donMontant, setDonMontant] = useState("");
     const [donMode, setDonMode] = useState("wave");
     const [donMembre, setDonMembre] = useState(membres[0]?.id ?? "");
     const [confirming, setConfirming] = useState(false);
     const [donSuccess, setDonSuccess] = useState(false);
+    const [isDonLibreModalOpen, setIsDonLibreModalOpen] = useState(false);
+    const [donLibreMontant, setDonLibreMontant] = useState("");
+    const [donLibreMembre, setDonLibreMembre] = useState(membres[0]?.id ?? "");
+    const [donLibreMode, setDonLibreMode] = useState("MOBILE_MONEY");
+    const [submittingDonLibre, setSubmittingDonLibre] = useState(false);
 
     const PRESETS = [5000, 10000, 25000, 50000];
 
+    const campagnesDisponibles =
+        Array.isArray(campagnesActives) && campagnesActives.length
+            ? campagnesActives
+            : FALLBACK_CAMPAGNES;
+
     const handleDonSubmit = async () => {
-        if (!selectedCampagne || !donMontant) return;
+        if (!donMontant) return;
         setConfirming(true);
         try {
+            const modePaiement =
+                donMode === "especes"
+                    ? "ESPECES"
+                    : donMode === "virement"
+                      ? "VIREMENT"
+                      : "MOBILE_MONEY";
+
             await fetch("/responsable-famille/tresorerie/dons", {
                 method: "POST",
                 headers: {
@@ -1594,10 +1983,23 @@ function TabDons({ membres, donsFamille }) {
                 },
                 credentials: "same-origin",
                 body: JSON.stringify({
+                    family_id: familyInfo?.id,
                     user_id: donMembre,
-                    campagne: selectedCampagne,
+                    campagne_id:
+                        selectedCampagne === "LIBRE" || !selectedCampagne
+                            ? null
+                            : Number(selectedCampagne),
                     montant: Number(donMontant),
-                    mode_paiement: donMode,
+                    type:
+                        selectedCampagne === "LIBRE" || !selectedCampagne
+                            ? "LIBRE"
+                            : "CAMPAGNE",
+                    mode_paiement: modePaiement,
+                    date_don: new Date().toISOString().slice(0, 10),
+                    note:
+                        selectedCampagne === "LIBRE" || !selectedCampagne
+                            ? "Don libre"
+                            : "Don campagne",
                 }),
             });
             setDonSuccess(true);
@@ -1613,9 +2015,93 @@ function TabDons({ membres, donsFamille }) {
 
     const totalDons = donsFamille.reduce((s, d) => s + d.montant, 0);
 
+    const handleSubmitDonLibre = async () => {
+        const amount = Number(donLibreMontant || 0);
+        if (amount < 100 || submittingDonLibre) {
+            alert("Veuillez saisir un montant valide (minimum 100 F CFA).");
+            return;
+        }
+
+        setSubmittingDonLibre(true);
+        try {
+            const response = await fetch(
+                "/responsable-famille/tresorerie/dons",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": getCsrfToken(),
+                        Accept: "application/json",
+                    },
+                    credentials: "same-origin",
+                    body: JSON.stringify({
+                        family_id: familyInfo?.id,
+                        user_id: donLibreMembre,
+                        campagne_id: null,
+                        montant: amount,
+                        type: "LIBRE",
+                        mode_paiement: donLibreMode,
+                        date_don: new Date().toISOString().slice(0, 10),
+                        note: "Don libre depuis l'espace responsable famille",
+                    }),
+                },
+            );
+
+            if (!response.ok) {
+                throw new Error("Don libre impossible");
+            }
+
+            setDonSuccess(true);
+            setDonLibreMontant("");
+            setDonLibreMode("MOBILE_MONEY");
+            setIsDonLibreModalOpen(false);
+            setTimeout(() => setDonSuccess(false), 4000);
+            window.location.reload();
+        } catch {
+            alert("Erreur lors de l'enregistrement du don libre.");
+        } finally {
+            setSubmittingDonLibre(false);
+        }
+    };
+
     return (
         <div>
-            <h3 style={sectionTitle}>Réaliser un don</h3>
+            <div
+                style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 10,
+                    marginBottom: 10,
+                }}
+            >
+                <h3 style={{ ...sectionTitle, marginBottom: 0 }}>
+                    Réaliser un don
+                </h3>
+                <button
+                    onClick={() => {
+                        setDonLibreMontant("");
+                        setDonLibreMode("MOBILE_MONEY");
+                        setDonLibreMembre(membres[0]?.id ?? "");
+                        setIsDonLibreModalOpen(true);
+                    }}
+                    style={{
+                        border: "none",
+                        background: "#7f77dd",
+                        color: "white",
+                        borderRadius: 10,
+                        padding: "8px 12px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                    }}
+                >
+                    <Gift size={14} /> Faire un don libre
+                </button>
+            </div>
 
             {donSuccess && (
                 <div
@@ -1637,65 +2123,169 @@ function TabDons({ membres, donsFamille }) {
                 </div>
             )}
 
-            {/* Campagnes */}
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 10,
-                    marginBottom: 20,
-                }}
-            >
-                {CAMPAGNES_DONS.map((c) => (
-                    <div
-                        key={c.id}
-                        onClick={() => setSelectedCampagne(c.id)}
-                        style={{
-                            border:
-                                selectedCampagne === c.id
-                                    ? `2px solid ${c.color}`
-                                    : "1px solid #e8e8f0",
-                            borderRadius: 12,
-                            padding: 14,
-                            cursor: "pointer",
-                            background:
-                                selectedCampagne === c.id ? "#faf9ff" : "white",
-                            transition: "all .15s",
-                        }}
-                    >
-                        <div
-                            style={{
-                                fontWeight: 600,
-                                fontSize: 13,
-                                color: "#1a1a2e",
-                            }}
-                        >
-                            {c.label}
-                        </div>
-                        <div
-                            style={{
-                                fontSize: 11,
-                                color: "#888",
-                                margin: "4px 0 8px",
-                            }}
-                        >
-                            {c.desc}
-                        </div>
-                        <span
-                            style={{
-                                display: "inline-block",
-                                padding: "2px 8px",
-                                borderRadius: 12,
-                                fontSize: 10,
-                                fontWeight: 500,
-                                background: c.color + "22",
-                                color: c.color,
-                            }}
-                        >
-                            {c.tag}
-                        </span>
-                    </div>
-                ))}
+            {/* Dons disponibles */}
+            <h3 style={{ ...sectionTitle, marginBottom: 10 }}>
+                Dons et campagnes disponibles
+            </h3>
+            <div style={{ overflowX: "auto", marginBottom: 16 }}>
+                <table
+                    style={{
+                        width: "100%",
+                        borderCollapse: "collapse",
+                        fontSize: 13,
+                    }}
+                >
+                    <thead>
+                        <tr style={{ background: "#f8f8fc" }}>
+                            {[
+                                "Nom",
+                                "Portée",
+                                "Objectif",
+                                "Collecté",
+                                "Période",
+                                "Action",
+                            ].map((h) => (
+                                <th
+                                    key={h}
+                                    style={{
+                                        padding: "7px 10px",
+                                        textAlign: "left",
+                                        color: "#888",
+                                        fontWeight: 500,
+                                        fontSize: 11,
+                                        borderBottom: "1px solid #eee",
+                                    }}
+                                >
+                                    {h}
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style={{ borderBottom: "0.5px solid #f5f5f5" }}>
+                            <td
+                                style={{ padding: "9px 10px", fontWeight: 600 }}
+                            >
+                                Don libre
+                            </td>
+                            <td style={{ padding: "9px 10px" }}>
+                                <Badge color="blue">GLOBAL</Badge>
+                            </td>
+                            <td style={{ padding: "9px 10px", color: "#888" }}>
+                                -
+                            </td>
+                            <td style={{ padding: "9px 10px", color: "#888" }}>
+                                -
+                            </td>
+                            <td style={{ padding: "9px 10px", color: "#888" }}>
+                                -
+                            </td>
+                            <td style={{ padding: "9px 10px" }}>
+                                <button
+                                    onClick={() => setSelectedCampagne("LIBRE")}
+                                    style={{
+                                        border: "none",
+                                        background:
+                                            selectedCampagne === "LIBRE"
+                                                ? "#3b2a8a"
+                                                : "#eceaf9",
+                                        color:
+                                            selectedCampagne === "LIBRE"
+                                                ? "white"
+                                                : "#3b2a8a",
+                                        borderRadius: 8,
+                                        padding: "6px 10px",
+                                        fontSize: 11,
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    Sélectionner
+                                </button>
+                            </td>
+                        </tr>
+
+                        {campagnesDisponibles.map((c) => (
+                            <tr
+                                key={c.id}
+                                style={{ borderBottom: "0.5px solid #f5f5f5" }}
+                            >
+                                <td
+                                    style={{
+                                        padding: "9px 10px",
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    {c.titre}
+                                </td>
+                                <td style={{ padding: "9px 10px" }}>
+                                    <Badge
+                                        color={
+                                            c.scope === "GLOBAL"
+                                                ? "blue"
+                                                : "green"
+                                        }
+                                    >
+                                        {c.scope}
+                                    </Badge>
+                                </td>
+                                <td
+                                    style={{
+                                        padding: "9px 10px",
+                                        color: "#854f0b",
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    {fmt(Number(c.objectif || 0))} F
+                                </td>
+                                <td
+                                    style={{
+                                        padding: "9px 10px",
+                                        color: "#1d9e75",
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    {fmt(Number(c.collecte || 0))} F
+                                </td>
+                                <td
+                                    style={{
+                                        padding: "9px 10px",
+                                        color: "#888",
+                                    }}
+                                >
+                                    {c.date_debut || "-"} - {c.date_fin || "-"}
+                                </td>
+                                <td style={{ padding: "9px 10px" }}>
+                                    <button
+                                        onClick={() =>
+                                            setSelectedCampagne(c.id)
+                                        }
+                                        style={{
+                                            border: "none",
+                                            background:
+                                                String(selectedCampagne) ===
+                                                String(c.id)
+                                                    ? "#3b2a8a"
+                                                    : "#eceaf9",
+                                            color:
+                                                String(selectedCampagne) ===
+                                                String(c.id)
+                                                    ? "white"
+                                                    : "#3b2a8a",
+                                            borderRadius: 8,
+                                            padding: "6px 10px",
+                                            fontSize: 11,
+                                            fontWeight: 600,
+                                            cursor: "pointer",
+                                        }}
+                                    >
+                                        Sélectionner
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
 
             {/* Formulaire don */}
@@ -1712,11 +2302,12 @@ function TabDons({ membres, donsFamille }) {
                 >
                     <p style={{ fontSize: 13, fontWeight: 600, color: "#444" }}>
                         Don —{" "}
-                        {
-                            CAMPAGNES_DONS.find(
-                                (c) => c.id === selectedCampagne,
-                            )?.label
-                        }
+                        {selectedCampagne === "LIBRE"
+                            ? "Don libre"
+                            : campagnesDisponibles.find(
+                                  (c) =>
+                                      String(c.id) === String(selectedCampagne),
+                              )?.titre}
                     </p>
 
                     <div>
@@ -1953,6 +2544,175 @@ function TabDons({ membres, donsFamille }) {
                     </tbody>
                 </table>
             </div>
+
+            {isDonLibreModalOpen && (
+                <div
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        background: "rgba(0,0,0,0.55)",
+                        zIndex: 210,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: 16,
+                    }}
+                >
+                    <div
+                        style={{
+                            background: "white",
+                            borderRadius: 14,
+                            width: "100%",
+                            maxWidth: 420,
+                            boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+                        }}
+                    >
+                        <div
+                            style={{
+                                padding: "14px 16px",
+                                borderBottom: "1px solid #eee",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                            }}
+                        >
+                            <h4
+                                style={{
+                                    margin: 0,
+                                    fontSize: 16,
+                                    fontWeight: 700,
+                                    color: "#1a1a2e",
+                                }}
+                            >
+                                Don libre
+                            </h4>
+                            <button
+                                onClick={() => setIsDonLibreModalOpen(false)}
+                                style={{
+                                    border: "none",
+                                    background: "none",
+                                    cursor: "pointer",
+                                    color: "#777",
+                                }}
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div
+                            style={{
+                                padding: 16,
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 10,
+                            }}
+                        >
+                            <div>
+                                <label style={labelStyle}>Contributeur</label>
+                                <select
+                                    style={inputStyle}
+                                    value={donLibreMembre}
+                                    onChange={(e) =>
+                                        setDonLibreMembre(
+                                            Number(e.target.value),
+                                        )
+                                    }
+                                >
+                                    {membres.map((m) => (
+                                        <option key={m.id} value={m.id}>
+                                            {m.nom}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label style={labelStyle}>
+                                    Montant (F CFA)
+                                </label>
+                                <input
+                                    type="number"
+                                    min={100}
+                                    style={inputStyle}
+                                    placeholder="Saisir le montant"
+                                    value={donLibreMontant}
+                                    onChange={(e) =>
+                                        setDonLibreMontant(e.target.value)
+                                    }
+                                />
+                            </div>
+
+                            <div>
+                                <label style={labelStyle}>
+                                    Mode de paiement
+                                </label>
+                                <select
+                                    style={inputStyle}
+                                    value={donLibreMode}
+                                    onChange={(e) =>
+                                        setDonLibreMode(e.target.value)
+                                    }
+                                >
+                                    <option value="MOBILE_MONEY">
+                                        Mobile Money
+                                    </option>
+                                    <option value="ESPECES">Espèces</option>
+                                    <option value="VIREMENT">Virement</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div
+                            style={{
+                                borderTop: "1px solid #eee",
+                                padding: 14,
+                                display: "flex",
+                                gap: 8,
+                            }}
+                        >
+                            <button
+                                onClick={() => setIsDonLibreModalOpen(false)}
+                                style={{
+                                    flex: 1,
+                                    border: "1px solid #ddd",
+                                    background: "white",
+                                    color: "#555",
+                                    borderRadius: 10,
+                                    padding: "9px 0",
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                }}
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                onClick={handleSubmitDonLibre}
+                                disabled={submittingDonLibre}
+                                style={{
+                                    flex: 1,
+                                    border: "none",
+                                    background: submittingDonLibre
+                                        ? "#b8b6d9"
+                                        : "#7f77dd",
+                                    color: "white",
+                                    borderRadius: 10,
+                                    padding: "9px 0",
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    cursor: submittingDonLibre
+                                        ? "not-allowed"
+                                        : "pointer",
+                                }}
+                            >
+                                {submittingDonLibre
+                                    ? "Enregistrement..."
+                                    : "Valider le don libre"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -2399,12 +3159,17 @@ export default function ResponsableFamilleFinances({
     familyInfo: familyInfoProp,
     membres: membresProp,
     cotisations: cotisationsProp,
+    campagnesActives: campagnesActivesProp,
     historiquePaiements: historiqueProp,
     donsFamille: donsProp,
     notifications: notifsProp,
 }) {
-    const [activeTab, setActiveTab] = useState("consultation");
+    const [activeTab, setActiveTab] = useState("fimeco");
     const [openReceipt, setOpenReceipt] = useState(null);
+    const [paymentPrefill, setPaymentPrefill] = useState({
+        cotisationId: null,
+        amount: null,
+    });
 
     const familyInfo = familyInfoProp || FALLBACK_FAMILY;
     const membres =
@@ -2421,18 +3186,60 @@ export default function ResponsableFamilleFinances({
             : FALLBACK_HISTORIQUE;
     const donsFamille =
         Array.isArray(donsProp) && donsProp.length ? donsProp : FALLBACK_DONS;
+    const campagnesActives =
+        Array.isArray(campagnesActivesProp) && campagnesActivesProp.length
+            ? campagnesActivesProp
+            : FALLBACK_CAMPAGNES;
     const notifs =
         Array.isArray(notifsProp) && notifsProp.length
             ? notifsProp
             : FALLBACK_NOTIFICATIONS;
+
+    const cotisationsNorm = cotisations.map((c) => ({
+        ...c,
+        montant_attendu:
+            Number(c.montant_attendu) ||
+            Number(c.montant || 0) * Math.max(1, membres.length),
+        montant_paye: Number(c.montant_paye) || 0,
+        montant_restant:
+            Number(c.montant_restant) ||
+            Math.max(
+                0,
+                (Number(c.montant_attendu) ||
+                    Number(c.montant || 0) * Math.max(1, membres.length)) -
+                    (Number(c.montant_paye) || 0),
+            ),
+        type_finance:
+            c.type_finance ||
+            (String(c.nom || "")
+                .toLowerCase()
+                .includes("fimeco")
+                ? "FIMECO"
+                : "COTISATION"),
+    }));
+    const fimecoCotisations = cotisationsNorm.filter(
+        (c) => c.type_finance === "FIMECO",
+    );
+    const autresCotisations = cotisationsNorm.filter(
+        (c) => c.type_finance !== "FIMECO",
+    );
 
     const totalDues = membres.reduce((s, m) => s + m.cotisationDue, 0);
     const totalPaid = membres.reduce((s, m) => s + m.paiements, 0);
     const totalDons = donsFamille.reduce((s, d) => s + d.montant, 0);
     const unreadNotifs = notifs.filter((n) => !n.lu).length;
 
+    const handlePayCotisation = (cotisationId, amount) => {
+        setPaymentPrefill({
+            cotisationId,
+            amount,
+        });
+        setActiveTab("paiement");
+    };
+
     const TABS = [
-        { id: "consultation", label: "📋 Consultation" },
+        { id: "fimeco", label: "🏦 FIMECO" },
+        { id: "mes_cotisations", label: "📋 Mes cotisations" },
         { id: "membres", label: "👥 Membres" },
         { id: "paiement", label: "💳 Paiement" },
         { id: "dons", label: "🎁 Dons" },
@@ -2469,8 +3276,6 @@ export default function ResponsableFamilleFinances({
             >
                 <div
                     style={{
-                        maxWidth: 960,
-                        margin: "0 auto",
                         padding: "18px 20px",
                         display: "flex",
                         alignItems: "center",
@@ -2520,7 +3325,7 @@ export default function ResponsableFamilleFinances({
 
             <div
                 style={{
-                    maxWidth: 960,
+                    maxWidth: 10000,
                     margin: "0 auto",
                     padding: "28px 20px",
                 }}
@@ -2691,11 +3496,18 @@ export default function ResponsableFamilleFinances({
 
                     {/* Tab content */}
                     <div style={{ padding: 24 }}>
-                        {activeTab === "consultation" && (
-                            <TabConsultation
-                                cotisations={cotisations}
-                                membres={membres}
-                                totalDues={totalDues}
+                        {activeTab === "fimeco" && (
+                            <TabCotisations
+                                title="Cotisations FIMECO"
+                                cotisations={fimecoCotisations}
+                                onPayCotisation={handlePayCotisation}
+                            />
+                        )}
+                        {activeTab === "mes_cotisations" && (
+                            <TabCotisations
+                                title="Mes cotisations"
+                                cotisations={autresCotisations}
+                                onPayCotisation={handlePayCotisation}
                             />
                         )}
                         {activeTab === "membres" && (
@@ -2704,14 +3516,20 @@ export default function ResponsableFamilleFinances({
                         {activeTab === "paiement" && (
                             <TabPaiement
                                 membres={membres}
-                                cotisations={cotisations}
+                                cotisations={cotisationsNorm}
                                 familyInfo={familyInfo}
+                                preselectedCotisationId={
+                                    paymentPrefill.cotisationId
+                                }
+                                preselectedAmount={paymentPrefill.amount}
                             />
                         )}
                         {activeTab === "dons" && (
                             <TabDons
                                 membres={membres}
                                 donsFamille={donsFamille}
+                                campagnesActives={campagnesActives}
+                                familyInfo={familyInfo}
                             />
                         )}
                         {activeTab === "historique" && (

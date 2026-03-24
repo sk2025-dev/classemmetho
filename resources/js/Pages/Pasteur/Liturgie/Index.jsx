@@ -39,12 +39,6 @@ const ANNONCE_TYPES = [
         color: "slate",
     },
     {
-        value: "felicitations",
-        label: "Félicitations",
-        emoji: "🎉",
-        color: "terra",
-    },
-    {
         value: "generale",
         label: "Annonce générale",
         emoji: "📢",
@@ -57,8 +51,6 @@ function getPlaceholder(type) {
         priere: "Ex : Nous sollicitons les prières de la communauté pour la guérison de…",
         grace: "Ex : La famille Kouassi rend grâce à Dieu pour la naissance de…",
         deces: "Ex : La famille a la douleur de vous annoncer le rappel à Dieu de…",
-        felicitations:
-            "Ex : Nous félicitons chaleureusement les époux… pour leur union sacrée.",
         generale: "Rédigez votre annonce à destination de l'assemblée…",
     };
     return p[type] || "Rédigez votre message…";
@@ -1527,9 +1519,6 @@ export default function Index({
                                         🙌 Action de grâce
                                     </option>
                                     <option value="deces">⚰️ Décès</option>
-                                    <option value="felicitations">
-                                        🎉 Félicitations
-                                    </option>
                                     <option value="generale">
                                         📢 Générale
                                     </option>

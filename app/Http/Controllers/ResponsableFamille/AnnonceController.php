@@ -53,7 +53,7 @@ class AnnonceController extends Controller
     {
         // Support both frontend format and standard format
         $validated = $request->validate([
-            'type_acte' => 'nullable|in:annonce,annonce_liturgique,priere,grace,deces,felicitations,generale',
+            'type_acte' => 'nullable|in:annonce,annonce_liturgique,priere,grace,deces,generale',
             'type_annonce' => 'nullable|string', // Frontend format
             'membre_id' => 'required|exists:users,id', // Frontend format - member selector
             'details.titre' => 'nullable|string|max:255',

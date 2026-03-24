@@ -56,7 +56,6 @@ class ActeLiturgique extends Model
     public const TYPE_ANNOUNCE_LITURGIQUE = 'annonce_liturgique';
     public const TYPE_PRIERE = 'priere';
     public const TYPE_GRACE = 'grace';
-    public const TYPE_FELICITATIONS = 'felicitations';
     public const TYPE_GENERALE = 'generale';
 
     public const ANNOUNCE_TYPES = [
@@ -64,7 +63,6 @@ class ActeLiturgique extends Model
         self::TYPE_ANNOUNCE_LITURGIQUE,
         self::TYPE_PRIERE,
         self::TYPE_GRACE,
-        self::TYPE_FELICITATIONS,
         self::TYPE_GENERALE,
     ];
 
@@ -221,7 +219,6 @@ class ActeLiturgique extends Model
             self::TYPE_ANNOUNCE_LITURGIQUE => 'Annonce liturgique',
             self::TYPE_PRIERE => 'Demande de prière',
             self::TYPE_GRACE => 'Action de grâce',
-            self::TYPE_FELICITATIONS => 'Félicitations',
             self::TYPE_GENERALE => 'Annonce libre',
         ];
     }

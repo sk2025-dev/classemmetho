@@ -295,12 +295,8 @@ export default function Inscriptions() {
                                 <th className="px-4 py-3 text-left font-semibold text-white">
                                     Ville
                                 </th>
-                                <th className="px-4 py-3 text-left font-semibold text-white">
-                                    Code Famille
-                                </th>
-                                <th className="px-4 py-3 text-left font-semibold text-white">
-                                    Code Membre
-                                </th>
+                               
+                                
                                 <th className="px-4 py-3 text-left font-semibold text-white">
                                     Date
                                 </th>

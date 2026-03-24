@@ -7,7 +7,10 @@ import Select2Fonction from "../../../Components/Select2Fonction";
 import Select2Relation from "../../../Components/Select2Relation";
 import CitySelect from "../../../Components/CitySelect";
 import { useDebounce } from "../../../Hooks/useDebounce";
-import { usePersistentState, clearFormPersistedData } from "../../../Hooks/usePersistentState";
+import {
+    usePersistentState,
+    clearFormPersistedData,
+} from "../../../Hooks/usePersistentState";
 import { useFormErrors } from "../../../Hooks/useFormErrors";
 import { useToastWithErrorHandling } from "../../../Hooks/useToastWithErrorHandling";
 import ToastContainer from "../../../Components/ToastContainer";
@@ -47,17 +50,21 @@ import {
 // --- Style Constants ---
 const STYLES = {
     button: {
-        primary: "px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 transform hover:scale-105 active:scale-95",
-        secondary: "px-6 py-3 rounded-lg bg-gray-200 text-gray-700 font-semibold shadow hover:shadow-md hover:bg-gray-300 transition-all duration-300",
+        primary:
+            "px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 transform hover:scale-105 active:scale-95",
+        secondary:
+            "px-6 py-3 rounded-lg bg-gray-200 text-gray-700 font-semibold shadow hover:shadow-md hover:bg-gray-300 transition-all duration-300",
         danger: "px-3 py-2 text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition-all duration-300 flex items-center gap-2 font-medium",
         small: "px-4 py-2 rounded-lg bg-blue-600 text-white font-medium shadow hover:shadow-md hover:bg-blue-700 transition-all duration-300",
     },
     input: "w-full h-12 border border-gray-300 rounded-lg px-4 outline-none focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300",
-    photoContainer: "w-24 h-24 rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden border-2 border-blue-300 flex items-center justify-center flex-shrink-0 shadow-md",
-    photoLargeContainer: "w-28 h-28 rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden border-2 border-blue-300 flex items-center justify-center flex-shrink-0 shadow-md",
-    photoExtraLarge: "w-32 h-32 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden border-3 border-blue-300 flex items-center justify-center shadow-lg",
+    photoContainer:
+        "w-24 h-24 rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden border-2 border-blue-300 flex items-center justify-center flex-shrink-0 shadow-md",
+    photoLargeContainer:
+        "w-28 h-28 rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden border-2 border-blue-300 flex items-center justify-center flex-shrink-0 shadow-md",
+    photoExtraLarge:
+        "w-32 h-32 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden border-3 border-blue-300 flex items-center justify-center shadow-lg",
 };
-
 
 const FormStepper = ({ currentStep, totalSteps, labels, onStepClick }) => {
     const icons = [Home, User, Users, CheckCircle];
@@ -128,8 +135,6 @@ const FormStepper = ({ currentStep, totalSteps, labels, onStepClick }) => {
     );
 };
 
-
-
 // --- Form Field Component ---
 const FormField = ({ label, children, icon: Icon, required }) => (
     <div className="space-y-2">
@@ -143,23 +148,32 @@ const FormField = ({ label, children, icon: Icon, required }) => (
 );
 
 // --- MultiSelectDropdown Component ---
-const MultiSelectDropdown = ({ items, selected, onChange, placeholder = "Sélectionner..." }) => {
+const MultiSelectDropdown = ({
+    items,
+    selected,
+    onChange,
+    placeholder = "Sélectionner...",
+}) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef(null);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (containerRef.current && !containerRef.current.contains(event.target)) {
+            if (
+                containerRef.current &&
+                !containerRef.current.contains(event.target)
+            ) {
                 setIsOpen(false);
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
+        return () =>
+            document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
     const handleToggle = (item) => {
-        if (selected.some(s => s.id === item.id)) {
-            onChange(selected.filter(s => s.id !== item.id));
+        if (selected.some((s) => s.id === item.id)) {
+            onChange(selected.filter((s) => s.id !== item.id));
         } else {
             onChange([...selected, item]);
         }
@@ -173,14 +187,21 @@ const MultiSelectDropdown = ({ items, selected, onChange, placeholder = "Sélect
                 className="w-full h-12 border border-gray-300 rounded-lg px-4 py-2 flex items-center justify-between focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white hover:border-gray-400"
             >
                 <div className="flex flex-col items-start">
-                    <span className={selected.length === 0 ? "text-gray-500 text-sm" : "text-gray-700 text-xs font-semibold"}>
+                    <span
+                        className={
+                            selected.length === 0
+                                ? "text-gray-500 text-sm"
+                                : "text-gray-700 text-xs font-semibold"
+                        }
+                    >
                         {selected.length === 0
                             ? placeholder
-                            : selected.map(s => s.nom).join(", ")
-                        }
+                            : selected.map((s) => s.nom).join(", ")}
                     </span>
                 </div>
-                <ChevronDown className={`w-4 h-4 transition-transform flex-shrink-0 ${isOpen ? "rotate-180" : ""}`} />
+                <ChevronDown
+                    className={`w-4 h-4 transition-transform flex-shrink-0 ${isOpen ? "rotate-180" : ""}`}
+                />
             </button>
 
             {isOpen && (
@@ -192,11 +213,13 @@ const MultiSelectDropdown = ({ items, selected, onChange, placeholder = "Sélect
                         >
                             <input
                                 type="checkbox"
-                                checked={selected.some(s => s.id === item.id)}
+                                checked={selected.some((s) => s.id === item.id)}
                                 onChange={() => handleToggle(item)}
                                 className="w-4 h-4 rounded border-gray-300 text-blue-600"
                             />
-                            <span className="flex-1 text-sm text-gray-900">{item.nom}</span>
+                            <span className="flex-1 text-sm text-gray-900">
+                                {item.nom}
+                            </span>
                         </label>
                     ))}
                 </div>
@@ -205,17 +228,29 @@ const MultiSelectDropdown = ({ items, selected, onChange, placeholder = "Sélect
     );
 };
 
-
-
 // --- Main Component ---
 export default function RegisterConducteur({
     labels = ["Conducteur", "Responsable", "Membres", "Vérification"],
     auth,
 }) {
     // --- États ---
-    const [step, setStep] = usePersistentState('registerConducteur_step', 1);
-    const { errors, setErrors, serverErrors, setServerErrors, getFieldError, handleServerErrors } = useFormErrors();
-    const { toasts, removeToast, success: showSuccess, error: showError, warning: showWarning, info: showInfo } = useToastWithErrorHandling();
+    const [step, setStep] = usePersistentState("registerConducteur_step", 1);
+    const {
+        errors,
+        setErrors,
+        serverErrors,
+        setServerErrors,
+        getFieldError,
+        handleServerErrors,
+    } = useFormErrors();
+    const {
+        toasts,
+        removeToast,
+        success: showSuccess,
+        error: showError,
+        warning: showWarning,
+        info: showInfo,
+    } = useToastWithErrorHandling();
     const [loading, setLoading] = useState(false);
     const [editingMemberIndex, setEditingMemberIndex] = useState(null);
 
@@ -224,13 +259,22 @@ export default function RegisterConducteur({
     const [villesDatabase, setVillesDatabase] = useState([]);
 
     // Recherche et Dropdowns
-    const [classesSearchTerm, setClassesSearchTerm] = usePersistentState('registerConducteur_classesSearchTerm', "");
+    const [classesSearchTerm, setClassesSearchTerm] = usePersistentState(
+        "registerConducteur_classesSearchTerm",
+        "",
+    );
     const [showClassesDropdown, setShowClassesDropdown] = useState(false);
-    const [villesSearchTerm, setVillesSearchTerm] = usePersistentState('registerConducteur_villesSearchTerm', "");
+    const [villesSearchTerm, setVillesSearchTerm] = usePersistentState(
+        "registerConducteur_villesSearchTerm",
+        "",
+    );
     const [showVillesDropdown, setShowVillesDropdown] = useState(false);
 
     // États pour l'adresse autocomplete
-    const [adresseInputValue, setAdresseInputValue] = usePersistentState('registerConducteur_adresseInputValue', "");
+    const [adresseInputValue, setAdresseInputValue] = usePersistentState(
+        "registerConducteur_adresseInputValue",
+        "",
+    );
     const [adresseSuggestions, setAdresseSuggestions] = useState([]);
     const [showAdresseDropdown, setShowAdresseDropdown] = useState(false);
 
@@ -238,96 +282,125 @@ export default function RegisterConducteur({
     const debouncedAdresseTerm = useDebounce(adresseInputValue, 500);
 
     // Données du formulaire
-    const [famille, setFamille] = usePersistentState('registerConducteur_famille', {
-        nom: "",
-        adresse: "",
-        quartier: "",
-        ville: "",
-        telephone: "",
-        telephone2: "",
-        classe_id: null,
-    });
+    const [famille, setFamille] = usePersistentState(
+        "registerConducteur_famille",
+        {
+            nom: "",
+            adresse: "",
+            quartier: "",
+            ville: "",
+            telephone: "",
+            telephone2: "",
+            classe_id: null,
+        },
+    );
 
-    const [responsable, setResponsable] = usePersistentState('registerConducteur_responsable', {
-        nom: "",
-        prenom: "",
-        email: "",
-        tel: "",
-        telephone2: "",
-        dateNaissance: "",
-        genre: "",
-        relation: "",
-        profession: "",
-        fonction_professionnelle: "",
-        adresse: "",
-        ville_id: null,
-        statutMarital: "",
-        dateMariage: "",
-        lieuMariage: "",
-        dateDivorce: "",
-        lieuDivorce: "",
-        dateDeces: "",
-        lieuDeces: "",
-        // Champs religieux - baptême
-        baptise: false,
-        dateBapteme: "",
-        lieuBapteme: "",
-        // Champs religieux - première communion
-        premiereCommunion: false,
-        datePremiereCommunion: "",
-        lieuPremiereCommunion: "",
-        // Champs religieux - mariage religieux
-        marieReligieusement: false,
-        dateMariageReligieux: "",
-        lieuMariageReligieux: "",
-        photo: null,
-        photoPreview: null,
-    }, { excludeKeys: ['photo', 'photoPreview'] });
+    const [responsable, setResponsable] = usePersistentState(
+        "registerConducteur_responsable",
+        {
+            nom: "",
+            prenom: "",
+            email: "",
+            tel: "",
+            telephone2: "",
+            dateNaissance: "",
+            genre: "",
+            relation: "",
+            employment_status: "",
+            profession: "",
+            fonction_professionnelle: "",
+            adresse: "",
+            ville_id: null,
+            statutMarital: "",
+            dateMariage: "",
+            lieuMariage: "",
+            dateDivorce: "",
+            lieuDivorce: "",
+            dateDeces: "",
+            lieuDeces: "",
+            // Champs religieux - baptême
+            baptise: false,
+            dateBapteme: "",
+            lieuBapteme: "",
+            // Champs religieux - première communion
+            premiereCommunion: false,
+            datePremiereCommunion: "",
+            lieuPremiereCommunion: "",
+            // Champs religieux - mariage religieux
+            marieReligieusement: false,
+            dateMariageReligieux: "",
+            lieuMariageReligieux: "",
+            photo: null,
+            photoPreview: null,
+        },
+        { excludeKeys: ["photo", "photoPreview"] },
+    );
 
-    const [membres, setMembres] = usePersistentState('registerConducteur_membres', []);
-    const [membreTemp, setMembreTemp] = usePersistentState('registerConducteur_membreTemp', {
-        nom: "",
-        prenom: "",
-        email: "",
-        telephone: "",
-        relation: "",
-        genre: "",
-        dateNaissance: "",
-        statutMarital: "",
-        dateMariage: "",
-        lieuMariage: "",
-        dateDivorce: "",
-        lieuDivorce: "",
-        dateDeces: "",
-        lieuDeces: "",
-        dateDote: "",
-        lieuDote: "",
-        lienParente: "",
-        // Champs religieux - baptême
-        baptise: false,
-        dateBapteme: "",
-        lieuBapteme: "",
-        // Champs religieux - première communion
-        premiereCommunion: false,
-        datePremiereCommunion: "",
-        lieuPremiereCommunion: "",
-        // Champs religieux - mariage religieux
-        marieReligieusement: false,
-        dateMariageReligieux: "",
-        lieuMariageReligieux: "",
-        fonction: "",
-        fonction_id: null,
-        profession: "",
-        photo: null,
-        photoPreview: null,
-    }, { excludeKeys: ['photo', 'photoPreview'] });
+    const [membres, setMembres] = usePersistentState(
+        "registerConducteur_membres",
+        [],
+    );
+    const [membreTemp, setMembreTemp] = usePersistentState(
+        "registerConducteur_membreTemp",
+        {
+            nom: "",
+            prenom: "",
+            email: "",
+            telephone: "",
+            relation: "",
+            genre: "",
+            dateNaissance: "",
+            statutMarital: "",
+            dateMariage: "",
+            lieuMariage: "",
+            dateDivorce: "",
+            lieuDivorce: "",
+            dateDeces: "",
+            lieuDeces: "",
+            dateDote: "",
+            lieuDote: "",
+            lienParente: "",
+            // Champs religieux - baptême
+            baptise: false,
+            dateBapteme: "",
+            lieuBapteme: "",
+            // Champs religieux - première communion
+            premiereCommunion: false,
+            datePremiereCommunion: "",
+            lieuPremiereCommunion: "",
+            // Champs religieux - mariage religieux
+            marieReligieusement: false,
+            dateMariageReligieux: "",
+            lieuMariageReligieux: "",
+            fonction: "",
+            fonction_id: null,
+            employment_status: "",
+            profession: "",
+            photo: null,
+            photoPreview: null,
+        },
+        { excludeKeys: ["photo", "photoPreview"] },
+    );
 
-    const [consentement, setConsentement] = usePersistentState('registerConducteur_consentement', false);
-    const [hasMembersToAdd, setHasMembersToAdd] = usePersistentState('registerConducteur_hasMembersToAdd', null);
+    const [consentement, setConsentement] = usePersistentState(
+        "registerConducteur_consentement",
+        false,
+    );
+    const [hasMembersToAdd, setHasMembersToAdd] = usePersistentState(
+        "registerConducteur_hasMembersToAdd",
+        null,
+    );
     const [churchRoles, setChurchRoles] = useState([]);
-    const [selectedRolesResponsable, setSelectedRolesResponsable] = usePersistentState('registerConducteur_selectedRolesResponsable', []);
-    const [selectedMembresRoles, setSelectedMembresRoles] = usePersistentState('registerConducteur_selectedMembresRoles', new Set());
-    const [selectedCity, setSelectedCity] = usePersistentState('registerConducteur_selectedCity', null);
+    const [selectedRolesResponsable, setSelectedRolesResponsable] =
+        usePersistentState("registerConducteur_selectedRolesResponsable", []);
+    const [selectedMembresRoles, setSelectedMembresRoles] = usePersistentState(
+        "registerConducteur_selectedMembresRoles",
+        new Set(),
+    );
+    const [selectedCity, setSelectedCity] = usePersistentState(
+        "registerConducteur_selectedCity",
+        null,
+    );
 
     // Refs
     const familyNameRef = useRef(null);
@@ -338,10 +411,10 @@ export default function RegisterConducteur({
     const villesDropdownRef = useRef(null);
 
     const fieldRefs = {
-        'famille.nom': familyNameRef,
-        'responsable.nom': respNameRef,
-        'responsable.prenom': respPrenomRef,
-        'responsable.email': respEmailRef,
+        "famille.nom": familyNameRef,
+        "responsable.nom": respNameRef,
+        "responsable.prenom": respPrenomRef,
+        "responsable.email": respEmailRef,
     };
 
     const totalSteps = labels.length;
@@ -351,30 +424,54 @@ export default function RegisterConducteur({
         const fetchData = async () => {
             try {
                 // Charger les classes depuis la base de données
-                const classesRes = await fetch('/api/classes');
+                const classesRes = await fetch("/api/classes");
                 if (classesRes.ok) {
                     const classesData = await classesRes.json();
-                    setClassesDatabase(classesData.data && Array.isArray(classesData.data) ? classesData.data : Array.isArray(classesData) ? classesData : []);
+                    setClassesDatabase(
+                        classesData.data && Array.isArray(classesData.data)
+                            ? classesData.data
+                            : Array.isArray(classesData)
+                              ? classesData
+                              : [],
+                    );
                 } else {
-                    console.error("Erreur chargement classes:", classesRes.status);
+                    console.error(
+                        "Erreur chargement classes:",
+                        classesRes.status,
+                    );
                     setClassesDatabase([]);
                 }
 
                 // Charger les villes depuis la base de données
-                const villesRes = await fetch('/api/villes');
+                const villesRes = await fetch("/api/villes");
                 if (villesRes.ok) {
                     const villesData = await villesRes.json();
-                    setVillesDatabase(villesData.data && Array.isArray(villesData.data) ? villesData.data : Array.isArray(villesData) ? villesData : []);
+                    setVillesDatabase(
+                        villesData.data && Array.isArray(villesData.data)
+                            ? villesData.data
+                            : Array.isArray(villesData)
+                              ? villesData
+                              : [],
+                    );
                 } else {
-                    console.error("Erreur chargement villes:", villesRes.status);
+                    console.error(
+                        "Erreur chargement villes:",
+                        villesRes.status,
+                    );
                     setVillesDatabase([]);
                 }
 
                 // Charger les fonctions d'église
-                const rolesRes = await fetch('/api/fonctions');
+                const rolesRes = await fetch("/api/fonctions");
                 if (rolesRes.ok) {
                     const rolesData = await rolesRes.json();
-                    setChurchRoles(rolesData.data && Array.isArray(rolesData.data) ? rolesData.data : Array.isArray(rolesData) ? rolesData : []);
+                    setChurchRoles(
+                        rolesData.data && Array.isArray(rolesData.data)
+                            ? rolesData.data
+                            : Array.isArray(rolesData)
+                              ? rolesData
+                              : [],
+                    );
                 } else {
                     setChurchRoles([]);
                 }
@@ -391,9 +488,9 @@ export default function RegisterConducteur({
     // Pré-remplir la classe du conducteur si authentifié
     useEffect(() => {
         if (auth?.user?.classe_id && !famille.classe_id) {
-            setFamille(prev => ({
+            setFamille((prev) => ({
                 ...prev,
-                classe_id: auth.user.classe_id
+                classe_id: auth.user.classe_id,
             }));
         }
     }, [auth?.user?.classe_id, famille.classe_id]);
@@ -449,47 +546,72 @@ export default function RegisterConducteur({
 
         if (!membreTemp.nom) newErrors["membre.nom"] = "Nom requis";
         if (!membreTemp.prenom) newErrors["membre.prenom"] = "Prénom requis";
-        if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email)) newErrors["membre.email"] = "Adresse email invalide";
-        if (!membreTemp.relation) newErrors["membre.relation"] = "Relation requise";
-        if (!membreTemp.dateNaissance) newErrors["membre.dateNaissance"] = "Date de naissance requise";
+        if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email))
+            newErrors["membre.email"] = "Adresse email invalide";
+        if (!membreTemp.relation)
+            newErrors["membre.relation"] = "Relation requise";
+        if (!membreTemp.dateNaissance)
+            newErrors["membre.dateNaissance"] = "Date de naissance requise";
         else if (new Date(membreTemp.dateNaissance) > new Date())
-            newErrors["membre.dateNaissance"] = "La date ne doit pas être dans le futur";
+            newErrors["membre.dateNaissance"] =
+                "La date ne doit pas être dans le futur";
 
         // Si fourni, valider le format téléphone
         if (membreTemp.telephone && !isValidPhoneFormat(membreTemp.telephone)) {
-            newErrors["membre.telephone"] = "Doit contenir exactement 10 chiffres";
+            newErrors["membre.telephone"] =
+                "Doit contenir exactement 10 chiffres";
         }
 
         if (!membreTemp.genre) newErrors["membre.genre"] = "Genre requis";
-        if (!membreTemp.statutMarital) newErrors["membre.statutMarital"] = "Statut marital requis";
-        if (!membreTemp.profession) newErrors["membre.profession"] = "Profession requise";
+        if (!membreTemp.statutMarital)
+            newErrors["membre.statutMarital"] = "Statut marital requis";
+        if (!membreTemp.employment_status)
+            newErrors["membre.employment_status"] = "Statut d'emploi requis";
+        if (!membreTemp.profession)
+            newErrors["membre.profession"] = "Profession requise";
 
         // Vérifier conditions statut marital
         if (membreTemp.statutMarital === "marie") {
-            if (!membreTemp.dateMariage) newErrors["membre.dateMariage"] = "Date requise";
-            if (!membreTemp.lieuMariage) newErrors["membre.lieuMariage"] = "Lieu requis";
+            if (!membreTemp.dateMariage)
+                newErrors["membre.dateMariage"] = "Date requise";
+            if (!membreTemp.lieuMariage)
+                newErrors["membre.lieuMariage"] = "Lieu requis";
         }
         if (membreTemp.statutMarital === "divorce") {
-            if (!membreTemp.dateDivorce) newErrors["membre.dateDivorce"] = "Date requise";
-            if (!membreTemp.lieuDivorce) newErrors["membre.lieuDivorce"] = "Lieu requis";
+            if (!membreTemp.dateDivorce)
+                newErrors["membre.dateDivorce"] = "Date requise";
+            if (!membreTemp.lieuDivorce)
+                newErrors["membre.lieuDivorce"] = "Lieu requis";
         }
         if (membreTemp.statutMarital === "veuf") {
-            if (!membreTemp.dateDeces) newErrors["membre.dateDeces"] = "Date requise";
-            if (!membreTemp.lieuDeces) newErrors["membre.lieuDeces"] = "Lieu requis";
+            if (!membreTemp.dateDeces)
+                newErrors["membre.dateDeces"] = "Date requise";
+            if (!membreTemp.lieuDeces)
+                newErrors["membre.lieuDeces"] = "Lieu requis";
         }
 
         // Validation des champs religieux si cochés
         if (membreTemp.baptise) {
-            if (!membreTemp.dateBapteme) newErrors["membre.dateBapteme"] = "Date de baptême requise";
-            if (!membreTemp.lieuBapteme) newErrors["membre.lieuBapteme"] = "Lieu de baptême requis";
+            if (!membreTemp.dateBapteme)
+                newErrors["membre.dateBapteme"] = "Date de baptême requise";
+            if (!membreTemp.lieuBapteme)
+                newErrors["membre.lieuBapteme"] = "Lieu de baptême requis";
         }
         if (membreTemp.premiereCommunion) {
-            if (!membreTemp.datePremiereCommunion) newErrors["membre.datePremiereCommunion"] = "Date de première communion requise";
-            if (!membreTemp.lieuPremiereCommunion) newErrors["membre.lieuPremiereCommunion"] = "Lieu de première communion requis";
+            if (!membreTemp.datePremiereCommunion)
+                newErrors["membre.datePremiereCommunion"] =
+                    "Date de première communion requise";
+            if (!membreTemp.lieuPremiereCommunion)
+                newErrors["membre.lieuPremiereCommunion"] =
+                    "Lieu de première communion requis";
         }
         if (membreTemp.marieReligieusement) {
-            if (!membreTemp.dateMariageReligieux) newErrors["membre.dateMariageReligieux"] = "Date du mariage religieux requise";
-            if (!membreTemp.lieuMariageReligieux) newErrors["membre.lieuMariageReligieux"] = "Lieu du mariage religieux requis";
+            if (!membreTemp.dateMariageReligieux)
+                newErrors["membre.dateMariageReligieux"] =
+                    "Date du mariage religieux requise";
+            if (!membreTemp.lieuMariageReligieux)
+                newErrors["membre.lieuMariageReligieux"] =
+                    "Lieu du mariage religieux requis";
         }
 
         if (Object.keys(newErrors).length > 0) {
@@ -529,6 +651,7 @@ export default function RegisterConducteur({
                 dateBapteme: "",
                 lieuBapteme: "",
                 fonction: "",
+                employment_status: "",
                 profession: "",
                 photo: null,
                 photoPreview: null,
@@ -540,7 +663,9 @@ export default function RegisterConducteur({
     const editerMembre = (index) => {
         setMembreTemp(membres[index]);
         setEditingMemberIndex(index);
-        document.querySelector('[data-member-form]')?.scrollIntoView({ behavior: 'smooth' });
+        document
+            .querySelector("[data-member-form]")
+            ?.scrollIntoView({ behavior: "smooth" });
     };
 
     const annulerEdition = () => {
@@ -565,6 +690,7 @@ export default function RegisterConducteur({
             lieuBapteme: "",
             fonction: "",
             fonction_id: null,
+            employment_status: "",
             profession: "",
             photo: null,
             photoPreview: null,
@@ -617,7 +743,8 @@ export default function RegisterConducteur({
             if (!famille.telephone) {
                 newErrors["famille.telephone"] = "Requis";
             } else if (!isValidPhoneFormat(famille.telephone)) {
-                newErrors["famille.telephone"] = "Doit contenir exactement 10 chiffres";
+                newErrors["famille.telephone"] =
+                    "Doit contenir exactement 10 chiffres";
             }
             if (!famille.classe_id)
                 newErrors["famille.classe_id"] =
@@ -632,13 +759,18 @@ export default function RegisterConducteur({
             if (!responsable.tel) {
                 newErrors["responsable.tel"] = "Requis";
             } else if (!isValidPhoneFormat(responsable.tel)) {
-                newErrors["responsable.tel"] = "Doit contenir exactement 10 chiffres";
+                newErrors["responsable.tel"] =
+                    "Doit contenir exactement 10 chiffres";
             }
             if (!responsable.dateNaissance)
                 newErrors["responsable.dateNaissance"] = "Requis";
-             else if (new Date(responsable.dateNaissance) > new Date())
-                newErrors["responsable.dateNaissance"] = "La date ne doit pas être dans le futur";
+            else if (new Date(responsable.dateNaissance) > new Date())
+                newErrors["responsable.dateNaissance"] =
+                    "La date ne doit pas être dans le futur";
             if (!responsable.genre) newErrors["responsable.genre"] = "Requis";
+            if (!responsable.employment_status)
+                newErrors["responsable.employment_status"] =
+                    "Statut d'emploi requis";
             if (!responsable.profession)
                 newErrors["responsable.profession"] = "Requis";
             if (!responsable.statutMarital)
@@ -646,30 +778,45 @@ export default function RegisterConducteur({
 
             // Validation des champs religieux si cochés
             if (responsable.baptise) {
-                if (!responsable.dateBapteme) newErrors["responsable.dateBapteme"] = "Date de baptême requise";
-                if (!responsable.lieuBapteme) newErrors["responsable.lieuBapteme"] = "Lieu de baptême requis";
+                if (!responsable.dateBapteme)
+                    newErrors["responsable.dateBapteme"] =
+                        "Date de baptême requise";
+                if (!responsable.lieuBapteme)
+                    newErrors["responsable.lieuBapteme"] =
+                        "Lieu de baptême requis";
             }
             if (responsable.premiereCommunion) {
-                if (!responsable.datePremiereCommunion) newErrors["responsable.datePremiereCommunion"] = "Date de première communion requise";
-                if (!responsable.lieuPremiereCommunion) newErrors["responsable.lieuPremiereCommunion"] = "Lieu de première communion requis";
+                if (!responsable.datePremiereCommunion)
+                    newErrors["responsable.datePremiereCommunion"] =
+                        "Date de première communion requise";
+                if (!responsable.lieuPremiereCommunion)
+                    newErrors["responsable.lieuPremiereCommunion"] =
+                        "Lieu de première communion requis";
             }
             if (responsable.marieReligieusement) {
-                if (!responsable.dateMariageReligieux) newErrors["responsable.dateMariageReligieux"] = "Date du mariage religieux requise";
-                if (!responsable.lieuMariageReligieux) newErrors["responsable.lieuMariageReligieux"] = "Lieu du mariage religieux requis";
+                if (!responsable.dateMariageReligieux)
+                    newErrors["responsable.dateMariageReligieux"] =
+                        "Date du mariage religieux requise";
+                if (!responsable.lieuMariageReligieux)
+                    newErrors["responsable.lieuMariageReligieux"] =
+                        "Lieu du mariage religieux requis";
             }
         }
         if (s === 3) {
             // Si l'utilisateur a choisi d'ajouter des membres, les valider
             if (hasMembersToAdd === true) {
                 if (membres.length === 0) {
-                    newErrors["membres"] = "Veuillez ajouter au moins un membre de la famille";
+                    newErrors["membres"] =
+                        "Veuillez ajouter au moins un membre de la famille";
                 } else {
                     // Valider que chaque membre a les champs requis
                     membres.forEach((m, idx) => {
                         if (!m.dateNaissance) {
-                            newErrors[`membres[${idx}].dateNaissance`] = "Date de naissance requise";
+                            newErrors[`membres[${idx}].dateNaissance`] =
+                                "Date de naissance requise";
                         } else if (new Date(m.dateNaissance) > new Date())
-                            newErrors[`membres[${idx}].dateNaissance`] = "La date ne doit pas être dans le futur";
+                            newErrors[`membres[${idx}].dateNaissance`] =
+                                "La date ne doit pas être dans le futur";
                         if (!m.nom) {
                             newErrors[`membres[${idx}].nom`] = "Nom requis";
                         }
@@ -691,21 +838,31 @@ export default function RegisterConducteur({
     };
 
     const handleSubmit = async (e) => {
-        if (e) e.preventDefau
+        if (e) e.preventDefau;
 
         // Validation complète avant soumission
         const validationErrors = {};
 
         // Valider le responsable
-        if (!responsable.nom) validationErrors["responsable.nom"] = "Nom du responsable requis";
-        if (!responsable.prenom) validationErrors["responsable.prenom"] = "Prénom du responsable requis";
-        if (!responsable.email || !/^\S+@\S+\.\S+$/.test(responsable.email)) validationErrors["responsable.email"] = "Email valide requis";
-        if (!responsable.dateNaissance) validationErrors["responsable.dateNaissance"] = "Date de naissance requise";
+        if (!responsable.nom)
+            validationErrors["responsable.nom"] = "Nom du responsable requis";
+        if (!responsable.prenom)
+            validationErrors["responsable.prenom"] =
+                "Prénom du responsable requis";
+        if (!responsable.email || !/^\S+@\S+\.\S+$/.test(responsable.email))
+            validationErrors["responsable.email"] = "Email valide requis";
+        if (!responsable.dateNaissance)
+            validationErrors["responsable.dateNaissance"] =
+                "Date de naissance requise";
+        if (!responsable.employment_status)
+            validationErrors["responsable.employment_status"] =
+                "Statut d'emploi du responsable requis";
 
         // Valider les membres s'ils sont requis
         if (hasMembersToAdd === true) {
             if (membres.length === 0) {
-                validationErrors["membres"] = "Veuillez ajouter au moins un membre";
+                validationErrors["membres"] =
+                    "Veuillez ajouter au moins un membre";
             } else {
                 let memberErrors = [];
                 membres.forEach((m, idx) => {
@@ -719,14 +876,20 @@ export default function RegisterConducteur({
                         memberHasErrors = true;
                     }
                     if (!m.dateNaissance) {
-                        memberErrors.push(`Membre ${idx + 1}: Date de naissance requise`);
+                        memberErrors.push(
+                            `Membre ${idx + 1}: Date de naissance requise`,
+                        );
                         memberHasErrors = true;
                     } else if (new Date(m.dateNaissance) > new Date()) {
-                        memberErrors.push(`Membre ${idx + 1}: La date ne doit pas être dans le futur`);
+                        memberErrors.push(
+                            `Membre ${idx + 1}: La date ne doit pas être dans le futur`,
+                        );
                         memberHasErrors = true;
                     }
                     if (!m.relation) {
-                        memberErrors.push(`Membre ${idx + 1}: Relation requise`);
+                        memberErrors.push(
+                            `Membre ${idx + 1}: Relation requise`,
+                        );
                         memberHasErrors = true;
                     }
                     if (!m.genre) {
@@ -734,26 +897,42 @@ export default function RegisterConducteur({
                         memberHasErrors = true;
                     }
                     if (!m.statutMarital) {
-                        memberErrors.push(`Membre ${idx + 1}: Statut marital requis`);
+                        memberErrors.push(
+                            `Membre ${idx + 1}: Statut marital requis`,
+                        );
+                        memberHasErrors = true;
+                    }
+                    if (!m.employment_status) {
+                        memberErrors.push(
+                            `Membre ${idx + 1}: Statut d'emploi requis`,
+                        );
                         memberHasErrors = true;
                     }
                     if (!m.profession) {
-                        memberErrors.push(`Membre ${idx + 1}: Profession requise`);
+                        memberErrors.push(
+                            `Membre ${idx + 1}: Profession requise`,
+                        );
                         memberHasErrors = true;
                     }
                 });
                 if (memberErrors.length > 0) {
-                    validationErrors["membres_detailed"] = memberErrors.join("\n");
+                    validationErrors["membres_detailed"] =
+                        memberErrors.join("\n");
                 }
             }
         }
 
         // Afficher les erreurs s'il y en a
         if (Object.keys(validationErrors).length > 0) {
-            let errorMessage = "❌ Veuillez corriger les erreurs suivantes:\n\n";
-            Object.values(validationErrors).forEach(err => {
-                if (typeof err === 'string' && err.includes('\n')) {
-                    errorMessage += err.split('\n').map(e => "• " + e).join("\n") + "\n";
+            let errorMessage =
+                "❌ Veuillez corriger les erreurs suivantes:\n\n";
+            Object.values(validationErrors).forEach((err) => {
+                if (typeof err === "string" && err.includes("\n")) {
+                    errorMessage +=
+                        err
+                            .split("\n")
+                            .map((e) => "• " + e)
+                            .join("\n") + "\n";
                 } else {
                     errorMessage += "• " + err + "\n";
                 }
@@ -794,8 +973,8 @@ export default function RegisterConducteur({
             }
 
             // Convertir les booléens en 1/0 pour FormData
-            if (typeof valueToSend === 'boolean') {
-                valueToSend = valueToSend ? '1' : '0';
+            if (typeof valueToSend === "boolean") {
+                valueToSend = valueToSend ? "1" : "0";
             }
 
             formData.append(`famille[${k}]`, valueToSend ?? "");
@@ -828,8 +1007,8 @@ export default function RegisterConducteur({
                 }
 
                 // Convertir les booléens en 1/0 pour FormData
-                if (typeof valueToSend === 'boolean') {
-                    valueToSend = valueToSend ? '1' : '0';
+                if (typeof valueToSend === "boolean") {
+                    valueToSend = valueToSend ? "1" : "0";
                 }
 
                 formData.append(`responsable[${k}]`, valueToSend);
@@ -861,12 +1040,14 @@ export default function RegisterConducteur({
 
                         // Nettoyer le téléphone si présent
                         if (k === "telephone" && valueToSend) {
-                            valueToSend = valueToSend.toString().replace(/^225/, "");
+                            valueToSend = valueToSend
+                                .toString()
+                                .replace(/^225/, "");
                         }
 
                         // Convertir les booléens en 1/0 pour FormData
-                        if (typeof valueToSend === 'boolean') {
-                            valueToSend = valueToSend ? '1' : '0';
+                        if (typeof valueToSend === "boolean") {
+                            valueToSend = valueToSend ? "1" : "0";
                         }
 
                         formData.append(`membres[${i}][${k}]`, valueToSend);
@@ -879,16 +1060,21 @@ export default function RegisterConducteur({
         formData.append("consentement", consentement ? "1" : "0");
 
         // 🔐 Récupérer et ajouter le token CSRF au FormData
-        let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        let csrfToken = document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute("content");
 
         // Fallback si la meta n'existe pas - chercher dans window.axios
-        if (!csrfToken && window.axios?.defaults?.headers?.common?.['X-CSRF-TOKEN']) {
-            csrfToken = window.axios.defaults.headers.common['X-CSRF-TOKEN'];
+        if (
+            !csrfToken &&
+            window.axios?.defaults?.headers?.common?.["X-CSRF-TOKEN"]
+        ) {
+            csrfToken = window.axios.defaults.headers.common["X-CSRF-TOKEN"];
         }
 
         // ✅ Ajouter le token CSRF au FormData
         if (csrfToken) {
-            formData.append('_token', csrfToken);
+            formData.append("_token", csrfToken);
         }
 
         try {
@@ -897,15 +1083,20 @@ export default function RegisterConducteur({
 
             // Ajouter le token CSRF au header aussi (double sécurité)
             if (csrfToken) {
-                headers['X-CSRF-TOKEN'] = csrfToken;
+                headers["X-CSRF-TOKEN"] = csrfToken;
             }
 
-            const res = await axios.post("/admin/inscriptions/conducteur", formData, {
-                headers: headers,
-            });
+            const res = await axios.post(
+                "/admin/inscriptions/conducteur",
+                formData,
+                {
+                    headers: headers,
+                },
+            );
 
             // Succès
-            const message = res.data?.message || "Inscription soumise avec succès !";
+            const message =
+                res.data?.message || "Inscription soumise avec succès !";
             showSuccess(message);
 
             // Reset du formulaire
@@ -928,6 +1119,7 @@ export default function RegisterConducteur({
                 dateNaissance: "",
                 genre: "",
                 relation: "",
+                employment_status: "",
                 profession: "",
                 fonction_professionnelle: "",
                 adresse: "",
@@ -978,6 +1170,7 @@ export default function RegisterConducteur({
                 lieuMariageReligieux: "",
                 fonction: "",
                 fonction_id: null,
+                employment_status: "",
                 profession: "",
                 photo: null,
                 photoPreview: null,
@@ -989,46 +1182,59 @@ export default function RegisterConducteur({
             setAdresseInputValue("");
 
             // Effacer les données sauvegardées après soumission réussie
-            clearFormPersistedData('registerConducteur_');
-            localStorage.removeItem('registerWelcomeState');
+            clearFormPersistedData("registerConducteur_");
+            localStorage.removeItem("registerWelcomeState");
         } catch (err) {
             const apiErrors = err?.response?.data?.errors || {};
             const apiMessage = err?.response?.data?.message;
 
             if (Object.keys(apiErrors).length > 0) {
                 // Construire un message d'erreur clair et lisible pour le toast
-                const errorList = Object.entries(apiErrors)
-                    .flatMap(([field, messages]) => {
+                const errorList = Object.entries(apiErrors).flatMap(
+                    ([field, messages]) => {
                         if (Array.isArray(messages)) {
-                            return messages.map(msg => `${field}: ${msg}`);
+                            return messages.map((msg) => `${field}: ${msg}`);
                         }
                         return [`${field}: ${messages}`];
-                    });
+                    },
+                );
 
                 const errorTitle = "⚠️ ERREURS DE VALIDATION";
-                const errorBody = errorList.join('\n');
+                const errorBody = errorList.join("\n");
                 const fullErrorMessage = `${errorTitle}\n\n${errorBody}`;
 
                 showError(fullErrorMessage);
-                handleServerErrors(apiErrors, "Veuillez corriger les erreurs ci-dessus.");
+                handleServerErrors(
+                    apiErrors,
+                    "Veuillez corriger les erreurs ci-dessus.",
+                );
 
                 // Focus automatique sur le premier champ en erreur
                 const firstErrorField = Object.keys(apiErrors)[0];
-                if (firstErrorField && fieldRefs[firstErrorField] && fieldRefs[firstErrorField].current) {
+                if (
+                    firstErrorField &&
+                    fieldRefs[firstErrorField] &&
+                    fieldRefs[firstErrorField].current
+                ) {
                     fieldRefs[firstErrorField].current.focus();
-                    fieldRefs[firstErrorField].current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    fieldRefs[firstErrorField].current.scrollIntoView({
+                        behavior: "smooth",
+                        block: "center",
+                    });
                 }
 
                 setStep(1);
             } else if (apiMessage) {
                 // Afficher le message d'erreur du serveur directement
-                if (apiMessage.includes('❌')) {
+                if (apiMessage.includes("❌")) {
                     showError(apiMessage);
                 } else {
                     showError(`❌ ${apiMessage}`);
                 }
             } else {
-                showError("❌ Une erreur est survenue lors de la soumission. Veuillez réessayer.");
+                showError(
+                    "❌ Une erreur est survenue lors de la soumission. Veuillez réessayer.",
+                );
             }
         } finally {
             setLoading(false);
@@ -1074,9 +1280,14 @@ export default function RegisterConducteur({
                         <FormField label="Adresse" icon={MapPin}>
                             <AddressAutocomplete
                                 value={famille.adresse}
-                                onChange={(value) => setFamille({ ...famille, adresse: value })}
+                                onChange={(value) =>
+                                    setFamille({ ...famille, adresse: value })
+                                }
                                 onAddressSelect={(addressDetails) => {
-                                    setFamille({ ...famille, adresse: addressDetails.full_address });
+                                    setFamille({
+                                        ...famille,
+                                        adresse: addressDetails.full_address,
+                                    });
                                 }}
                             />
                         </FormField>
@@ -1129,7 +1340,9 @@ export default function RegisterConducteur({
                                         onChange={(e) =>
                                             setFamille({
                                                 ...famille,
-                                                telephone: formatPhoneNumber(e.target.value),
+                                                telephone: formatPhoneNumber(
+                                                    e.target.value,
+                                                ),
                                             })
                                         }
                                     />
@@ -1153,39 +1366,42 @@ export default function RegisterConducteur({
                                         onChange={(e) =>
                                             setFamille({
                                                 ...famille,
-                                                telephone2: formatPhoneNumber(e.target.value),
+                                                telephone2: formatPhoneNumber(
+                                                    e.target.value,
+                                                ),
                                             })
                                         }
                                     />
                                 </div>
                             </FormField>
-
                         </div>
-                    <FormField
-                                                        label="Classe de la famille"
-                                                        icon={BookOpen}
-                                                        required
-                                                    >
-                                                        <Select2Classe
-                                                            id="classe_id_select"
-                                                            name="classe_id"
-                                                            value={famille.classe_id || ""}
-                                                            onChange={(e) =>
-                                                                setFamille({
-                                                                    ...famille,
-                                                                    classe_id: e.target.value ? parseInt(e.target.value, 10) : null,
-                                                                })
-                                                            }
-                                                            options={classesDatabase}
-                                                            placeholder="Sélectionner une classe"
-                                                            threshold={5}
-                                                        />
-                                                        {getFieldError("famille.classe_id") && (
-                                                            <p className="text-red-500 text-xs mt-1">
-                                                                {getFieldError("famille.classe_id")}
-                                                            </p>
-                                                        )}
-                                                    </FormField>
+                        <FormField
+                            label="Classe de la famille"
+                            icon={BookOpen}
+                            required
+                        >
+                            <Select2Classe
+                                id="classe_id_select"
+                                name="classe_id"
+                                value={famille.classe_id || ""}
+                                onChange={(e) =>
+                                    setFamille({
+                                        ...famille,
+                                        classe_id: e.target.value
+                                            ? parseInt(e.target.value, 10)
+                                            : null,
+                                    })
+                                }
+                                options={classesDatabase}
+                                placeholder="Sélectionner une classe"
+                                threshold={5}
+                            />
+                            {getFieldError("famille.classe_id") && (
+                                <p className="text-red-500 text-xs mt-1">
+                                    {getFieldError("famille.classe_id")}
+                                </p>
+                            )}
+                        </FormField>
                     </div>
                 );
 
@@ -1195,7 +1411,9 @@ export default function RegisterConducteur({
                         {/* Photo Upload avec background complet - LARGEUR COMPLÈTE */}
                         <div className="w-full p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-md">
                             <div className="flex flex-col items-center gap-3">
-                                <h3 className="text-sm font-bold text-gray-800">Photo de profil</h3>
+                                <h3 className="text-sm font-bold text-gray-800">
+                                    Photo de profil
+                                </h3>
                                 <div className="relative">
                                     <div className="w-20 h-20 rounded-full bg-white overflow-hidden border-3 border-blue-400 shadow-lg ring-3 ring-blue-100">
                                         {responsable.photoPreview ? (
@@ -1214,7 +1432,9 @@ export default function RegisterConducteur({
                                 <input
                                     type="file"
                                     accept="image/*"
-                                    onChange={(e) => handlePhotoChange(e, "responsable")}
+                                    onChange={(e) =>
+                                        handlePhotoChange(e, "responsable")
+                                    }
                                     className="file:py-1 file:px-3 file:rounded file:bg-blue-600 file:text-white file:cursor-pointer file:font-semibold file:border-0 file:hover:bg-blue-700 file:transition-colors file:text-xs"
                                 />
                                 <p className="text-xs text-gray-600 text-center">
@@ -1285,7 +1505,11 @@ export default function RegisterConducteur({
                                     </p>
                                 )}
                             </FormField>
-                            <FormField label="Date de naissance" icon={Calendar} required>
+                            <FormField
+                                label="Date de naissance"
+                                icon={Calendar}
+                                required
+                            >
                                 <input
                                     type="date"
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none"
@@ -1301,7 +1525,11 @@ export default function RegisterConducteur({
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField label="Téléphone 1" icon={Phone} required>
+                            <FormField
+                                label="Téléphone 1"
+                                icon={Phone}
+                                required
+                            >
                                 <div className="flex">
                                     <span className="bg-gray-100 border border-gray-300 border-r-0 rounded-l-lg px-3 flex items-center text-gray-600">
                                         +225
@@ -1315,7 +1543,9 @@ export default function RegisterConducteur({
                                         onChange={(e) =>
                                             setResponsable({
                                                 ...responsable,
-                                                tel: formatPhoneNumber(e.target.value),
+                                                tel: formatPhoneNumber(
+                                                    e.target.value,
+                                                ),
                                             })
                                         }
                                     />
@@ -1340,7 +1570,9 @@ export default function RegisterConducteur({
                                         onChange={(e) =>
                                             setResponsable({
                                                 ...responsable,
-                                                telephone2: formatPhoneNumber(e.target.value),
+                                                telephone2: formatPhoneNumber(
+                                                    e.target.value,
+                                                ),
                                             })
                                         }
                                     />
@@ -1365,7 +1597,12 @@ export default function RegisterConducteur({
                                     <option value="F">Féminin</option>
                                 </select>
                             </FormField>
-                            <FormField label="Lien de parenté" icon={Users} required hint="Relation avec la famille">
+                            <FormField
+                                label="Lien de parenté"
+                                icon={Users}
+                                required
+                                hint="Relation avec la famille"
+                            >
                                 <Select2Relation
                                     value={responsable.relation}
                                     onChange={(e) =>
@@ -1380,7 +1617,72 @@ export default function RegisterConducteur({
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField label="Profession" icon={Briefcase} required hint="ex: Infirmier, Comptable">
+                            <FormField
+                                label="Statut d'emploi"
+                                icon={Briefcase}
+                                required
+                            >
+                                <select
+                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none"
+                                    value={responsable.employment_status || ""}
+                                    onChange={(e) =>
+                                        setResponsable({
+                                            ...responsable,
+                                            employment_status: e.target.value,
+                                        })
+                                    }
+                                >
+                                    <option value="">
+                                        Sélectionner un statut
+                                    </option>
+                                    <option value="TRAVAILLEUR">
+                                        Travailleur(euse)
+                                    </option>
+                                    <option value="RETRAITE">
+                                        Retraité(e)
+                                    </option>
+                                    <option value="ETUDIANT">
+                                        Étudiant(e)
+                                    </option>
+                                    <option value="SANS_EMPLOI">
+                                        Sans emploi
+                                    </option>
+                                </select>
+                                {getFieldError(
+                                    "responsable.employment_status",
+                                ) && (
+                                    <p className="text-red-500 text-xs mt-1">
+                                        {getFieldError(
+                                            "responsable.employment_status",
+                                        )}
+                                    </p>
+                                )}
+                            </FormField>
+                            <FormField
+                                label="Fonction dans l'église"
+                                icon={Users}
+                                hint="Cliquez pour sélectionner"
+                            >
+                                <Select2Fonction
+                                    value={selectedRolesResponsable}
+                                    onChange={(e) =>
+                                        setSelectedRolesResponsable(
+                                            e.target.value,
+                                        )
+                                    }
+                                    options={churchRoles}
+                                    placeholder="Sélectionner des fonctions..."
+                                />
+                            </FormField>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                                label="Profession"
+                                icon={Briefcase}
+                                required
+                                hint="ex: Infirmier, Comptable"
+                            >
                                 <input
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none"
                                     value={responsable.profession}
@@ -1394,22 +1696,20 @@ export default function RegisterConducteur({
                                 />
                                 {getFieldError("responsable.profession") && (
                                     <p className="text-red-500 text-xs mt-1">
-                                        {getFieldError("responsable.profession")}
+                                        {getFieldError(
+                                            "responsable.profession",
+                                        )}
                                     </p>
                                 )}
-                            </FormField>
-                            <FormField label="Fonction dans l'église" icon={Users} hint="Cliquez pour sélectionner">
-                                <Select2Fonction
-                                    value={selectedRolesResponsable}
-                                    onChange={(e) => setSelectedRolesResponsable(e.target.value)}
-                                    options={churchRoles}
-                                    placeholder="Sélectionner des fonctions..."
-                                />
                             </FormField>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-                            <FormField label="Statut Marital" icon={Heart} required>
+                            <FormField
+                                label="Statut Marital"
+                                icon={Heart}
+                                required
+                            >
                                 <select
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 bg-white"
                                     value={responsable.statutMarital}
@@ -1421,7 +1721,9 @@ export default function RegisterConducteur({
                                     }
                                 >
                                     <option value="">Sélectionner...</option>
-                                    <option value="celibataire">Célibataire</option>
+                                    <option value="celibataire">
+                                        Célibataire
+                                    </option>
                                     <option value="marie">Mariage Civil</option>
                                     <option value="divorce">Divorcé(e)</option>
                                     <option value="veuf">Veuf(ve)</option>
@@ -1433,7 +1735,11 @@ export default function RegisterConducteur({
                         {responsable.statutMarital === "marie" && (
                             <div className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField label="Date du mariage civil" icon={Calendar} required>
+                                    <FormField
+                                        label="Date du mariage civil"
+                                        icon={Calendar}
+                                        required
+                                    >
                                         <input
                                             type="date"
                                             className="w-full h-10 border border-gray-300 rounded-lg px-3 outline-none focus:border-blue-500"
@@ -1446,7 +1752,11 @@ export default function RegisterConducteur({
                                             }
                                         />
                                     </FormField>
-                                    <FormField label="Lieu du mariage civil" icon={Building} required>
+                                    <FormField
+                                        label="Lieu du mariage civil"
+                                        icon={Building}
+                                        required
+                                    >
                                         <input
                                             className="w-full h-10 border border-gray-300 rounded-lg px-3 outline-none focus:border-blue-500"
                                             value={responsable.lieuMariage}
@@ -1465,7 +1775,11 @@ export default function RegisterConducteur({
                         {responsable.statutMarital === "dot" && (
                             <div className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField label="Date de la dot" icon={Calendar} required>
+                                    <FormField
+                                        label="Date de la dot"
+                                        icon={Calendar}
+                                        required
+                                    >
                                         <input
                                             type="date"
                                             className="w-full h-10 border border-gray-300 rounded-lg px-3 outline-none focus:border-blue-500"
@@ -1478,7 +1792,11 @@ export default function RegisterConducteur({
                                             }
                                         />
                                     </FormField>
-                                    <FormField label="Lieu de la dot" icon={Building} required>
+                                    <FormField
+                                        label="Lieu de la dot"
+                                        icon={Building}
+                                        required
+                                    >
                                         <input
                                             className="w-full h-10 border border-gray-300 rounded-lg px-3 outline-none focus:border-blue-500"
                                             value={responsable.lieuDote}
@@ -1497,7 +1815,11 @@ export default function RegisterConducteur({
                         {responsable.statutMarital === "divorce" && (
                             <div className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField label="Date du divorce" icon={Calendar} required>
+                                    <FormField
+                                        label="Date du divorce"
+                                        icon={Calendar}
+                                        required
+                                    >
                                         <input
                                             type="date"
                                             className="w-full h-10 border border-gray-300 rounded-lg px-3 outline-none"
@@ -1510,7 +1832,10 @@ export default function RegisterConducteur({
                                             }
                                         />
                                     </FormField>
-                                    <FormField label="Lieu du divorce" icon={Building}>
+                                    <FormField
+                                        label="Lieu du divorce"
+                                        icon={Building}
+                                    >
                                         <input
                                             className="w-full h-10 border border-gray-300 rounded-lg px-3 outline-none"
                                             value={responsable.lieuDivorce}
@@ -1529,7 +1854,11 @@ export default function RegisterConducteur({
                         {responsable.statutMarital === "veuf" && (
                             <div className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField label="Date du décès du conjoint" icon={Calendar} required>
+                                    <FormField
+                                        label="Date du décès du conjoint"
+                                        icon={Calendar}
+                                        required
+                                    >
                                         <input
                                             type="date"
                                             className="w-full h-10 border border-gray-300 rounded-lg px-3 outline-none"
@@ -1542,7 +1871,10 @@ export default function RegisterConducteur({
                                             }
                                         />
                                     </FormField>
-                                    <FormField label="Lieu du décès" icon={Building}>
+                                    <FormField
+                                        label="Lieu du décès"
+                                        icon={Building}
+                                    >
                                         <input
                                             className="w-full h-10 border border-gray-300 rounded-lg px-3 outline-none"
                                             value={responsable.lieuDeces}
@@ -1576,13 +1908,19 @@ export default function RegisterConducteur({
                                             setResponsable({
                                                 ...responsable,
                                                 baptise: e.target.checked,
-                                                dateBapteme: e.target.checked ? responsable.dateBapteme : "",
-                                                lieuBapteme: e.target.checked ? responsable.lieuBapteme : "",
+                                                dateBapteme: e.target.checked
+                                                    ? responsable.dateBapteme
+                                                    : "",
+                                                lieuBapteme: e.target.checked
+                                                    ? responsable.lieuBapteme
+                                                    : "",
                                             })
                                         }
                                         className="w-5 h-5 rounded border-gray-300 text-blue-600"
                                     />
-                                    <span className="text-sm font-semibold text-gray-700">Baptisé(e)</span>
+                                    <span className="text-sm font-semibold text-gray-700">
+                                        Baptisé(e)
+                                    </span>
                                 </label>
                                 {responsable.baptise === true && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 ml-8 mt-3">
@@ -1594,7 +1932,8 @@ export default function RegisterConducteur({
                                                 onChange={(e) =>
                                                     setResponsable({
                                                         ...responsable,
-                                                        dateBapteme: e.target.value,
+                                                        dateBapteme:
+                                                            e.target.value,
                                                     })
                                                 }
                                             />
@@ -1607,7 +1946,8 @@ export default function RegisterConducteur({
                                                 onChange={(e) =>
                                                     setResponsable({
                                                         ...responsable,
-                                                        lieuBapteme: e.target.value,
+                                                        lieuBapteme:
+                                                            e.target.value,
                                                     })
                                                 }
                                             />
@@ -1621,18 +1961,30 @@ export default function RegisterConducteur({
                                 <label className="flex items-center gap-3 cursor-pointer">
                                     <input
                                         type="checkbox"
-                                        checked={responsable.premiereCommunion === true}
+                                        checked={
+                                            responsable.premiereCommunion ===
+                                            true
+                                        }
                                         onChange={(e) =>
                                             setResponsable({
                                                 ...responsable,
-                                                premiereCommunion: e.target.checked,
-                                                datePremiereCommunion: e.target.checked ? responsable.datePremiereCommunion : "",
-                                                lieuPremiereCommunion: e.target.checked ? responsable.lieuPremiereCommunion : "",
+                                                premiereCommunion:
+                                                    e.target.checked,
+                                                datePremiereCommunion: e.target
+                                                    .checked
+                                                    ? responsable.datePremiereCommunion
+                                                    : "",
+                                                lieuPremiereCommunion: e.target
+                                                    .checked
+                                                    ? responsable.lieuPremiereCommunion
+                                                    : "",
                                             })
                                         }
                                         className="w-5 h-5 rounded border-gray-300 text-purple-600"
                                     />
-                                    <span className="text-sm font-semibold text-gray-700">Première Communion</span>
+                                    <span className="text-sm font-semibold text-gray-700">
+                                        Première Communion
+                                    </span>
                                 </label>
                                 {responsable.premiereCommunion === true && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 ml-8 mt-3">
@@ -1640,11 +1992,14 @@ export default function RegisterConducteur({
                                             <input
                                                 type="date"
                                                 className="w-full h-10 border border-gray-300 rounded px-2 bg-white"
-                                                value={responsable.datePremiereCommunion}
+                                                value={
+                                                    responsable.datePremiereCommunion
+                                                }
                                                 onChange={(e) =>
                                                     setResponsable({
                                                         ...responsable,
-                                                        datePremiereCommunion: e.target.value,
+                                                        datePremiereCommunion:
+                                                            e.target.value,
                                                     })
                                                 }
                                             />
@@ -1653,11 +2008,14 @@ export default function RegisterConducteur({
                                             <input
                                                 type="text"
                                                 className="w-full h-10 border border-gray-300 rounded px-2"
-                                                value={responsable.lieuPremiereCommunion}
+                                                value={
+                                                    responsable.lieuPremiereCommunion
+                                                }
                                                 onChange={(e) =>
                                                     setResponsable({
                                                         ...responsable,
-                                                        lieuPremiereCommunion: e.target.value,
+                                                        lieuPremiereCommunion:
+                                                            e.target.value,
                                                     })
                                                 }
                                             />
@@ -1671,18 +2029,30 @@ export default function RegisterConducteur({
                                 <label className="flex items-center gap-3 cursor-pointer">
                                     <input
                                         type="checkbox"
-                                        checked={responsable.marieReligieusement === true}
+                                        checked={
+                                            responsable.marieReligieusement ===
+                                            true
+                                        }
                                         onChange={(e) =>
                                             setResponsable({
                                                 ...responsable,
-                                                marieReligieusement: e.target.checked,
-                                                dateMariageReligieux: e.target.checked ? responsable.dateMariageReligieux : "",
-                                                lieuMariageReligieux: e.target.checked ? responsable.lieuMariageReligieux : "",
+                                                marieReligieusement:
+                                                    e.target.checked,
+                                                dateMariageReligieux: e.target
+                                                    .checked
+                                                    ? responsable.dateMariageReligieux
+                                                    : "",
+                                                lieuMariageReligieux: e.target
+                                                    .checked
+                                                    ? responsable.lieuMariageReligieux
+                                                    : "",
                                             })
                                         }
                                         className="w-5 h-5 rounded border-gray-300 text-pink-600"
                                     />
-                                    <span className="text-sm font-semibold text-gray-700">Marié(e) religieusement</span>
+                                    <span className="text-sm font-semibold text-gray-700">
+                                        Marié(e) religieusement
+                                    </span>
                                 </label>
                                 {responsable.marieReligieusement === true && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 ml-8 mt-3">
@@ -1690,11 +2060,14 @@ export default function RegisterConducteur({
                                             <input
                                                 type="date"
                                                 className="w-full h-10 border border-gray-300 rounded px-2 bg-white"
-                                                value={responsable.dateMariageReligieux}
+                                                value={
+                                                    responsable.dateMariageReligieux
+                                                }
                                                 onChange={(e) =>
                                                     setResponsable({
                                                         ...responsable,
-                                                        dateMariageReligieux: e.target.value,
+                                                        dateMariageReligieux:
+                                                            e.target.value,
                                                     })
                                                 }
                                             />
@@ -1703,11 +2076,14 @@ export default function RegisterConducteur({
                                             <input
                                                 type="text"
                                                 className="w-full h-10 border border-gray-300 rounded px-2"
-                                                value={responsable.lieuMariageReligieux}
+                                                value={
+                                                    responsable.lieuMariageReligieux
+                                                }
                                                 onChange={(e) =>
                                                     setResponsable({
                                                         ...responsable,
-                                                        lieuMariageReligieux: e.target.value,
+                                                        lieuMariageReligieux:
+                                                            e.target.value,
                                                     })
                                                 }
                                             />
@@ -1716,7 +2092,6 @@ export default function RegisterConducteur({
                                 )}
                             </div>
                         </div>
-
                     </div>
                 );
 
@@ -1734,16 +2109,23 @@ export default function RegisterConducteur({
                         )}
 
                         {/* Form to add new member */}
-                        <div className="p-6 bg-white rounded-xl border border-gray-200 shadow-sm space-y-6" data-member-form>
+                        <div
+                            className="p-6 bg-white rounded-xl border border-gray-200 shadow-sm space-y-6"
+                            data-member-form
+                        >
                             {/* Photo Upload avec background complet - LARGEUR COMPLÈTE */}
                             <div className="w-full p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-md">
                                 <div className="flex flex-col items-center gap-3">
-                                    <h3 className="text-sm font-bold text-gray-800">Photo du membre</h3>
+                                    <h3 className="text-sm font-bold text-gray-800">
+                                        Photo du membre
+                                    </h3>
                                     <div className="relative">
                                         <div className="w-20 h-20 rounded-full bg-white overflow-hidden border-3 border-blue-400 shadow-lg ring-3 ring-blue-100">
                                             {membreTemp.photoPreview ? (
                                                 <img
-                                                    src={membreTemp.photoPreview}
+                                                    src={
+                                                        membreTemp.photoPreview
+                                                    }
                                                     alt="profil"
                                                     className="w-full h-full object-cover"
                                                 />
@@ -1757,7 +2139,9 @@ export default function RegisterConducteur({
                                     <input
                                         type="file"
                                         accept="image/*"
-                                        onChange={(e) => handlePhotoChange(e, "membre")}
+                                        onChange={(e) =>
+                                            handlePhotoChange(e, "membre")
+                                        }
                                         className="file:py-1 file:px-3 file:rounded file:bg-blue-600 file:text-white file:cursor-pointer file:font-semibold file:border-0 file:hover:bg-blue-700 file:transition-colors file:text-xs"
                                     />
                                     <p className="text-xs text-gray-600 text-center">
@@ -1819,7 +2203,9 @@ export default function RegisterConducteur({
                                             })
                                         }
                                     >
-                                        <option value="">Sélectionner...</option>
+                                        <option value="">
+                                            Sélectionner...
+                                        </option>
                                         <option value="M">Masculin</option>
                                         <option value="F">Féminin</option>
                                     </select>
@@ -1829,7 +2215,11 @@ export default function RegisterConducteur({
                                         </p>
                                     )}
                                 </FormField>
-                                <FormField label="Date de naissance" icon={Calendar} required>
+                                <FormField
+                                    label="Date de naissance"
+                                    icon={Calendar}
+                                    required
+                                >
                                     <input
                                         type="date"
                                         className={STYLES.input}
@@ -1843,7 +2233,9 @@ export default function RegisterConducteur({
                                     />
                                     {getFieldError("membre.dateNaissance") && (
                                         <p className="text-red-500 text-xs mt-1">
-                                            {getFieldError("membre.dateNaissance")}
+                                            {getFieldError(
+                                                "membre.dateNaissance",
+                                            )}
                                         </p>
                                     )}
                                 </FormField>
@@ -1902,23 +2294,81 @@ export default function RegisterConducteur({
                             </div>
                             {/* Fonction dans l'église et vide */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField label="Fonction dans l'église" icon={Users} hint="Sélectionnez une fonction">
+                                <FormField
+                                    label="Fonction dans l'église"
+                                    icon={Users}
+                                    hint="Sélectionnez une fonction"
+                                >
                                     <Select2Fonction
                                         value={Array.from(selectedMembresRoles)}
                                         onChange={(e) => {
                                             // e.target.value est un array d'IDs
-                                            const newSet = new Set(e.target.value);
+                                            const newSet = new Set(
+                                                e.target.value,
+                                            );
                                             setSelectedMembresRoles(newSet);
                                             setMembreTemp({
                                                 ...membreTemp,
-                                                fonction: e.target.value.join(","),
+                                                fonction:
+                                                    e.target.value.join(","),
                                             });
                                         }}
                                         options={churchRoles}
                                         placeholder="Sélectionner des fonctions..."
                                     />
                                 </FormField>
-                                <FormField label="Profession" icon={Briefcase} required>
+                                <FormField
+                                    label="Statut d'emploi"
+                                    icon={Briefcase}
+                                    required
+                                >
+                                    <select
+                                        className={STYLES.input}
+                                        value={
+                                            membreTemp.employment_status || ""
+                                        }
+                                        onChange={(e) =>
+                                            setMembreTemp({
+                                                ...membreTemp,
+                                                employment_status:
+                                                    e.target.value,
+                                            })
+                                        }
+                                    >
+                                        <option value="">
+                                            Sélectionner un statut
+                                        </option>
+                                        <option value="TRAVAILLEUR">
+                                            Travailleur(euse)
+                                        </option>
+                                        <option value="RETRAITE">
+                                            Retraité(e)
+                                        </option>
+                                        <option value="ETUDIANT">
+                                            Étudiant(e)
+                                        </option>
+                                        <option value="SANS_EMPLOI">
+                                            Sans emploi
+                                        </option>
+                                    </select>
+                                    {getFieldError(
+                                        "membre.employment_status",
+                                    ) && (
+                                        <p className="text-red-500 text-xs mt-1">
+                                            {getFieldError(
+                                                "membre.employment_status",
+                                            )}
+                                        </p>
+                                    )}
+                                </FormField>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField
+                                    label="Profession"
+                                    icon={Briefcase}
+                                    required
+                                >
                                     <input
                                         className={STYLES.input}
                                         value={membreTemp.profession}
@@ -1939,7 +2389,12 @@ export default function RegisterConducteur({
                             </div>
                             {/* Lien de parenté et Statut marital */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField label="Lien de parenté" icon={Users} required hint="Relation avec le responsable">
+                                <FormField
+                                    label="Lien de parenté"
+                                    icon={Users}
+                                    required
+                                    hint="Relation avec le responsable"
+                                >
                                     <Select2Relation
                                         value={membreTemp.relation}
                                         onChange={(e) =>
@@ -1956,33 +2411,14 @@ export default function RegisterConducteur({
                                         </p>
                                     )}
                                 </FormField>
-                                <FormField label="Fonction dans l'église" icon={Users} hint="Cliquez pour sélectionner">
-                                    <Select2Fonction
-                                        value={membreTemp.fonction_id ? [{ id: membreTemp.fonction_id, nom: membreTemp.fonction }] : []}
-                                        onChange={(e) => {
-                                            if (!e.target.value) {
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    fonction_id: null,
-                                                    fonction: "",
-                                                });
-                                            } else {
-                                                const selected = churchRoles.find(f => f.id == e.target.value);
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    fonction_id: e.target.value ? parseInt(e.target.value, 10) : null,
-                                                    fonction: selected ? selected.nom : "",
-                                                });
-                                            }
-                                        }}
-                                        options={churchRoles}
-                                        placeholder="Sélectionner une fonction (optionnel)..."
-                                    />
-                                </FormField>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-                                <FormField label="Statut marital" icon={Heart} required>
+                                <FormField
+                                    label="Statut marital"
+                                    icon={Heart}
+                                    required
+                                >
                                     <select
                                         className={STYLES.input}
                                         value={membreTemp.statutMarital}
@@ -1993,16 +2429,24 @@ export default function RegisterConducteur({
                                             })
                                         }
                                     >
-                                        <option value="">Sélectionner...</option>
-                                        <option value="celibataire">Célibataire</option>
+                                        <option value="">
+                                            Sélectionner...
+                                        </option>
+                                        <option value="celibataire">
+                                            Célibataire
+                                        </option>
                                         <option value="marie">Marié(e)</option>
-                                        <option value="divorce">Divorcé(e)</option>
+                                        <option value="divorce">
+                                            Divorcé(e)
+                                        </option>
                                         <option value="veuf">Veuf(ve)</option>
                                         <option value="dot">Dot</option>
                                     </select>
                                     {getFieldError("membre.statutMarital") && (
                                         <p className="text-red-500 text-xs mt-1">
-                                            {getFieldError("membre.statutMarital")}
+                                            {getFieldError(
+                                                "membre.statutMarital",
+                                            )}
                                         </p>
                                     )}
                                 </FormField>
@@ -2010,7 +2454,11 @@ export default function RegisterConducteur({
 
                             {membreTemp.statutMarital === "marie" && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-gray-200">
-                                    <FormField label="Date du mariage" icon={Calendar} required>
+                                    <FormField
+                                        label="Date du mariage"
+                                        icon={Calendar}
+                                        required
+                                    >
                                         <input
                                             type="date"
                                             className={STYLES.input}
@@ -2022,13 +2470,21 @@ export default function RegisterConducteur({
                                                 })
                                             }
                                         />
-                                        {getFieldError("membre.dateMariage") && (
+                                        {getFieldError(
+                                            "membre.dateMariage",
+                                        ) && (
                                             <p className="text-red-500 text-xs mt-1">
-                                                {getFieldError("membre.dateMariage")}
+                                                {getFieldError(
+                                                    "membre.dateMariage",
+                                                )}
                                             </p>
                                         )}
                                     </FormField>
-                                    <FormField label="Lieu du mariage" icon={Building} required>
+                                    <FormField
+                                        label="Lieu du mariage"
+                                        icon={Building}
+                                        required
+                                    >
                                         <input
                                             className={STYLES.input}
                                             value={membreTemp.lieuMariage}
@@ -2040,9 +2496,13 @@ export default function RegisterConducteur({
                                             }
                                             placeholder="Ville, Pays..."
                                         />
-                                        {getFieldError("membre.lieuMariage") && (
+                                        {getFieldError(
+                                            "membre.lieuMariage",
+                                        ) && (
                                             <p className="text-red-500 text-xs mt-1">
-                                                {getFieldError("membre.lieuMariage")}
+                                                {getFieldError(
+                                                    "membre.lieuMariage",
+                                                )}
                                             </p>
                                         )}
                                     </FormField>
@@ -2051,7 +2511,11 @@ export default function RegisterConducteur({
 
                             {membreTemp.statutMarital === "divorce" && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-gray-200">
-                                    <FormField label="Date du divorce" icon={Calendar} required>
+                                    <FormField
+                                        label="Date du divorce"
+                                        icon={Calendar}
+                                        required
+                                    >
                                         <input
                                             type="date"
                                             className={STYLES.input}
@@ -2063,13 +2527,21 @@ export default function RegisterConducteur({
                                                 })
                                             }
                                         />
-                                        {getFieldError("membre.dateDivorce") && (
+                                        {getFieldError(
+                                            "membre.dateDivorce",
+                                        ) && (
                                             <p className="text-red-500 text-xs mt-1">
-                                                {getFieldError("membre.dateDivorce")}
+                                                {getFieldError(
+                                                    "membre.dateDivorce",
+                                                )}
                                             </p>
                                         )}
                                     </FormField>
-                                    <FormField label="Lieu du divorce" icon={Building} required>
+                                    <FormField
+                                        label="Lieu du divorce"
+                                        icon={Building}
+                                        required
+                                    >
                                         <input
                                             className={STYLES.input}
                                             value={membreTemp.lieuDivorce}
@@ -2081,9 +2553,13 @@ export default function RegisterConducteur({
                                             }
                                             placeholder="Ville, Pays..."
                                         />
-                                        {getFieldError("membre.lieuDivorce") && (
+                                        {getFieldError(
+                                            "membre.lieuDivorce",
+                                        ) && (
                                             <p className="text-red-500 text-xs mt-1">
-                                                {getFieldError("membre.lieuDivorce")}
+                                                {getFieldError(
+                                                    "membre.lieuDivorce",
+                                                )}
                                             </p>
                                         )}
                                     </FormField>
@@ -2092,7 +2568,11 @@ export default function RegisterConducteur({
 
                             {membreTemp.statutMarital === "veuf" && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-gray-200">
-                                    <FormField label="Date du décès" icon={Calendar} required>
+                                    <FormField
+                                        label="Date du décès"
+                                        icon={Calendar}
+                                        required
+                                    >
                                         <input
                                             type="date"
                                             className={STYLES.input}
@@ -2106,11 +2586,17 @@ export default function RegisterConducteur({
                                         />
                                         {getFieldError("membre.dateDeces") && (
                                             <p className="text-red-500 text-xs mt-1">
-                                                {getFieldError("membre.dateDeces")}
+                                                {getFieldError(
+                                                    "membre.dateDeces",
+                                                )}
                                             </p>
                                         )}
                                     </FormField>
-                                    <FormField label="Lieu du décès" icon={Building} required>
+                                    <FormField
+                                        label="Lieu du décès"
+                                        icon={Building}
+                                        required
+                                    >
                                         <input
                                             className={STYLES.input}
                                             value={membreTemp.lieuDeces}
@@ -2124,7 +2610,9 @@ export default function RegisterConducteur({
                                         />
                                         {getFieldError("membre.lieuDeces") && (
                                             <p className="text-red-500 text-xs mt-1">
-                                                {getFieldError("membre.lieuDeces")}
+                                                {getFieldError(
+                                                    "membre.lieuDeces",
+                                                )}
                                             </p>
                                         )}
                                     </FormField>
@@ -2133,7 +2621,11 @@ export default function RegisterConducteur({
 
                             {membreTemp.statutMarital === "dot" && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-gray-200">
-                                    <FormField label="Date du dot" icon={Calendar} required>
+                                    <FormField
+                                        label="Date du dot"
+                                        icon={Calendar}
+                                        required
+                                    >
                                         <input
                                             type="date"
                                             className={STYLES.input}
@@ -2147,11 +2639,17 @@ export default function RegisterConducteur({
                                         />
                                         {getFieldError("membre.dateDot") && (
                                             <p className="text-red-500 text-xs mt-1">
-                                                {getFieldError("membre.dateDot")}
+                                                {getFieldError(
+                                                    "membre.dateDot",
+                                                )}
                                             </p>
                                         )}
                                     </FormField>
-                                    <FormField label="Lieu du dot" icon={Building} required>
+                                    <FormField
+                                        label="Lieu du dot"
+                                        icon={Building}
+                                        required
+                                    >
                                         <input
                                             className={STYLES.input}
                                             value={membreTemp.lieuDot || ""}
@@ -2165,7 +2663,9 @@ export default function RegisterConducteur({
                                         />
                                         {getFieldError("membre.lieuDot") && (
                                             <p className="text-red-500 text-xs mt-1">
-                                                {getFieldError("membre.lieuDot")}
+                                                {getFieldError(
+                                                    "membre.lieuDot",
+                                                )}
                                             </p>
                                         )}
                                     </FormField>
@@ -2181,172 +2681,200 @@ export default function RegisterConducteur({
 
                                 {/* Baptism section */}
                                 <div className="space-y-3 mb-4">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <input
-                                        type="checkbox"
-                                        id="baptise"
-                                        className="h-5 w-5 text-blue-600 rounded"
-                                        checked={membreTemp.baptise}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                baptise: e.target.checked,
-                                            })
-                                        }
-                                    />
-                                    <label
-                                        htmlFor="baptise"
-                                        className="text-sm font-medium text-gray-700"
-                                    >
-                                        Cette personne est baptisée
-                                    </label>
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <input
+                                            type="checkbox"
+                                            id="baptise"
+                                            className="h-5 w-5 text-blue-600 rounded"
+                                            checked={membreTemp.baptise}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    baptise: e.target.checked,
+                                                })
+                                            }
+                                        />
+                                        <label
+                                            htmlFor="baptise"
+                                            className="text-sm font-medium text-gray-700"
+                                        >
+                                            Cette personne est baptisée
+                                        </label>
+                                    </div>
+
+                                    {membreTemp.baptise && (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-8">
+                                            <FormField label="Date de baptême">
+                                                <input
+                                                    type="date"
+                                                    className={STYLES.input}
+                                                    value={
+                                                        membreTemp.dateBapteme ||
+                                                        ""
+                                                    }
+                                                    onChange={(e) =>
+                                                        setMembreTemp({
+                                                            ...membreTemp,
+                                                            dateBapteme:
+                                                                e.target.value,
+                                                        })
+                                                    }
+                                                />
+                                            </FormField>
+                                            <FormField label="Lieu de baptême">
+                                                <input
+                                                    className={STYLES.input}
+                                                    value={
+                                                        membreTemp.lieuBapteme ||
+                                                        ""
+                                                    }
+                                                    onChange={(e) =>
+                                                        setMembreTemp({
+                                                            ...membreTemp,
+                                                            lieuBapteme:
+                                                                e.target.value,
+                                                        })
+                                                    }
+                                                    placeholder="Église, Ville..."
+                                                />
+                                            </FormField>
+                                        </div>
+                                    )}
                                 </div>
 
-                                {membreTemp.baptise && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-8">
-                                        <FormField label="Date de baptême">
-                                            <input
-                                                type="date"
-                                                className={STYLES.input}
-                                                value={membreTemp.dateBapteme || ""}
-                                                onChange={(e) =>
-                                                    setMembreTemp({
-                                                        ...membreTemp,
-                                                        dateBapteme:
-                                                            e.target.value,
-                                                    })
-                                                }
-                                            />
-                                        </FormField>
-                                        <FormField label="Lieu de baptême">
-                                            <input
-                                                className={STYLES.input}
-                                                value={
-                                                    membreTemp.lieuBapteme || ""
-                                                }
-                                                onChange={(e) =>
-                                                    setMembreTemp({
-                                                        ...membreTemp,
-                                                        lieuBapteme:
-                                                            e.target.value,
-                                                    })
-                                                }
-                                                placeholder="Église, Ville..."
-                                            />
-                                        </FormField>
+                                {/* Première Communion */}
+                                <div className="space-y-3 mb-4">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <input
+                                            type="checkbox"
+                                            id="premiereCommunion"
+                                            className="h-5 w-5 text-purple-600 rounded"
+                                            checked={
+                                                membreTemp.premiereCommunion
+                                            }
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    premiereCommunion:
+                                                        e.target.checked,
+                                                })
+                                            }
+                                        />
+                                        <label
+                                            htmlFor="premiereCommunion"
+                                            className="text-sm font-medium text-gray-700"
+                                        >
+                                            Cette personne a fait sa première
+                                            communion
+                                        </label>
                                     </div>
-                                )}
-                            </div>
 
-                            {/* Première Communion */}
-                            <div className="space-y-3 mb-4">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <input
-                                        type="checkbox"
-                                        id="premiereCommunion"
-                                        className="h-5 w-5 text-purple-600 rounded"
-                                        checked={membreTemp.premiereCommunion}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                premiereCommunion: e.target.checked,
-                                            })
-                                        }
-                                    />
-                                    <label
-                                        htmlFor="premiereCommunion"
-                                        className="text-sm font-medium text-gray-700"
-                                    >
-                                        Cette personne a fait sa première communion
-                                    </label>
+                                    {membreTemp.premiereCommunion && (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-8">
+                                            <FormField label="Date de première communion">
+                                                <input
+                                                    type="date"
+                                                    className={STYLES.input}
+                                                    value={
+                                                        membreTemp.datePremiereCommunion ||
+                                                        ""
+                                                    }
+                                                    onChange={(e) =>
+                                                        setMembreTemp({
+                                                            ...membreTemp,
+                                                            datePremiereCommunion:
+                                                                e.target.value,
+                                                        })
+                                                    }
+                                                />
+                                            </FormField>
+                                            <FormField label="Lieu de première communion">
+                                                <input
+                                                    className={STYLES.input}
+                                                    value={
+                                                        membreTemp.lieuPremiereCommunion ||
+                                                        ""
+                                                    }
+                                                    onChange={(e) =>
+                                                        setMembreTemp({
+                                                            ...membreTemp,
+                                                            lieuPremiereCommunion:
+                                                                e.target.value,
+                                                        })
+                                                    }
+                                                    placeholder="Église, Ville..."
+                                                />
+                                            </FormField>
+                                        </div>
+                                    )}
                                 </div>
 
-                                {membreTemp.premiereCommunion && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-8">
-                                        <FormField label="Date de première communion">
-                                            <input
-                                                type="date"
-                                                className={STYLES.input}
-                                                value={membreTemp.datePremiereCommunion || ""}
-                                                onChange={(e) =>
-                                                    setMembreTemp({
-                                                        ...membreTemp,
-                                                        datePremiereCommunion: e.target.value,
-                                                    })
-                                                }
-                                            />
-                                        </FormField>
-                                        <FormField label="Lieu de première communion">
-                                            <input
-                                                className={STYLES.input}
-                                                value={membreTemp.lieuPremiereCommunion || ""}
-                                                onChange={(e) =>
-                                                    setMembreTemp({
-                                                        ...membreTemp,
-                                                        lieuPremiereCommunion: e.target.value,
-                                                    })
-                                                }
-                                                placeholder="Église, Ville..."
-                                            />
-                                        </FormField>
+                                {/* Mariage Religieux */}
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <input
+                                            type="checkbox"
+                                            id="marieReligieusement"
+                                            className="h-5 w-5 text-pink-600 rounded"
+                                            checked={
+                                                membreTemp.marieReligieusement
+                                            }
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    marieReligieusement:
+                                                        e.target.checked,
+                                                })
+                                            }
+                                        />
+                                        <label
+                                            htmlFor="marieReligieusement"
+                                            className="text-sm font-medium text-gray-700"
+                                        >
+                                            Cette personne a été mariée
+                                            religieusement
+                                        </label>
                                     </div>
-                                )}
-                            </div>
 
-                            {/* Mariage Religieux */}
-                            <div className="space-y-3">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <input
-                                        type="checkbox"
-                                        id="marieReligieusement"
-                                        className="h-5 w-5 text-pink-600 rounded"
-                                        checked={membreTemp.marieReligieusement}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                marieReligieusement: e.target.checked,
-                                            })
-                                        }
-                                    />
-                                    <label
-                                        htmlFor="marieReligieusement"
-                                        className="text-sm font-medium text-gray-700"
-                                    >
-                                        Cette personne a été mariée religieusement
-                                    </label>
+                                    {membreTemp.marieReligieusement && (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-8">
+                                            <FormField label="Date du mariage religieux">
+                                                <input
+                                                    type="date"
+                                                    className={STYLES.input}
+                                                    value={
+                                                        membreTemp.dateMariageReligieux ||
+                                                        ""
+                                                    }
+                                                    onChange={(e) =>
+                                                        setMembreTemp({
+                                                            ...membreTemp,
+                                                            dateMariageReligieux:
+                                                                e.target.value,
+                                                        })
+                                                    }
+                                                />
+                                            </FormField>
+                                            <FormField label="Lieu du mariage religieux">
+                                                <input
+                                                    className={STYLES.input}
+                                                    value={
+                                                        membreTemp.lieuMariageReligieux ||
+                                                        ""
+                                                    }
+                                                    onChange={(e) =>
+                                                        setMembreTemp({
+                                                            ...membreTemp,
+                                                            lieuMariageReligieux:
+                                                                e.target.value,
+                                                        })
+                                                    }
+                                                    placeholder="Église, Ville..."
+                                                />
+                                            </FormField>
+                                        </div>
+                                    )}
                                 </div>
-
-                                {membreTemp.marieReligieusement && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-8">
-                                        <FormField label="Date du mariage religieux">
-                                            <input
-                                                type="date"
-                                                className={STYLES.input}
-                                                value={membreTemp.dateMariageReligieux || ""}
-                                                onChange={(e) =>
-                                                    setMembreTemp({
-                                                        ...membreTemp,
-                                                        dateMariageReligieux: e.target.value,
-                                                    })
-                                                }
-                                            />
-                                        </FormField>
-                                        <FormField label="Lieu du mariage religieux">
-                                            <input
-                                                className={STYLES.input}
-                                                value={membreTemp.lieuMariageReligieux || ""}
-                                                onChange={(e) =>
-                                                    setMembreTemp({
-                                                        ...membreTemp,
-                                                        lieuMariageReligieux: e.target.value,
-                                                    })
-                                                }
-                                                placeholder="Église, Ville..."
-                                            />
-                                        </FormField>
-                                    </div>
-                                )}
-                            </div>
                             </div>
 
                             {/* Add button */}
@@ -2393,7 +2921,11 @@ export default function RegisterConducteur({
                                             <div className="flex items-start justify-between gap-4">
                                                 {/* Photo and Identity */}
                                                 <div className="flex items-start gap-4 flex-1">
-                                                    <div className={STYLES.photoContainer}>
+                                                    <div
+                                                        className={
+                                                            STYLES.photoContainer
+                                                        }
+                                                    >
                                                         {m.photoPreview ? (
                                                             <img
                                                                 src={
@@ -2431,14 +2963,18 @@ export default function RegisterConducteur({
                                                                     <span className="font-medium">
                                                                         Téléphone:
                                                                     </span>{" "}
-                                                                    {m.telephone}
+                                                                    {
+                                                                        m.telephone
+                                                                    }
                                                                 </div>
                                                             )}
                                                             <div>
                                                                 <span className="font-medium">
                                                                     Né le:
                                                                 </span>{" "}
-                                                                {m.dateNaissance}
+                                                                {
+                                                                    m.dateNaissance
+                                                                }
                                                             </div>
                                                             <div>
                                                                 <span className="font-medium">
@@ -2448,12 +2984,12 @@ export default function RegisterConducteur({
                                                                 "celibataire"
                                                                     ? "Célibataire"
                                                                     : m.statutMarital ===
-                                                                      "marie"
-                                                                    ? "Marié(e)"
-                                                                    : m.statutMarital ===
-                                                                      "divorce"
-                                                                    ? "Divorcé(e)"
-                                                                    : "Veuf(ve)"}
+                                                                        "marie"
+                                                                      ? "Marié(e)"
+                                                                      : m.statutMarital ===
+                                                                          "divorce"
+                                                                        ? "Divorcé(e)"
+                                                                        : "Veuf(ve)"}
                                                             </div>
                                                             {m.statutMarital ===
                                                                 "marie" && (
@@ -2463,23 +2999,35 @@ export default function RegisterConducteur({
                                                                         m.dateMariage
                                                                     }{" "}
                                                                     à{" "}
-                                                                    {m.lieuMariage}
+                                                                    {
+                                                                        m.lieuMariage
+                                                                    }
                                                                 </div>
                                                             )}
                                                             {m.statutMarital ===
                                                                 "divorce" && (
                                                                 <div className="text-xs text-orange-600">
                                                                     Divorcé le{" "}
-                                                                    {m.dateDivorce} à{" "}
-                                                                    {m.lieuDivorce}
+                                                                    {
+                                                                        m.dateDivorce
+                                                                    }{" "}
+                                                                    à{" "}
+                                                                    {
+                                                                        m.lieuDivorce
+                                                                    }
                                                                 </div>
                                                             )}
                                                             {m.statutMarital ===
                                                                 "veuf" && (
                                                                 <div className="text-xs text-gray-600">
                                                                     Décédé le{" "}
-                                                                    {m.dateDeces} à{" "}
-                                                                    {m.lieuDeces}
+                                                                    {
+                                                                        m.dateDeces
+                                                                    }{" "}
+                                                                    à{" "}
+                                                                    {
+                                                                        m.lieuDeces
+                                                                    }
                                                                 </div>
                                                             )}
                                                             {m.baptise && (
@@ -2493,12 +3041,20 @@ export default function RegisterConducteur({
                                                             )}
                                                             {m.fonction && (
                                                                 <div className="text-xs text-blue-600">
-                                                                    <span className="font-medium">Fonction:</span> {m.fonction}
+                                                                    <span className="font-medium">
+                                                                        Fonction:
+                                                                    </span>{" "}
+                                                                    {m.fonction}
                                                                 </div>
                                                             )}
                                                             {m.profession && (
                                                                 <div className="text-xs text-gray-600">
-                                                                    <span className="font-medium">Profession:</span> {m.profession}
+                                                                    <span className="font-medium">
+                                                                        Profession:
+                                                                    </span>{" "}
+                                                                    {
+                                                                        m.profession
+                                                                    }
                                                                 </div>
                                                             )}
                                                         </div>
@@ -2509,7 +3065,9 @@ export default function RegisterConducteur({
                                                 <div className="flex gap-2">
                                                     <button
                                                         type="button"
-                                                        onClick={() => editerMembre(idx)}
+                                                        onClick={() =>
+                                                            editerMembre(idx)
+                                                        }
                                                         className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium flex items-center gap-2"
                                                     >
                                                         <Edit className="w-4 h-4" />
@@ -2520,7 +3078,9 @@ export default function RegisterConducteur({
                                                         onClick={() =>
                                                             supprimerMembre(idx)
                                                         }
-                                                        className={STYLES.button.danger}
+                                                        className={
+                                                            STYLES.button.danger
+                                                        }
                                                     >
                                                         <Trash2 className="w-4 h-4" />
                                                         Supprimer
@@ -2688,7 +3248,13 @@ export default function RegisterConducteur({
     return (
         <>
             <ToastContainer toasts={toasts} removeToast={removeToast} />
-            <div className="min-h-screen py-10 px-4" style={{ background: "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)" }}>
+            <div
+                className="min-h-screen py-10 px-4"
+                style={{
+                    background:
+                        "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
+                }}
+            >
                 {/* Header avec lien retour */}
                 <div className="max-w-4xl mx-auto mb-6 flex justify-between items-center">
                     <Link
@@ -2701,171 +3267,173 @@ export default function RegisterConducteur({
                     <button
                         type="button"
                         onClick={() => {
-                            if (window.confirm('Êtes-vous sûr de vouloir effacer toutes les données du formulaire ?')) {
+                            if (
+                                window.confirm(
+                                    "Êtes-vous sûr de vouloir effacer toutes les données du formulaire ?",
+                                )
+                            ) {
                                 // Reset all state
-                            setStep(1);
-                            setErrors({});
-                            setFamille({
-                                nom: "",
-                                adresse: "",
-                                quartier: "",
-                                ville: "",
-                                telephone: "",
-                                telephone2: "",
-                                classe_id: null,
-                            });
-                            setResponsable({
-                                nom: "",
-                                prenom: "",
-                                email: "",
-                                tel: "",
-                                telephone2: "",
-                                dateNaissance: "",
-                                genre: "",
-                                profession: "",
-                                fonction_professionnelle: "",
-                                adresse: "",
-                                ville_id: null,
-                                statutMarital: "",
-                                dateMariage: "",
-                                lieuMariage: "",
-                                dateDivorce: "",
-                                lieuDivorce: "",
-                                dateDeces: "",
-                                lieuDeces: "",
-                                baptise: false,
-                                dateBapteme: "",
-                                lieuBapteme: "",
-                                premiereCommunion: false,
-                                datePremiereCommunion: "",
-                                lieuPremiereCommunion: "",
-                                marieReligieusement: false,
-                                dateMariageReligieux: "",
-                                lieuMariageReligieux: "",
-                                photo: null,
-                                photoPreview: null,
-                            });
-                            setMembres([]);
-                            setMembreTemp({
-                                nom: "",
-                                prenom: "",
-                                email: "",
-                                telephone: "",
-                                relation: "",
-                                genre: "",
-                                dateNaissance: "",
-                                statutMarital: "",
-                                dateMariage: "",
-                                lieuMariage: "",
-                                dateDivorce: "",
-                                lieuDivorce: "",
-                                dateDeces: "",
-                                lieuDeces: "",
-                                dateDote: "",
-                                lieuDote: "",
-                                lienParente: "",
-                                baptise: false,
-                                dateBapteme: "",
-                                lieuBapteme: "",
-                                premiereCommunion: false,
-                                datePremiereCommunion: "",
-                                lieuPremiereCommunion: "",
-                                marieReligieusement: false,
-                                dateMariageReligieux: "",
-                                lieuMariageReligieux: "",
-                                fonction: "",
-                                profession: "",
-                                photo: null,
-                                photoPreview: null,
-                            });
-                            setConsentement(false);
-                            setSelectedCity(null);
-                            setClassesSearchTerm("");
-                            setVillesSearchTerm("");
-                            setAdresseInputValue("");
-                            setSelectedRolesResponsable([]);
-                            setSelectedMembresRoles(new Set());
+                                setStep(1);
+                                setErrors({});
+                                setFamille({
+                                    nom: "",
+                                    adresse: "",
+                                    quartier: "",
+                                    ville: "",
+                                    telephone: "",
+                                    telephone2: "",
+                                    classe_id: null,
+                                });
+                                setResponsable({
+                                    nom: "",
+                                    prenom: "",
+                                    email: "",
+                                    tel: "",
+                                    telephone2: "",
+                                    dateNaissance: "",
+                                    genre: "",
+                                    profession: "",
+                                    fonction_professionnelle: "",
+                                    adresse: "",
+                                    ville_id: null,
+                                    statutMarital: "",
+                                    dateMariage: "",
+                                    lieuMariage: "",
+                                    dateDivorce: "",
+                                    lieuDivorce: "",
+                                    dateDeces: "",
+                                    lieuDeces: "",
+                                    baptise: false,
+                                    dateBapteme: "",
+                                    lieuBapteme: "",
+                                    premiereCommunion: false,
+                                    datePremiereCommunion: "",
+                                    lieuPremiereCommunion: "",
+                                    marieReligieusement: false,
+                                    dateMariageReligieux: "",
+                                    lieuMariageReligieux: "",
+                                    photo: null,
+                                    photoPreview: null,
+                                });
+                                setMembres([]);
+                                setMembreTemp({
+                                    nom: "",
+                                    prenom: "",
+                                    email: "",
+                                    telephone: "",
+                                    relation: "",
+                                    genre: "",
+                                    dateNaissance: "",
+                                    statutMarital: "",
+                                    dateMariage: "",
+                                    lieuMariage: "",
+                                    dateDivorce: "",
+                                    lieuDivorce: "",
+                                    dateDeces: "",
+                                    lieuDeces: "",
+                                    dateDote: "",
+                                    lieuDote: "",
+                                    lienParente: "",
+                                    baptise: false,
+                                    dateBapteme: "",
+                                    lieuBapteme: "",
+                                    premiereCommunion: false,
+                                    datePremiereCommunion: "",
+                                    lieuPremiereCommunion: "",
+                                    marieReligieusement: false,
+                                    dateMariageReligieux: "",
+                                    lieuMariageReligieux: "",
+                                    fonction: "",
+                                    profession: "",
+                                    photo: null,
+                                    photoPreview: null,
+                                });
+                                setConsentement(false);
+                                setSelectedCity(null);
+                                setClassesSearchTerm("");
+                                setVillesSearchTerm("");
+                                setAdresseInputValue("");
+                                setSelectedRolesResponsable([]);
+                                setSelectedMembresRoles(new Set());
 
-                            // Clear persistent data
-                            clearFormPersistedData('registerConducteur_');
-                        }
-                    }}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
-                >
-                    Effacer le formulaire
-                </button>
-            </div>
-
-            <div className="max-w-4xl mx-auto">
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-white">
-                        Inscription Famille Conducteur
-                    </h1>
-                    <p className="text-yellow-100">
-                        Suivez les étapes pour enregistrer votre famille
-                    </p>
+                                // Clear persistent data
+                                clearFormPersistedData("registerConducteur_");
+                            }
+                        }}
+                        className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
+                    >
+                        Effacer le formulaire
+                    </button>
                 </div>
 
-                <div className="bg-gradient-to-br from-blue-50 to-white shadow-xl rounded-2xl overflow-hidden">
-                    <FormStepper
-                        currentStep={step}
-                        totalSteps={totalSteps}
-                        labels={labels}
-                        onStepClick={setStep}
-                    />
+                <div className="max-w-4xl mx-auto">
+                    <div className="text-center mb-8">
+                        <h1 className="text-3xl font-bold text-white">
+                            Inscription Famille Conducteur
+                        </h1>
+                        <p className="text-yellow-100">
+                            Suivez les étapes pour enregistrer votre famille
+                        </p>
+                    </div>
 
-                    <div className="p-6 md:p-10">
-                        {renderStepForm()}
+                    <div className="bg-gradient-to-br from-blue-50 to-white shadow-xl rounded-2xl overflow-hidden">
+                        <FormStepper
+                            currentStep={step}
+                            totalSteps={totalSteps}
+                            labels={labels}
+                            onStepClick={setStep}
+                        />
 
-                        <div
-                            className={`flex mt-8 gap-4 ${step === 1 ? "justify-end" : "justify-between"}`}
-                        >
-                            {step > 1 && (
-                                <button
-                                    type="button"
-                                    onClick={() => setStep(step - 1)}
-                                    className={STYLES.button.secondary}
-                                >
-                                    <ArrowLeft className="w-4 h-4" /> Retour
-                                </button>
-                            )}
+                        <div className="p-6 md:p-10">
+                            {renderStepForm()}
 
-                            {step < totalSteps ? (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (validateStep(step))
-                                            setStep(step + 1);
-                                    }}
-                                    className={`${STYLES.button.primary} ml-auto`}
-                                >
-                                    Continuer <ArrowRight className="w-4 h-4" />
-                                </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={handleSubmit}
-                                    disabled={loading || !consentement}
-                                    className={`${STYLES.button.primary} ml-auto disabled:opacity-60 disabled:cursor-not-allowed disabled:transform disabled:hover:scale-100`}
-                                >
-                                    {loading ? (
-                                        "Envoi..."
-                                    ) : (
-                                        <>
-                                            <Send className="w-4 h-4" />{" "}
-                                            Soumettre
-                                        </>
-                                    )}
-                                </button>
-                            )}
+                            <div
+                                className={`flex mt-8 gap-4 ${step === 1 ? "justify-end" : "justify-between"}`}
+                            >
+                                {step > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setStep(step - 1)}
+                                        className={STYLES.button.secondary}
+                                    >
+                                        <ArrowLeft className="w-4 h-4" /> Retour
+                                    </button>
+                                )}
+
+                                {step < totalSteps ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (validateStep(step))
+                                                setStep(step + 1);
+                                        }}
+                                        className={`${STYLES.button.primary} ml-auto`}
+                                    >
+                                        Continuer{" "}
+                                        <ArrowRight className="w-4 h-4" />
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={handleSubmit}
+                                        disabled={loading || !consentement}
+                                        className={`${STYLES.button.primary} ml-auto disabled:opacity-60 disabled:cursor-not-allowed disabled:transform disabled:hover:scale-100`}
+                                    >
+                                        {loading ? (
+                                            "Envoi..."
+                                        ) : (
+                                            <>
+                                                <Send className="w-4 h-4" />{" "}
+                                                Soumettre
+                                            </>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
         </>
     );
 }
-
-
-

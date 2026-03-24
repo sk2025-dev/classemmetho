@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\ResponsableFamille;
 
 use App\Http\Controllers\Controller;
+use App\Models\Campagne;
 use App\Models\Cotisation;
 use App\Models\Don;
 use App\Models\Family;
@@ -32,6 +33,7 @@ class TresorerieController extends Controller
                 'familyInfo' => null,
                 'membres' => [],
                 'cotisations' => [],
+                'campagnesActives' => [],
                 'historiquePaiements' => [],
                 'donsFamille' => [],
                 'projection' => [
@@ -54,6 +56,7 @@ class TresorerieController extends Controller
                 ],
                 'membres' => [],
                 'cotisations' => [],
+                'campagnesActives' => [],
                 'historiquePaiements' => [],
                 'donsFamille' => [],
                 'projection' => [
@@ -102,18 +105,48 @@ class TresorerieController extends Controller
             $paid = (int) $paiements
                 ->where('cotisation_id', $cotisation->id)
                 ->sum('montant');
+            $isFimeco = str_contains(mb_strtolower((string) $cotisation->nom), 'fimeco');
 
             return [
                 'id' => $cotisation->id,
                 'nom' => $cotisation->nom,
                 'montant' => (int) $cotisation->montant,
                 'periodicite' => ucfirst(strtolower($cotisation->periodicite)),
+                'target_scope' => $cotisation->target_scope,
+                'type_finance' => $isFimeco ? 'FIMECO' : 'COTISATION',
                 'statut' => $cotisation->statut === Cotisation::STATUT_ACTIVE ? 'Actif' : $cotisation->statut,
                 'montant_attendu' => $expected,
                 'montant_paye' => $paid,
                 'montant_restant' => max(0, $expected - $paid),
+                'date_echeance' => optional($cotisation->date_echeance)->format('Y-m-d'),
             ];
-        });
+        })->values();
+
+        $campagnesActives = Campagne::query()
+            ->where('statut', Campagne::STATUT_ACTIVE)
+            ->where(function ($query) use ($family) {
+                $query->where('scope', Campagne::SCOPE_GLOBAL)
+                    ->orWhere(function ($q) use ($family) {
+                        $q->where('scope', Campagne::SCOPE_CLASSE)
+                            ->where('classe_id', $family->classe_id);
+                    });
+            })
+            ->orderByDesc('created_at')
+            ->limit(30)
+            ->get()
+            ->map(function (Campagne $campagne) {
+                return [
+                    'id' => $campagne->id,
+                    'titre' => $campagne->titre,
+                    'scope' => $campagne->scope,
+                    'statut' => $campagne->statut,
+                    'objectif' => (int) $campagne->objectif_montant,
+                    'collecte' => (int) $campagne->montant_collecte,
+                    'date_debut' => optional($campagne->date_debut)->format('d/m/Y'),
+                    'date_fin' => optional($campagne->date_fin)->format('d/m/Y'),
+                ];
+            })
+            ->values();
 
         $membres = $members->map(function ($member) use ($paiementsByMember, $activeCotisationsTotal, $family) {
             $paid = (int) ($paiementsByMember[$member->id] ?? 0);
@@ -178,6 +211,7 @@ class TresorerieController extends Controller
             ],
             'membres' => $membres,
             'cotisations' => $cotisations,
+            'campagnesActives' => $campagnesActives,
             'historiquePaiements' => $historiquePaiements,
             'donsFamille' => $donsFamille,
             'projection' => $projection,
@@ -186,6 +220,8 @@ class TresorerieController extends Controller
 
     public function storePaiement(Request $request): JsonResponse
     {
+        $user = Auth::user();
+
         $validated = $request->validate([
             'family_id' => ['required', 'exists:families,id'],
             'user_id' => ['nullable', 'exists:users,id'],
@@ -196,15 +232,61 @@ class TresorerieController extends Controller
             'note' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        $family = Family::query()
+            ->where('id', $validated['family_id'])
+            ->where('responsable_id', $user->id)
+            ->with('users:id,family_id')
+            ->first();
+
+        if (!$family) {
+            return response()->json(['message' => 'Accès refusé à cette famille.'], 403);
+        }
+
+        if (!empty($validated['user_id']) && !$family->users->pluck('id')->contains((int) $validated['user_id'])) {
+            return response()->json(['message' => 'Le membre sélectionné n\'appartient pas à votre famille.'], 422);
+        }
+
+        $paymentStatus = Paiement::STATUT_PAYE;
+
         if (!empty($validated['cotisation_id'])) {
+            /** @var Cotisation|null $cotisation */
             $cotisation = Cotisation::query()->find($validated['cotisation_id']);
-            if (!$cotisation || ($cotisation->target_scope !== null && $cotisation->target_scope !== Cotisation::TARGET_SCOPE_FAMILLE)) {
+            if (
+                !$cotisation
+                || $cotisation->statut !== Cotisation::STATUT_ACTIVE
+                || ($cotisation->target_scope !== null && $cotisation->target_scope !== Cotisation::TARGET_SCOPE_FAMILLE)
+            ) {
                 return response()->json(['message' => 'Cette cotisation ne peut pas être payée par famille.'], 422);
+            }
+
+            if ($cotisation->classe_id !== null && (int) $cotisation->classe_id !== (int) $family->classe_id) {
+                return response()->json(['message' => 'Cette cotisation n\'est pas disponible dans votre classe.'], 403);
+            }
+
+            $expectedAmount = (int) $cotisation->montant * max(1, $family->users->count());
+            $alreadyPaid = (int) Paiement::query()
+                ->where('family_id', $family->id)
+                ->where('cotisation_id', $cotisation->id)
+                ->sum('montant');
+
+            $remainingBefore = max(0, $expectedAmount - $alreadyPaid);
+            if ($remainingBefore === 0) {
+                return response()->json(['message' => 'Cette cotisation est déjà réglée.'], 422);
+            }
+
+            if ((int) $validated['montant'] > $remainingBefore) {
+                return response()->json([
+                    'message' => 'Le montant dépasse le reste à payer (' . number_format($remainingBefore, 0, ',', ' ') . ' F CFA).',
+                ], 422);
+            }
+
+            if ((int) $validated['montant'] < $remainingBefore) {
+                $paymentStatus = Paiement::STATUT_PARTIELLEMENT_PAYE;
             }
         }
 
         $validated['reference_recu'] = 'RECU-' . now()->format('YmdHis') . '-' . strtoupper(substr(md5((string) random_int(1, 9999999)), 0, 6));
-        $validated['statut'] = Paiement::STATUT_PAYE;
+        $validated['statut'] = $paymentStatus;
 
         $paiement = Paiement::create($validated);
 
@@ -270,9 +352,48 @@ class TresorerieController extends Controller
 
         // Vérifier la cotisation
         $cotisation = Cotisation::query()->find($validated['cotisation_id']);
-        if (!$cotisation || $cotisation->statut !== Cotisation::STATUT_ACTIVE) {
+        if (
+            !$cotisation
+            || $cotisation->statut !== Cotisation::STATUT_ACTIVE
+            || ($cotisation->target_scope !== null && $cotisation->target_scope !== Cotisation::TARGET_SCOPE_FAMILLE)
+        ) {
             return response()->json(
                 ['message' => 'Cotisation invalide ou inactive.'],
+                422
+            );
+        }
+
+        if ($cotisation->classe_id !== null && (int) $cotisation->classe_id !== (int) $family->classe_id) {
+            return response()->json(
+                ['message' => 'Cette cotisation n\'est pas disponible dans votre classe.'],
+                403
+            );
+        }
+
+        if (!$family->users()->where('id', $validated['user_id'])->exists()) {
+            return response()->json(
+                ['message' => 'Le membre sélectionné n\'appartient pas à votre famille.'],
+                422
+            );
+        }
+
+        $expectedAmount = (int) $cotisation->montant * max(1, $family->users()->count());
+        $alreadyPaid = (int) Paiement::query()
+            ->where('family_id', $family->id)
+            ->where('cotisation_id', $cotisation->id)
+            ->sum('montant');
+
+        $remainingBefore = max(0, $expectedAmount - $alreadyPaid);
+        if ($remainingBefore === 0) {
+            return response()->json(
+                ['message' => 'Cette cotisation est déjà réglée.'],
+                422
+            );
+        }
+
+        if ((int) $validated['montant'] > $remainingBefore) {
+            return response()->json(
+                ['message' => 'Le montant dépasse le reste à payer (' . number_format($remainingBefore, 0, ',', ' ') . ' F CFA).'],
                 422
             );
         }
@@ -336,6 +457,9 @@ class TresorerieController extends Controller
         // Vérifier l'accès
         $family = $paiement->family;
         if ($family->responsable_id !== $user->id) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Accès refusé'], 403);
+            }
             return redirect('/dashboard')->with('error', 'Accès refusé');
         }
 
@@ -355,6 +479,26 @@ class TresorerieController extends Controller
                 default => 'Statut inconnu',
             };
 
+            // Retourner JSON si c'est une requête AJAX (du modal)
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => $status === Paiement::PAYMENT_STATUS_PAYE,
+                    'status' => $status,
+                    'message' => $message,
+                    'paiement' => [
+                        'id' => $paiement->id,
+                        'reference_recu' => $paiement->reference_recu,
+                        'montant' => (int) $paiement->montant,
+                        'payment_status' => $paiement->payment_status,
+                        'cotisation_nom' => $paiement->cotisation?->nom,
+                        'member_name' => trim(($paiement->user?->prenom ?? '') . ' ' . ($paiement->user?->nom ?? '')),
+                        'year' => $paiement->year,
+                        'date_paiement' => $paiement->date_paiement->format('d/m/Y'),
+                    ],
+                ], 200);
+            }
+
+            // Sinon retourner une page Inertia
             return Inertia::render('ResponsableFamille/Tresorerie/PaiementResultat', [
                 'paiement' => [
                     'id' => $paiement->id,
@@ -371,6 +515,13 @@ class TresorerieController extends Controller
                 'success' => $status === Paiement::PAYMENT_STATUS_PAYE,
             ]);
         } catch (\Exception $e) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erreur lors de la vérification: ' . $e->getMessage(),
+                ], 500);
+            }
+
             return Inertia::render('ResponsableFamille/Tresorerie/PaiementResultat', [
                 'message' => 'Erreur lors de la vérification: ' . $e->getMessage(),
                 'success' => false,

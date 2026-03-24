@@ -43,6 +43,8 @@ class User extends Authenticatable
         'telephone',
         'telephone2',
         'profession',
+        'employment_status',
+        'profession_detail',
 
         // === RELATIONS ET SYSTÈME ===
         'family_id',

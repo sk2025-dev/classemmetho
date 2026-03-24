@@ -307,6 +307,8 @@ export default function RegisterConducteur({
             dateNaissance: "",
             genre: "",
             profession: "",
+            employment_status: "",
+            profession_detail: "",
             fonction_professionnelle: "",
             adresse: "",
             ville_id: null,
@@ -373,6 +375,8 @@ export default function RegisterConducteur({
             lieuMariageReligieux: "",
             fonction: "",
             profession: "",
+            employment_status: "",
+            profession_detail: "",
             photo: null,
             photoPreview: null,
         },
@@ -555,8 +559,10 @@ export default function RegisterConducteur({
         if (!membreTemp.genre) newErrors["membre.genre"] = "Genre requis";
         if (!membreTemp.statutMarital)
             newErrors["membre.statutMarital"] = "Statut marital requis";
-        if (!membreTemp.profession)
-            newErrors["membre.profession"] = "Profession requise";
+        if (!membreTemp.employment_status)
+            newErrors["membre.employment_status"] = "Statut d'emploi requis";
+        if (!membreTemp.profession_detail)
+            newErrors["membre.profession_detail"] = "Profession requise";
 
         // Vérifier conditions statut marital
         if (membreTemp.statutMarital === "marie") {
@@ -651,6 +657,9 @@ export default function RegisterConducteur({
                 dateMariageReligieux: "",
                 lieuMariageReligieux: "",
                 fonction: "",
+                profession: "",
+                employment_status: "",
+                profession_detail: "",
                 photo: null,
                 photoPreview: null,
             });
@@ -700,8 +709,12 @@ export default function RegisterConducteur({
                 newErrors["responsable.dateNaissance"] =
                     "La date ne doit pas être dans le futur";
             if (!responsable.genre) newErrors["responsable.genre"] = "Requis";
-            if (!responsable.profession)
-                newErrors["responsable.profession"] = "Requis";
+            if (!responsable.employment_status)
+                newErrors["responsable.employment_status"] =
+                    "Statut d'emploi requis";
+            if (!responsable.profession_detail)
+                newErrors["responsable.profession_detail"] =
+                    "Profession requise";
             if (!responsable.statutMarital)
                 newErrors["responsable.statutMarital"] = "Requis";
             if (!responsable.lienParente)
@@ -761,7 +774,9 @@ export default function RegisterConducteur({
                 if (!value) error = "Requis";
             } else if (field === "genre") {
                 if (!value) error = "Requis";
-            } else if (field === "profession") {
+            } else if (field === "employment_status") {
+                if (!value) error = "Requis";
+            } else if (field === "profession_detail") {
                 if (!value) error = "Requis";
             } else if (field === "statutMarital") {
                 if (!value) error = "Requis";
@@ -1007,6 +1022,8 @@ export default function RegisterConducteur({
                 dateNaissance: "",
                 genre: "",
                 profession: "",
+                employment_status: "",
+                profession_detail: "",
                 fonction_professionnelle: "",
                 adresse: "",
                 ville_id: null,
@@ -1057,6 +1074,8 @@ export default function RegisterConducteur({
                 lieuMariageReligieux: "",
                 fonction: "",
                 profession: "",
+                employment_status: "",
+                profession_detail: "",
                 photo: null,
                 photoPreview: null,
             });
@@ -1497,30 +1516,76 @@ export default function RegisterConducteur({
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
-                                label="Profession"
+                                label="Statut d'emploi"
                                 icon={Briefcase}
                                 required
-                                hint="ex: Infirmier, Comptable"
                             >
-                                <input
-                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none"
-                                    value={responsable.profession}
+                                <select
+                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none focus:border-blue-500"
+                                    value={responsable.employment_status || ""}
                                     onChange={(e) =>
                                         setResponsable({
                                             ...responsable,
-                                            profession: e.target.value,
+                                            employment_status: e.target.value,
                                         })
                                     }
-                                    placeholder="ex: Enseignant, Commerçant"
-                                />
-                                {getFieldError("responsable.profession") && (
+                                >
+                                    <option value="">
+                                        Sélectionner un statut
+                                    </option>
+                                    <option value="TRAVAILLEUR">
+                                        Travailleur(euse)
+                                    </option>
+                                    <option value="RETRAITE">
+                                        Retraité(e)
+                                    </option>
+                                    <option value="ETUDIANT">
+                                        Étudiant(e)
+                                    </option>
+                                    <option value="SANS_EMPLOI">
+                                        Sans emploi
+                                    </option>
+                                </select>
+                                {getFieldError(
+                                    "responsable.employment_status",
+                                ) && (
                                     <p className="text-red-500 text-xs mt-1">
                                         {getFieldError(
-                                            "responsable.profession",
+                                            "responsable.employment_status",
                                         )}
                                     </p>
                                 )}
                             </FormField>
+                            <FormField
+                                label="Profession / Activité"
+                                icon={Briefcase}
+                                required
+                                hint="ex: Infirmier, Commerçant"
+                            >
+                                <input
+                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none focus:border-blue-500"
+                                    value={responsable.profession_detail || ""}
+                                    onChange={(e) =>
+                                        setResponsable({
+                                            ...responsable,
+                                            profession_detail: e.target.value,
+                                        })
+                                    }
+                                    placeholder="ex: Enseignant, Électricien"
+                                />
+                                {getFieldError(
+                                    "responsable.profession_detail",
+                                ) && (
+                                    <p className="text-red-500 text-xs mt-1">
+                                        {getFieldError(
+                                            "responsable.profession_detail",
+                                        )}
+                                    </p>
+                                )}
+                            </FormField>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
                                 label="Fonction dans l'église"
                                 icon={Users}
@@ -2241,7 +2306,7 @@ export default function RegisterConducteur({
                                             )}
                                         </FormField>
                                     </div>
-                                    {/* Fonction dans l'église et vide */}
+                                    {/* Fonction dans l'église et profession */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <FormField
                                             label="Fonction dans l'église"
@@ -2273,28 +2338,79 @@ export default function RegisterConducteur({
                                             />
                                         </FormField>
                                         <FormField
-                                            label="Profession"
+                                            label="Statut d'emploi"
+                                            icon={Briefcase}
+                                            required
+                                        >
+                                            <select
+                                                className={STYLES.input}
+                                                value={
+                                                    membreTemp.employment_status ||
+                                                    ""
+                                                }
+                                                onChange={(e) =>
+                                                    setMembreTemp({
+                                                        ...membreTemp,
+                                                        employment_status:
+                                                            e.target.value,
+                                                    })
+                                                }
+                                            >
+                                                <option value="">
+                                                    Sélectionner un statut
+                                                </option>
+                                                <option value="TRAVAILLEUR">
+                                                    Travailleur(euse)
+                                                </option>
+                                                <option value="RETRAITE">
+                                                    Retraité(e)
+                                                </option>
+                                                <option value="ETUDIANT">
+                                                    Étudiant(e)
+                                                </option>
+                                                <option value="SANS_EMPLOI">
+                                                    Sans emploi
+                                                </option>
+                                            </select>
+                                            {getFieldError(
+                                                "membre.employment_status",
+                                            ) && (
+                                                <p className="text-red-500 text-xs mt-1">
+                                                    {getFieldError(
+                                                        "membre.employment_status",
+                                                    )}
+                                                </p>
+                                            )}
+                                        </FormField>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField
+                                            label="Profession / Activité"
                                             icon={Briefcase}
                                             required
                                         >
                                             <input
                                                 className={STYLES.input}
-                                                value={membreTemp.profession}
+                                                value={
+                                                    membreTemp.profession_detail ||
+                                                    ""
+                                                }
                                                 onChange={(e) =>
                                                     setMembreTemp({
                                                         ...membreTemp,
-                                                        profession:
+                                                        profession_detail:
                                                             e.target.value,
                                                     })
                                                 }
-                                                placeholder="Ex: Enseignant, Infirmier..."
+                                                placeholder="ex: Enseignant, Infirmier..."
                                             />
                                             {getFieldError(
-                                                "membre.profession",
+                                                "membre.profession_detail",
                                             ) && (
                                                 <p className="text-red-500 text-xs mt-1">
                                                     {getFieldError(
-                                                        "membre.profession",
+                                                        "membre.profession_detail",
                                                     )}
                                                 </p>
                                             )}
@@ -3142,8 +3258,12 @@ export default function RegisterConducteur({
                                         <strong>Tel:</strong> {responsable.tel}
                                     </li>
                                     <li>
+                                        <strong>Statut d'emploi:</strong>{" "}
+                                        {responsable.employment_status || "N/A"}
+                                    </li>
+                                    <li>
                                         <strong>Profession:</strong>{" "}
-                                        {responsable.profession}
+                                        {responsable.profession_detail || "N/A"}
                                     </li>
                                 </ul>
                             </div>

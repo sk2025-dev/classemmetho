@@ -440,11 +440,10 @@ export default function MainLayout({ children, auth }) {
     const categorizedInfo = {
         annonces: announcements.filter((a) =>
             [
-                "annonce",
-                "annonce_liturgique",
-                "grace",
-                "felicitations",
-                "generale",
+            "annonce",
+            "annonce_liturgique",
+            "grace",
+            "generale",
             ].includes(String(a?.type_acte || "").toLowerCase()),
         ),
         mariage: announcements.filter(

@@ -50,7 +50,6 @@ class HandleInertiaRequests extends Middleware
                             'annonce_liturgique',
                             'priere',
                             'grace',
-                            'felicitations',
                             'generale',
                             'mariage',
                             'deces',
