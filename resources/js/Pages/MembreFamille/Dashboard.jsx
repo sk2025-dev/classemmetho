@@ -145,7 +145,7 @@ export default function Dashboard({ role, pendingInscriptions, auth, flashAnnoun
             title: "Annuaire",
             desc: "Annuaire de la communauté",
             icon: "annuaire",
-            href: "/membre-famille/annuaire",
+            href: "/membreFamille/annuaire",
             color: "text-teal-600",
             bg: "bg-teal-100",
         },

@@ -23,6 +23,12 @@ use App\Http\Controllers\Admin\ClasseController;
 use App\Http\Controllers\Admin\FonctionController;
 use App\Http\Controllers\Admin\NotificationsController;
 use App\Http\Controllers\Admin\AnnonceController;
+use app\Http\Controllers\Admin\AnnuaireController;
+use app\Http\Controllers\Conducteur\AnnuaireConducteurController;
+use app\Http\Controllers\Psteur\AnnuairePasteurController;
+use app\Http\Controllers\ResponsableFamille\AnnuaireResponsableController;
+use app\Http\Controllers\ResponsableFamille\AnnuaireMembreController;
+use App\Http\Controllers\Admin\ProgrammesController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\LiturgieController as AdminLiturgieController;
 use App\Http\Controllers\Admin\ActesLiturgiqueController;
@@ -203,10 +209,17 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/annonces/{id}/edit', [AnnonceController::class, 'edit'])->name('admin.annonces.edit');
         Route::put('/admin/annonces/{id}', [AnnonceController::class, 'update'])->name('admin.annonces.update');
         Route::delete('/admin/annonces/{id}', [AnnonceController::class, 'destroy'])->name('admin.annonces.destroy');
+
     });
+    
+    Route::get('/admin/programmes', [ProgrammesController::class, 'index'])->name('admin.programmes');
 
     Route::get('/admin/actesLiturgique', [\App\Http\Controllers\Admin\ActesLiturgiqueController::class, 'index'])->name('admin.actesLiturgique');
-    
+    Route::get('/admin/annuaire', [\App\Http\Controllers\Admin\AnnuaireController::class, 'index'])->name('admin.annuaire');
+    Route::get('/conducteur/annuaire', [\App\Http\Controllers\Conducteur\AnnuaireConducteurController::class, 'index'])->name('conducteur.annuaire');
+    Route::get('/pasteur/annuaire', [\App\Http\Controllers\pasteur\AnnuairePasteurController::class, 'index'])->name('pasteur.annuaire');
+    Route::get('/responsableFamille/annuaire', [\App\Http\Controllers\ResponsableFamille\AnnuaireResponsableController::class, 'index'])->name('responsableFamille.annuaire');
+    Route::get('/membreFamille/annuaire', [\App\Http\Controllers\MembreFamille\AnnuaireMembreController::class, 'index'])->name('membreFamille.annuaire');
 
     // Tableau de bord Conducteur
     Route::middleware('role:conducteur')->group(function () {
