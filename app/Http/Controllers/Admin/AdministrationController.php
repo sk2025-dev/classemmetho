@@ -227,6 +227,7 @@ class AdministrationController extends Controller
         // ═══════════════════════════════════════════════════════════════
 
         $membersByFamily = [];
+        $membersByFamilyCode = [];
         $membersByResponsible = [];
 
         foreach ($membersFormatted as $memberData) {
@@ -236,6 +237,14 @@ class AdministrationController extends Controller
                     $membersByFamily[$familyName] = [];
                 }
                 $membersByFamily[$familyName][] = $memberData;
+            }
+
+            if ($memberData['code_famille']) {
+                $familyCode = $memberData['code_famille'];
+                if (!isset($membersByFamilyCode[$familyCode])) {
+                    $membersByFamilyCode[$familyCode] = [];
+                }
+                $membersByFamilyCode[$familyCode][] = $memberData;
             }
 
             $responsableName = $memberData['role'] === 'responsable_famille' ?
@@ -298,15 +307,28 @@ class AdministrationController extends Controller
         // ÉTAPE 9: CRÉER LES FAMILLES FORMATÉES
         // ═══════════════════════════════════════════════════════════════
 
-        $famillesFormatted = Family::all()->map(function ($f) {
+        $famillesFormatted = Family::with(['responsable'])->get()->map(function ($f) use ($membersByFamily) {
             return [
                 'id' => $f->id,
                 'nom' => $f->nom,
-                'responsable' => $f->responsable,
+                'code_famille' => $f->code_famille,
+                'responsable' => $f->responsable
+                    ? trim(($f->responsable->prenom ?? "") . " " . ($f->responsable->nom ?? ""))
+                    : null,
+                'responsable_code' => $f->responsable?->code_membre,
                 'classe_id' => $f->classe_id,
                 'classe_nom' => $f->classe?->nom,
                 'contact' => $f->contact,
+                'telephone' => $f->telephone,
+                'telephone2' => $f->telephone2,
+                'email' => $f->email,
                 'adresse' => $f->adresse,
+                'quartier' => $f->quartier,
+                'ville' => $f->ville?->nom,
+                'status' => $f->status ?? ($f->deleted_at ? 'supprimée' : 'active'),
+                'created_at' => $f->created_at?->format('d/m/Y'),
+                'updated_at' => $f->updated_at?->format('d/m/Y'),
+                'membres_count' => count($membersByFamily[$f->nom] ?? []),
             ];
         });
 
@@ -337,6 +359,7 @@ class AdministrationController extends Controller
         return Inertia::render('Admin/Administration', [
             'dataByType' => $dataByType,
             'membersByFamily' => $membersByFamily,
+            'membersByFamilyCode' => $membersByFamilyCode,
             'membersByResponsible' => $membersByResponsible,
             'membres' => $membersFormatted,
             'availableClasses' => $availableClasses,

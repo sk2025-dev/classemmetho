@@ -7,6 +7,7 @@ import AdminHeader from "./components/AdminHeader";
 import { ToastContainer, useToast } from "../../Components/Toast";
 
 import TabUtilisateurs from "./Tabs/TabUtilisateurs";
+import TabFamille from "./Tabs/TabFamille";
 import TabClasses from "./Tabs/TabClasse";
 import TabFonctions from "./Tabs/TabFonctions";
 
@@ -14,6 +15,7 @@ export default function AdminPage({
     auth,
     dataByType: initialDataByType = {},
     membersByFamily: initialMembersByFamily = {},
+    membersByFamilyCode: initialMembersByFamilyCode = {},
     membersByResponsible: initialMembersByResponsible = {},
     membres: initialMembres = [], // ✅ Liste des membres (utilisateurs)
     availableClasses: initialAvailableClasses = [], // ✅ Classes disponibles
@@ -34,6 +36,13 @@ export default function AdminPage({
         React.useState(false);
     const [selectedClasseForToggle, setSelectedClasseForToggle] =
         React.useState(null);
+
+    const tabList = [
+        { id: "utilisateurs", label: "Utilisateurs" },
+        { id: "familles", label: "Familles" },
+        { id: "classes", label: "Classes" },
+        { id: "fonctions", label: "Fonctions" },
+    ];
 
     // Toast state
     const [toasts, setToasts] = useState([]);
@@ -416,28 +425,18 @@ export default function AdminPage({
                 </Link>
 
                 <div className="flex justify-center">
-                    <nav className="bg-white p-1 rounded-lg shadow-md border">
-                        {[
-                            "utilisateurs",
-                            "annuaire",
-                            "classes",
-                            "fonctions",
-                        ].map((tab) => (
+                    <nav className="bg-white p-1 rounded-lg shadow-md border flex flex-wrap gap-1">
+                        {tabList.map((tab) => (
                             <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
                                 className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                                    activeTab === tab
+                                    activeTab === tab.id
                                         ? "bg-blue-500 text-white shadow-sm font-bold"
                                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                                 }`}
                             >
-                                {tab === "utilisateurs"
-                                    ? "Utilisateurs"
-                                    : tab === "classes"
-                                      ? "Classes"
-                                      : tab.charAt(0).toUpperCase() +
-                                        tab.slice(1)}
+                                {tab.label}
                             </button>
                         ))}
                     </nav>
@@ -459,7 +458,12 @@ export default function AdminPage({
                     />
                 )}
 
-                {activeTab === "annuaire" && <TabAnnuaire />}
+                {activeTab === "familles" && (
+                    <TabFamille
+                        familles={initialDataByType?.familles || []}
+                        membersByFamilyCode={initialMembersByFamilyCode}
+                    />
+                )}
 
                 {activeTab === "classes" && (
                     <TabClasses
