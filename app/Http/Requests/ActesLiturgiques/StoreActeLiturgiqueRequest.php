@@ -52,7 +52,7 @@ class StoreActeLiturgiqueRequest extends FormRequest
                 'bapteme_premiere_communion' => ['date', 'lieu'],
                 'confirmation' => ['confirmand', 'date', 'lieu'],
                 // Le membre concerne est deja l'un des conjoints
-                'mariage' => ['date', 'lieu', 'type_mariage'],
+                'mariage' => [],
                 'naissance' => ['nom_enfant', 'date_naissance', 'parents'],
                 // Le membre concerne est deja le defunt
                 'deces' => ['date_deces'],

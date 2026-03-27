@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Link } from "@inertiajs/react";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
@@ -9,10 +9,8 @@ export default function BaptemeForm({
     backHref,
     submitUrl,
     familyMembers = [],
-    classes = [],
     canSelectMember = false,
 }) {
-    const [step, setStep] = useState(1);
     const [processing, setProcessing] = useState(false);
     const [success, setSuccess] = useState(false);
     const [successMsg, setSuccessMsg] = useState("");
@@ -22,7 +20,6 @@ export default function BaptemeForm({
         toasts,
         removeToast,
         success: showSuccess,
-        error: showError,
         handleApiError,
     } = useToastWithErrorHandling();
 
@@ -54,25 +51,12 @@ export default function BaptemeForm({
     const currentMember = familyMembers.find(
         (m) => String(m.id) === String(form.membre_id),
     );
-    const currentClasse = classes.find(
-        (c) => String(c.id) === String(form.classe_id),
-    );
 
-    const recap = useMemo(
-        () => ({
-            classe: currentClasse?.nom || "-",
-            personne: form.details.personne || "-",
-            ddn: form.details.date_naissance || "-",
-        }),
-        [form.details, currentClasse?.nom],
-    );
-
-    const setDetail = (key, value) => {
+    const setDetail = (key, value) =>
         setForm((prev) => ({
             ...prev,
             details: { ...prev.details, [key]: value },
         }));
-    };
 
     const applyMemberDefaults = (member) => {
         if (!member) return;
@@ -87,7 +71,7 @@ export default function BaptemeForm({
             details: {
                 ...prev.details,
                 personne: fullName || prev.details.personne,
-                date_naissance: dateNaissance,
+                date_naissance: dateNaissance || prev.details.date_naissance,
             },
         }));
     };
@@ -98,37 +82,10 @@ export default function BaptemeForm({
             (m) => String(m.id) === String(form.membre_id),
         );
         if (!member) return;
-        const hasAny = form.details.personne || form.details.date_naissance;
-        if (hasAny) return;
+        const hasInfo = form.details.personne || form.details.date_naissance;
+        if (hasInfo) return;
         applyMemberDefaults(member);
     }, [form.membre_id, familyMembers]);
-
-    const next = () => {
-        if (step === 2) {
-            const missing = [];
-            if (form.details.want_communion === "Oui") {
-                if (!form.details.can_baptise)
-                    missing.push("details.can_baptise");
-                if (!form.details.decl1) missing.push("details.declarations");
-            }
-            if (missing.length) {
-                setErrors((prev) => ({
-                    ...prev,
-                    "details.can_baptise": !form.details.can_baptise
-                        ? "Champ requis."
-                        : prev["details.can_baptise"],
-                    "details.declarations": !form.details.decl1
-                        ? "Veuillez confirmer."
-                        : prev["details.declarations"],
-                }));
-                return;
-            }
-        }
-        setErrors({});
-        setStep((s) => Math.min(3, s + 1));
-    };
-
-    const prev = () => setStep((s) => Math.max(1, s - 1));
 
     const submit = async (e) => {
         e.preventDefault();
@@ -136,6 +93,22 @@ export default function BaptemeForm({
         setProcessing(true);
         setErrors({});
         setSuccessMsg("");
+
+        if (form.details.want_communion === "Oui") {
+            const validationErrors = {};
+            if (!form.details.can_baptise) {
+                validationErrors["details.can_baptise"] = "Champ requis.";
+            }
+            if (!form.details.decl1) {
+                validationErrors["details.declarations"] =
+                    "Veuillez confirmer.";
+            }
+            if (Object.keys(validationErrors).length) {
+                setErrors((prev) => ({ ...prev, ...validationErrors }));
+                setProcessing(false);
+                return;
+            }
+        }
 
         const payload = new FormData();
         payload.append("type_acte", "bapteme");
@@ -197,15 +170,13 @@ export default function BaptemeForm({
         } catch (error) {
             const data = error?.response?.data || {};
             handleApiError(data);
-
             const serverErrors = data.errors || {};
             const flat = {};
-            Object.keys(serverErrors).forEach((k) => {
-                flat[k] = serverErrors[k][0];
+            Object.keys(serverErrors).forEach((key) => {
+                flat[key] = serverErrors[key][0];
             });
-            if (!Object.keys(flat).length && data.message) {
+            if (!Object.keys(flat).length && data.message)
                 flat.submit = data.message;
-            }
             setErrors(flat);
         } finally {
             setProcessing(false);
@@ -214,7 +185,6 @@ export default function BaptemeForm({
 
     const reset = () => {
         setSuccess(false);
-        setStep(1);
         setErrors({});
         setSuccessMsg("");
         setForm({
@@ -253,8 +223,7 @@ export default function BaptemeForm({
                     href={backHref}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-slate-700 border border-slate-200 shadow-sm font-semibold"
                 >
-                    <ArrowLeft size={16} />
-                    Retour
+                    <ArrowLeft size={16} /> Retour
                 </Link>
 
                 <div className="text-center mt-6 mb-6">
@@ -270,60 +239,25 @@ export default function BaptemeForm({
                 </div>
 
                 <div className="bg-white border border-slate-200 rounded-md overflow-hidden shadow-2xl">
-                    {!success && (
-                        <>
-                            <div className="h-[3px] bg-gradient-to-r from-transparent via-blue-500 to-transparent" />
-                            <div className="grid grid-cols-3 bg-slate-50 border-b border-slate-200">
-                                {[
-                                    "A baptiser",
-                                    "Ceremonie",
-                                    "Confirmation",
-                                ].map((label, idx) => {
-                                    const sn = idx + 1;
-                                    const active = step === sn;
-                                    const done = step > sn;
-                                    return (
-                                        <div
-                                            key={label}
-                                            className={`text-center py-3 text-[10px] uppercase tracking-wider font-bold border-b-2 ${
-                                                active
-                                                    ? "text-blue-600 border-blue-500"
-                                                    : done
-                                                      ? "text-amber-600 border-amber-500"
-                                                      : "text-slate-400 border-transparent"
-                                            }`}
-                                        >
-                                            {label}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </>
-                    )}
-
+                    <div className="h-[4px] bg-gradient-to-r from-blue-500 via-sky-500 to-cyan-500" />
                     <form onSubmit={submit} className="p-6 md:p-10">
-                        {/* ══ ÉTAPE 1 : A BAPTISER ══ */}
-                        {!success && step === 1 && (
+                        {!success ? (
                             <section>
                                 <h2 className="text-2xl font-semibold text-slate-800 mb-1">
-                                    Personne a baptiser
+                                    Personne à baptiser
                                 </h2>
                                 <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">
-                                    Renseignez les informations completes de la
-                                    personne concernee.
+                                    Renseignez les informations complétes de la personne concernée.
                                 </p>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                    <Field label="Personne concernee">
+                                <div className="grid grid-cols-1 gap-4 mb-6">
+                                    <Field label="Personne concernée">
                                         <select
                                             value={form.membre_id}
                                             onChange={(e) => {
-                                                const member =
-                                                    familyMembers.find(
-                                                        (m) =>
-                                                            String(m.id) ===
-                                                            e.target.value,
-                                                    );
+                                                const member = familyMembers.find(
+                                                    (m) => String(m.id) === e.target.value,
+                                                );
                                                 if (member) {
                                                     applyMemberDefaults(member);
                                                     return;
@@ -341,21 +275,21 @@ export default function BaptemeForm({
                                                 </option>
                                             ))}
                                         </select>
-                                    </Field>
-                                    <Field label="Nom complet">
-                                        <input
-                                            value={form.details.personne}
-                                            onChange={(e) =>
-                                                setDetail(
-                                                    "personne",
-                                                    e.target.value,
-                                                )
-                                            }
-                                        />
+                                        {errors.membre_id && (
+                                            <Err>{errors.membre_id}</Err>
+                                        )}
                                     </Field>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <Field label="Nom complet">
+                                        <input
+                                            value={form.details.personne}
+                                            onChange={(e) =>
+                                                setDetail("personne", e.target.value)
+                                            }
+                                        />
+                                    </Field>
                                     <Field label="Date de naissance">
                                         <input
                                             type="date"
@@ -370,9 +304,8 @@ export default function BaptemeForm({
                                     </Field>
                                 </div>
 
-                                {/* ── Déjà baptisé ── */}
                                 <div className="grid grid-cols-1 gap-4 mb-4">
-                                    <Field label="A deja recu un bapteme ?">
+                                    <Field label="A déjà reçu un baptéme ?">
                                         <select
                                             value={form.details.deja_baptise}
                                             onChange={(e) =>
@@ -384,23 +317,20 @@ export default function BaptemeForm({
                                         >
                                             <option value="">Choisir</option>
                                             <option value="Non">
-                                                Non - premier bapteme
+                                                Non - premier baptême
                                             </option>
                                             <option value="Oui autre eglise">
-                                                Oui, autre eglise
+                                                Oui, autre église
                                             </option>
                                         </select>
                                     </Field>
                                 </div>
 
-                                {form.details.deja_baptise ===
-                                    "Oui autre eglise" && (
+                                {form.details.deja_baptise === "Oui autre eglise" && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                        <Field label="Nom de l'eglise">
+                                        <Field label="Nom de l'église">
                                             <input
-                                                value={
-                                                    form.details.bapteme_eglise
-                                                }
+                                                value={form.details.bapteme_eglise}
                                                 onChange={(e) =>
                                                     setDetail(
                                                         "bapteme_eglise",
@@ -409,12 +339,10 @@ export default function BaptemeForm({
                                                 }
                                             />
                                         </Field>
-                                        <Field label="Date du bapteme">
+                                        <Field label="Date du baptême">
                                             <input
                                                 type="date"
-                                                value={
-                                                    form.details.bapteme_date
-                                                }
+                                                value={form.details.bapteme_date}
                                                 onChange={(e) =>
                                                     setDetail(
                                                         "bapteme_date",
@@ -426,16 +354,15 @@ export default function BaptemeForm({
                                     </div>
                                 )}
 
-                                {/* ── Première communion ── */}
                                 <div className="flex items-center gap-2 my-6">
                                     <div className="h-px bg-slate-200 flex-1" />
                                     <span className="text-xs italic text-slate-500">
-                                        Premiere communion
+                                        Première communion
                                     </span>
                                     <div className="h-px bg-slate-200 flex-1" />
                                 </div>
                                 <div className="grid grid-cols-1 gap-4 mb-4">
-                                    <Field label="Souhaitez-vous faire la premiere communion ?">
+                                    <Field label="Souhaitez-vous faire la premiére communion ?">
                                         <select
                                             value={form.details.want_communion}
                                             onChange={(e) =>
@@ -453,119 +380,75 @@ export default function BaptemeForm({
                                 </div>
 
                                 {form.details.want_communion === "Oui" && (
-                                    <>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                            <Field label="A ete baptise(e) ? *">
-                                                <select
-                                                    value={
-                                                        form.details.can_baptise
-                                                    }
-                                                    onChange={(e) =>
-                                                        setDetail(
-                                                            "can_baptise",
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                >
-                                                    <option value="">
-                                                        Choisir
-                                                    </option>
-                                                    <option value="Oui autre eglise">
-                                                        Oui - autre eglise
-                                                    </option>
-                                                    <option value="Non">
-                                                        Non
-                                                    </option>
-                                                </select>
-                                                {errors[
-                                                    "details.can_baptise"
-                                                ] && (
-                                                    <Err>
-                                                        {
-                                                            errors[
-                                                                "details.can_baptise"
-                                                            ]
-                                                        }
-                                                    </Err>
-                                                )}
-                                            </Field>
-                                            <Field label="Date du bapteme">
-                                                <input
-                                                    type="date"
-                                                    value={
-                                                        form.details
-                                                            .can_date_bap
-                                                    }
-                                                    onChange={(e) =>
-                                                        setDetail(
-                                                            "can_date_bap",
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                />
-                                            </Field>
-                                        </div>
-                                        <Field label="Anciennete dans l'eglise">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                        <Field label="A été baptisé(e) ?">
                                             <select
-                                                value={
-                                                    form.details.can_anciennete
-                                                }
+                                                value={form.details.can_baptise}
                                                 onChange={(e) =>
                                                     setDetail(
-                                                        "can_anciennete",
+                                                        "can_baptise",
                                                         e.target.value,
                                                     )
                                                 }
                                             >
-                                                <option value="">
-                                                    Choisir
+                                                <option value="">Choisir</option>
+                                                <option value="Oui autre eglise">
+                                                    Oui - autre église
                                                 </option>
-                                                <option value="<6m">
-                                                    Moins de 6 mois
-                                                </option>
-                                                <option value="6m-1a">
-                                                    6 mois a 1 an
-                                                </option>
-                                                <option value="1a-3a">
-                                                    1 a 3 ans
-                                                </option>
-                                                <option value=">3a">
-                                                    Plus de 3 ans
+                                                <option value="Non">
+                                                    Non
                                                 </option>
                                             </select>
+                                            {errors["details.can_baptise"] && (
+                                                <Err>
+                                                    {errors["details.can_baptise"]}
+                                                </Err>
+                                            )}
                                         </Field>
-                                    </>
+                                        <Field label="Date du baptême">
+                                            <input
+                                                type="date"
+                                                value={form.details.can_date_bap}
+                                                onChange={(e) =>
+                                                    setDetail(
+                                                        "can_date_bap",
+                                                        e.target.value,
+                                                    )
+                                                }
+                                            />
+                                        </Field>
+                                    </div>
                                 )}
 
-                                <FooterButtons onNext={next} />
-                            </section>
-                        )}
+                                {form.details.want_communion === "Oui" && (
+                                    <Field label="Ancienneté dans l'église">
+                                        <select
+                                            value={form.details.can_anciennete}
+                                            onChange={(e) =>
+                                                setDetail(
+                                                    "can_anciennete",
+                                                    e.target.value,
+                                                )
+                                            }
+                                        >
+                                            <option value="">Choisir</option>
+                                            <option value="<6m">Moins de 6 mois</option>
+                                            <option value="6m-1a">6 mois-1 an</option>
+                                            <option value="1a-3a">1-3 ans</option>
+                                            <option value=">3a">Plus de 3 ans</option>
+                                        </select>
+                                    </Field>
+                                )}
 
-                        {/* ══ ÉTAPE 2 : CÉRÉMONIE ══ */}
-                        {!success && step === 2 && (
-                            <section>
-                                {/* <h2 className="text-2xl font-semibold text-slate-800 mb-1">Details de la ceremonie</h2> */}
-                                {/* <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">
-                                    Informations pour la celebration.
-                                </p> */}
-
-                                {/* ── Parrains & Marraines ── */}
-                                <div className="flex items-center gap-2 mb-4">
-                                    <div className="h-px bg-slate-200 flex-1" />
-                                    <span className="text-xs italic text-slate-500">
-                                        Parrains & Marraines
-                                    </span>
-                                    <div className="h-px bg-slate-200 flex-1" />
-                                </div>
+                                <p className="text-sm text-slate-500 mb-3 mt-4">
+                                    Parrains & marraines
+                                </p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <Field label="Parrain">
                                         <input
                                             value={form.details.parrain}
                                             onChange={(e) =>
-                                                setDetail(
-                                                    "parrain",
-                                                    e.target.value,
-                                                )
+                                                setDetail("parrain", e.target.value)
                                             }
                                         />
                                     </Field>
@@ -573,16 +456,13 @@ export default function BaptemeForm({
                                         <input
                                             value={form.details.marraine}
                                             onChange={(e) =>
-                                                setDetail(
-                                                    "marraine",
-                                                    e.target.value,
-                                                )
+                                                setDetail("marraine", e.target.value)
                                             }
                                         />
                                     </Field>
                                 </div>
 
-                                <Field label="Observations / Precisions">
+                                <Field label="Observations / Précisions">
                                     <textarea
                                         value={form.details.observations}
                                         onChange={(e) =>
@@ -594,7 +474,7 @@ export default function BaptemeForm({
                                     />
                                 </Field>
 
-                                <Field label="Pieces jointes">
+                                <Field label="Piéces jointes">
                                     <input
                                         type="file"
                                         multiple
@@ -610,128 +490,26 @@ export default function BaptemeForm({
                                     />
                                 </Field>
 
-                                {/* ── Communion : déclaration uniquement si want_communion = Oui ── */}
                                 {form.details.want_communion === "Oui" && (
-                                    <>
-                                        <div className="flex items-center gap-2 my-6">
-                                            <div className="h-px bg-slate-200 flex-1" />
-                                            <span className="text-xs italic text-slate-500">
-                                                Preparation a la communion
-                                            </span>
-                                            <div className="h-px bg-slate-200 flex-1" />
-                                        </div>
-                                        <div className="space-y-2 mb-4">
-                                            <CheckRow
-                                                checked={form.details.decl1}
-                                                text="Je confirme que les informations sont exactes"
-                                                onChange={(v) =>
-                                                    setDetail("decl1", v)
-                                                }
-                                            />
-                                            {errors["details.declarations"] && (
-                                                <Err>
-                                                    {
-                                                        errors[
-                                                            "details.declarations"
-                                                        ]
-                                                    }
-                                                </Err>
-                                            )}
-                                        </div>
-                                    </>
+                                    <div className="space-y-2 mt-4 mb-4">
+                                        <CheckRow
+                                            checked={form.details.decl1}
+                                            text="Je confirme que les informations sont exactes"
+                                            onChange={(v) =>
+                                                setDetail("decl1", v)
+                                            }
+                                        />
+                                        {errors["details.declarations"] && (
+                                            <Err>
+                                                {errors["details.declarations"]}
+                                            </Err>
+                                        )}
+                                    </div>
                                 )}
-
-                                <FooterButtons onPrev={prev} onNext={next} />
-                            </section>
-                        )}
-
-                        {/* ══ ÉTAPE 3 : RÉCAPITULATIF ══ */}
-                        {!success && step === 3 && (
-                            <section>
-                                <h2 className="text-2xl font-semibold text-slate-800 mb-1">
-                                    Recapitulatif de la demande
-                                </h2>
-                                <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">
-                                    Verifiez attentivement avant de soumettre.
-                                </p>
-
-                                <RecapCard title="Personne a baptiser">
-                                    <RecapRow k="Identite" v={recap.personne} />
-                                    <RecapRow
-                                        k="Date de naissance"
-                                        v={recap.ddn}
-                                    />
-                                    {form.details.deja_baptise && (
-                                        <RecapRow
-                                            k="Bapteme anterieur"
-                                            v={form.details.deja_baptise}
-                                        />
-                                    )}
-                                    {form.details.bapteme_eglise && (
-                                        <RecapRow
-                                            k="Eglise du bapteme"
-                                            v={form.details.bapteme_eglise}
-                                        />
-                                    )}
-                                </RecapCard>
-
-                                <RecapCard title="Premiere communion">
-                                    <RecapRow
-                                        k="Souhait communion"
-                                        v={form.details.want_communion || "-"}
-                                    />
-                                    {form.details.want_communion === "Oui" && (
-                                        <>
-                                            <RecapRow
-                                                k="Deja baptise(e)"
-                                                v={
-                                                    form.details.can_baptise ||
-                                                    "-"
-                                                }
-                                            />
-                                            <RecapRow
-                                                k="Anciennete eglise"
-                                                v={
-                                                    form.details
-                                                        .can_anciennete || "-"
-                                                }
-                                            />
-                                        </>
-                                    )}
-                                </RecapCard>
-
-                                <RecapCard title="Ceremonie">
-                                    {form.details.parrain && (
-                                        <RecapRow
-                                            k="Parrain"
-                                            v={form.details.parrain}
-                                        />
-                                    )}
-                                    {form.details.marraine && (
-                                        <RecapRow
-                                            k="Marraine"
-                                            v={form.details.marraine}
-                                        />
-                                    )}
-                                    {form.details.observations && (
-                                        <RecapRow
-                                            k="Observations"
-                                            v={form.details.observations}
-                                        />
-                                    )}
-                                    <RecapRow k="Statut initial" v="SOUMISE" />
-                                </RecapCard>
 
                                 {errors.submit && <Err>{errors.submit}</Err>}
 
-                                <div className="flex justify-between gap-3 mt-8 pt-5 border-t border-slate-200">
-                                    <button
-                                        type="button"
-                                        onClick={prev}
-                                        className="btn-ghost"
-                                    >
-                                        Modifier
-                                    </button>
+                                <div className="flex justify-end gap-3 mt-8 pt-5 border-t border-slate-200">
                                     <button
                                         type="submit"
                                         disabled={processing}
@@ -743,21 +521,16 @@ export default function BaptemeForm({
                                     </button>
                                 </div>
                             </section>
-                        )}
-
-                        {/* ══ SUCCÈS ══ */}
-                        {success && (
+                        ) : (
                             <section className="text-center py-12">
                                 <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center">
                                     <CheckCircle2 size={32} />
                                 </div>
                                 <h2 className="text-3xl font-semibold text-slate-800 mb-2">
-                                    Demande soumise avec succes
+                                    Demande soumise avec succés
                                 </h2>
                                 <p className="text-slate-600 max-w-md mx-auto">
-                                    Votre demande de bapteme a ete transmise a
-                                    votre conducteur. Vous serez notifie a
-                                    chaque etape.
+                                    Votre demande de baptême a été transmise à votre conducteur. Vous serez notifie à chaque étape.
                                 </p>
                                 {successMsg && (
                                     <p className="text-sm text-blue-700 mt-3">
@@ -778,6 +551,7 @@ export default function BaptemeForm({
                     </form>
                 </div>
             </div>
+
             <style>{`
                 input, select, textarea {
                     width: 100%;
@@ -813,13 +587,12 @@ export default function BaptemeForm({
                     font-size: 13px;
                     font-weight: 700;
                 }
-            `}</style>{" "}
-            <ToastContainer toasts={toasts} removeToast={removeToast} />{" "}
+            `}</style>
+            <ToastContainer toasts={toasts} removeToast={removeToast} />
         </div>
     );
 }
 
-/* ── Sub-components (identiques) ── */
 function Field({ label, children }) {
     return (
         <div className="space-y-1.5">
@@ -830,43 +603,11 @@ function Field({ label, children }) {
         </div>
     );
 }
+
 function Err({ children }) {
     return <p className="text-xs text-red-600 mt-1">{children}</p>;
 }
-function FooterButtons({ onPrev, onNext }) {
-    return (
-        <div className="flex justify-between gap-3 mt-8 pt-5 border-t border-slate-200">
-            {onPrev ? (
-                <button type="button" onClick={onPrev} className="btn-ghost">
-                    Retour
-                </button>
-            ) : (
-                <span />
-            )}
-            <button type="button" onClick={onNext} className="btn-main">
-                Suivant
-            </button>
-        </div>
-    );
-}
-function RecapCard({ title, children }) {
-    return (
-        <div className="bg-slate-50 border border-slate-200 rounded-md p-4 mb-3">
-            <h3 className="text-base font-semibold text-slate-800 mb-3 pb-2 border-b border-slate-200">
-                {title}
-            </h3>
-            {children}
-        </div>
-    );
-}
-function RecapRow({ k, v }) {
-    return (
-        <div className="flex items-start justify-between gap-3 text-sm py-1.5 border-b border-slate-200/70 last:border-b-0">
-            <span className="text-slate-500">{k}</span>
-            <span className="text-slate-800 text-right">{v || "-"}</span>
-        </div>
-    );
-}
+
 function CheckRow({ checked, text, onChange }) {
     return (
         <label className="flex items-center gap-3 border border-amber-200 rounded-sm px-3 py-2 bg-amber-50 cursor-pointer">
