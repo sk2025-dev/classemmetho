@@ -1,4 +1,59 @@
 import React, { useEffect, useMemo, useState } from "react";
+import Modal from "../../components/Modal";
+// Composant pour visualiser les fiches PDF par date
+function FichesMariageModal({ open, onClose }) {
+    const [dates, setDates] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(null);
+    const [pdfUrl, setPdfUrl] = useState("");
+    useEffect(() => {
+        if (open) {
+            setLoading(true);
+            axios.get("/api/conducteur/liturgie/fiches-dates")
+                .then(res => setDates(res.data?.dates || []))
+                .finally(() => setLoading(false));
+        }
+    }, [open]);
+    const handleVoirFiche = (date) => {
+        setSelectedDate(date);
+        setPdfUrl(`/api/conducteur/liturgie/fiche-pdf?date=${date}`);
+    };
+    return (
+        <Modal open={open} onClose={onClose} title="Fiches des demandes de mariage par jour">
+            {loading ? (
+                <div>Chargement…</div>
+            ) : (
+                <div>
+                    <ul style={{marginBottom: 16}}>
+                        {dates.length === 0 && <li>Aucune fiche disponible.</li>}
+                        {dates.map(date => (
+                            <li key={date} style={{marginBottom: 8}}>
+                                <button onClick={() => handleVoirFiche(date)} style={{marginRight: 8}}>
+                                    Voir la fiche du {date}
+                                </button>
+                                {selectedDate === date && pdfUrl && (
+                                    <span style={{color: 'green'}}> (ouverte ci-dessous)</span>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                    {pdfUrl && (
+                        <div style={{height: 600, border: '1px solid #ccc'}}>
+                            <iframe
+                                src={pdfUrl}
+                                title="Fiche PDF"
+                                width="100%"
+                                height="100%"
+                                style={{border: 'none'}}
+                                allow="autoplay"
+                            />
+                        </div>
+                    )}
+                </div>
+            )}
+        </Modal>
+    );
+}
 import axios from "axios";
 import { Link } from "@inertiajs/react";
 
@@ -75,6 +130,9 @@ export default function Index({
     classes = [],
     annonces: rawAnnonces = [],
 }) {
+    // ...existing code...
+    // Modal pour fiches PDF mariage
+    const [ficheModalOpen, setFicheModalOpen] = useState(false);
     /* ── ACTES state ── */
     const [localActes, setLocalActes] = useState(actes);
     const [tab, setTab] = useState("soumises");
@@ -777,6 +835,13 @@ export default function Index({
     /* ════════════════════════ RENDER ════════════════════════ */
     return (
         <div className="conductor-page">
+            {/* Bouton pour ouvrir le modal des fiches PDF */}
+            <div style={{marginBottom: 16}}>
+                <button className="btn" onClick={() => setFicheModalOpen(true)}>
+                    📄 Voir les fiches PDF Mariage (par jour)
+                </button>
+            </div>
+            <FichesMariageModal open={ficheModalOpen} onClose={() => setFicheModalOpen(false)} />
             <style>{styles}</style>
             <main className="main">
                 <div className="page-content">
