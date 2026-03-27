@@ -19,66 +19,82 @@ class AnnuaireController extends Controller
     }
 
     /**
-     * Display annuaire principal (Admin - tous accès)
+     * Determine the role scope for the authenticated user.
+     */
+    protected function getRoleScope(): string
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return 'guest';
+        }
+
+        if ($user->role === 'admin') {
+            return 'admin';
+        }
+
+        if ($user->role === 'conducteur') {
+            return 'conducteur';
+        }
+
+        if ($user->role === 'responsable_famille') {
+            return 'responsable_famille';
+        }
+
+        return 'user';
+    }
+
+    /**
+     * Display annuaire principal avec tous les modes (admin, conducteur, responsable_famille).
      */
     public function index(Request $request)
     {
-        $data = $this->annuaireService->getAnnuaireData($request, 'admin');
+        $roleScope = $this->getRoleScope();
+        $data = $this->annuaireService->getAnnuaireData($request, $roleScope);
 
         return Inertia::render('Admin/Annuaire/Index', [
-            // Props attendues par la vue Admin/Annuaire/Index.jsx
-            'members' => $data['data'],
-            'classes' => $data['classes'] ?? [],
-            'families' => $data['families'] ?? [],
-            'view' => $request->get('view', 'all'),
-            'cotisations' => [],
-            'user' => [
-                'id' => Auth::id(),
-                'role' => Auth::user()?->role,
-            ],
-            'stats' => $data['stats'],
-            'filters' => $request->only(['search', 'classe', 'famille', 'statut', 'role', 'perPage', 'view']),
-            'filterOptions' => [
-                'classes' => $data['classOptions'] ?? [],
-                'familles' => collect($data['families'] ?? [])
-                    ->map(fn($family) => [
-                        'id' => $family['id'],
-                        'nom' => $family['nom'],
-                        'code_famille' => $family['code_famille'] ?? null,
-                    ])
-                    ->values()
-                    ->toArray(),
-                'statuts' => [
-                    ['value' => 'active', 'label' => 'Actif'],
-                    ['value' => 'inactive', 'label' => 'Inactif'],
-                ],
-                'roles' => $data['roles'] ?? [],
-            ],
+            'members' => $data['members'],
+            'families' => $data['families'],
+            'classes' => $data['classes'],
+            'view' => $data['view'],
+            'cotisations' => $data['cotisations'],
+            'user' => $data['user'],
+            'filters' => $data['filters'],
+            'filterOptions' => $data['filterOptions'],
         ]);
     }
 
     /**
-     * Recherche AJAX rapide
+     * Recherche AJAX (optionnel, utilisé par les filtres dynamiques).
      */
     public function search(Request $request)
     {
-        $results = $this->annuaireService->search($request->all(), 'admin');
+        $roleScope = $this->getRoleScope();
+        $data = $this->annuaireService->getAnnuaireData($request, $roleScope);
 
         return response()->json([
             'success' => true,
-            'data' => $results['data'],
-            'pagination' => $results['pagination'],
-            'stats' => $results['stats'],
+            'data' => $data['members']['data'],
+            'pagination' => [
+                'current_page' => $data['members']['current_page'],
+                'last_page' => ceil($data['members']['total'] / $data['members']['per_page']),
+                'per_page' => $data['members']['per_page'],
+                'total' => $data['members']['total'],
+                'links' => $data['members']['links'],
+            ],
+            'stats' => $this->annuaireService->getStats($request, $roleScope),
         ]);
     }
 
     /**
-     * Export Excel/PDF
+     * Export Excel ou PDF des membres filtrés.
      */
     public function export(Request $request)
     {
         $format = $request->get('format', 'excel');
-        $data = $this->annuaireService->exportData($request->all(), 'admin');
+        $roleScope = $this->getRoleScope();
+
+        $data = $this->annuaireService->exportData($request->all(), $roleScope);
 
         if ($format === 'pdf') {
             return $this->annuaireService->generatePDF($data);
@@ -88,11 +104,12 @@ class AnnuaireController extends Controller
     }
 
     /**
-     * Statistiques annuaire
+     * Retourne les statistiques globales (utilisé éventuellement pour des widgets).
      */
     public function stats(Request $request)
     {
-        $stats = $this->annuaireService->getStats($request, 'admin');
+        $roleScope = $this->getRoleScope();
+        $stats = $this->annuaireService->getStats($request, $roleScope);
 
         return response()->json([
             'success' => true,

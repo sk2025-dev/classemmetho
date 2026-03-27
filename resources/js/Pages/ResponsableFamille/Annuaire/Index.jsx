@@ -460,40 +460,31 @@ const GLOBAL_STYLES = `
     .family-member-item strong, .class-member-item strong { color: #1f2937; font-weight: 600; display: block; }
 `;
 
+// ==================== FONCTIONS UTILITAIRES ====================
 const toText = (value, fallback = '-') => {
-    if (value === null || value === undefined) {
-        return fallback;
-    }
-
-    if (typeof value === 'string' || typeof value === 'number') {
-        return String(value);
-    }
-
+    if (value === null || value === undefined) return fallback;
+    if (typeof value === 'string' || typeof value === 'number') return String(value);
     if (typeof value === 'object') {
         return String(value.nom ?? value.label ?? value.name ?? value.code ?? fallback);
     }
-
     return fallback;
 };
 
 const normalizeMember = (member) => {
-    if (!member) {
-        return null;
-    }
-
+    if (!member) return null;
     const prenoms = toText(member?.prenoms || member?.prenom || member?.full_name, '');
-
+    const classeName = toText(member?.classe?.nom || member?.classeMethodiste || member?.classe, '-');
+    const familleName = toText(
+        member?.famille || member?.family?.nom || member?.family?.code_famille || member?.family_code,
+        '-'
+    );
     return {
         ...member,
         prenoms,
-        classeMethodiste: toText(member?.classeMethodiste || member?.classe, '-'),
-        famille: toText(
-            member?.famille
-                || member?.family?.code_famille
-                || member?.family?.nom
-                || member?.family_code,
-            '-',
-        ),
+        classeMethodiste: classeName,
+        famille: familleName,
+        codeFamille: member?.code_famille || member?.family?.code_famille || null,
+        codeMembre: member?.numMembre || member?.code_membre || null,
         photo: member?.photo || member?.profile_photo_url || '',
         sexe: toText(member?.sexe || member?.genre, ''),
         dateNaissance: member?.dateNaissance || member?.date_naissance || null,
@@ -502,19 +493,8 @@ const normalizeMember = (member) => {
         fonction: toText(member?.fonction, '-'),
         profession: toText(member?.profession, '-'),
         relation: toText(member?.relation, '-'),
-        adresse: toText(
-            member?.adresse
-                || member?.address
-                || member?.family?.adresse
-                || member?.family?.address,
-            '-',
-        ),
-        quartier: toText(
-            member?.quartier
-                || member?.neighborhood
-                || member?.family?.quartier,
-            '-',
-        ),
+        adresse: toText(member?.adresse || member?.family?.adresse || member?.address, '-'),
+        quartier: toText(member?.quartier || member?.family?.quartier, '-'),
     };
 };
 
@@ -541,65 +521,8 @@ const MemberStatusBadge = ({ member }) => {
     );
 };
 
-// --- Composant simplifié pour les détails du membre (Identité et Contact) ---
-const MemberDetailsModal = ({ member, userData, onClose }) => {
-  const getFallbackAvatar = (initial) => {
-    return `data:image/svg+xml,${encodeURIComponent(
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="45" fill="#fbbf24"/>
-        <text x="50" y="65" font-size="40" text-anchor="middle" fill="white" font-weight="bold">
-          ${initial}
-        </text>
-      </svg>`
-    )}`;
-  };
-
-  const initial = (member?.prenoms || member?.nom || '?').charAt(0).toUpperCase();
-  const fallbackAvatar = getFallbackAvatar(initial);
-  const photoSrc = member?.photo || fallbackAvatar;
-
-  if (!member) return null;
-
-  return (
-    <div className="member-details">
-      <div className="detail-section">
-        <h3>🧍 Identité</h3>
-        <div className="member-identity">
-          <div className="member-photo-large">
-            <img
-              src={photoSrc}
-              alt={`${member.prenoms} ${member.nom}`}
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = fallbackAvatar;
-              }}
-            />
-          </div>
-          <div className="member-identity-info">
-            <p><strong>Nom & Prénoms:</strong> {member.prenoms} {member.nom}</p>
-            <p><strong>Famille:</strong> {member.famille || '-'}</p>
-            <p><strong>Genre:</strong> {member.sexe === 'M' ? 'Masculin' : 'Féminin'}</p>
-            <p><strong>Date de naissance:</strong> {member.dateNaissance ? new Date(member.dateNaissance).toLocaleDateString() : '-'}</p>
-            <p><strong>Classe méthodiste:</strong> {member.classeMethodiste || '-'}</p>
-            <p><strong>Profession:</strong> {member.profession || '-'}</p>
-            <p><strong>Fonction:</strong> {member.fonction || '-'}</p>
-            <p><strong>Relation:</strong> {member.relation || '-'}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="detail-section">
-        <h3>🧾 Contact</h3>
-        <div className="contact-info">
-          <p><strong>Téléphone:</strong> {member.telephone || '-'}</p>
-          <p><strong>Email:</strong> {member.email || '-'}</p>
-          <p><strong>Adresse:</strong> {member.adresse || '-'}</p>
-          {member.quartier && <p><strong>Quartier:</strong> {member.quartier}</p>}
-        </div>
-      </div>
-    </div>
-  );
-};
+// --- Composant Modal pour les détails du membre (commenté car plus utilisé) ---
+// const MemberDetailsModal = ({ member, userData, onClose }) => { ... };
 
 // ==================== COMPOSANT PRINCIPAL ====================
 const Annuaire = ({ 
@@ -610,14 +533,14 @@ const Annuaire = ({
     cotisations = {}, 
     user = { role: 'user' }, 
     filters = {},
-    filterOptions = { classes: [], familles: [], statuts: [], roles: [] } 
+    filterOptions = { classes: [], familles: [], professions: [], roles: [] }
 }) => {
     const { data: paginatedMembers, links: membersLinks, current_page: membersCurrentPage, per_page: membersPerPage, total: membersTotal } = members || { data: [], links: [], current_page: 1, per_page: 10, total: 0 };
 
     const [searchTerm, setSearchTerm] = useState(filters.search || "");
-    const [classeFilter, setClasseFilter] = useState(filters.classe || "");
+    // Filtre classe supprimé
     const [familleFilter, setFamilleFilter] = useState(filters.famille || "");
-    const [statutFilter, setStatutFilter] = useState(filters.statut || "");
+    const [professionFilter, setProfessionFilter] = useState(filters.profession || "");
     const [roleFilter, setRoleFilter] = useState(filters.role || "");
     const [itemsPerPage, setItemsPerPage] = useState(filters.perPage || 10);
 
@@ -627,16 +550,17 @@ const Annuaire = ({
     const [isExiting, setIsExiting] = useState(false);
     const [photoPopup, setPhotoPopup] = useState({ visible: false, src: '', x: 0, y: 0, exiting: false });
     const popupRef = useRef(null);
-    const [classMemberPages, setClassMemberPages] = useState({});
+    // Pagination interne des classes supprimée
+    // const [classMemberPages, setClassMemberPages] = useState({});
 
     const applyFilters = useCallback(() => {
         router.get(
             window.location.pathname,
             {
                 search: searchTerm,
-                classe: classeFilter,
+                // classe: classeFilter, // supprimé
                 famille: familleFilter,
-                statut: statutFilter,
+                profession: professionFilter,
                 role: roleFilter,
                 perPage: itemsPerPage,
                 view: currentView,
@@ -644,7 +568,7 @@ const Annuaire = ({
             },
             { preserveState: true, preserveScroll: true, replace: true }
         );
-    }, [searchTerm, classeFilter, familleFilter, statutFilter, roleFilter, itemsPerPage, currentView]);
+    }, [searchTerm, familleFilter, professionFilter, roleFilter, itemsPerPage, currentView]);
 
     useEffect(() => {
         const handler = setTimeout(() => applyFilters(), 500);
@@ -657,33 +581,30 @@ const Annuaire = ({
             window.location.pathname,
             {
                 search: searchTerm,
-                classe: classeFilter,
+                // classe: classeFilter, // supprimé
                 famille: familleFilter,
-                statut: statutFilter,
+                profession: professionFilter,
                 role: roleFilter,
                 view: newView,
                 page: 1,
                 familiesPerPage: 5,
-                classesPerPage: 1,
+                // classesPerPage: 1, // supprimé
             },
             { preserveState: true, preserveScroll: true }
         );
-        setClassMemberPages({});
+        // setClassMemberPages({}); // supprimé
     };
 
     const handlePageChange = (url) => { if (url) router.get(url, {}, { preserveState: true, preserveScroll: true }); };
     const handleFamilyPageChange = (url) => { if (url) router.get(url, {}, { preserveState: true, preserveScroll: true }); };
-    const handleClassPageChange = (url) => {
-        if (url) router.get(url, {}, { preserveState: true, preserveScroll: true });
-        setClassMemberPages({});
-    };
+    // const handleClassPageChange = (url) => { ... }; // supprimé
     const handlePerPageChange = (newPerPage) => setItemsPerPage(newPerPage);
 
     const resetFilters = () => {
         setSearchTerm("");
-        setClasseFilter("");
+        // setClasseFilter(""); // supprimé
         setFamilleFilter("");
-        setStatutFilter("");
+        setProfessionFilter("");
         setRoleFilter("");
         setItemsPerPage(10);
     };
@@ -796,7 +717,8 @@ const Annuaire = ({
                                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                                         {member.email || '-'}
                                     </div>
-                                    <button onClick={() => openModal(member)} className="btn btn-view mt-3 w-full">Voir profil</button>
+                                    {/* Bouton Voir profil commenté */}
+                                    {/* <button onClick={() => openModal(member)} className="btn btn-view mt-3 w-full">Voir profil</button> */}
                                 </div>
                             </div>
                         ))
@@ -829,7 +751,8 @@ const Annuaire = ({
                                 {normalizedFamilyMembers.map(member => (
                                     <div key={member.id} className="family-member-item">
                                         <img src={member.photo || getFallbackImage(member)} onClick={(e) => openPhotoPopup(member.photo || getFallbackImage(member), e)} onError={(e) => e.target.src = getFallbackImage(member)} alt={member.prenoms} />
-                                        <div className="member-info" onClick={() => openModal(member)}>
+                                        {/* onClick du membre commenté */}
+                                        <div className="member-info" /* onClick={() => openModal(member)} */>
                                             <strong>{member.prenoms} {member.nom}</strong>
                                             <p>{member.classeMethodiste || '-'}</p>
                                             <p className="text-sm text-gray-600">{member.telephone || '-'}</p>
@@ -847,64 +770,11 @@ const Annuaire = ({
         );
     };
 
-    const renderClassesView = () => {
-        const classData =
-            Array.isArray(classes?.data) && classes.data.length > 0
-                ? classes.data
-                : Array.isArray(classes)
-                    ? classes
-                    : [];
-
-        if (classData.length === 0) return <p className="text-center py-12 text-gray-400 italic">Aucune classe trouvée.</p>;
-        return (
-            <div className="classes-list">
-                {classData.map(classe => {
-                    const normalizedClassMembers = (classe.members || []).map(normalizeMember).filter(Boolean);
-                    const totalMembers = normalizedClassMembers.length;
-                    const perPage = 10;
-                    const current = classMemberPages[classe.id] || 1;
-                    const totalPages = Math.ceil(totalMembers / perPage);
-                    const start = (current - 1) * perPage;
-                    const displayed = normalizedClassMembers.slice(start, start + perPage);
-                    return (
-                        <div key={classe.id} className="class-group">
-                            <div className="class-header"><h3>{classe.nom}</h3><span className="class-count">{totalMembers}</span></div>
-                            <div className="class-members">
-                                {displayed.map(member => (
-                                    <div key={member.id} className="class-member-item">
-                                        <img src={member.photo || getFallbackImage(member)} onClick={(e) => openPhotoPopup(member.photo || getFallbackImage(member), e)} onError={(e) => e.target.src = getFallbackImage(member)} alt={member.prenoms} />
-                                        <div className="member-info" onClick={() => openModal(member)}>
-                                            <strong>{member.prenoms} {member.nom}</strong>
-                                            <p>{member.famille || '-'}</p>
-                                            <p className="text-sm text-gray-600">{member.telephone || '-'}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            {totalPages > 1 && (
-                                <div className="flex items-center justify-center gap-4 p-4 border-t border-white/50">
-                                    <button onClick={() => setClassMemberPages(prev => ({ ...prev, [classe.id]: current - 1 }))} disabled={current === 1} className="btn btn-icon !p-2 disabled:opacity-50">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                                    </button>
-                                    <span className="text-sm text-gray-700">Page {current} / {totalPages}</span>
-                                    <button onClick={() => setClassMemberPages(prev => ({ ...prev, [classe.id]: current + 1 }))} disabled={current === totalPages} className="btn btn-icon !p-2 disabled:opacity-50">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-                <Pagination links={classes.links} currentPage={classes.current_page} perPage={classes.per_page} total={classes.total} onPageChange={handleClassPageChange} />
-            </div>
-        );
-    };
-
+    // La vue Classes a été supprimée
     const renderActiveView = () => {
         switch (currentView) {
             case 'all': return renderGridView();
             case 'families': return renderFamiliesView();
-            case 'classes': return renderClassesView();
             default: return renderGridView();
         }
     };
@@ -914,7 +784,8 @@ const Annuaire = ({
             <Head title="Annuaire des membres" />
             <style>{GLOBAL_STYLES}</style>
 
-            {isModalOpen && (
+            {/* MODAL FICHE MEMBRE - COMMENTÉ POUR NE PLUS S'AFFICHER */}
+            {/* {isModalOpen && (
                 <div className={`modal-overlay ${isExiting ? 'closing' : ''}`} onClick={closeModal}>
                     <div className={`modal-content ${isExiting ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
@@ -927,8 +798,9 @@ const Annuaire = ({
                         <div className="modal-footer"><button onClick={closeModal} className="btn btn-secondary">Fermer</button></div>
                     </div>
                 </div>
-            )}
+            )} */}
 
+            {/* POPUP PHOTO - toujours actif */}
             {photoPopup.visible && (
                 <div ref={popupRef} className={`photo-popup ${photoPopup.exiting ? 'closing' : ''}`} style={getPopupStyle()}>
                     <img src={photoPopup.src} alt="Agrandissement" />
@@ -953,23 +825,20 @@ const Annuaire = ({
                         <div className="filter-group">
                             <div className="input-search-wrapper">
                                 <svg className="input-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                                <input type="text" placeholder="Rechercher (nom, téléphone, classe)..." className="input-control input-search" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                                <input type="text" placeholder="Rechercher (nom, prénom, téléphone, profession, code membre, code famille)..." className="input-control input-search" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                             </div>
-                            <select value={classeFilter} onChange={e => setClasseFilter(e.target.value)} className="input-control" style={{ minWidth: '140px' }}>
-                                <option value="">Toutes classes</option>
-                                {filterOptions.classes.map(c => <option key={c} value={c}>{c}</option>)}
-                            </select>
+                            {/* Filtre classe supprimé */}
                             <select value={familleFilter} onChange={e => setFamilleFilter(e.target.value)} className="input-control" style={{ minWidth: '140px' }}>
                                 <option value="">Toutes familles</option>
-                                {filterOptions.familles.map(f => <option key={f} value={f}>{f}</option>)}
+                                {filterOptions.familles.map(f => <option key={f.id} value={f.id}>{f.nom}</option>)}
                             </select>
-                            <select value={statutFilter} onChange={e => setStatutFilter(e.target.value)} className="input-control" style={{ minWidth: '140px' }}>
-                                <option value="">Tous statuts</option>
-                                {filterOptions.statuts.map(s => <option key={s} value={s}>{s === 'baptise' ? 'Baptisé' : s === 'non_baptise' ? 'Non baptisé' : s === 'communion' ? '1ère communion' : s === 'marie' ? 'Marié' : s === 'decede' ? 'Décédé' : s}</option>)}
+                            <select value={professionFilter} onChange={e => setProfessionFilter(e.target.value)} className="input-control" style={{ minWidth: '140px' }}>
+                                <option value="">Toutes professions</option>
+                                {filterOptions.professions.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                             </select>
                             <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="input-control" style={{ minWidth: '140px' }}>
                                 <option value="">Tous rôles</option>
-                                {filterOptions.roles.map(r => <option key={r} value={r}>{r}</option>)}
+                                {filterOptions.roles.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                             </select>
                             <button onClick={resetFilters} className="btn btn-success">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -979,13 +848,13 @@ const Annuaire = ({
 
                         <div className="filter-second-row">
                             <div className="filter-nav">
-                                {['all', 'families', 'classes'].map(viewKey => (
+                                {['all', 'families'].map(viewKey => (
                                     <button key={viewKey} className={`filter-nav-btn ${currentView === viewKey ? 'active' : ''}`} onClick={() => switchView(viewKey)}>
-                                        {viewKey === 'all' ? 'Tous' : viewKey === 'families' ? 'Familles' : 'Classes'}
+                                        {viewKey === 'all' ? 'Tous' : 'Familles'}
                                     </button>
                                 ))}
                             </div>
-                            {/* Les boutons Excel et PDF ont été supprimés */}
+                            {/* Pas de boutons Excel/PDF dans cette version */}
                         </div>
                     </div>
 

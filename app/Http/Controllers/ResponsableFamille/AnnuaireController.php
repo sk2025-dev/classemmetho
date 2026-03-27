@@ -3,15 +3,12 @@
 namespace App\Http\Controllers\ResponsableFamille;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Traits\BuildsAnnuaireProps;
 use App\Services\AnnuaireService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class AnnuaireController extends Controller
 {
-    use BuildsAnnuaireProps;
-
     protected AnnuaireService $annuaireService;
 
     public function __construct(AnnuaireService $annuaireService)
@@ -21,8 +18,18 @@ class AnnuaireController extends Controller
 
     public function index(Request $request)
     {
-        $data = $this->annuaireService->getAnnuaireData($request, 'responsable_famille');
+        $roleScope = 'responsable_famille';
+        $data = $this->annuaireService->getAnnuaireData($request, $roleScope);
 
-        return Inertia::render('ResponsableFamille/Annuaire/Index', $this->buildAnnuaireProps($data, $request));
+        return Inertia::render('ResponsableFamille/Annuaire/Index', [
+            'members' => $data['members'],
+            'families' => $data['families'],
+            'classes' => $data['classes'],
+            'view' => $data['view'],
+            'cotisations' => $data['cotisations'],
+            'user' => $data['user'],
+            'filters' => $data['filters'],
+            'filterOptions' => $data['filterOptions'],
+        ]);
     }
 }

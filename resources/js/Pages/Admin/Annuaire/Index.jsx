@@ -146,7 +146,7 @@ const GLOBAL_STYLES = `
     /* Table Styles */
     .table-container { background: var(--glass-bg); border-radius: 1rem; box-shadow: var(--shadow-lg); overflow: hidden; border: 1px solid var(--glass-border); display: flex; flex-direction: column; flex: 1; min-height: 500px; position: relative; }
     .table-scroll { overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch; } 
-    table { width: 100%; min-width: 2400px; border-collapse: collapse; text-align: left; }
+    table { width: 100%; min-width: 2800px; border-collapse: collapse; text-align: left; }
     thead { background: #f59e0b; color: white; position: sticky; top: 0; z-index: 10; }
     th { padding: 0.75rem; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
     td { padding: 0.75rem; border-bottom: 1px solid #f3f4f6; font-size: 0.875rem; vertical-align: middle; }
@@ -787,7 +787,7 @@ const Annuaire = ({
     cotisations = {},
     user = { role: "user" },
     filters = {},
-    filterOptions = { classes: [], familles: [], statuts: [], roles: [] },
+    filterOptions = { classes: [], familles: [], professions: [], roles: [] },
 }) => {
     const toPaginated = (source, defaultPerPage = 10) => {
         if (!source) {
@@ -825,7 +825,6 @@ const Annuaire = ({
     const familiesPage = toPaginated(families, 10);
     const classesPage = toPaginated(classes, 10);
 
-    // Données paginées pour la vue 'all'
     const {
         data: paginatedMembers,
         links: membersLinks,
@@ -834,20 +833,17 @@ const Annuaire = ({
         total: membersTotal,
     } = membersPage;
 
-    // États des filtres (initialisés avec les valeurs de la requête)
+    // États des filtres
     const [searchTerm, setSearchTerm] = useState(filters.search || "");
     const [classeFilter, setClasseFilter] = useState(filters.classe || "");
     const [familleFilter, setFamilleFilter] = useState(filters.famille || "");
-    const [statutFilter, setStatutFilter] = useState(filters.statut || "");
+    const [professionFilter, setProfessionFilter] = useState(filters.profession || "");
     const [roleFilter, setRoleFilter] = useState(filters.role || "");
     const [itemsPerPage, setItemsPerPage] = useState(filters.perPage || 10);
 
-    // État de la vue courante
     const [currentView, setCurrentView] = useState(view);
-    // MODIFICATION : vue grille par défaut
-    const [viewMode, setViewMode] = useState("grid"); // 'grid' en premier
+    const [viewMode, setViewMode] = useState("grid");
 
-    // États pour les modales et popups
     const [selectedMember, setSelectedMember] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isExiting, setIsExiting] = useState(false);
@@ -860,11 +856,8 @@ const Annuaire = ({
     });
     const popupRef = useRef(null);
     const [actesLiturgiques, setActesLiturgiques] = useState([]);
-
-    // Pagination interne des membres d'une classe
     const [classMemberPages, setClassMemberPages] = useState({});
 
-    // Fonction pour appliquer les filtres
     const applyFilters = useCallback(() => {
         router.get(
             window.location.pathname,
@@ -872,7 +865,7 @@ const Annuaire = ({
                 search: searchTerm,
                 classe: classeFilter,
                 famille: familleFilter,
-                statut: statutFilter,
+                profession: professionFilter,
                 role: roleFilter,
                 perPage: itemsPerPage,
                 view: currentView,
@@ -884,21 +877,19 @@ const Annuaire = ({
         searchTerm,
         classeFilter,
         familleFilter,
-        statutFilter,
+        professionFilter,
         roleFilter,
         itemsPerPage,
         currentView,
     ]);
 
-    // Debounce sur l'application des filtres
     useEffect(() => {
         const handler = setTimeout(() => {
             applyFilters();
-        }, 500);
+        }, 100);
         return () => clearTimeout(handler);
     }, [applyFilters]);
 
-    // Changer de vue (onglet)
     const switchView = (newView) => {
         setCurrentView(newView);
         router.get(
@@ -907,7 +898,7 @@ const Annuaire = ({
                 search: searchTerm,
                 classe: classeFilter,
                 famille: familleFilter,
-                statut: statutFilter,
+                profession: professionFilter,
                 role: roleFilter,
                 view: newView,
                 page: 1,
@@ -919,20 +910,16 @@ const Annuaire = ({
         setClassMemberPages({});
     };
 
-    // Gestion de la pagination pour les différentes vues
     const handlePageChange = (url) => {
-        if (url)
-            router.get(url, {}, { preserveState: true, preserveScroll: true });
+        if (url) router.get(url, {}, { preserveState: true, preserveScroll: true });
     };
 
     const handleFamilyPageChange = (url) => {
-        if (url)
-            router.get(url, {}, { preserveState: true, preserveScroll: true });
+        if (url) router.get(url, {}, { preserveState: true, preserveScroll: true });
     };
 
     const handleClassPageChange = (url) => {
-        if (url)
-            router.get(url, {}, { preserveState: true, preserveScroll: true });
+        if (url) router.get(url, {}, { preserveState: true, preserveScroll: true });
         setClassMemberPages({});
     };
 
@@ -940,17 +927,15 @@ const Annuaire = ({
         setItemsPerPage(newPerPage);
     };
 
-    // Réinitialiser tous les filtres
     const resetFilters = () => {
         setSearchTerm("");
         setClasseFilter("");
         setFamilleFilter("");
-        setStatutFilter("");
+        setProfessionFilter("");
         setRoleFilter("");
         setItemsPerPage(10);
     };
 
-    // Gestion du modal
     const openModal = (member) => {
         setSelectedMember(member);
         setIsExiting(false);
@@ -966,7 +951,6 @@ const Annuaire = ({
         }, 200);
     };
 
-    // Gestion de la popup photo
     const openPhotoPopup = (src, event) => {
         event.stopPropagation();
         const x = event.clientX;
@@ -993,7 +977,6 @@ const Annuaire = ({
         }, 150);
     };
 
-    // Fermer la popup en cliquant à l'extérieur
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (
@@ -1041,6 +1024,8 @@ const Annuaire = ({
                 member?.famille || member?.family || member?.family_code,
                 "-",
             ),
+            codeFamille: member?.code_famille || member?.family?.code_famille || null,
+            codeMembre: member?.numMembre || member?.code_membre || null,
             photo: member?.photo || member?.profile_photo_url || "",
             sexe: toText(member?.sexe || member?.genre, ""),
             dateNaissance:
@@ -1052,7 +1037,6 @@ const Annuaire = ({
         };
     };
 
-    // Générer une image fallback
     const getFallbackImage = (member) => {
         const normalized = normalizeMember(member);
         const initial = (normalized.prenoms || normalized.nom || "?")
@@ -1061,7 +1045,6 @@ const Annuaire = ({
         return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#2563eb"/><text x="50" y="65" font-size="40" text-anchor="middle" fill="white" font-weight="bold">${initial}</text></svg>`)}`;
     };
 
-    // Charger les cotisations pour un membre
     const loadMemberCotisations = (member) => {
         if (!cotisations || typeof cotisations !== "object") {
             return { fimeco: null, autres: [] };
@@ -1082,7 +1065,6 @@ const Annuaire = ({
         };
     };
 
-    // Calcul de la position de la popup
     const getPopupStyle = () => {
         if (!photoPopup.visible) return {};
         const popupWidth = 260;
@@ -1107,10 +1089,13 @@ const Annuaire = ({
         }
 
         const columns = [
+            "#",
             "Nom",
             "Prénoms",
             "Genre",
             "Famille",
+            "Code famille",
+            "Code membre",
             "Classe",
             "Téléphone",
             "Email",
@@ -1126,25 +1111,32 @@ const Annuaire = ({
             "Profession",
         ];
 
-        const rows = paginatedMembers.map((member) => [
-            member.nom || "",
-            member.prenoms || "",
-            member.sexe === "M" ? "Masculin" : "Féminin",
-            member.famille || "",
-            member.classeMethodiste || "",
-            member.telephone || "",
-            member.email || "",
-            member.baptise ? "Oui" : "Non",
-            member.relation || "",
-            member.premiereCommunion ? "Oui" : "Non",
-            member.mariageCivil ? "Oui" : "Non",
-            member.marieReligieusement ? "Oui" : "Non",
-            member.dote ? "Oui" : "Non",
-            member.veuf ? "Oui" : "Non",
-            member.dateNaissance || "",
-            member.fonction || "",
-            member.profession || "",
-        ]);
+        const rows = paginatedMembers.map((member, idx) => {
+            const normalized = normalizeMember(member);
+            const rowNumber = (membersCurrentPage - 1) * membersPerPage + idx + 1;
+            return [
+                rowNumber,
+                normalized.nom || "",
+                normalized.prenoms || "",
+                normalized.sexe === "M" ? "Masculin" : "Féminin",
+                normalized.famille || "",
+                normalized.codeFamille || "",
+                normalized.codeMembre || "",
+                normalized.classeMethodiste || "",
+                normalized.telephone || "",
+                normalized.email || "",
+                normalized.baptise ? "Oui" : "Non",
+                normalized.relation || "",
+                normalized.premiereCommunion ? "Oui" : "Non",
+                normalized.mariageCivil ? "Oui" : "Non",
+                normalized.marieReligieusement ? "Oui" : "Non",
+                normalized.dote ? "Oui" : "Non",
+                normalized.veuf ? "Oui" : "Non",
+                normalized.dateNaissance || "",
+                normalized.fonction || "",
+                normalized.profession || "",
+            ];
+        });
 
         const csvContent = [
             columns.join(";"),
@@ -1207,11 +1199,15 @@ const Annuaire = ({
             doc.setFontSize(11);
             doc.setTextColor(100);
             doc.text(`Export du ${new Date().toLocaleDateString()}`, 14, 30);
+
             const columns = [
+                { header: "#", dataKey: "index" },
                 { header: "Nom", dataKey: "nom" },
                 { header: "Prénoms", dataKey: "prenoms" },
                 { header: "Genre", dataKey: "genre" },
                 { header: "Famille", dataKey: "famille" },
+                { header: "Code famille", dataKey: "codeFamille" },
+                { header: "Code membre", dataKey: "codeMembre" },
                 { header: "Classe", dataKey: "classe" },
                 { header: "Téléphone", dataKey: "telephone" },
                 { header: "Email", dataKey: "email" },
@@ -1226,25 +1222,34 @@ const Annuaire = ({
                 { header: "Fonction", dataKey: "fonction" },
                 { header: "Profession", dataKey: "profession" },
             ];
-            const data = paginatedMembers.map((member) => ({
-                nom: member.nom || "",
-                prenoms: member.prenoms || "",
-                genre: member.sexe === "M" ? "Masculin" : "Féminin",
-                famille: member.famille || "",
-                classe: member.classeMethodiste || "",
-                telephone: member.telephone || "",
-                email: member.email || "",
-                baptise: member.baptise ? "Oui" : "Non",
-                relation: member.relation || "",
-                premiereCommunion: member.premiereCommunion ? "Oui" : "Non",
-                mariageCivil: member.mariageCivil ? "Oui" : "Non",
-                marieReligieusement: member.marieReligieusement ? "Oui" : "Non",
-                dote: member.dote ? "Oui" : "Non",
-                veuf: member.veuf ? "Oui" : "Non",
-                dateNaissance: member.dateNaissance || "",
-                fonction: member.fonction || "",
-                profession: member.profession || "",
-            }));
+
+            const data = paginatedMembers.map((member, idx) => {
+                const normalized = normalizeMember(member);
+                const rowNumber = (membersCurrentPage - 1) * membersPerPage + idx + 1;
+                return {
+                    index: rowNumber,
+                    nom: normalized.nom || "",
+                    prenoms: normalized.prenoms || "",
+                    genre: normalized.sexe === "M" ? "Masculin" : "Féminin",
+                    famille: normalized.famille || "",
+                    codeFamille: normalized.codeFamille || "",
+                    codeMembre: normalized.codeMembre || "",
+                    classe: normalized.classeMethodiste || "",
+                    telephone: normalized.telephone || "",
+                    email: normalized.email || "",
+                    baptise: normalized.baptise ? "Oui" : "Non",
+                    relation: normalized.relation || "",
+                    premiereCommunion: normalized.premiereCommunion ? "Oui" : "Non",
+                    mariageCivil: normalized.mariageCivil ? "Oui" : "Non",
+                    marieReligieusement: normalized.marieReligieusement ? "Oui" : "Non",
+                    dote: normalized.dote ? "Oui" : "Non",
+                    veuf: normalized.veuf ? "Oui" : "Non",
+                    dateNaissance: normalized.dateNaissance || "",
+                    fonction: normalized.fonction || "",
+                    profession: normalized.profession || "",
+                };
+            });
+
             autoTable(doc, {
                 columns,
                 body: data,
@@ -1332,13 +1337,16 @@ const Annuaire = ({
         return (
             <>
                 <div className="table-scroll">
-                    <table style={{ minWidth: "2400px" }}>
+                    <table style={{ minWidth: "2800px" }}>
                         <thead>
                             <tr>
+                                <th className="text-center">#</th>
                                 <th className="text-center">Photo</th>
                                 <th className="text-center">Nom & Prénoms</th>
                                 <th className="text-center">Genre</th>
                                 <th className="text-center">Famille</th>
+                                <th className="text-center">Code famille</th>
+                                <th className="text-center">Code membre</th>
                                 <th className="text-center">Classe</th>
                                 <th className="text-center">Téléphone</th>
                                 <th className="text-center">Email</th>
@@ -1346,9 +1354,7 @@ const Annuaire = ({
                                 <th className="text-center">Relation</th>
                                 <th className="text-center">1ère communion</th>
                                 <th className="text-center">Mariage civil</th>
-                                <th className="text-center">
-                                    Mariage religieux
-                                </th>
+                                <th className="text-center">Mariage religieux</th>
                                 <th className="text-center">Doté</th>
                                 <th className="text-center">Veuf</th>
                                 <th className="text-center">Date naiss.</th>
@@ -1359,13 +1365,17 @@ const Annuaire = ({
                         </thead>
                         <tbody>
                             {paginatedMembers.length > 0 ? (
-                                paginatedMembers.map((rawMember) => {
+                                paginatedMembers.map((rawMember, idx) => {
                                     const member = normalizeMember(rawMember);
+                                    const rowNumber = (membersCurrentPage - 1) * membersPerPage + idx + 1;
                                     return (
                                         <tr
                                             key={member.id}
                                             className="hover:bg-white/90 transition"
                                         >
+                                            <td className="text-center">
+                                                {rowNumber}
+                                            </td>
                                             <td className="text-center">
                                                 <img
                                                     src={
@@ -1401,6 +1411,12 @@ const Annuaire = ({
                                             </td>
                                             <td className="text-center">
                                                 {member.famille || "-"}
+                                            </td>
+                                            <td className="text-center">
+                                                {member.codeFamille || "-"}
+                                            </td>
+                                            <td className="text-center">
+                                                {member.codeMembre || "-"}
                                             </td>
                                             <td className="text-center">
                                                 {member.classeMethodiste || "-"}
@@ -1488,7 +1504,7 @@ const Annuaire = ({
                             ) : (
                                 <tr>
                                     <td
-                                        colSpan={18}
+                                        colSpan={21}
                                         className="text-center py-12 text-gray-400 italic"
                                     >
                                         Aucun membre trouvé.
@@ -1515,7 +1531,7 @@ const Annuaire = ({
         );
     };
 
-    // Vue grille (pour 'all') avec design type Facebook/album
+    // Vue grille (pour 'all')
     const renderGridView = () => {
         return (
             <>
@@ -1525,10 +1541,7 @@ const Annuaire = ({
                             const member = normalizeMember(rawMember);
                             return (
                                 <div key={member.id} className="grid-card">
-                                    {/* Bannière semi-transparente */}
                                     <div className="grid-cover"></div>
-
-                                    {/* Photo de profil (au-dessus de la bannière) */}
                                     <div className="grid-profile-container">
                                         <div
                                             className="grid-profile-photo"
@@ -1557,8 +1570,6 @@ const Annuaire = ({
                                             />
                                         </div>
                                     </div>
-
-                                    {/* Informations du membre */}
                                     <div className="grid-card-info">
                                         <h4>
                                             {member.prenoms} {member.nom}
@@ -1599,7 +1610,6 @@ const Annuaire = ({
                                             </svg>
                                             {member.email || "-"}
                                         </div>
-                                        {/* Bouton Voir profil */}
                                         <button
                                             onClick={() => openModal(member)}
                                             className="btn btn-view mt-3 w-full"
@@ -1633,7 +1643,7 @@ const Annuaire = ({
         );
     };
 
-    // Vue familles (pagination serveur) - avec téléphone ajouté
+    // Vue familles (inchangée)
     const renderFamiliesView = () => {
         if (familiesPage.data.length === 0) {
             return (
@@ -1702,7 +1712,7 @@ const Annuaire = ({
         );
     };
 
-    // Vue classes avec pagination interne des membres - avec téléphone ajouté
+    // Vue classes (inchangée)
     const renderClassesView = () => {
         if (classesPage.data.length === 0) {
             return (
@@ -1845,7 +1855,6 @@ const Annuaire = ({
         );
     };
 
-    // Rendu conditionnel de la vue active
     const renderActiveView = () => {
         switch (currentView) {
             case "all":
@@ -2077,43 +2086,29 @@ const Annuaire = ({
                             </select>
 
                             <select
-                                value={statutFilter}
+                                value={professionFilter}
                                 onChange={(e) =>
-                                    setStatutFilter(e.target.value)
+                                    setProfessionFilter(e.target.value)
                                 }
                                 className="input-control"
                                 style={{ minWidth: "140px" }}
                             >
-                                <option value="">Tous statuts</option>
-                                {filterOptions.statuts.map((s, idx) => {
-                                    const rawValue =
-                                        typeof s === "object" && s !== null
-                                            ? String(s.value ?? s.id ?? idx)
-                                            : String(s);
-                                    const rawLabel =
-                                        typeof s === "object" && s !== null
-                                            ? String(
-                                                  s.label ?? s.nom ?? rawValue,
-                                              )
-                                            : rawValue;
-                                    const pretty =
-                                        rawLabel === "baptise"
-                                            ? "Baptisé"
-                                            : rawLabel === "non_baptise"
-                                              ? "Non baptisé"
-                                              : rawLabel === "communion"
-                                                ? "1ère communion"
-                                                : rawLabel === "marie"
-                                                  ? "Marié"
-                                                  : rawLabel === "decede"
-                                                    ? "Décédé"
-                                                    : rawLabel;
+                                <option value="">Toutes professions</option>
+                                {filterOptions.professions.map((p, idx) => {
+                                    const value =
+                                        typeof p === "object" && p !== null
+                                            ? String(p.value ?? p.id ?? idx)
+                                            : String(p);
+                                    const label =
+                                        typeof p === "object" && p !== null
+                                            ? String(p.label ?? p.nom ?? value)
+                                            : String(p);
                                     return (
                                         <option
-                                            key={`statut-${rawValue}-${idx}`}
-                                            value={rawValue}
+                                            key={`profession-${value}-${idx}`}
+                                            value={value}
                                         >
-                                            {pretty}
+                                            {label}
                                         </option>
                                     );
                                 })}
