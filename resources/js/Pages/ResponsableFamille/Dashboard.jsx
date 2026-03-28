@@ -127,7 +127,7 @@ export default function Dashboard({
             title: "Sondage",
             desc: "Participez aux sondages",
             icon: "sondage",
-            href: "/admin/sondages",
+            href: "/responsable-famille/sondages",
             color: "text-pink-600",
             bg: "bg-pink-100",
         },
