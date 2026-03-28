@@ -1,4 +1,59 @@
 import React, { useEffect, useMemo, useState } from "react";
+import Modal from "../../components/Modal";
+// Composant pour visualiser les fiches PDF par date
+function FichesMariageModal({ open, onClose }) {
+    const [dates, setDates] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(null);
+    const [pdfUrl, setPdfUrl] = useState("");
+    useEffect(() => {
+        if (open) {
+            setLoading(true);
+            axios.get("/api/conducteur/liturgie/fiches-dates")
+                .then(res => setDates(res.data?.dates || []))
+                .finally(() => setLoading(false));
+        }
+    }, [open]);
+    const handleVoirFiche = (date) => {
+        setSelectedDate(date);
+        setPdfUrl(`/api/conducteur/liturgie/fiche-pdf?date=${date}`);
+    };
+    return (
+        <Modal open={open} onClose={onClose} title="Fiches des demandes de mariage par jour">
+            {loading ? (
+                <div>Chargement…</div>
+            ) : (
+                <div>
+                    <ul style={{marginBottom: 16}}>
+                        {dates.length === 0 && <li>Aucune fiche disponible.</li>}
+                        {dates.map(date => (
+                            <li key={date} style={{marginBottom: 8}}>
+                                <button onClick={() => handleVoirFiche(date)} style={{marginRight: 8}}>
+                                    Voir la fiche du {date}
+                                </button>
+                                {selectedDate === date && pdfUrl && (
+                                    <span style={{color: 'green'}}> (ouverte ci-dessous)</span>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                    {pdfUrl && (
+                        <div style={{height: 600, border: '1px solid #ccc'}}>
+                            <iframe
+                                src={pdfUrl}
+                                title="Fiche PDF"
+                                width="100%"
+                                height="100%"
+                                style={{border: 'none'}}
+                                allow="autoplay"
+                            />
+                        </div>
+                    )}
+                </div>
+            )}
+        </Modal>
+    );
+}
 import axios from "axios";
 import { Link } from "@inertiajs/react";
 
@@ -75,6 +130,9 @@ export default function Index({
     classes = [],
     annonces: rawAnnonces = [],
 }) {
+    // ...existing code...
+    // Modal pour fiches PDF mariage
+    const [ficheModalOpen, setFicheModalOpen] = useState(false);
     /* ── ACTES state ── */
     const [localActes, setLocalActes] = useState(actes);
     const [tab, setTab] = useState("soumises");
@@ -777,6 +835,13 @@ export default function Index({
     /* ════════════════════════ RENDER ════════════════════════ */
     return (
         <div className="conductor-page">
+            {/* Bouton pour ouvrir le modal des fiches PDF */}
+            <div style={{marginBottom: 16}}>
+                <button className="btn" onClick={() => setFicheModalOpen(true)}>
+                    📄 Voir les fiches PDF Mariage (par jour)
+                </button>
+            </div>
+            <FichesMariageModal open={ficheModalOpen} onClose={() => setFicheModalOpen(false)} />
             <style>{styles}</style>
             <main className="main">
                 <div className="page-content">
@@ -1705,7 +1770,6 @@ export default function Index({
                     {/* ══════════ ★★★ ONGLET ANNONCES ★★★ ══════════ */}
                     {tab === "annonces" && (
                         <div className="ann-tab-root">
-
                             {/* Corps : liste + sidebar */}
                             <div className="grid-3-1">
                                 {/* COLONNE PRINCIPALE */}
@@ -4426,7 +4490,7 @@ const styles = `
 .tab-violet{background:var(--violet);color:white}
 .tab-ann.active{color:var(--violet)}
 .quick-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-.quick-dropdown{min-width:300px;height:54px;background:#ECEFF4;border:2px solid #D9DEE8;border-radius:22px;padding:0 48px 0 46px;font-size:16px;font-weight:800;color:#111827;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23586A84' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23374151' stroke-width='2.2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat,no-repeat;background-position:left 16px center,right 16px center;background-size:18px 18px,18px 18px}
+.quick-dropdown{min-width:300px;height:20px;background:#ECEFF4;border:2px solid #D9DEE8;border-radius:5px;padding:0 48px 0 46px;font-size:16px;font-weight:800;color:#111827;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23586A84' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23374151' stroke-width='2.2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat,no-repeat;background-position:left 16px center,right 16px center;background-size:18px 18px,18px 18px}
 .quick-dropdown:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(91,63,175,.12)}
 .quick-search{min-width:260px;background:rgba(255,255,255,.95);border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-size:12.5px;color:var(--text);outline:none}
 .quick-search:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(91,63,175,.12)}
