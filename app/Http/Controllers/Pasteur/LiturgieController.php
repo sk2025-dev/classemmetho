@@ -291,6 +291,43 @@ class LiturgieController extends Controller
         ]);
     }
 
+    public function annulerFinFormation(Request $request, int $id)
+    {
+        $user = Auth::user();
+
+        $payload = Validator::make($request->all(), [
+            'commentaire' => ['nullable', 'string', 'max:1000'],
+        ])->validate();
+
+        $formation = FormationRequest::findOrFail($id);
+
+        if (!$formation->formation_terminee_at) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cette formation n\'est pas marquee comme terminee.',
+            ], 422);
+        }
+
+        $formation->forceFill([
+            'formation_terminee_at' => null,
+            'formation_terminee_by' => null,
+        ])->save();
+
+        FormationRequestHistorique::create([
+            'formation_request_id' => $formation->id,
+            'statut_precedent' => $formation->statut,
+            'statut_nouveau' => $formation->statut,
+            'acteur_id' => $user->id,
+            'commentaire' => $payload['commentaire'] ?: 'Annulation de la fin de formation par le pasteur.',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'La fin de formation a ete annulee.',
+            'formation' => $formation->fresh(['membre', 'classe', 'family', 'createur', 'formationTermineePar']),
+        ]);
+    }
+
     public function ficheFormationsValidees()
     {
         $pasteur = Auth::user();
@@ -535,8 +572,51 @@ class LiturgieController extends Controller
         return $pdf->download($filename);
     }
 
-    public function ficheConducteur(int $id)
+    public function ficheConducteur(Request $request, int $id)
     {
+        $requestedIds = array_filter(array_unique(array_map('intval', explode(',', $request->query('ids', '')))));
+        if (!in_array($id, $requestedIds, true)) {
+            $requestedIds[] = $id;
+        }
+
+        if (count($requestedIds) > 1) {
+            $actes = ActeLiturgique::with([
+                'createur.classe',
+                'createur.family',
+                'family.ville',
+                'classe.conducteur',
+                'conducteur',
+                'pasteur',
+                'membre.family',
+                'membre.classe',
+            ])
+                ->where(function ($q) {
+                    $q->where('est_annonce', false)
+                        ->orWhereNull('est_annonce');
+                })
+                ->whereNotIn('type_acte', ActeLiturgique::ANNOUNCE_TYPES)
+                ->whereIn('id', $requestedIds)
+                ->get();
+
+            if ($actes->count() !== count($requestedIds)) {
+                abort(404, 'Certaines demandes de fiche sont introuvables.');
+            }
+
+            $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
+
+            $pdf = Pdf::loadView('pdf.fiche-acte-conducteur', [
+                'actes' => $actes,
+                'logoDataUri' => $logoDataUri,
+                'generatedBy' => $actes->first()->conducteur ?? $actes->first()->classe?->conducteur,
+                'generatedAt' => $actes->first()->updated_at ?? now(),
+                'documentLabel' => 'Fiche recue du conducteur',
+            ])->setPaper('a4', 'portrait');
+
+            $filename = 'fiche-conducteur-' . ($actes->first()->reference ?: ('acte-' . $actes->first()->id)) . '.pdf';
+
+            return $pdf->download($filename);
+        }
+
         $acte = ActeLiturgique::with([
             'createur.classe',
             'createur.family',

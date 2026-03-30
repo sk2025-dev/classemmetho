@@ -32,6 +32,7 @@ export default function MariageForm({
         details: {
             epoux_nom: "",
             epoux_prenom: "",
+            epoux_date_naissance: "",
             epoux_nat: "",
             epoux_prof: "",
             epoux_contact: "",
@@ -75,6 +76,7 @@ export default function MariageForm({
         payload.append("classe_id", form.classe_id || "");
         payload.append("details[epoux_nom]", form.details.epoux_nom || "");
         payload.append("details[epoux_prenom]", form.details.epoux_prenom || "");
+        payload.append("details[epoux_date_naissance]", form.details.epoux_date_naissance || "");
         payload.append("details[epoux_nat]", form.details.epoux_nat || "");
         payload.append("details[epoux_prof]", form.details.epoux_prof || "");
         payload.append("details[epoux_contact]", form.details.epoux_contact || "");
@@ -131,6 +133,7 @@ export default function MariageForm({
             details: {
                 epoux_nom: "",
                 epoux_prenom: "",
+                epoux_date_naissance: "",
                 epoux_nat: "",
                 epoux_prof: "",
                 epoux_contact: "",
@@ -248,7 +251,7 @@ export default function MariageForm({
                                     </Field>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                     <Field label="Nationalité">
                                         <input
                                             value={form.details.epoux_nat}
@@ -259,6 +262,23 @@ export default function MariageForm({
                                                 )
                                             }
                                         />
+                                    </Field>
+                                    <Field label="Date de naissance">
+                                        <input
+                                            type="date"
+                                            value={form.details.epoux_date_naissance}
+                                            onChange={(e) =>
+                                                setDetail(
+                                                    "epoux_date_naissance",
+                                                    e.target.value,
+                                                )
+                                            }
+                                        />
+                                        {errors.epoux_date_naissance && (
+                                            <Err>
+                                                {errors.epoux_date_naissance}
+                                            </Err>
+                                        )}
                                     </Field>
                                     <Field label="Profession">
                                         <input

@@ -292,15 +292,8 @@ class LiturgieController extends Controller
             ], 422);
         }
 
-        if (!$acte->formationRequest || !$acte->formationRequest->formation_terminee_at) {
-            return response()->json([
-                'success' => false,
-                'message' => 'La formation doit etre confirmee comme terminee par le pasteur avant de choisir une date.',
-            ], 422);
-        }
-
         if (
-            in_array($acte->statut, ['REFUSEE_PAR_CONDUCTEUR', 'REFUSEE_PAR_PASTEUR', 'ARCHIVEE', 'CELEBRE', 'TERMINE'], true)
+            in_array($acte->statut, ['REFUSEE_PAR_CONDUCTEUR', 'REFUSEE_PAR_PASTEUR', 'ARCHIVEE'], true)
         ) {
             return response()->json([
                 'success' => false,
@@ -310,13 +303,32 @@ class LiturgieController extends Controller
 
         $payload = $request->validate([
             'date_souhaitee' => ['required', 'date'],
+            'ceremonie_creneau' => ['required', 'string', 'in:matin,apres_midi'],
             'lieu_ceremonie' => ['required', 'string', 'max:255'],
             'temoins' => ['required', 'string', 'max:1000'],
         ]);
 
+        $conflict = ActeLiturgique::where('type_acte', $acte->type_acte)
+            ->where('id', '<>', $acte->id)
+            ->where('date_souhaitee', $payload['date_souhaitee'])
+            ->where('details->ceremonie_creneau', $payload['ceremonie_creneau'])
+            ->whereNotIn('details->ceremonie_statut', [
+                'CEREMONIE_REFUSEE_PAR_CONDUCTEUR',
+                'CEREMONIE_REFUSEE_PAR_PASTEUR',
+            ])
+            ->exists();
+
+        if ($conflict) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ce créneau est déjà réservé pour cette date. Choisissez un autre créneau.',
+            ], 422);
+        }
+
         $details = (array) ($acte->details ?? []);
         $details['lieu_ceremonie'] = $payload['lieu_ceremonie'];
         $details['temoins'] = $payload['temoins'];
+        $details['ceremonie_creneau'] = $payload['ceremonie_creneau'];
         $details['ceremonie_statut'] = 'CEREMONIE_SOUMISE_AU_CONDUCTEUR';
         $details['ceremonie_soumise_at'] = now()->toISOString();
         $details['ceremonie_transmise_pasteur_at'] = null;
@@ -335,7 +347,8 @@ class LiturgieController extends Controller
             'historiques.acteur',
             'formationRequest.formationTermineePar',
         ]);
-        $acte->can_choose_date = (bool) optional($acte->formationRequest)->formation_terminee_at;
+        $acte->can_choose_date = (bool) optional($acte->formationRequest)->formation_terminee_at
+            || in_array($acte->statut, ['CELEBRE', 'TERMINE'], true);
 
         return response()->json([
             'success' => true,
@@ -486,7 +499,8 @@ class LiturgieController extends Controller
                     }
                 }
 
-                $acte->can_choose_date = (bool) optional($acte->formationRequest)->formation_terminee_at;
+                $acte->can_choose_date = (bool) optional($acte->formationRequest)->formation_terminee_at
+                    || in_array($acte->statut, ['CELEBRE', 'TERMINE'], true);
 
                 return $acte;
             });

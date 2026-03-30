@@ -102,6 +102,7 @@ export default function Index({
     const [ceremonyProcessing, setCeremonyProcessing] = useState(false);
     const [ceremonyForm, setCeremonyForm] = useState({
         date_souhaitee: "",
+        ceremonie_creneau: "",
         lieu_ceremonie: "",
         temoins: "",
     });
@@ -526,6 +527,7 @@ export default function Index({
             date_souhaitee: acte?.date_souhaitee
                 ? String(acte.date_souhaitee).slice(0, 10)
                 : "",
+            ceremonie_creneau: acte?.details?.ceremonie_creneau || "",
             lieu_ceremonie: acte?.details?.lieu_ceremonie || "",
             temoins: acte?.details?.temoins || "",
         });
@@ -637,11 +639,12 @@ export default function Index({
 
         if (
             !ceremonyForm.date_souhaitee ||
+            !ceremonyForm.ceremonie_creneau ||
             !ceremonyForm.lieu_ceremonie.trim() ||
             !ceremonyForm.temoins.trim()
         ) {
             notify(
-                "Renseignez la date, le lieu de la cérémonie et les témoins.",
+                "Renseignez la date, le créneau, le lieu de la cérémonie et les témoins.",
                 "error",
             );
             return;
@@ -653,6 +656,7 @@ export default function Index({
                 `/responsable-famille/liturgie/${ceremonyActe.id}/ceremonie`,
                 {
                     date_souhaitee: ceremonyForm.date_souhaitee,
+                    ceremonie_creneau: ceremonyForm.ceremonie_creneau,
                     lieu_ceremonie: ceremonyForm.lieu_ceremonie.trim(),
                     temoins: ceremonyForm.temoins.trim(),
                 },
@@ -965,8 +969,10 @@ export default function Index({
                                         );
                                     const canChooseDate =
                                         Boolean(acte?.can_choose_date) ||
-                                        Boolean(
-                                            linkedFormation?.formation_terminee_at,
+                                        ["CELEBRE", "TERMINE"].includes(
+                                            String(acte?.statut || "")
+                                                .trim()
+                                                .toUpperCase(),
                                         );
                                     const hist = Array.isArray(acte.historiques)
                                         ? [...acte.historiques].sort(
@@ -1148,7 +1154,7 @@ export default function Index({
                                                         title={
                                                             canChooseDate
                                                                 ? "Renseigner les informations de ceremonie"
-                                                                : "Le pasteur doit d'abord confirmer la fin de la formation."
+                                                                : "Le pasteur doit d'abord cliquer sur Marquer comme terminé."
                                                         }
                                                         onClick={() =>
                                                             openCeremonyModal(
@@ -3079,6 +3085,29 @@ export default function Index({
                                         }
                                     />
                                 </Field>
+                                <Field label="Créneau horaire" required>
+                                    <select
+                                        className="ann-input"
+                                        value={ceremonyForm.ceremonie_creneau}
+                                        onChange={(e) =>
+                                            setCeremonyForm((prev) => ({
+                                                ...prev,
+                                                ceremonie_creneau:
+                                                    e.target.value,
+                                            }))
+                                        }
+                                    >
+                                        <option value="">
+                                            Sélectionner un créneau
+                                        </option>
+                                        <option value="matin">
+                                            Matin 09h-10h
+                                        </option>
+                                        <option value="apres_midi">
+                                            Après-midi 15h-16h
+                                        </option>
+                                    </select>
+                                </Field>
                                 <Field label="Lieu de la cérémonie" required>
                                     <input
                                         type="text"
@@ -4086,7 +4115,7 @@ const styles = `
 .tbadge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:800}
 .tbadge-terra{background:rgba(192,96,64,.12);color:#C06040}.tbadge-violet{background:rgba(91,63,175,.1);color:#5B3FAF}.tbadge-sage{background:rgba(74,124,94,.1);color:#4A7C5E}
 .quick-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-.quick-dropdown{min-width:300px;height:54px;background:#ECEFF4;border:2px solid #D9DEE8;border-radius:22px;padding:0 48px 0 46px;font-size:16px;font-weight:800;color:#111827;cursor:pointer;transition:all .2s;appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23586A84' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23374151' stroke-width='2.2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat,no-repeat;background-position:left 16px center,right 16px center;background-size:18px 18px,18px 18px}
+.quick-dropdown{min-width:300px;height:35px;background:#ECEFF4;border:2px solid #D9DEE8;border-radius:10px;padding:0 48px 0 46px;font-size:16px;font-weight:800;color:#111827;cursor:pointer;transition:all .2s;appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23586A84' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23374151' stroke-width='2.2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat,no-repeat;background-position:left 16px center,right 16px center;background-size:18px 18px,18px 18px}
 .quick-dropdown:hover{border-color:#8FA0BC;background-color:#F1F4F9}
 .quick-dropdown:focus{outline:none;border-color:#5B3FAF;box-shadow:0 0 0 4px rgba(91,63,175,.14)}
 .quick-search{min-width:220px;background:#fff;border:1px solid #E8E4DC;border-radius:8px;padding:9px 12px;font-size:13px;color:#1E1B16}

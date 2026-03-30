@@ -336,10 +336,57 @@ class LiturgieController extends Controller
         return $pdf->download($filename);
     }
 
-    public function ficheConducteur(int $id)
+    public function ficheConducteur(Request $request, int $id)
     {
         $user = Auth::user();
         $classIds = $user->getManagedClasses()->pluck('id')->toArray();
+
+        $requestedIds = array_filter(array_unique(array_map('intval', explode(',', $request->query('ids', '')))));
+        if (!in_array($id, $requestedIds, true)) {
+            $requestedIds[] = $id;
+        }
+
+        $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
+
+        if (count($requestedIds) > 1) {
+            $actes = ActeLiturgique::with([
+                'createur.classe',
+                'createur.family',
+                'family.ville',
+                'classe.conducteur',
+                'conducteur',
+                'pasteur',
+                'membre.family',
+                'membre.classe',
+            ])
+                ->whereNotIn('type_acte', [
+                    ActeLiturgique::TYPE_ANNOUNCE,
+                    ActeLiturgique::TYPE_ANNOUNCE_LITURGIQUE,
+                ])
+                ->whereIn('classe_id', $classIds)
+                ->whereIn('id', $requestedIds)
+                ->get();
+
+            if ($actes->count() !== count($requestedIds)) {
+                abort(404, 'Certaines demandes de fiche sont introuvables.');
+            }
+
+            $pdf = Pdf::loadView('pdf.fiche-acte-conducteur', [
+                'actes' => $actes,
+                'logoDataUri' => $logoDataUri,
+                'generatedBy' => $user,
+                'generatedAt' => now(),
+                'documentLabel' => 'Fiche du conducteur',
+            ])->setPaper('a4', 'portrait');
+
+            $filename = 'fiche-conducteur-' . ($actes->first()->reference ?: ('acte-' . $actes->first()->id)) . '.pdf';
+
+            if ($request->query('preview')) {
+                return $pdf->stream($filename);
+            }
+
+            return $pdf->download($filename);
+        }
 
         $acte = ActeLiturgique::with([
             'createur.classe',
@@ -358,8 +405,6 @@ class LiturgieController extends Controller
             ->whereIn('classe_id', $classIds)
             ->findOrFail($id);
 
-        $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
-
         $pdf = Pdf::loadView('pdf.fiche-acte-conducteur', [
             'acte' => $acte,
             'logoDataUri' => $logoDataUri,
@@ -369,6 +414,10 @@ class LiturgieController extends Controller
         ])->setPaper('a4', 'portrait');
 
         $filename = 'fiche-conducteur-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
+
+        if ($request->query('preview')) {
+            return $pdf->stream($filename);
+        }
 
         return $pdf->download($filename);
     }

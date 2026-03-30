@@ -373,6 +373,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/pasteur/liturgie/{id}/ceremonie/decision', [PasteurLiturgieController::class, 'decisionCeremonie'])->name('pasteur.liturgie.ceremonie.decision');
         Route::post('/pasteur/liturgie/formations/{id}/transition', [PasteurLiturgieController::class, 'transitionFormation'])->name('pasteur.liturgie.formations.transition');
         Route::post('/pasteur/liturgie/formations/{id}/terminer', [PasteurLiturgieController::class, 'terminerFormation'])->name('pasteur.liturgie.formations.terminer');
+        Route::post('/pasteur/liturgie/formations/{id}/annuler-terminer', [PasteurLiturgieController::class, 'annulerFinFormation'])->name('pasteur.liturgie.formations.annuler_terminer');
         Route::get('/pasteur/liturgie/formations/fiche/validees', [PasteurLiturgieController::class, 'ficheFormationsValidees'])->name('pasteur.liturgie.formations.fiche_validees');
         Route::get('/pasteur/liturgie/formations/fiche/historique', [PasteurLiturgieController::class, 'ficheFormationsHistorique'])->name('pasteur.liturgie.formations.fiche_historique');
         Route::get('/pasteur/liturgie/{id}/certificat', [PasteurLiturgieController::class, 'certificat'])->name('pasteur.liturgie.certificat');
