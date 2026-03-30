@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { normalizePhotoUrl } from "@/Helpers/PhotoUrlHelper";
 
 // Composant pour visualiser les fiches PDF par date
 function FichesMariageModal({ open, onClose, acte, ids, onEdit }) {
@@ -1591,13 +1592,15 @@ export default function Index({
                                             <div
                                                 className={`demande-acte-icon ${tone(acte.type_acte)}`}
                                             >
-                                                {acte.membre
-                                                    ?.profile_photo_url ? (
+                                                {normalizePhotoUrl(
+                                                    acte.membre
+                                                        ?.profile_photo_url,
+                                                ) ? (
                                                     <img
-                                                        src={
+                                                        src={normalizePhotoUrl(
                                                             acte.membre
-                                                                .profile_photo_url
-                                                        }
+                                                                ?.profile_photo_url,
+                                                        )}
                                                         alt={
                                                             acte.membre
                                                                 ?.prenom +
@@ -2960,13 +2963,15 @@ export default function Index({
                                                 <div
                                                     className={`demande-acte-icon ${tone(acte.type_acte)}`}
                                                 >
-                                                    {acte.membre
-                                                        ?.profile_photo_url ? (
+                                                    {normalizePhotoUrl(
+                                                        acte.membre
+                                                            ?.profile_photo_url,
+                                                    ) ? (
                                                         <img
-                                                            src={
+                                                            src={normalizePhotoUrl(
                                                                 acte.membre
-                                                                    .profile_photo_url
-                                                            }
+                                                                    ?.profile_photo_url,
+                                                            )}
                                                             alt={
                                                                 acte.membre
                                                                     ?.prenom +

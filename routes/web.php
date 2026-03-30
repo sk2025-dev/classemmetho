@@ -219,6 +219,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/conducteur/annuaire', [ConducteurAnnuaireController::class, 'index'])->name('conducteur.annuaire.index');
         Route::get('/conducteur/dashboard', [ConducteurDashboardController::class, 'index'])->name('conducteur.dashboard');
         Route::get('/conducteur/sondages', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'index'])->name('conducteur.sondages.index');
+        Route::get('/conducteur/sondages/create', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'create'])->name('conducteur.sondages.create');
+        Route::get('/conducteur/sondages/preview/{id?}', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'preview'])->name('conducteur.sondages.preview');
         Route::post('/conducteur/dashboard/inscriptions/{inscriptionId}/approve', [ConducteurDashboardController::class, 'approveInscription'])->name('conducteur.dashboard.inscriptions.approve');
         Route::post('/conducteur/dashboard/inscriptions/{inscriptionId}/reject', [ConducteurDashboardController::class, 'rejectInscription'])->name('conducteur.dashboard.inscriptions.reject');
 

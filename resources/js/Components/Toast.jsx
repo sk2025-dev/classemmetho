@@ -54,9 +54,9 @@ const Toast = ({
     return (
         <div
             className={`
-                fixed top-6 right-6 z-[9999] max-w-sm w-full
+                w-full max-w-sm
                 ${styles.bg} border ${styles.border}
-                rounded-lg shadow-lg backdrop-blur-sm
+                rounded-2xl shadow-[0_20px_45px_rgba(15,23,42,0.16)] backdrop-blur-sm
                 transform transition-all duration-300 ease-out
                 animate-slide-in-right
             `}
@@ -79,7 +79,7 @@ const Toast = ({
                     {styles.icon}
                 </div>
                 <div className="flex-1">
-                    <p className={`text-sm font-medium ${styles.text}`}>
+                    <p className={`text-sm font-semibold leading-5 ${styles.text}`}>
                         {message}
                     </p>
                 </div>
@@ -114,7 +114,7 @@ const Toast = ({
 
 export const ToastContainer = ({ toasts, onRemoveToast }) => {
     return (
-        <div className="fixed top-6 right-6 flex flex-col gap-3 z-[9999] pointer-events-none">
+        <div className="fixed top-6 right-6 flex w-[calc(100vw-2rem)] max-w-sm flex-col gap-3 z-[9999] pointer-events-none">
             {toasts.map((toast) => (
                 <div key={toast.id} className="pointer-events-auto">
                     <Toast
