@@ -51,6 +51,15 @@ Route::get('/', function () {
 Route::get('/certificat/verification/{reference}', [VerificationCertificatController::class, 'show'])
     ->name('certificat.verification');
 
+Route::get('/sondages/public/{token}', [\App\Http\Controllers\Public\SondageController::class, 'show'])
+    ->name('sondages.public.show');
+Route::post('/sondages/public/{token}/acces', [\App\Http\Controllers\Public\SondageController::class, 'verifyAccess'])
+    ->name('sondages.public.access');
+Route::get('/sondages/public/{token}/repondre', [\App\Http\Controllers\Public\SondageController::class, 'respond'])
+    ->name('sondages.public.respond');
+Route::post('/sondages/public/{token}/reponses', [\App\Http\Controllers\Public\SondageController::class, 'storeResponse'])
+    ->name('sondages.public.responses.store');
+
 
 // Pages d'authentification (Inertia)
 Route::get('/login', function () {
@@ -122,6 +131,8 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
         Route::get('/admin/sondages', [\App\Http\Controllers\Admin\Sondage\SondageController::class, 'index'])->name('admin.sondages.index');
+        Route::get('/admin/sondages/{id}/export', [\App\Http\Controllers\Admin\Sondage\SondageController::class, 'export'])->whereNumber('id')->name('admin.sondages.export');
+        Route::get('/admin/sondages/{id}', [\App\Http\Controllers\Admin\Sondage\SondageController::class, 'show'])->whereNumber('id')->name('admin.sondages.show');
         Route::get('/admin/inscriptions', [\App\Http\Controllers\Admin\InscriptionsController::class, 'index'])->name('admin.inscriptions');
         Route::get('/admin/inscriptions/{id}/approval-log', [\App\Http\Controllers\Admin\InscriptionApprovalController::class, 'approvalLog'])->name('admin.inscriptions.approval_log');
         Route::get('/admin/inscriptions/type-selection', [\App\Http\Controllers\Admin\InscriptionsController::class, 'typeSelection'])->name('admin.inscriptions.type-selection');
@@ -220,6 +231,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/conducteur/dashboard', [ConducteurDashboardController::class, 'index'])->name('conducteur.dashboard');
         Route::get('/conducteur/sondages', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'index'])->name('conducteur.sondages.index');
         Route::get('/conducteur/sondages/create', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'create'])->name('conducteur.sondages.create');
+        Route::get('/conducteur/sondages/{id}/edit', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'edit'])->whereNumber('id')->name('conducteur.sondages.edit');
+        Route::get('/conducteur/sondages/{id}/repondre', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'respond'])->whereNumber('id')->name('conducteur.sondages.respond');
+        Route::post('/conducteur/sondages/{id}/reponses', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'storeResponse'])->whereNumber('id')->name('conducteur.sondages.responses.store');
+        Route::get('/conducteur/sondages/{id}/export', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'export'])->whereNumber('id')->name('conducteur.sondages.export');
+        Route::get('/conducteur/sondages/{id}', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'show'])->whereNumber('id')->name('conducteur.sondages.show');
+        Route::post('/conducteur/sondages', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'store'])->name('conducteur.sondages.store');
+        Route::post('/conducteur/sondages/{id}/publish', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'publish'])->whereNumber('id')->name('conducteur.sondages.publish');
+        Route::put('/conducteur/sondages/{id}', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'update'])->whereNumber('id')->name('conducteur.sondages.update');
         Route::get('/conducteur/sondages/preview/{id?}', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'preview'])->name('conducteur.sondages.preview');
         Route::post('/conducteur/dashboard/inscriptions/{inscriptionId}/approve', [ConducteurDashboardController::class, 'approveInscription'])->name('conducteur.dashboard.inscriptions.approve');
         Route::post('/conducteur/dashboard/inscriptions/{inscriptionId}/reject', [ConducteurDashboardController::class, 'rejectInscription'])->name('conducteur.dashboard.inscriptions.reject');
@@ -300,6 +319,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/responsable-famille/annuaire', [ResponsableFamilleAnnuaireController::class, 'index'])->name('responsable_famille.annuaire.index');
         Route::get('/responsable-famille/dashboard', [ResponsableFamilleDashboardController::class, 'index'])->name('responsable_famille.dashboard');
         Route::get('/responsable-famille/sondages', [\App\Http\Controllers\ResponsableFamille\Sondage\SondageController::class, 'index'])->name('responsable_famille.sondages.index');
+        Route::get('/responsable-famille/sondages/{id}', [\App\Http\Controllers\ResponsableFamille\Sondage\SondageController::class, 'show'])->name('responsable_famille.sondages.show');
+        Route::post('/responsable-famille/sondages/{id}/reponses', [\App\Http\Controllers\ResponsableFamille\Sondage\SondageController::class, 'storeResponse'])->name('responsable_famille.sondages.responses.store');
         Route::get('/responsable-famille/inscriptions', [ResponsableFamilleInscriptionsController::class, 'index'])->name('responsable_famille.inscriptions');
         Route::get('/responsable-famille/family/edit', [\App\Http\Controllers\ResponsableFamille\FamilyController::class, 'edit'])->name('responsable_famille.family.edit');
         Route::post('/responsable-famille/family/update', [\App\Http\Controllers\ResponsableFamille\FamilyController::class, 'update'])->name('responsable_famille.family.update');
@@ -357,6 +378,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/pasteur/annuaire', [PasteurAnnuaireController::class, 'index'])->name('pasteur.annuaire.index');
         Route::get('/pasteur/dashboard', [PasteurDashboardController::class, 'index'])->name('pasteur.dashboard');
         Route::get('/pasteur/sondages', [\App\Http\Controllers\Pasteur\Sondage\SondageController::class, 'index'])->name('pasteur.sondages.index');
+        Route::get('/pasteur/sondages/{id}/export', [\App\Http\Controllers\Pasteur\Sondage\SondageController::class, 'export'])->whereNumber('id')->name('pasteur.sondages.export');
+        Route::get('/pasteur/sondages/{id}', [\App\Http\Controllers\Pasteur\Sondage\SondageController::class, 'show'])->whereNumber('id')->name('pasteur.sondages.show');
         // Liste des inscriptions pour le pasteur (module controller)
         Route::get('/pasteur/inscriptions', [\App\Http\Controllers\Pasteur\InscriptionsController::class, 'index'])
             ->name('pasteur.inscriptions');
@@ -402,6 +425,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/membre-famille/annuaire', [MembreFamilleAnnuaireController::class, 'index'])->name('membre_famille.annuaire.index');
         Route::get('/membre-famille/dashboard', [MembreFamilleDashboardController::class, 'index'])->name('membre_famille.dashboard');
         Route::get('/membre-famille/sondages', [\App\Http\Controllers\MembreFamille\Sondage\SondageController::class, 'index'])->name('membre_famille.sondages.index');
+        Route::get('/membre-famille/sondages/{id}', [\App\Http\Controllers\MembreFamille\Sondage\SondageController::class, 'show'])->whereNumber('id')->name('membre_famille.sondages.show');
+        Route::post('/membre-famille/sondages/{id}/reponses', [\App\Http\Controllers\MembreFamille\Sondage\SondageController::class, 'storeResponse'])->whereNumber('id')->name('membre_famille.sondages.responses.store');
         Route::get('/membre-famille/inscriptions', [\App\Http\Controllers\MembreFamille\InscriptionsController::class, 'index'])->name('membre_famille.inscriptions');
         Route::get('/membre-famille/family', [MembreFamilleFamilyController::class, 'index'])->name('membre_famille.family');
         Route::get('/membre-famille/profile/edit', [MembreFamilleProfileController::class, 'edit'])->name('membre_famille.profile.edit');

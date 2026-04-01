@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Head, Link } from "@inertiajs/react";
+import { Head, Link, router } from "@inertiajs/react";
 import {
     ArrowLeft,
     BarChart3,
@@ -26,15 +26,15 @@ import {
 const questionTypeOptions = [
     {
         value: "multiple",
-        label: "Choix multiple",
+        label: "Choix multiples",
         icon: ListChecks,
-        hint: "Ideal pour une reponse rapide et facile a analyser.",
+        hint: "Permet plusieurs reponses dans une seule question.",
     },
     {
         value: "checkbox",
-        label: "Cases a cocher",
+        label: "Choix unique",
         icon: CheckSquare,
-        hint: "Permet plusieurs reponses dans une seule question.",
+        hint: "Une seule reponse possible, avec un rendu en cases a cocher.",
     },
     {
         value: "rating",
@@ -56,32 +56,10 @@ const questionTypeOptions = [
     },
 ];
 
-const questionBank = [
-    "Quel est votre niveau de satisfaction global ?",
-    "Recommanderiez-vous ce service a un autre membre ?",
-    "Quelle action devrait etre prioritaire ce mois-ci ?",
-    "Quelles difficultes rencontrez-vous actuellement ?",
-];
-
-const templates = [
-    {
-        title: "Satisfaction",
-        desc: "Mesurez l'experience des membres apres une activite ou un service.",
-    },
-    {
-        title: "Decision rapide",
-        desc: "Prenez une decision collective en quelques questions claires.",
-    },
-    {
-        title: "Retour d'experience",
-        desc: "Collectez des reponses riches avant d'ameliorer un programme.",
-    },
-];
-
 function createQuestion(type = "multiple", title = "") {
     const defaults = {
-        multiple: ["Option 1", "Option 2", "Option 3"],
-        checkbox: ["Option 1", "Option 2", "Option 3"],
+        multiple: ["Option 1"],
+        checkbox: ["Option 1"],
         rating: ["1", "2", "3", "4", "5"],
         text: [],
         yes_no: ["Oui", "Non"],
@@ -118,30 +96,30 @@ function formatDate(dateString) {
     }).format(date);
 }
 
-export default function ConducteurSondageCreate({ authUser = null }) {
+export default function ConducteurSondageCreate({
+    authUser = null,
+    existingSurvey = null,
+    mode = "create",
+}) {
+    const isEditing = mode === "edit" && existingSurvey?.id;
+    const isDraftSurvey = existingSurvey?.statut === "draft";
+
     const [survey, setSurvey] = useState({
-        titre: "",
-        description: "",
-        objectif: "",
-        audience: "Tous les membres",
-        dateEcheance: "",
-        anonymat: false,
+        titre: existingSurvey?.titre || "",
+        description: existingSurvey?.description || "",
+        objectif: existingSurvey?.objectif || "",
+        audience: existingSurvey?.audience || "Tous les membres",
+        dateEcheance: existingSurvey?.dateEcheance || "",
         messageFin:
+            existingSurvey?.messageFin ||
             "Merci pour votre participation. Vos reponses aideront a la prise de decision.",
-        diffusion: "Lien partage",
+        diffusion: existingSurvey?.diffusion || "Lien partage",
     });
 
-    const [questions, setQuestions] = useState([
-        createQuestion(
-            "multiple",
-            "Quel sujet souhaitez-vous voir priorise lors de la prochaine reunion ?",
-        ),
-        createQuestion(
-            "rating",
-            "Comment evaluez-vous l'organisation generale des activites recentes ?",
-        ),
-    ]);
+    const [questions, setQuestions] = useState(existingSurvey?.questions || []);
     const [activeId, setActiveId] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [formErrors, setFormErrors] = useState({});
 
     const addQuestion = (type = "multiple", title = "") => {
         const question = createQuestion(type, title);
@@ -227,6 +205,10 @@ export default function ConducteurSondageCreate({ authUser = null }) {
             return;
         }
 
+        const previewBackHref = isEditing
+            ? `/conducteur/sondages/${existingSurvey.id}/edit`
+            : "/conducteur/sondages/create";
+
         window.localStorage.setItem(
             "conducteur-sondage-preview",
             JSON.stringify({
@@ -234,13 +216,50 @@ export default function ConducteurSondageCreate({ authUser = null }) {
                 questions,
                 creatorName,
                 totalRequired,
+                previewBackHref,
             }),
         );
     };
 
+    const submitSurvey = (mode) => {
+        savePreviewDraft();
+        setIsSubmitting(true);
+        setFormErrors({});
+
+        const payload = {
+            surveyId: existingSurvey?.id || null,
+            ...survey,
+            questions,
+            mode,
+        };
+
+        const options = {
+            preserveScroll: true,
+            onError: (errors) => {
+                setFormErrors(errors);
+                setIsSubmitting(false);
+            },
+            onSuccess: () => {
+                if (typeof window !== "undefined") {
+                    window.localStorage.removeItem(
+                        "conducteur-sondage-preview",
+                    );
+                }
+            },
+            onFinish: () => setIsSubmitting(false),
+        };
+
+        if (isEditing) {
+            router.put(`/conducteur/sondages/${existingSurvey.id}`, payload, options);
+            return;
+        }
+
+        router.post("/conducteur/sondages", payload, options);
+    };
+
     return (
         <>
-            <Head title="Nouveau sondage - Conducteur" />
+            <Head title={`${isEditing ? "Modifier" : "Nouveau"} sondage - Conducteur`} />
 
             <div
                 className="min-h-screen px-4 py-6 sm:px-6 lg:px-8"
@@ -260,18 +279,19 @@ export default function ConducteurSondageCreate({ authUser = null }) {
                             </Link>
                             <div>
                                 <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                                    Nouveau sondage
+                                    {isEditing ? "Modifier le sondage" : "Nouveau sondage"}
                                 </h1>
                                 <p className="text-sm text-blue-100">
-                                    Construisez un questionnaire clair, engageant
-                                    et facile a analyser.
+                                    {isEditing
+                                        ? "Reprenez votre questionnaire a l'endroit ou vous l'avez laisse."
+                                        : "Construisez un questionnaire clair, engageant et facile a analyser."}
                                 </p>
                             </div>
                         </div>
 
                         <div className="flex flex-wrap gap-2">
                             <Link
-                                href="/conducteur/sondages/preview/new"
+                                href={`/conducteur/sondages/preview/${isEditing ? existingSurvey.id : "new"}`}
                                 onClick={savePreviewDraft}
                                 className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/15"
                             >
@@ -280,21 +300,40 @@ export default function ConducteurSondageCreate({ authUser = null }) {
                             </Link>
                             <button
                                 type="button"
+                                onClick={() => submitSurvey("draft")}
+                                disabled={isSubmitting}
                                 className="rounded-lg border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/15"
                             >
-                                Enregistrer brouillon
+                                {isEditing
+                                    ? "Mettre a jour le brouillon"
+                                    : "Enregistrer brouillon"}
                             </button>
                             <button
                                 type="button"
+                                onClick={() => submitSurvey("publish")}
+                                disabled={isSubmitting}
                                 className="rounded-lg bg-[#B6C01A] px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-[#a4ae17]"
                             >
-                                Publier le sondage
+                                {isSubmitting
+                                    ? "Publication..."
+                                    : isEditing
+                                      ? isDraftSurvey
+                                          ? "Publier le sondage"
+                                          : "Mettre a jour le sondage"
+                                      : "Publier le sondage"}
                             </button>
                         </div>
                     </div>
 
                     <div className="grid gap-6">
                         <div className="space-y-6">
+                            {Object.keys(formErrors).length > 0 ? (
+                                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                                    Certains champs du sondage doivent etre
+                                    corriges avant l'enregistrement.
+                                </div>
+                            ) : null}
+
                             <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_50px_rgba(15,23,42,0.10)] sm:p-6">
                                 <div className="flex items-start justify-between gap-4">
                                     <div>
@@ -308,7 +347,8 @@ export default function ConducteurSondageCreate({ authUser = null }) {
                                             Les meilleurs outils de creation de
                                             sondage privilegient un objectif net,
                                             un contexte simple et une promesse de
-                                            reponse courte.
+                                            reponse courte. Les reponses sont
+                                            anonymes pour tous les participants.
                                         </p>
                                     </div>
                                     <div className="rounded-2xl bg-blue-50 p-3 text-blue-700">
@@ -332,6 +372,11 @@ export default function ConducteurSondageCreate({ authUser = null }) {
                                             placeholder="Ex: Satisfaction apres la retraite spirituelle"
                                             className={fieldClasses()}
                                         />
+                                        {formErrors.titre ? (
+                                            <p className="mt-2 text-sm text-rose-600">
+                                                {formErrors.titre}
+                                            </p>
+                                        ) : null}
                                     </div>
 
                                     <div className="md:col-span-2">
@@ -351,11 +396,16 @@ export default function ConducteurSondageCreate({ authUser = null }) {
                                             placeholder="Expliquez en quelques lignes ce que vous cherchez a comprendre."
                                             className={fieldClasses()}
                                         />
+                                        {formErrors.description ? (
+                                            <p className="mt-2 text-sm text-rose-600">
+                                                {formErrors.description}
+                                            </p>
+                                        ) : null}
                                     </div>
 
                                     <div>
                                         <label className="mb-2 block text-sm font-semibold text-slate-700">
-                                            Date d'echeance
+                                            Date de cloture
                                         </label>
                                         <div className="relative">
                                             <CalendarDays className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -371,6 +421,11 @@ export default function ConducteurSondageCreate({ authUser = null }) {
                                                 }
                                                 className={`${fieldClasses()} pl-11`}
                                             />
+                                            {formErrors.dateEcheance ? (
+                                                <p className="mt-2 text-sm text-rose-600">
+                                                    {formErrors.dateEcheance}
+                                                </p>
+                                            ) : null}
                                         </div>
                                     </div>
 
@@ -391,14 +446,18 @@ export default function ConducteurSondageCreate({ authUser = null }) {
                                                 }
                                                 className={`${fieldClasses()} appearance-none pl-11`}
                                             >
-                                                <option>Tous les membres</option>
                                                 <option>Responsables de famille</option>
-                                                <option>Moniteurs</option>
-                                                <option>Jeunesse</option>
-                                                <option>Leaders seulement</option>
+                                                <option>Conducteurs de classe</option>
+                                                <option>Membres de famille</option>
+                                                <option>Tous les membres</option>
                                             </select>
                                             <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                                         </div>
+                                        {formErrors.audience ? (
+                                            <p className="mt-2 text-sm text-rose-600">
+                                                {formErrors.audience}
+                                            </p>
+                                        ) : null}
                                     </div>
 
                                 </div>
@@ -431,6 +490,26 @@ export default function ConducteurSondageCreate({ authUser = null }) {
                                 </div>
 
                                 <div className="mt-6 space-y-4">
+                                    {questions.length === 0 ? (
+                                        <div className="rounded-[26px] border border-dashed border-slate-300 bg-slate-50/70 px-6 py-12 text-center">
+                                            <p className="text-base font-semibold text-slate-800">
+                                                Aucune question pour le moment
+                                            </p>
+                                            <p className="mt-2 text-sm text-slate-500">
+                                                Ajoutez un type de question pour
+                                                commencer la construction du
+                                                sondage.
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={() => addQuestion("multiple")}
+                                                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                                            >
+                                                <Plus className="h-4 w-4" />
+                                                Ajouter une premiere question
+                                            </button>
+                                        </div>
+                                    ) : null}
                                     {questions.map((question, index) => {
                                         const isActive = activeId === question.id;
                                         const currentType =
@@ -511,15 +590,11 @@ export default function ConducteurSondageCreate({ authUser = null }) {
                                                                                   ]
                                                                                 : event.target.value ===
                                                                                     "text"
-                                                                                  ? []
+                                                                                ? []
                                                                                   : event.target.value ===
                                                                                       "yes_no"
                                                                                     ? ["Oui", "Non"]
-                                                                                    : [
-                                                                                          "Option 1",
-                                                                                          "Option 2",
-                                                                                          "Option 3",
-                                                                                      ],
+                                                                                    : ["Option 1"],
                                                                     })
                                                                 }
                                                                 className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-10 text-sm font-medium text-slate-700 outline-none transition focus:border-amber-300 focus:ring-4 focus:ring-amber-100"
@@ -702,8 +777,20 @@ export default function ConducteurSondageCreate({ authUser = null }) {
                                                         </div>
                                                     </div>
                                                 </div>
-                                        );
-                                    })}
+                                            );
+                                        })}
+                                    {questions.length > 0 ? (
+                                        <div className="flex justify-center pt-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => addQuestion("multiple")}
+                                                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                                            >
+                                                <Plus className="h-4 w-4" />
+                                                Ajouter une question
+                                            </button>
+                                        </div>
+                                    ) : null}
                                 </div>
                             </section>
                         </div>

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Head, Link } from "@inertiajs/react";
+import { useEffect, useRef, useState } from "react";
+import { Head, Link, router, usePage } from "@inertiajs/react";
 import {
     ArrowLeft,
     BarChart3,
@@ -8,9 +8,16 @@ import {
     Clock3,
     Plus,
     Search,
+    Send,
     TrendingUp,
     Users,
+    X,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
 } from "lucide-react";
+import { ToastContainer } from "../../../Components/Toast";
+import useToast from "../../../Hooks/useToast";
 
 function StatCard({ title, value, subtitle, icon: Icon, accent }) {
     return (
@@ -58,11 +65,22 @@ function getStatusClasses(statut) {
         return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
     }
 
-    if (statut === "Expire") {
+    if (statut === "Cloture") {
         return "bg-rose-50 text-rose-700 ring-1 ring-rose-200";
     }
 
     return "bg-amber-50 text-amber-700 ring-1 ring-amber-200";
+}
+
+function canConducteurRespondToSurvey(cible) {
+    const normalizedCible = (cible || "").trim();
+
+    return [
+        "Tous les membres",
+        "Tout le monde (tous les membres)",
+        "Responsables de famille",
+        "Conducteurs de classe",
+    ].includes(normalizedCible);
 }
 
 function normalizeSondage(sondage, authUser, index) {
@@ -93,7 +111,7 @@ function normalizeSondage(sondage, authUser, index) {
         sondage.statut ||
         sondage.status ||
         (dateEcheance && new Date(dateEcheance) < new Date()
-            ? "Expire"
+            ? "Cloture"
             : "Actif");
 
     const createur =
@@ -114,14 +132,18 @@ function normalizeSondage(sondage, authUser, index) {
 
     return {
         id: sondage.id ?? index,
+        code: sondage.code || null,
         titre,
         createur,
+        cible: sondage.audience || "Non renseignee",
         dateCreation,
         dateEcheance,
         statut,
         participants,
         reponses,
         tauxParticipation,
+        canEdit: Boolean(sondage.canEdit),
+        canPublish: Boolean(sondage.canPublish),
     };
 }
 
@@ -129,7 +151,34 @@ export default function ConducteurSondageIndex({
     sondages = [],
     authUser = null,
 }) {
+    const { flash = {} } = usePage().props;
     const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
+    const [cibleFilter, setCibleFilter] = useState("all");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [publishTarget, setPublishTarget] = useState(null);
+    const {
+        toasts,
+        removeToast,
+        success: showSuccess,
+        error: showError,
+    } = useToast();
+    const lastSuccessRef = useRef(null);
+    const lastErrorRef = useRef(null);
+
+    useEffect(() => {
+        if (flash?.success && flash.success !== lastSuccessRef.current) {
+            lastSuccessRef.current = flash.success;
+            showSuccess(flash.success);
+        }
+    }, [flash?.success, showSuccess]);
+
+    useEffect(() => {
+        if (flash?.error && flash.error !== lastErrorRef.current) {
+            lastErrorRef.current = flash.error;
+            showError(flash.error);
+        }
+    }, [flash?.error, showError]);
 
     const sondagesNormalises = Array.isArray(sondages)
         ? sondages.map((sondage, index) =>
@@ -137,19 +186,37 @@ export default function ConducteurSondageIndex({
           )
         : [];
 
+    const cibleOptions = [...new Set(sondagesNormalises.map((sondage) => sondage.cible))]
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, "fr"));
+
     const sondagesFiltres = sondagesNormalises.filter((sondage) => {
         const term = search.trim().toLowerCase();
+
+        if (statusFilter !== "all" && sondage.statut !== statusFilter) {
+            return false;
+        }
+
+        if (cibleFilter !== "all" && sondage.cible !== cibleFilter) {
+            return false;
+        }
 
         if (!term) {
             return true;
         }
 
         return (
+            (sondage.code || "").toLowerCase().includes(term) ||
             sondage.titre.toLowerCase().includes(term) ||
             sondage.createur.toLowerCase().includes(term) ||
+            sondage.cible.toLowerCase().includes(term) ||
             sondage.statut.toLowerCase().includes(term)
         );
     });
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, statusFilter, cibleFilter]);
 
     const totalSondages = sondagesNormalises.length;
     const sondagesActifs = sondagesNormalises.filter(
@@ -169,9 +236,29 @@ export default function ConducteurSondageIndex({
               )
             : 0;
 
+    const itemsPerPage = 8;
+    const totalPages = Math.max(1, Math.ceil(sondagesFiltres.length / itemsPerPage));
+    const currentPageSafe = Math.min(currentPage, totalPages);
+    const paginatedSondages = sondagesFiltres.slice(
+        (currentPageSafe - 1) * itemsPerPage,
+        currentPageSafe * itemsPerPage,
+    );
+
+    const confirmPublish = () => {
+        if (!publishTarget) {
+            return;
+        }
+
+        router.post(`/conducteur/sondages/${publishTarget.id}/publish`, {}, {
+            preserveScroll: true,
+            onSuccess: () => setPublishTarget(null),
+        });
+    };
+
     return (
         <>
             <Head title="Sondages - Conducteur" />
+            <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
 
             <div
                 className="min-h-screen px-4 py-6 sm:px-6 lg:px-8"
@@ -248,22 +335,58 @@ export default function ConducteurSondageIndex({
                                     Liste des sondages
                                 </h2>
                                 <p className="mt-1 text-sm text-slate-600">
-                                    Recherche par titre, createur ou statut.
+                                    Recherche par titre, createur, cible ou statut.
                                 </p>
                             </div>
 
-                            <label className="relative block w-full lg:max-w-md">
-                                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                                <input
-                                    type="text"
-                                    value={search}
-                                    onChange={(event) =>
-                                        setSearch(event.target.value)
-                                    }
-                                    placeholder="Rechercher un sondage..."
-                                    className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                />
-                            </label>
+                            <div className="grid w-full gap-3 lg:max-w-4xl lg:grid-cols-3">
+                                <label className="relative block">
+                                    <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        value={search}
+                                        onChange={(event) =>
+                                            setSearch(event.target.value)
+                                        }
+                                        placeholder="Rechercher un sondage..."
+                                        className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                    />
+                                </label>
+
+                                <label className="relative block">
+                                    <select
+                                        value={statusFilter}
+                                        onChange={(event) =>
+                                            setStatusFilter(event.target.value)
+                                        }
+                                        className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-3 pl-4 pr-10 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                    >
+                                        <option value="all">Tous les statuts</option>
+                                        <option value="Actif">Actif</option>
+                                        <option value="Brouillon">Brouillon</option>
+                                        <option value="Cloture">Cloture</option>
+                                    </select>
+                                    <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                                </label>
+
+                                <label className="relative block">
+                                    <select
+                                        value={cibleFilter}
+                                        onChange={(event) =>
+                                            setCibleFilter(event.target.value)
+                                        }
+                                        className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-3 pl-4 pr-10 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                    >
+                                        <option value="all">Toutes les cibles</option>
+                                        {cibleOptions.map((cible) => (
+                                            <option key={cible} value={cible}>
+                                                {cible}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                                </label>
+                            </div>
                         </div>
 
                         <div className="mt-5 overflow-hidden rounded-[24px] border border-slate-200 bg-white">
@@ -273,10 +396,16 @@ export default function ConducteurSondageIndex({
                                         <tr>
                                             <th className="px-5 py-4">#</th>
                                             <th className="px-5 py-4">
+                                                Code sondage
+                                            </th>
+                                            <th className="px-5 py-4">
                                                 Nom du sondage
                                             </th>
                                             <th className="px-5 py-4">
                                                 Createur
+                                            </th>
+                                            <th className="px-5 py-4">
+                                                Cible
                                             </th>
                                             <th className="px-5 py-4">
                                                 Statut
@@ -285,7 +414,7 @@ export default function ConducteurSondageIndex({
                                                 Date creation
                                             </th>
                                             <th className="px-5 py-4">
-                                                Date d'echeance
+                                                Date de cloture
                                             </th>
                                             <th className="px-5 py-4">
                                                 Reponses
@@ -300,14 +429,19 @@ export default function ConducteurSondageIndex({
                                     </thead>
 
                                     <tbody className="divide-y divide-slate-100 bg-white">
-                                        {sondagesFiltres.length > 0 ? (
-                                            sondagesFiltres.map((sondage, index) => (
+                                        {paginatedSondages.length > 0 ? (
+                                            paginatedSondages.map((sondage, index) => (
                                                 <tr
                                                     key={sondage.id}
                                                     className="transition hover:bg-slate-50"
                                                 >
                                                     <td className="px-5 py-4 font-mono text-xs text-slate-400">
-                                                        #{index + 1}
+                                                        #{(currentPageSafe - 1) * itemsPerPage + index + 1}
+                                                    </td>
+                                                    <td className="px-5 py-4">
+                                                        <span className="font-mono text-xs font-semibold tracking-[0.16em] text-slate-700">
+                                                            {sondage.code || "Non genere"}
+                                                        </span>
                                                     </td>
                                                     <td className="px-5 py-4">
                                                         <div className="flex flex-col gap-2">
@@ -324,6 +458,9 @@ export default function ConducteurSondageIndex({
                                                     </td>
                                                     <td className="px-5 py-4 text-slate-700">
                                                         {sondage.createur}
+                                                    </td>
+                                                    <td className="px-5 py-4 text-slate-700">
+                                                        {sondage.cible}
                                                     </td>
                                                     <td className="px-5 py-4">
                                                         <span
@@ -360,18 +497,43 @@ export default function ConducteurSondageIndex({
                                                     </td>
                                                     <td className="px-5 py-4">
                                                         <div className="flex flex-wrap gap-2">
-                                                            <button
-                                                                type="button"
+                                                            <Link
+                                                                href={`/conducteur/sondages/${sondage.id}`}
                                                                 className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                                                             >
-                                                                Voir
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
-                                                            >
-                                                                Modifier
-                                                            </button>
+                                                                {sondage.statut === "Cloture"
+                                                                    ? "Voir l'historique"
+                                                                    : "Voir"}
+                                                            </Link>
+                                                            {sondage.statut !== "Cloture" &&
+                                                            sondage.statut !== "Brouillon" &&
+                                                            canConducteurRespondToSurvey(
+                                                                sondage.cible,
+                                                            ) ? (
+                                                                <Link
+                                                                    href={`/conducteur/sondages/${sondage.id}/repondre`}
+                                                                    className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
+                                                                >
+                                                                    Repondre
+                                                                </Link>
+                                                            ) : null}
+                                                            {sondage.canEdit ? (
+                                                                <Link
+                                                                    href={`/conducteur/sondages/${sondage.id}/edit`}
+                                                                    className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
+                                                                >
+                                                                    Modifier
+                                                                </Link>
+                                                            ) : null}
+                                                            {sondage.canPublish ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setPublishTarget(sondage)}
+                                                                    className="rounded-xl bg-amber-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-amber-600"
+                                                                >
+                                                                    Publier
+                                                                </button>
+                                                            ) : null}
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -379,7 +541,7 @@ export default function ConducteurSondageIndex({
                                         ) : (
                                             <tr>
                                                 <td
-                                                    colSpan="9"
+                                                    colSpan="11"
                                                     className="px-5 py-12 text-center text-sm text-slate-500"
                                                 >
                                                     Aucun sondage disponible pour le
@@ -392,9 +554,110 @@ export default function ConducteurSondageIndex({
                                 </table>
                             </div>
                         </div>
+
+                        {sondagesFiltres.length > 0 ? (
+                            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <p className="text-sm text-slate-600">
+                                    Affichage de{" "}
+                                    <span className="font-semibold text-slate-900">
+                                        {(currentPageSafe - 1) * itemsPerPage + 1}
+                                    </span>
+                                    {" "}a{" "}
+                                    <span className="font-semibold text-slate-900">
+                                        {Math.min(currentPageSafe * itemsPerPage, sondagesFiltres.length)}
+                                    </span>
+                                    {" "}sur{" "}
+                                    <span className="font-semibold text-slate-900">
+                                        {sondagesFiltres.length}
+                                    </span>
+                                    {" "}sondage(s)
+                                </p>
+
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setCurrentPage((page) => Math.max(1, page - 1))
+                                        }
+                                        disabled={currentPageSafe === 1}
+                                        className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                        Precedent
+                                    </button>
+
+                                    <span className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
+                                        Page {currentPageSafe}/{totalPages}
+                                    </span>
+
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setCurrentPage((page) => Math.min(totalPages, page + 1))
+                                        }
+                                        disabled={currentPageSafe === totalPages}
+                                        className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Suivant
+                                        <ChevronRight className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        ) : null}
                     </div>
                 </div>
             </div>
+
+            {publishTarget ? (
+                <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-slate-950/45 px-4">
+                    <div className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_30px_90px_rgba(15,23,42,0.24)]">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h2 className="text-xl font-bold text-slate-900">
+                                    Confirmer la publication
+                                </h2>
+                                <p className="mt-2 text-sm leading-6 text-slate-600">
+                                    Voulez-vous publier le sondage{" "}
+                                    <span className="font-semibold text-slate-900">
+                                        {publishTarget.titre}
+                                    </span>
+                                    {" "}?
+                                </p>
+                                {publishTarget.code ? (
+                                    <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                        {publishTarget.code}
+                                    </p>
+                                ) : null}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setPublishTarget(null)}
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setPublishTarget(null)}
+                                className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmPublish}
+                                className="inline-flex items-center gap-2 rounded-2xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-600"
+                            >
+                                <Send className="h-4 w-4" />
+                                Publier le sondage
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </>
     );
 }
