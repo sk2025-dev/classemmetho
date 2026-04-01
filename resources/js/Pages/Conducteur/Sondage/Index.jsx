@@ -392,7 +392,7 @@ export default function ConducteurSondageIndex({
                         <div className="mt-5 overflow-hidden rounded-[24px] border border-slate-200 bg-white">
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-slate-200 text-sm">
-                                    <thead className="bg-slate-900 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">
+                                    <thead className="bg-[#B6C01A] text-left text-xs font-semibold uppercase tracking-[0.18em] text-white">
                                         <tr>
                                             <th className="px-5 py-4">#</th>
                                             <th className="px-5 py-4">

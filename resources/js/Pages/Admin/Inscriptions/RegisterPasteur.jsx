@@ -9,6 +9,7 @@ import { useToastWithErrorHandling } from "../../../Hooks/useToastWithErrorHandl
 import ToastContainer from "../../../Components/ToastContainer";
 import { useDebounce } from "../../../Hooks/useDebounce";
 import CitySelect from "../../../Components/CitySelect";
+import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
 import {
     usePersistentState,
     clearFormPersistedData,
@@ -395,8 +396,22 @@ export default function RegisterFamille({
     const respNameRef = useRef(null);
     const respPrenomRef = useRef(null);
     const respEmailRef = useRef(null);
+    const respDateNaissanceRef = useRef(null);
+    const respEmploymentStatusRef = useRef(null);
+    const respProfessionRef = useRef(null);
+    const respStatutMaritalRef = useRef(null);
+    const membreNomRef = useRef(null);
+    const membrePrenomRef = useRef(null);
+    const membreGenreRef = useRef(null);
+    const membreDateNaissanceRef = useRef(null);
+    const membreEmploymentStatusRef = useRef(null);
+    const membreProfessionRef = useRef(null);
+    const membreRelationRef = useRef(null);
+    const membreStatutMaritalRef = useRef(null);
+    const consentementRef = useRef(null);
     const classesDropdownRef = useRef(null);
     const villesDropdownRef = useRef(null);
+    const pendingFocusFieldRef = useRef(null);
 
     // Mapping des champs aux refs pour le focus automatique
     const fieldRefs = {
@@ -404,6 +419,19 @@ export default function RegisterFamille({
         "responsable.nom": respNameRef,
         "responsable.prenom": respPrenomRef,
         "responsable.email": respEmailRef,
+        "responsable.dateNaissance": respDateNaissanceRef,
+        "responsable.employment_status": respEmploymentStatusRef,
+        "responsable.profession": respProfessionRef,
+        "responsable.statutMarital": respStatutMaritalRef,
+        "membre.nom": membreNomRef,
+        "membre.prenom": membrePrenomRef,
+        "membre.genre": membreGenreRef,
+        "membre.dateNaissance": membreDateNaissanceRef,
+        "membre.employment_status": membreEmploymentStatusRef,
+        "membre.profession": membreProfessionRef,
+        "membre.relation": membreRelationRef,
+        "membre.statutMarital": membreStatutMaritalRef,
+        consentement: consentementRef,
     };
 
     const totalSteps = labels.length;
@@ -421,6 +449,159 @@ export default function RegisterFamille({
             return Array.isArray(serverError) ? serverError[0] : serverError;
         }
         return null;
+    };
+
+    const getStepForField = (fieldName) => {
+        if (!fieldName) return step;
+        if (fieldName.startsWith("famille.")) return 1;
+        if (fieldName.startsWith("responsable.")) return 2;
+        if (
+            fieldName.startsWith("membre.") ||
+            fieldName.startsWith("membres") ||
+            fieldName === "membres" ||
+            fieldName === "membres_detailed"
+        ) {
+            return 3;
+        }
+        if (fieldName === "consentement") return totalSteps;
+        return step;
+    };
+
+    const focusField = (fieldName) => {
+        if (!fieldName) return;
+        pendingFocusFieldRef.current = fieldName;
+        const targetStep = getStepForField(fieldName);
+        if (targetStep !== step) {
+            setStep(targetStep);
+            return;
+        }
+
+        const ref = fieldRefs[fieldName];
+        if (ref?.current) {
+            ref.current.focus?.();
+            ref.current.scrollIntoView?.({
+                behavior: "smooth",
+                block: "center",
+            });
+            pendingFocusFieldRef.current = null;
+        } else if (fieldName.startsWith("membre")) {
+            document
+                .querySelector("[data-member-form]")
+                ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+    };
+
+    useEffect(() => {
+        const pendingField = pendingFocusFieldRef.current;
+        if (!pendingField) return;
+
+        const ref = fieldRefs[pendingField];
+        if (ref?.current) {
+            ref.current.focus?.();
+            ref.current.scrollIntoView?.({
+                behavior: "smooth",
+                block: "center",
+            });
+            pendingFocusFieldRef.current = null;
+            return;
+        }
+
+        if (pendingField.startsWith("membre")) {
+            document
+                .querySelector("[data-member-form]")
+                ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+    }, [step]);
+
+    const translateErrorMessage = (msg) => {
+        const text = String(msg || "").trim();
+        if (!text) return "Une erreur est survenue.";
+
+        const translations = [
+            [/^The .* field is required\.?$/i, "Ce champ est obligatoire."],
+            [/required/i, "Ce champ est obligatoire"],
+            [/must be a valid email/i, "doit contenir un email valide"],
+            [/invalid email/i, "email invalide"],
+            [/field must be a date/i, "doit être une date valide"],
+            [/field must be before today/i, "doit être antérieure à aujourd'hui"],
+            [/field must be before/i, "doit être antérieure à la date attendue"],
+            [/field must be after/i, "doit être postérieure à la date attendue"],
+            [/already exists|already been taken/i, "est déjà utilisé dans le système"],
+            [/already registered/i, "est déjà enregistré"],
+            [/invalid/i, "est invalide"],
+            [/network error/i, "Problème de connexion. Vérifiez Internet puis réessayez."],
+            [/server error/i, "Erreur serveur. Veuillez réessayer."],
+        ];
+
+        let translated = text;
+        translations.forEach(([pattern, replacement]) => {
+            translated = translated.replace(pattern, replacement);
+        });
+
+        return translated;
+    };
+
+    const translateFieldName = (field) => {
+        const fieldTranslations = {
+            nom: "Nom",
+            prenom: "Prénom",
+            email: "Email",
+            tel: "Téléphone",
+            telephone: "Téléphone",
+            dateNaissance: "Date de naissance",
+            date_naissance: "Date de naissance",
+            genre: "Genre",
+            employment_status: "Statut d'emploi",
+            profession: "Profession",
+            fonction: "Fonction",
+            fonction_professionnelle: "Fonction professionnelle",
+            relation: "Lien de parenté",
+            statutMarital: "Statut marital",
+            statut_marital: "Statut marital",
+            dateMariage: "Date du mariage",
+            lieuMariage: "Lieu du mariage",
+            dateDivorce: "Date du divorce",
+            lieuDivorce: "Lieu du divorce",
+            dateDeces: "Date du décès",
+            lieuDeces: "Lieu du décès",
+            dote: "Date du dot",
+            lieuDote: "Lieu du dot",
+            baptise: "Baptisé",
+            dateBapteme: "Date de baptême",
+            lieuBapteme: "Lieu de baptême",
+            premiereCommunion: "Première communion",
+            datePremiereCommunion: "Date de première communion",
+            lieuPremiereCommunion: "Lieu de première communion",
+            marieReligieusement: "Marié religieusement",
+            dateMariageReligieux: "Date du mariage religieux",
+            lieuMariageReligieux: "Lieu du mariage religieux",
+            adresse: "Adresse",
+            ville: "Ville",
+            classe_id: "Classe",
+            classe: "Classe",
+            consentement: "Consentement",
+            membres: "Membres",
+        };
+
+        return fieldTranslations[field] || field;
+    };
+
+    const buildErrorToastMessage = (errorMap, title = "Veuillez corriger les champs suivants :") => {
+        const lines = Object.entries(errorMap).map(([field, message]) => {
+            if (!message) return null;
+            const fieldKey = field
+                .replace(/^responsable\./, "")
+                .replace(/^famille\./, "")
+                .replace(/^membre\./, "")
+                .replace(/^membres\[\d+\]\./, "");
+            const label =
+                field === "membres_detailed" || field === "membres"
+                    ? "Membres"
+                    : translateFieldName(fieldKey);
+            return `- ${label} : ${translateErrorMessage(message)}`;
+        });
+
+        return [title, ...lines.filter(Boolean)].join("\n");
     };
 
     // --- Effets (Chargement des données) ---
@@ -517,6 +698,7 @@ export default function RegisterFamille({
     }, [step]);
 
     const formatName = (text) => text.toUpperCase().replace(/\s+/g, " ").trim();
+    const formatPrenom = (text) => sanitizeUppercasePrenom(text);
 
     /**
      * Valider le format téléphone
@@ -825,10 +1007,9 @@ export default function RegisterFamille({
 
         setErrors(newErrors);
         if (Object.keys(newErrors).length > 0) {
-            if (newErrors["famille.nom"] && familyNameRef.current)
-                familyNameRef.current.focus();
-            else if (newErrors["responsable.nom"] && respNameRef.current)
-                respNameRef.current.focus();
+            const firstErrorField = Object.keys(newErrors)[0];
+            showError(buildErrorToastMessage(newErrors));
+            focusField(firstErrorField);
             return false;
         }
         return true;
@@ -921,24 +1102,11 @@ export default function RegisterFamille({
 
         // Afficher les erreurs s'il y en a
         if (Object.keys(validationErrors).length > 0) {
-            let errorMessage =
-                "❌ Veuillez corriger les erreurs suivantes:\n\n";
-            Object.values(validationErrors).forEach((err) => {
-                if (typeof err === "string" && err.includes("\n")) {
-                    errorMessage +=
-                        err
-                            .split("\n")
-                            .map((e) => "• " + e)
-                            .join("\n") + "\n";
-                } else {
-                    errorMessage += "• " + err + "\n";
-                }
-            });
-            showError(errorMessage);
             setErrors(validationErrors);
+            focusField(Object.keys(validationErrors)[0]);
+            showError(buildErrorToastMessage(validationErrors));
             return;
         }
-
         setErrors({});
 
         // Valider toutes les étapes
@@ -950,7 +1118,8 @@ export default function RegisterFamille({
         }
 
         if (!consentement) {
-            showWarning("Veuillez accepter le consentement.");
+            showWarning("Veuillez accepter le consentement avant de continuer.");
+            focusField("consentement");
             return;
         }
 
@@ -1071,10 +1240,15 @@ export default function RegisterFamille({
                     "❌ Erreurs validation données membres:",
                     membreValidationErrors,
                 );
-                const errorMsg = Object.entries(membreValidationErrors)
-                    .map(([field, err]) => `${field}: ${err}`)
-                    .join("\n");
-                showError(`❌ DONNÉES INVALIDES DÉTECTÉES\n\n${errorMsg}`);
+                const firstMemberError = Object.keys(membreValidationErrors)[0]
+                    ?.replace(/^membres\[\d+\]\./, "membre.");
+                showError(
+                    buildErrorToastMessage(
+                        membreValidationErrors,
+                        "Certaines informations des membres sont incompl?tes :",
+                    ),
+                );
+                focusField(firstMemberError || "membre.nom");
                 setLoading(false);
                 return;
             }
@@ -1759,7 +1933,7 @@ export default function RegisterFamille({
                                     onChange={(e) =>
                                         setResponsable({
                                             ...responsable,
-                                            prenom: formatName(e.target.value),
+                                            prenom: formatPrenom(e.target.value),
                                         })
                                     }
                                     placeholder="ex: Jean"
@@ -1799,6 +1973,7 @@ export default function RegisterFamille({
                                 required
                             >
                                 <input
+                                    ref={respDateNaissanceRef}
                                     type="date"
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none"
                                     value={responsable.dateNaissance}
@@ -1911,6 +2086,7 @@ export default function RegisterFamille({
                                 required
                             >
                                 <select
+                                    ref={respEmploymentStatusRef}
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none"
                                     value={responsable.employment_status || ""}
                                     onChange={(e) =>
@@ -1979,6 +2155,7 @@ export default function RegisterFamille({
                                 required
                             >
                                 <input
+                                    ref={respProfessionRef}
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none"
                                     value={responsable.profession}
                                     onChange={(e) =>
@@ -1990,15 +2167,13 @@ export default function RegisterFamille({
                                     placeholder="ex: Enseignant, Commerçant"
                                 />
                             </FormField>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                             <FormField
                                 label="Statut Marital"
                                 icon={Heart}
                                 required
                             >
                                 <select
+                                    ref={respStatutMaritalRef}
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 bg-white"
                                     value={responsable.statutMarital}
                                     onChange={(e) =>
@@ -2447,6 +2622,7 @@ export default function RegisterFamille({
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField label="Nom" icon={User} required>
                                         <input
+                                            ref={membreNomRef}
                                             className={`${STYLES.input} uppercase`}
                                             value={membreTemp.nom}
                                             onChange={(e) =>
@@ -2469,12 +2645,15 @@ export default function RegisterFamille({
                                         required
                                     >
                                         <input
+                                            ref={membrePrenomRef}
                                             className={`${STYLES.input} capitalize`}
                                             value={membreTemp.prenom}
                                             onChange={(e) =>
                                                 setMembreTemp({
                                                     ...membreTemp,
-                                                    prenom: e.target.value,
+                                                    prenom: formatPrenom(
+                                                        e.target.value,
+                                                    ),
                                                 })
                                             }
                                             placeholder="Prénom"
@@ -2495,6 +2674,7 @@ export default function RegisterFamille({
                                         required
                                     >
                                         <select
+                                            ref={membreGenreRef}
                                             className={STYLES.input}
                                             value={membreTemp.genre}
                                             onChange={(e) =>
@@ -2522,6 +2702,7 @@ export default function RegisterFamille({
                                         required
                                     >
                                         <input
+                                            ref={membreDateNaissanceRef}
                                             type="date"
                                             className={STYLES.input}
                                             value={membreTemp.dateNaissance}
@@ -2628,6 +2809,7 @@ export default function RegisterFamille({
                                         required
                                     >
                                         <select
+                                            ref={membreEmploymentStatusRef}
                                             className={STYLES.input}
                                             value={
                                                 membreTemp.employment_status ||
@@ -2676,6 +2858,7 @@ export default function RegisterFamille({
                                         required
                                     >
                                         <input
+                                            ref={membreProfessionRef}
                                             className={STYLES.input}
                                             value={membreTemp.profession}
                                             onChange={(e) =>
@@ -2694,9 +2877,6 @@ export default function RegisterFamille({
                                             </p>
                                         )}
                                     </FormField>
-                                </div>
-                                {/* Lien de parenté et Statut marital */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField
                                         label="Lien de parenté"
                                         icon={Users}
@@ -2719,56 +2899,6 @@ export default function RegisterFamille({
                                             </p>
                                         )}
                                     </FormField>
-                                    <FormField
-                                        label="Fonction dans l'église"
-                                        icon={Users}
-                                        hint="Cliquez pour sélectionner"
-                                    >
-                                        <Select2Fonction
-                                            value={
-                                                membreTemp.fonction_id
-                                                    ? [
-                                                          {
-                                                              id: membreTemp.fonction_id,
-                                                              nom: membreTemp.fonction,
-                                                          },
-                                                      ]
-                                                    : []
-                                            }
-                                            onChange={(e) => {
-                                                if (!e.target.value) {
-                                                    setMembreTemp({
-                                                        ...membreTemp,
-                                                        fonction_id: null,
-                                                        fonction: "",
-                                                    });
-                                                } else {
-                                                    const selected =
-                                                        churchRoles.find(
-                                                            (f) =>
-                                                                f.id ==
-                                                                e.target.value,
-                                                        );
-                                                    setMembreTemp({
-                                                        ...membreTemp,
-                                                        fonction_id: e.target
-                                                            .value
-                                                            ? parseInt(
-                                                                  e.target
-                                                                      .value,
-                                                                  10,
-                                                              )
-                                                            : null,
-                                                        fonction: selected
-                                                            ? selected.nom
-                                                            : "",
-                                                    });
-                                                }
-                                            }}
-                                            options={churchRoles}
-                                            placeholder="Sélectionner une fonction (optionnel)..."
-                                        />
-                                    </FormField>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
@@ -2778,6 +2908,7 @@ export default function RegisterFamille({
                                         required
                                     >
                                         <select
+                                            ref={membreStatutMaritalRef}
                                             className={STYLES.input}
                                             value={membreTemp.statutMarital}
                                             onChange={(e) =>
@@ -3584,6 +3715,7 @@ export default function RegisterFamille({
                         <div className="border-t pt-4">
                             <label className="flex items-start gap-3 cursor-pointer">
                                 <input
+                                    ref={consentementRef}
                                     type="checkbox"
                                     checked={consentement}
                                     onChange={(e) =>

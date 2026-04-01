@@ -6,6 +6,7 @@ import Select2Classe from "../../../Components/Select2Classe";
 import Select2Fonction from "../../../Components/Select2Fonction";
 import Select2Relation from "../../../Components/Select2Relation";
 import CitySelect from "../../../Components/CitySelect";
+import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
 import { useDebounce } from "../../../Hooks/useDebounce";
 import { useFormErrors } from "../../../Hooks/useFormErrors";
 import {
@@ -502,6 +503,7 @@ export default function RegisterFamille({
     }, [step]);
 
     const formatName = (text) => text.toUpperCase().replace(/\s+/g, " ").trim();
+    const formatPrenom = (text) => sanitizeUppercasePrenom(text);
 
     /**
      * Valider le format téléphone
@@ -1608,7 +1610,7 @@ export default function RegisterFamille({
                                     onChange={(e) =>
                                         setResponsable({
                                             ...responsable,
-                                            prenom: formatName(e.target.value),
+                                            prenom: formatPrenom(e.target.value),
                                         })
                                     }
                                     placeholder="ex: Jean"
@@ -2363,7 +2365,9 @@ export default function RegisterFamille({
                                             onChange={(e) =>
                                                 setMembreTemp({
                                                     ...membreTemp,
-                                                    prenom: e.target.value,
+                                                    prenom: formatPrenom(
+                                                        e.target.value,
+                                                    ),
                                                 })
                                             }
                                             placeholder="Prénom"

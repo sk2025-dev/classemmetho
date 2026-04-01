@@ -25,6 +25,7 @@ import Select2Fonction from "../../../Components/Select2Fonction";
 import Select2Relation from "../../../Components/Select2Relation";
 import ProfilePhoto from "../../../Components/ProfilePhoto";
 import { resolveMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
+import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
 
 // ------------------------------------------------------------------
 // Fonction d'export PDF Professionnelle
@@ -973,6 +974,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
     }, [isOpen, memberData?.id]);
 
     const formatName = (text) => text.toUpperCase().replace(/\s+/g, " ").trim();
+    const formatPrenom = (text) => sanitizeUppercasePrenom(text);
 
     const formatPhoneNumber = (text) => {
         const cleaned = text.replace(/\D/g, "");
@@ -1310,7 +1312,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                                 onChange={(e) =>
                                                     handleFieldChange(
                                                         "nom",
-                                                        formatName(
+                                                        formatPrenom(
                                                             e.target.value,
                                                         ),
                                                     )

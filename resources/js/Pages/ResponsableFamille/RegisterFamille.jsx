@@ -11,6 +11,7 @@ import {
 import { useFormErrors } from "../../Hooks/useFormErrors";
 import { useToastWithErrorHandling } from "../../Hooks/useToastWithErrorHandling";
 import ToastContainer from "../../Components/ToastContainer";
+import { sanitizeUppercasePrenom } from "../../Helpers/nameSanitizers";
 import Select2Classe from "../../Components/Select2Classe";
 import CitySelect from "../../Components/CitySelect";
 import Select2Relation from "../../Components/Select2Relation";
@@ -526,6 +527,7 @@ export default function RegisterFamille({
     }, []);
 
     const formatName = (text) => text.toUpperCase().replace(/\s+/g, " ").trim();
+    const formatPrenom = (text) => sanitizeUppercasePrenom(text);
 
     /**
      * Valider le format t?l?phone
@@ -1477,7 +1479,7 @@ export default function RegisterFamille({
                                     onChange={(e) =>
                                         setResponsable({
                                             ...responsable,
-                                            prenom: formatName(e.target.value),
+                                            prenom: formatPrenom(e.target.value),
                                         })
                                     }
                                     placeholder="ex: Jean"
@@ -2244,7 +2246,9 @@ export default function RegisterFamille({
                                                 onChange={(e) =>
                                                     setMembreTemp({
                                                         ...membreTemp,
-                                                        prenom: e.target.value,
+                                                        prenom: formatPrenom(
+                                                            e.target.value,
+                                                        ),
                                                     })
                                                 }
                                                 placeholder="PRENOM"

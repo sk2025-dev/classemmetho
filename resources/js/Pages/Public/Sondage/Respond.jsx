@@ -40,6 +40,22 @@ function questionTypeLabel(type) {
     return "Reponse libre";
 }
 
+const ratingScaleLabels = {
+    1: "Tres insatisfait",
+    2: "Insatisfait",
+    3: "Neutre",
+    4: "Satisfait",
+    5: "Tres satisfait",
+};
+
+function getRatingLabel(question, option) {
+    return (
+        question?.scaleLabels?.[option] ||
+        ratingScaleLabels[option] ||
+        option
+    );
+}
+
 function normalizeGenreValue(value) {
     const normalized = String(value || "").trim().toUpperCase();
 
@@ -88,8 +104,10 @@ export default function PublicSondageRespond({
         profession_detail: member?.profession_detail || "",
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const { toasts, removeToast, success: showSuccess } = useToast();
+    const { toasts, removeToast, success: showSuccess, error: showError } = useToast();
     const lastSuccessRef = useRef(null);
+    const lastErrorRef = useRef(null);
+    const lastRespondedRef = useRef(false);
 
     const isExpired = survey?.statut === "Cloture";
     const questions = useMemo(
@@ -103,6 +121,27 @@ export default function PublicSondageRespond({
             showSuccess(flash.success);
         }
     }, [flash?.success, showSuccess]);
+
+    useEffect(() => {
+        const errorMessage = errors?.survey || errors?.answers || null;
+
+        if (!errorMessage) {
+            lastErrorRef.current = null;
+            return;
+        }
+
+        if (errorMessage !== lastErrorRef.current) {
+            lastErrorRef.current = errorMessage;
+            showError(errorMessage);
+        }
+    }, [errors?.answers, errors?.survey, showError]);
+
+    useEffect(() => {
+        if (hasResponded && !lastRespondedRef.current) {
+            lastRespondedRef.current = true;
+            showSuccess("Ce membre a deja repondu a ce sondage.");
+        }
+    }, [hasResponded, showSuccess]);
 
     const updateCheckboxAnswer = (questionId, option, checked) => {
         setAnswers((current) => {
@@ -462,18 +501,6 @@ export default function PublicSondageRespond({
                         </div>
                     </section>
 
-                    {hasResponded ? (
-                        <div className="mt-6 rounded-[24px] border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-700">
-                            Ce membre a deja repondu a ce sondage.
-                        </div>
-                    ) : null}
-
-                    {(errors.survey || errors.answers) ? (
-                        <div className="mt-6 rounded-[24px] border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">
-                            {errors.survey || errors.answers}
-                        </div>
-                    ) : null}
-
                     {isExpired ? (
                         <div className="mt-6 rounded-[24px] border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">
                             Ce sondage est expire. Vous ne pouvez plus soumettre de reponse.
@@ -524,7 +551,7 @@ export default function PublicSondageRespond({
                                 ) : null}
 
                                 {question.type === "rating" ? (
-                                    <div className="mt-5 flex flex-wrap gap-3">
+                                    <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                                         {(question.options || []).map((option, optionIndex) => {
                                             const isActive = answers[question.id] === option;
 
@@ -539,13 +566,27 @@ export default function PublicSondageRespond({
                                                             [question.id]: option,
                                                         }))
                                                     }
-                                                    className={`flex h-11 w-11 items-center justify-center rounded-full border transition ${
+                                                    className={`rounded-2xl border px-4 py-3 text-center transition ${
                                                         isActive
-                                                            ? "border-amber-500 bg-amber-50 text-amber-600"
-                                                            : "border-slate-200 bg-white text-slate-400 hover:border-amber-300"
+                                                            ? "border-amber-500 bg-amber-50 text-amber-700"
+                                                            : "border-slate-200 bg-white text-slate-500 hover:border-amber-300"
                                                     }`}
                                                 >
-                                                    <Star className="h-4 w-4 fill-current" />
+                                                    <div
+                                                        className={`mx-auto flex h-11 w-11 items-center justify-center rounded-full border ${
+                                                            isActive
+                                                                ? "border-amber-400 bg-amber-100"
+                                                                : "border-slate-200 bg-slate-50"
+                                                        }`}
+                                                    >
+                                                        <Star className="h-4 w-4 fill-current" />
+                                                        <span className="ml-1 text-sm font-semibold">
+                                                            {option}
+                                                        </span>
+                                                    </div>
+                                                    <p className="mt-2 text-xs font-medium leading-5">
+                                                        {getRatingLabel(question, option)}
+                                                    </p>
                                                 </button>
                                             );
                                         })}
