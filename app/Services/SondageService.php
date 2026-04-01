@@ -440,6 +440,14 @@ class SondageService
             ->exists();
     }
 
+    public function getUserResponseAnswers(int $sondageId, User $user): array
+    {
+        return SondageReponse::query()
+            ->where('sondage_id', $sondageId)
+            ->where('respondent_key', $this->makeRespondentKey($sondageId, $user))
+            ->value('reponses') ?? [];
+    }
+
     public function makeRespondentKey(int $sondageId, User $user): string
     {
         return hash_hmac(

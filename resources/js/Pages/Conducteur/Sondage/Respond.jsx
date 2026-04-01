@@ -30,6 +30,22 @@ function questionTypeLabel(type) {
     return "Reponse libre";
 }
 
+const ratingScaleLabels = {
+    1: "Tres insatisfait",
+    2: "Insatisfait",
+    3: "Neutre",
+    4: "Satisfait",
+    5: "Tres satisfait",
+};
+
+function getRatingLabel(question, option) {
+    return (
+        question?.scaleLabels?.[option] ||
+        ratingScaleLabels[option] ||
+        option
+    );
+}
+
 function getStatusClasses(statut) {
     if (statut === "Actif") {
         return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
@@ -46,12 +62,14 @@ export default function ConducteurSondageRespond({
     survey,
     classe = null,
     hasResponded = false,
+    previousAnswers = {},
 }) {
     const { errors = {}, flash = {} } = usePage().props;
-    const [answers, setAnswers] = useState({});
+    const [answers, setAnswers] = useState(previousAnswers || {});
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const { toasts, removeToast, success: showSuccess } = useToast();
+    const { toasts, removeToast, success: showSuccess, error: showError } = useToast();
     const lastSuccessRef = useRef(null);
+    const lastErrorRef = useRef(null);
 
     const isExpired = survey?.statut === "Cloture";
     const questions = useMemo(
@@ -60,11 +78,29 @@ export default function ConducteurSondageRespond({
     );
 
     useEffect(() => {
+        setAnswers(previousAnswers || {});
+    }, [previousAnswers]);
+
+    useEffect(() => {
         if (flash?.success && flash.success !== lastSuccessRef.current) {
             lastSuccessRef.current = flash.success;
             showSuccess(flash.success);
         }
     }, [flash?.success, showSuccess]);
+
+    useEffect(() => {
+        const errorMessage = errors?.survey || errors?.answers || null;
+
+        if (!errorMessage) {
+            lastErrorRef.current = null;
+            return;
+        }
+
+        if (errorMessage !== lastErrorRef.current) {
+            lastErrorRef.current = errorMessage;
+            showError(errorMessage);
+        }
+    }, [errors?.answers, errors?.survey, showError]);
 
     const updateCheckboxAnswer = (questionId, option, checked) => {
         setAnswers((current) => {
@@ -195,12 +231,6 @@ export default function ConducteurSondageRespond({
                         </div>
                     ) : null}
 
-                    {errors.survey || errors.answers ? (
-                        <div className="mt-6 rounded-[24px] border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">
-                            {errors.survey || errors.answers}
-                        </div>
-                    ) : null}
-
                     {isExpired ? (
                         <div className="mt-6 rounded-[24px] border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">
                             Ce sondage est expire. Vous ne pouvez plus soumettre de reponse.
@@ -257,7 +287,7 @@ export default function ConducteurSondageRespond({
                                 ) : null}
 
                                 {question.type === "rating" ? (
-                                    <div className="mt-5 flex flex-wrap gap-3">
+                                    <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                                         {(question.options || []).map((option, optionIndex) => {
                                             const isActive = answers[question.id] === option;
 
@@ -272,13 +302,27 @@ export default function ConducteurSondageRespond({
                                                             [question.id]: option,
                                                         }))
                                                     }
-                                                    className={`flex h-11 w-11 items-center justify-center rounded-full border transition ${
+                                                    className={`rounded-2xl border px-4 py-3 text-center transition ${
                                                         isActive
-                                                            ? "border-amber-500 bg-amber-50 text-amber-600"
-                                                            : "border-slate-200 bg-white text-slate-400 hover:border-amber-300"
+                                                            ? "border-amber-500 bg-amber-50 text-amber-700"
+                                                            : "border-slate-200 bg-white text-slate-500 hover:border-amber-300"
                                                     }`}
                                                 >
-                                                    <Star className="h-4 w-4 fill-current" />
+                                                    <div
+                                                        className={`mx-auto flex h-11 w-11 items-center justify-center rounded-full border ${
+                                                            isActive
+                                                                ? "border-amber-400 bg-amber-100"
+                                                                : "border-slate-200 bg-slate-50"
+                                                        }`}
+                                                    >
+                                                        <Star className="h-4 w-4 fill-current" />
+                                                        <span className="ml-1 text-sm font-semibold">
+                                                            {option}
+                                                        </span>
+                                                    </div>
+                                                    <p className="mt-2 text-xs font-medium leading-5">
+                                                        {getRatingLabel(question, option)}
+                                                    </p>
                                                 </button>
                                             );
                                         })}

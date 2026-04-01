@@ -5,16 +5,26 @@ namespace App\Http\Controllers\Conducteur;
 use App\Http\Controllers\Controller;
 use App\Models\ActeLiturgique;
 use App\Models\Inscription;
+use App\Models\Priere;
 use App\Models\User;
+use App\Services\SondageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
+    public function __construct(
+        private readonly SondageService $sondageService,
+    ) {
+    }
+
     public function index()
     {
         $user = Auth::user();
+        $user->loadMissing('family', 'classe');
+        $familyName = $user->family?->nom
+            ?? $user->familiesAsResponsible()->value('nom');
 
         // Vérifier que c'est un conducteur
         if ($user->role !== 'conducteur') {
@@ -29,11 +39,14 @@ class DashboardController extends Controller
                 'role' => $user->role,
                 'pendingInscriptions' => 0,
                 'pendingLiturgieCount' => 0,
+                'surveyBadgeCount' => 0,
+                'prayerBadgeCount' => 0,
                 'flashAnnouncements' => $this->buildFlashAnnouncements(),
                 'pendingTransfers' => 0,
                 'inscriptions' => [],
                 'users' => [],
                 'className' => 'Aucune classe assignée',
+                'familyName' => $familyName,
             ]);
         }
 
@@ -112,17 +125,33 @@ class DashboardController extends Controller
             ->whereIn('classe_id', $classIds)
             ->where('statut', ActeLiturgique::STATUT_Soumise)
             ->count();
+        $surveyBadgeCount = $this->sondageService
+            ->getVisibleSondagesForUser($user)
+            ->filter(fn (array $survey) => ($survey['statut'] ?? null) === 'Actif' && !($survey['aDejaRepondu'] ?? false))
+            ->count();
+        $prayerBadgeCount = Priere::query()
+            ->where('user_id', $user->id)
+            ->where(function ($query) {
+                $query->whereIn('statut', ['Transmise', 'En priere', 'Exaucement partage'])
+                    ->orWhereNotNull('vue_le')
+                    ->orWhereNotNull('prise_en_priere_le')
+                    ->orWhereNotNull('exaucee_le');
+            })
+            ->count();
         $pendingTransfers = 0; // À implémenter selon votre logique
 
         return Inertia::render('Conducteur/Dashboard', [
             'role' => $user->role,
             'pendingInscriptions' => $pendingCount,
             'pendingLiturgieCount' => $pendingLiturgieCount,
+            'surveyBadgeCount' => $surveyBadgeCount,
+            'prayerBadgeCount' => $prayerBadgeCount,
             'flashAnnouncements' => $this->buildFlashAnnouncements(),
             'pendingTransfers' => $pendingTransfers,
             'inscriptions' => $pendingInscriptions->values(),
             'users' => $classUsers->values(),
             'className' => $className,
+            'familyName' => $familyName,
             'userCount' => $classUsers->count(),
             'totalInscriptionCount' => Inscription::all()
                 ->filter(function ($insc) use ($classIdsStr) {
@@ -225,5 +254,3 @@ class DashboardController extends Controller
         return back()->with('success', 'Inscription rejetée avec succès');
     }
 }
-
-

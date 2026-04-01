@@ -85,6 +85,22 @@ function questionTypeLabel(type) {
     return "Reponse libre";
 }
 
+const ratingScaleLabels = {
+    1: "Tres insatisfait",
+    2: "Insatisfait",
+    3: "Neutre",
+    4: "Satisfait",
+    5: "Tres satisfait",
+};
+
+function getRatingOptionLabel(question = {}, option) {
+    const optionValue = String(option ?? "");
+    const label =
+        question?.scaleLabels?.[optionValue] || ratingScaleLabels[optionValue];
+
+    return label ? `${optionValue} - ${label}` : optionValue;
+}
+
 function responseStateLabel(value) {
     if (value === "with_answers") return "Avec reponses";
     if (value === "without_answers") return "Sans reponse";
@@ -391,7 +407,10 @@ function buildQuestionStats(questions = [], responses = []) {
                 const total = answerValues.length;
 
                 return {
-                    label: option,
+                    label:
+                        questionType === "rating"
+                            ? getRatingOptionLabel(question, option)
+                            : option,
                     count,
                     percentage: total > 0 ? Math.round((count / total) * 100) : 0,
                 };

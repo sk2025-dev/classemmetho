@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import {
     ArrowLeft,
@@ -22,6 +22,8 @@ import {
     Trash2,
     Users,
 } from "lucide-react";
+import { ToastContainer } from "../../../Components/Toast";
+import useToast from "../../../Hooks/useToast";
 
 const questionTypeOptions = [
     {
@@ -56,6 +58,14 @@ const questionTypeOptions = [
     },
 ];
 
+const ratingScaleLabels = {
+    1: "Tres insatisfait",
+    2: "Insatisfait",
+    3: "Neutre",
+    4: "Satisfait",
+    5: "Tres satisfait",
+};
+
 function createQuestion(type = "multiple", title = "") {
     const defaults = {
         multiple: ["Option 1"],
@@ -71,6 +81,7 @@ function createQuestion(type = "multiple", title = "") {
         title: title || "Nouvelle question",
         required: true,
         options: defaults[type] || [],
+        scaleLabels: type === "rating" ? ratingScaleLabels : undefined,
     };
 }
 
@@ -120,6 +131,26 @@ export default function ConducteurSondageCreate({
     const [activeId, setActiveId] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formErrors, setFormErrors] = useState({});
+    const { toasts, removeToast, error: showError } = useToast();
+    const lastErrorKeyRef = useRef(null);
+
+    useEffect(() => {
+        const errorKeys = Object.keys(formErrors);
+
+        if (errorKeys.length === 0) {
+            lastErrorKeyRef.current = null;
+            return;
+        }
+
+        const currentKey = JSON.stringify(errorKeys.sort());
+
+        if (currentKey !== lastErrorKeyRef.current) {
+            lastErrorKeyRef.current = currentKey;
+            showError(
+                "Certains champs du sondage doivent etre corriges avant l'enregistrement.",
+            );
+        }
+    }, [formErrors, showError]);
 
     const addQuestion = (type = "multiple", title = "") => {
         const question = createQuestion(type, title);
@@ -260,6 +291,7 @@ export default function ConducteurSondageCreate({
     return (
         <>
             <Head title={`${isEditing ? "Modifier" : "Nouveau"} sondage - Conducteur`} />
+            <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
 
             <div
                 className="min-h-screen px-4 py-6 sm:px-6 lg:px-8"
@@ -327,13 +359,6 @@ export default function ConducteurSondageCreate({
 
                     <div className="grid gap-6">
                         <div className="space-y-6">
-                            {Object.keys(formErrors).length > 0 ? (
-                                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                                    Certains champs du sondage doivent etre
-                                    corriges avant l'enregistrement.
-                                </div>
-                            ) : null}
-
                             <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_50px_rgba(15,23,42,0.10)] sm:p-6">
                                 <div className="flex items-start justify-between gap-4">
                                     <div>
@@ -372,11 +397,6 @@ export default function ConducteurSondageCreate({
                                             placeholder="Ex: Satisfaction apres la retraite spirituelle"
                                             className={fieldClasses()}
                                         />
-                                        {formErrors.titre ? (
-                                            <p className="mt-2 text-sm text-rose-600">
-                                                {formErrors.titre}
-                                            </p>
-                                        ) : null}
                                     </div>
 
                                     <div className="md:col-span-2">
@@ -396,11 +416,6 @@ export default function ConducteurSondageCreate({
                                             placeholder="Expliquez en quelques lignes ce que vous cherchez a comprendre."
                                             className={fieldClasses()}
                                         />
-                                        {formErrors.description ? (
-                                            <p className="mt-2 text-sm text-rose-600">
-                                                {formErrors.description}
-                                            </p>
-                                        ) : null}
                                     </div>
 
                                     <div>
@@ -421,11 +436,6 @@ export default function ConducteurSondageCreate({
                                                 }
                                                 className={`${fieldClasses()} pl-11`}
                                             />
-                                            {formErrors.dateEcheance ? (
-                                                <p className="mt-2 text-sm text-rose-600">
-                                                    {formErrors.dateEcheance}
-                                                </p>
-                                            ) : null}
                                         </div>
                                     </div>
 
@@ -453,11 +463,6 @@ export default function ConducteurSondageCreate({
                                             </select>
                                             <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                                         </div>
-                                        {formErrors.audience ? (
-                                            <p className="mt-2 text-sm text-rose-600">
-                                                {formErrors.audience}
-                                            </p>
-                                        ) : null}
                                     </div>
 
                                 </div>
@@ -595,6 +600,11 @@ export default function ConducteurSondageCreate({
                                                                                       "yes_no"
                                                                                     ? ["Oui", "Non"]
                                                                                     : ["Option 1"],
+                                                                        scaleLabels:
+                                                                            event.target.value ===
+                                                                            "rating"
+                                                                                ? ratingScaleLabels
+                                                                                : undefined,
                                                                     })
                                                                 }
                                                                 className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-10 text-sm font-medium text-slate-700 outline-none transition focus:border-amber-300 focus:ring-4 focus:ring-amber-100"
@@ -619,15 +629,25 @@ export default function ConducteurSondageCreate({
                                                                     Champ de reponse libre...
                                                                 </div>
                                                             ) : question.type === "rating" ? (
-                                                                <div className="flex flex-wrap gap-2">
+                                                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                                                                     {question.options.map(
                                                                         (option, optionIndex) => (
                                                                             <div
                                                                                 key={`${question.id}-${optionIndex}`}
-                                                                                className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-600"
-                                                                                title={option}
+                                                                                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center transition hover:border-amber-300 hover:bg-amber-50"
                                                                             >
-                                                                                <Star className="h-4 w-4 fill-current" />
+                                                                                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-500">
+                                                                                    <Star className="h-4 w-4 fill-current" />
+                                                                                    <span className="ml-1 text-sm font-semibold">
+                                                                                        {option}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <p className="mt-2 text-xs font-medium leading-5 text-slate-600">
+                                                                                    {question.scaleLabels?.[option] ||
+                                                                                        ratingScaleLabels[
+                                                                                            option
+                                                                                        ]}
+                                                                                </p>
                                                                             </div>
                                                                         ),
                                                                     )}
@@ -793,6 +813,24 @@ export default function ConducteurSondageCreate({
                                     ) : null}
                                 </div>
                             </section>
+
+                            <div className="flex justify-center">
+                                <button
+                                    type="button"
+                                    onClick={() => submitSurvey("publish")}
+                                    disabled={isSubmitting}
+                                    className="inline-flex items-center gap-2 rounded-2xl bg-[#B6C01A] px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-[#a4ae17] disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    <Share2 className="h-4 w-4" />
+                                    {isSubmitting
+                                        ? "Publication..."
+                                        : isEditing
+                                          ? isDraftSurvey
+                                              ? "Publier le sondage"
+                                              : "Mettre a jour le sondage"
+                                          : "Publier le sondage"}
+                                </button>
+                            </div>
                         </div>
 
                     </div>

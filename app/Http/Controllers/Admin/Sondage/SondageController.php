@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin\Sondage;
 
 use App\Http\Controllers\Controller;
 use App\Models\Sondage;
+use App\Models\SondageView;
 use App\Services\SondageService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Support\Str;
@@ -21,11 +23,25 @@ class SondageController extends Controller
     {
         return Inertia::render('Admin/Sondage/Index', [
             'sondages' => $this->sondageService->getAllSondages(),
+            'seenSurveyIds' => SondageView::query()
+                ->where('user_id', Auth::id())
+                ->pluck('sondage_id')
+                ->all(),
         ]);
     }
 
     public function show(int $id): Response
     {
+        SondageView::updateOrCreate(
+            [
+                'user_id' => Auth::id(),
+                'sondage_id' => $id,
+            ],
+            [
+                'viewed_at' => now(),
+            ],
+        );
+
         [$survey, $participantCount] = $this->resolveSurveyAnalyticsContext($id);
 
         return Inertia::render('Admin/Sondage/Show', array_merge(

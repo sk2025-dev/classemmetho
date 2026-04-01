@@ -20,6 +20,14 @@ use Inertia\Response;
 
 class SondageController extends Controller
 {
+    private const RATING_SCALE_LABELS = [
+        '1' => 'Tres insatisfait',
+        '2' => 'Insatisfait',
+        '3' => 'Neutre',
+        '4' => 'Satisfait',
+        '5' => 'Tres satisfait',
+    ];
+
     public function __construct(
         private readonly SondageService $sondageService,
     ) {
@@ -256,6 +264,7 @@ class SondageController extends Controller
                 'nom' => $user->classe?->nom,
             ],
             'hasResponded' => (bool) ($survey['aDejaRepondu'] ?? false),
+            'previousAnswers' => $this->sondageService->getUserResponseAnswers($id, $user),
         ]);
     }
 
@@ -326,12 +335,14 @@ class SondageController extends Controller
                 $optionStats = collect();
 
                 if (in_array($questionType, ['multiple', 'yes_no', 'rating'], true)) {
-                    $optionStats = $options->map(function ($option) use ($answerValues) {
+                    $optionStats = $options->map(function ($option) use ($answerValues, $questionType, $question) {
                         $count = $answerValues->filter(fn ($value) => $value === $option)->count();
                         $total = $answerValues->count();
 
                         return [
-                            'label' => $option,
+                            'label' => $questionType === 'rating'
+                                ? $this->formatRatingOptionLabel($question, $option)
+                                : $option,
                             'count' => $count,
                             'percentage' => $total > 0 ? (int) round(($count / $total) * 100) : 0,
                         ];
@@ -464,8 +475,20 @@ class SondageController extends Controller
             'questions.*.required' => ['nullable', 'boolean'],
             'questions.*.options' => ['nullable', 'array'],
             'questions.*.options.*' => ['nullable', 'string'],
+            'questions.*.scaleLabels' => ['nullable', 'array'],
+            'questions.*.scaleLabels.*' => ['nullable', 'string'],
             'mode' => ['nullable', 'in:draft,publish'],
         ]);
+    }
+
+    private function formatRatingOptionLabel(array $question, mixed $option): string
+    {
+        $optionValue = (string) $option;
+        $customLabels = collect($question['scaleLabels'] ?? [])
+            ->mapWithKeys(fn ($label, $key) => [(string) $key => (string) $label]);
+        $label = $customLabels->get($optionValue, self::RATING_SCALE_LABELS[$optionValue] ?? null);
+
+        return $label ? $optionValue . ' - ' . $label : $optionValue;
     }
 
     private function findEditableSurvey(int $classeId, int $id): Sondage
