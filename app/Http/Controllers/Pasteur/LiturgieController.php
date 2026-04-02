@@ -8,8 +8,6 @@ use App\Http\Requests\ActesLiturgiques\TransitionActeLiturgiqueRequest;
 use App\Http\Requests\ActesLiturgiques\StoreActeLiturgiquePasteurRequest;
 use App\Models\ActeLiturgique;
 use App\Models\ActeLiturgiqueHistorique;
-use App\Models\FormationRequest;
-use App\Models\FormationRequestHistorique;
 use App\Models\User;
 use App\Services\ActeLiturgiqueService;
 use Illuminate\Http\Request;
@@ -36,17 +34,30 @@ class LiturgieController extends Controller
             ActeLiturgique::TYPE_GENERALE,
         ];
 
-        $actes = ActeLiturgique::with(['membre', 'classe', 'family', 'historiques.acteur'])
+        $actes = ActeLiturgique::with([
+            'membre.family',
+            'classe',
+            'family',
+            'historiques.acteur',
+        ])
             ->where('statut', 'TRANSMISE_AU_PASTEUR')
             ->where(function ($q) {
                 $q->where('est_annonce', false)
                     ->orWhereNull('est_annonce');
             })
             ->whereNotIn('type_acte', $annonceTypes)
+            ->where(function ($q) {
+                $q->whereNull('details->ceremonie_statut')
+                    ->orWhere('details->ceremonie_statut', '<>', 'CEREMONIE_TRANSMISE_AU_PASTEUR');
+            })
             ->latest()
             ->paginate(10, ['*'], 'actes_page');
 
-        $historique = ActeLiturgiqueHistorique::with(['acte.membre', 'acte.classe', 'acte.family'])
+        $historique = ActeLiturgiqueHistorique::with([
+            'acte.membre.family',
+            'acte.classe',
+            'acte.family',
+        ])
             ->whereHas('acte', function ($q) use ($annonceTypes) {
                 $q->where(function ($sub) {
                     $sub->where('est_annonce', false)
@@ -65,8 +76,8 @@ class LiturgieController extends Controller
                     'membre' => $acte?->membre,
                     'classe' => $acte?->classe,
                     'classe_id' => $acte?->classe_id,
-                    'family' => $acte?->family,
-                    'family_id' => $acte?->family_id,
+                    'family' => $acte?->family ?? $acte?->membre?->family,
+                    'family_id' => $acte?->family_id ?? $acte?->membre?->family_id,
                     'reference' => $acte?->reference,
                     'date_souhaitee' => $acte?->date_souhaitee,
                     'details' => $acte?->details,
@@ -100,14 +111,24 @@ class LiturgieController extends Controller
             });
 
         // Load announcements from all families
-        $annonces = ActeLiturgique::with(['createur', 'family', 'classe', 'membre'])
+        $annonces = ActeLiturgique::with([
+            'createur.family',
+            'family',
+            'classe',
+            'membre.family',
+        ])
             ->annonces()
             ->where('statut', 'TRANSMISE_AU_PASTEUR')
             ->orderBy('created_at', 'desc')
             ->get();
 
         // Load announcement history
-        $annoncesHistorique = ActeLiturgiqueHistorique::with(['acte.createur', 'acte.family', 'acte.classe', 'acte.membre'])
+        $annoncesHistorique = ActeLiturgiqueHistorique::with([
+            'acte.createur.family',
+            'acte.family',
+            'acte.classe',
+            'acte.membre.family',
+        ])
             ->whereHas('acte', function ($q) {
                 $q->annonces();
             })
@@ -123,8 +144,9 @@ class LiturgieController extends Controller
                     'type_annonce' => $acte?->type_annonce,
                     'message' => $acte?->details?->contenu ?? $acte?->message,
                     'createur' => $acte?->createur,
-                    'famille' => $acte?->family,
-                    'family_id' => $acte?->family_id,
+                    'family' => $acte?->family ?? $acte?->membre?->family ?? $acte?->createur?->family,
+                    'famille' => $acte?->family ?? $acte?->membre?->family ?? $acte?->createur?->family,
+                    'family_id' => $acte?->family_id ?? $acte?->membre?->family_id ?? $acte?->createur?->family_id,
                     'classe' => $acte?->classe,
                     'classe_id' => $acte?->classe_id,
                     'membre' => $acte?->membre,
@@ -136,54 +158,44 @@ class LiturgieController extends Controller
             })
             ->values();
 
-        $formations = FormationRequest::with(['membre', 'classe', 'family', 'createur'])
-            ->where('statut', 'TRANSMISE_AU_PASTEUR')
-            ->orderBy('updated_at', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $calendarStatuses = [
+            ActeLiturgique::STATUT_VALIDEE,
+            ActeLiturgique::STATUT_PUBLIEE,
+            ActeLiturgique::STATUT_ARCHIVEE,
+            ActeLiturgique::STATUT_CELEBRE,
+            ActeLiturgique::STATUT_TERMINE,
+        ];
 
-        $formationsValidees = FormationRequest::with([
-            'membre',
-            'classe',
-            'family',
-            'createur',
-            'formationTermineePar',
-        ])
-            ->where('statut', 'VALIDEE')
-            ->orderByRaw('CASE WHEN formation_terminee_at IS NULL THEN 0 ELSE 1 END ASC')
-            ->orderBy('updated_at', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        $formationsHistorique = FormationRequestHistorique::with(['formation.membre', 'formation.classe', 'formation.family', 'acteur'])
-            ->whereHas('formation', function ($q) {
-                $q->whereIn('statut', ['VALIDEE', 'REFUSEE_PAR_PASTEUR']);
-            })
-            ->where('acteur_id', $user->id)
-            ->whereIn('statut_nouveau', ['VALIDEE', 'REFUSEE_PAR_PASTEUR'])
-            ->latest()
+        $calendarEvents = ActeLiturgique::with(['membre', 'classe'])
+            ->where('type_acte', ActeLiturgique::TYPE_MARIAGE)
+            ->whereIn('statut', $calendarStatuses)
+            ->whereNotNull('date_souhaitee')
+            ->orderBy('date_souhaitee', 'asc')
             ->get()
-            ->map(function ($item) {
-                $formation = $item->formation;
+            ->map(function (ActeLiturgique $acte) {
+                $date = $acte->date_souhaitee;
+                if (!$date) {
+                    return null;
+                }
+                $details = (array) ($acte->details ?? []);
                 return [
-                    'id' => $formation?->id,
-                    'reference' => $formation?->reference,
-                    'membre' => $formation?->membre,
-                    'classe' => $formation?->classe,
-                    'family' => $formation?->family,
-                    'conjoint_nom' => $formation?->conjoint_nom,
-                    'conjoint_contact' => $formation?->conjoint_contact,
-                    'conjoint_phone' => $formation?->conjoint_phone,
-                    'conjoint_birthdate' => $formation?->conjoint_birthdate,
-                    'conjoint_baptized' => $formation?->conjoint_baptized,
-                    'conjoint_church' => $formation?->conjoint_church,
-                    'formation_terminee_at' => optional($formation?->formation_terminee_at)?->toISOString(),
-                    'formation_terminee_by' => $formation?->formation_terminee_by,
-                    'statut' => $item->statut_nouveau,
-                    'commentaire' => $item->commentaire,
-                    'validated_at' => optional($item->created_at)->toISOString(),
+                    'id' => $acte->id,
+                    'date' => $date->format('Y-m-d'),
+                    'reference' => $acte->reference,
+                    'statut' => $acte->statut,
+                    'ceremonie_statut' => $details['ceremonie_statut'] ?? null,
+                    'membre' => [
+                        'id' => $acte->membre?->id,
+                        'prenom' => $acte->membre?->prenom,
+                        'nom' => $acte->membre?->nom,
+                    ],
+                    'classe' => [
+                        'id' => $acte->classe?->id,
+                        'nom' => $acte->classe?->nom,
+                    ],
                 ];
             })
+            ->filter()
             ->values();
 
         return Inertia::render('Pasteur/Liturgie/Index', [
@@ -192,188 +204,8 @@ class LiturgieController extends Controller
             'familyMembers' => $familyMembers,
             'annonces' => $annonces,
             'annoncesHistorique' => $annoncesHistorique,
-            'formations' => $formations,
-            'formationsValidees' => $formationsValidees,
-            'formationsHistorique' => $formationsHistorique,
+            'calendarEvents' => $calendarEvents,
         ]);
-    }
-
-    public function transitionFormation(Request $request, int $id)
-    {
-        $user = Auth::user();
-
-        $payload = Validator::make($request->all(), [
-            'statut' => ['required', 'in:VALIDEE,REFUSEE_PAR_PASTEUR'],
-            'commentaire' => ['nullable', 'string', 'max:1000'],
-        ])->validate();
-
-        if (
-            $payload['statut'] === 'REFUSEE_PAR_PASTEUR'
-            && empty(trim((string) ($payload['commentaire'] ?? '')))
-        ) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Le motif du refus est obligatoire.',
-            ], 422);
-        }
-
-        $formation = FormationRequest::findOrFail($id);
-
-        if ($formation->statut !== 'TRANSMISE_AU_PASTEUR') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cette demande de formation n\'est plus en attente du pasteur.',
-            ], 422);
-        }
-
-        $oldStatus = $formation->statut;
-        $formation->statut = $payload['statut'];
-        $formation->save();
-
-        FormationRequestHistorique::create([
-            'formation_request_id' => $formation->id,
-            'statut_precedent' => $oldStatus,
-            'statut_nouveau' => $payload['statut'],
-            'acteur_id' => $user->id,
-            'commentaire' => $payload['commentaire'] ?? null,
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => $payload['statut'] === 'VALIDEE'
-                ? 'Demande de formation validée.'
-                : 'Demande de formation refusée.',
-            'formation' => $formation->fresh(['membre', 'classe', 'family', 'createur', 'formationTermineePar']),
-        ]);
-    }
-
-    public function terminerFormation(Request $request, int $id)
-    {
-        $user = Auth::user();
-
-        $payload = Validator::make($request->all(), [
-            'commentaire' => ['nullable', 'string', 'max:1000'],
-        ])->validate();
-
-        $formation = FormationRequest::findOrFail($id);
-
-        if ($formation->statut !== 'VALIDEE') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Seule une formation validee peut etre marquee comme terminee.',
-            ], 422);
-        }
-
-        if ($formation->formation_terminee_at) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cette formation est deja marquee comme terminee.',
-            ], 422);
-        }
-
-        $formation->forceFill([
-            'formation_terminee_at' => now(),
-            'formation_terminee_by' => $user->id,
-        ])->save();
-
-        FormationRequestHistorique::create([
-            'formation_request_id' => $formation->id,
-            'statut_precedent' => $formation->statut,
-            'statut_nouveau' => $formation->statut,
-            'acteur_id' => $user->id,
-            'commentaire' => $payload['commentaire'] ?: 'Formation confirmee comme terminee par le pasteur.',
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'La formation a ete marquee comme terminee.',
-            'formation' => $formation->fresh(['membre', 'classe', 'family', 'createur', 'formationTermineePar']),
-        ]);
-    }
-
-    public function annulerFinFormation(Request $request, int $id)
-    {
-        $user = Auth::user();
-
-        $payload = Validator::make($request->all(), [
-            'commentaire' => ['nullable', 'string', 'max:1000'],
-        ])->validate();
-
-        $formation = FormationRequest::findOrFail($id);
-
-        if (!$formation->formation_terminee_at) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cette formation n\'est pas marquee comme terminee.',
-            ], 422);
-        }
-
-        $formation->forceFill([
-            'formation_terminee_at' => null,
-            'formation_terminee_by' => null,
-        ])->save();
-
-        FormationRequestHistorique::create([
-            'formation_request_id' => $formation->id,
-            'statut_precedent' => $formation->statut,
-            'statut_nouveau' => $formation->statut,
-            'acteur_id' => $user->id,
-            'commentaire' => $payload['commentaire'] ?: 'Annulation de la fin de formation par le pasteur.',
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'La fin de formation a ete annulee.',
-            'formation' => $formation->fresh(['membre', 'classe', 'family', 'createur', 'formationTermineePar']),
-        ]);
-    }
-
-    public function ficheFormationsValidees()
-    {
-        $pasteur = Auth::user();
-
-        $formations = FormationRequest::with(['membre', 'classe', 'family', 'createur'])
-            ->where('statut', 'VALIDEE')
-            ->orderBy('created_at', 'asc')
-            ->get();
-
-        if ($formations->isEmpty()) {
-            abort(422, 'Aucune demande de formation validée à imprimer.');
-        }
-
-        $pdf = Pdf::loadView('pdf.formations-validees-secretariat', [
-            'formations' => $formations,
-            'pasteur' => $pasteur,
-            'generatedAt' => now(),
-        ])->setPaper('a4', 'portrait');
-
-        return $pdf->download('fiche-formations-validees-secretariat.pdf');
-    }
-
-    public function ficheFormationsHistorique()
-    {
-        $pasteur = Auth::user();
-
-        $historique = FormationRequestHistorique::with(['formation.membre', 'formation.classe', 'formation.family', 'acteur'])
-            ->whereHas('formation', function ($q) {
-                $q->whereIn('statut', ['VALIDEE', 'REFUSEE_PAR_PASTEUR']);
-            })
-            ->where('acteur_id', $pasteur->id)
-            ->whereIn('statut_nouveau', ['VALIDEE', 'REFUSEE_PAR_PASTEUR'])
-            ->latest()
-            ->get();
-
-        if ($historique->isEmpty()) {
-            abort(422, 'Aucun historique de formations à imprimer.');
-        }
-
-        $pdf = Pdf::loadView('pdf.formations-historique-pasteur', [
-            'historique' => $historique,
-            'pasteur' => $pasteur,
-            'generatedAt' => now(),
-        ])->setPaper('a4', 'landscape');
-
-        return $pdf->download('historique-formations-validations.pdf');
     }
 
     public function store(StoreActeLiturgiquePasteurRequest $request)
@@ -406,12 +238,18 @@ class LiturgieController extends Controller
         $user = Auth::user();
         $acte = ActeLiturgique::findOrFail($id);
 
+        $extraDetails = null;
+        $statut = $request->string('statut')->toString();
+        // For marriage requests, the pastor validates the dossier with VALIDEE.
+        // The ceremony date itself is handled later via decisionCeremonie().
+
         try {
             $updated = $this->service->transitionStatut(
                 $acte,
-                $request->string('statut')->toString(),
+                $statut,
                 $user,
-                $request->input('commentaire')
+                $request->input('commentaire'),
+                $extraDetails
             );
         } catch (InvalidArgumentException $e) {
             return response()->json([
@@ -453,13 +291,6 @@ class LiturgieController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Cette validation de cérémonie concerne uniquement les mariages.',
-            ], 422);
-        }
-
-        if (!in_array($acte->statut, ['VALIDEE', 'PUBLIEE', 'ARCHIVEE'], true)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'La date de cérémonie ne peut être traitée qu\'après validation pastorale du dossier.',
             ], 422);
         }
 
@@ -509,8 +340,20 @@ class LiturgieController extends Controller
             abort(403, 'Accès interdit aux certificats de membres de votre famille.');
         }
 
-        if (!in_array($acte->statut, ['CELEBRE', 'TERMINE'], true)) {
-            abort(422, "Le certificat est disponible uniquement apres l'acte effectue.");
+        $details = (array) ($acte->details ?? []);
+        $dateValidatedMarriage = $typeActe === 'mariage'
+            && ($details['ceremonie_statut'] ?? null) === 'CEREMONIE_VALIDEE_PAR_PASTEUR';
+
+        if (in_array($typeActe, $typesFiche, true)) {
+            $validFicheStatuses = $typeActe === 'naissance'
+                ? ['SOUMISE', 'EN_ATTENTE_CONDUCTEUR', 'TRANSMISE_AU_PASTEUR', 'VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE']
+                : ['VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'];
+
+            if (!in_array($acte->statut, $validFicheStatuses, true)) {
+                abort(422, "La fiche est disponible uniquement apres validation de la demande.");
+            }
+        } elseif (!in_array($acte->statut, ['CELEBRE', 'TERMINE'], true) && ! $dateValidatedMarriage) {
+            abort(422, "Le certificat est disponible uniquement apres l'acte effectue ou apres validation de la date de cérémonie.");
         }
 
         if (in_array($typeActe, $typesFiche, true)) {
@@ -614,6 +457,10 @@ class LiturgieController extends Controller
 
             $filename = 'fiche-conducteur-' . ($actes->first()->reference ?: ('acte-' . $actes->first()->id)) . '.pdf';
 
+            if ($request->query('preview')) {
+                return $pdf->stream($filename);
+            }
+
             return $pdf->download($filename);
         }
 
@@ -639,22 +486,91 @@ class LiturgieController extends Controller
         }
 
         $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
+        $typeActe = strtolower((string) $acte->type_acte);
+        $view = $typeActe === 'naissance' || $typeActe === 'deces'
+            ? ($typeActe === 'naissance' ? 'pdf.fiche-naissance' : 'pdf.fiche-deces')
+            : 'pdf.fiche-acte-conducteur';
 
-        $pdf = Pdf::loadView('pdf.fiche-acte-conducteur', [
+        $pdfData = [
             'acte' => $acte,
             'logoDataUri' => $logoDataUri,
             'generatedBy' => $acte->conducteur ?? $acte->classe?->conducteur,
             'generatedAt' => $acte->updated_at ?? now(),
             'documentLabel' => 'Fiche recue du conducteur',
-        ])->setPaper('a4', 'portrait');
+        ];
+
+        if ($typeActe === 'naissance') {
+            $pdfData['methoDataUri'] = $this->buildImageDataUri(public_path('images/metho.jpg'));
+        }
+
+        $pdf = Pdf::loadView($view, $pdfData)
+            ->setPaper('a4', 'portrait');
 
         $filename = 'fiche-conducteur-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
+
+        if ($request->query('preview')) {
+            return $pdf->stream($filename);
+        }
 
         return $pdf->download($filename);
     }
 
-    public function fiche(int $id)
+    public function fiche(Request $request, int $id)
     {
+        $requestedIds = array_values(array_filter(array_map(
+            'intval',
+            explode(',', (string) $request->query('ids', ''))
+        )));
+
+        if (!empty($requestedIds)) {
+            $actes = ActeLiturgique::with([
+                'createur',
+                'family',
+                'conducteur',
+                'pasteur',
+                'membre.family',
+                'membre.classe',
+                'classe',
+            ])
+                ->where(function ($q) {
+                    $q->where('est_annonce', false)
+                        ->orWhereNull('est_annonce');
+                })
+                ->whereNotIn('type_acte', ActeLiturgique::ANNOUNCE_TYPES)
+                ->where('type_acte', ActeLiturgique::TYPE_MARIAGE)
+                ->whereIn('id', $requestedIds)
+                ->orderBy('created_at')
+                ->get();
+
+            if ($actes->count() !== count($requestedIds)) {
+                abort(404, 'Certaines demandes de mariage sont introuvables.');
+            }
+
+            $validFicheStatuses = ['TRANSMISE_AU_PASTEUR', 'VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'];
+            foreach ($actes as $marriageActe) {
+                if (!in_array($marriageActe->statut, $validFicheStatuses, true)) {
+                    abort(403, 'La fiche finale des mariages est disponible apres transmission de la demande.');
+                }
+            }
+
+            $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
+
+            $pdf = Pdf::loadView('pdf.fiche-pasteur_mariage', [
+                'actes' => $actes,
+                'logoDataUri' => $logoDataUri,
+                'documentLabel' => 'Fiche finale des mariages',
+                'generatedAt' => now(),
+            ])->setPaper('a4', 'portrait');
+
+            $filename = 'fiche-pasteur-mariage-' . now()->format('Ymd-His') . '.pdf';
+
+            if ($request->query('preview')) {
+                return $pdf->stream($filename);
+            }
+
+            return $pdf->download($filename);
+        }
+
         $acte = ActeLiturgique::with(['createur', 'family', 'conducteur', 'pasteur', 'membre', 'classe'])
             ->where(function ($q) {
                 $q->where('est_annonce', false)
@@ -663,20 +579,97 @@ class LiturgieController extends Controller
             ->whereNotIn('type_acte', ActeLiturgique::ANNOUNCE_TYPES)
             ->findOrFail($id);
 
-        if (!in_array($acte->statut, ['VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'], true)) {
-            abort(403, 'La fiche du pasteur est disponible apres validation du dossier.');
+        $typeActe = strtolower((string) $acte->type_acte);
+        $validFicheStatuses = ['TRANSMISE_AU_PASTEUR', 'VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'];
+
+        if (!in_array($acte->statut, $validFicheStatuses, true)) {
+            abort(403, 'La fiche du pasteur est disponible apres transmission de la demande.');
         }
 
         $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
+        $conducteurSignatureDataUri = null;
+        if ($acte->conducteur?->signature_path && Storage::disk('public')->exists($acte->conducteur->signature_path)) {
+            $conducteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->conducteur->signature_path));
+        }
+        $pasteurSignatureDataUri = null;
+        if ($acte->pasteur?->signature_path && Storage::disk('public')->exists($acte->pasteur->signature_path)) {
+            $pasteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->pasteur->signature_path));
+        }
 
-        $pdf = Pdf::loadView('pdf.fiche-demande', [
+        $view = $typeActe === 'naissance'
+            ? 'pdf.fiche-naissance'
+            : ($typeActe === 'deces' ? 'pdf.fiche-deces' : 'pdf.fiche-demande');
+
+        $pdf = Pdf::loadView($view, [
             'acte' => $acte,
             'logoDataUri' => $logoDataUri,
+            'conducteurSignatureDataUri' => $conducteurSignatureDataUri,
+            'pasteurSignatureDataUri' => $pasteurSignatureDataUri,
         ])->setPaper('a4', 'portrait');
 
         $filename = 'fiche-pasteur-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
 
+        if ($request->query('preview')) {
+            return $pdf->stream($filename);
+        }
+
         return $pdf->download($filename);
+    }
+
+    public function envoyerFiche(Request $request)
+    {
+        $payload = $request->validate([
+            'destinataire' => ['nullable', 'email'],
+            'subject' => ['nullable', 'string', 'max:255'],
+            'message' => ['nullable', 'string', 'max:2000'],
+            'ids' => ['nullable', 'array'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $user = $request->user();
+
+        $acteIds = array_filter(
+            array_unique(array_map('intval', $payload['ids'] ?? [])),
+        );
+
+        $query = ActeLiturgique::with(['membre', 'classe', 'family', 'historiques.acteur'])
+            ->where('type_acte', ActeLiturgique::TYPE_MARIAGE)
+            ->whereIn('statut', ['VALIDEE', 'PUBLIEE']);
+
+        if (!empty($acteIds)) {
+            $query->whereIn('id', $acteIds);
+        }
+
+        $actes = $query->get()->filter(function (ActeLiturgique $acte) {
+            $details = (array) ($acte->details ?? []);
+            return empty($details['fiche_pasteur_envoyee']);
+        })->values();
+
+        if ($actes->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Aucune fiche en attente d’envoi.',
+            ], 422);
+        }
+
+        $actes->each(function (ActeLiturgique $acte) use ($payload, $user) {
+            $details = (array) ($acte->details ?? []);
+            $details['fiche_pasteur_envoyee'] = true;
+            $details['fiche_pasteur_envoyee_at'] = now()->toISOString();
+            $details['fiche_pasteur_destinataire'] = $payload['destinataire'] ?? null;
+            $details['fiche_pasteur_envoyee_par'] = $user->id;
+            $acte->update(['details' => $details]);
+        });
+
+        $updatedActes = ActeLiturgique::with(['membre', 'classe', 'family', 'historiques.acteur'])
+            ->whereIn('id', $actes->pluck('id')->toArray())
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'La fiche a été marquée comme envoyée.',
+            'actes' => $updatedActes,
+        ]);
     }
 
     private function buildQrDataUri(string $payload): ?string

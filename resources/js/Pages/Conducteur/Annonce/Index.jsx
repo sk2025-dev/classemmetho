@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "@inertiajs/react";
-import { Download } from "lucide-react";
+import { Eye } from "lucide-react";
 
 function Pagination({ paginator }) {
     if (!paginator || !paginator.links) return null;
@@ -144,7 +144,7 @@ export default function Index({
                                         )
                                     }
                                 >
-                                    <Download size={13} /> Télécharger fiche
+                                    <Eye size={13} /> Voir la fiche
                                 </button>
                             )}
                         </div>

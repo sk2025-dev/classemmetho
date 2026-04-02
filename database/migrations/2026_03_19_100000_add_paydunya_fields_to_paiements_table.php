@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -58,14 +59,14 @@ return new class extends Migration
             }
 
             // Index pour requêtes courantes
-            if (!Schema::hasIndex('paiements', 'idx_paydunya_transaction')) {
-                $table->index('paydunya_transaction_id');
+            if (!$this->indexExists('paiements', 'idx_paydunya_transaction')) {
+                $table->index('paydunya_transaction_id', 'idx_paydunya_transaction');
             }
-            if (!Schema::hasIndex('paiements', 'idx_payment_status')) {
-                $table->index('payment_status');
+            if (!$this->indexExists('paiements', 'idx_payment_status')) {
+                $table->index('payment_status', 'idx_payment_status');
             }
-            if (!Schema::hasIndex('paiements', 'idx_year_cotisation')) {
-                $table->index(['year', 'cotisation_id']);
+            if (!$this->indexExists('paiements', 'idx_year_cotisation')) {
+                $table->index(['year', 'cotisation_id'], 'idx_year_cotisation');
             }
         });
     }
@@ -73,16 +74,41 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('paiements', function (Blueprint $table) {
-            $table->dropIndexIfExists('idx_paydunya_transaction');
-            $table->dropIndexIfExists('idx_payment_status');
-            $table->dropIndexIfExists('idx_year_cotisation');
-            $table->dropColumnIfExists('year');
-            $table->dropColumnIfExists('provider');
-            $table->dropColumnIfExists('paydunya_transaction_id');
-            $table->dropColumnIfExists('paydunya_reference');
-            $table->dropColumnIfExists('payment_status');
-            $table->dropColumnIfExists('return_url');
-            $table->dropColumnIfExists('paydunya_response');
+            if ($this->indexExists('paiements', 'idx_paydunya_transaction')) {
+                $table->dropIndex('idx_paydunya_transaction');
+            }
+            if ($this->indexExists('paiements', 'idx_payment_status')) {
+                $table->dropIndex('idx_payment_status');
+            }
+            if ($this->indexExists('paiements', 'idx_year_cotisation')) {
+                $table->dropIndex('idx_year_cotisation');
+            }
+            if ($this->indexExists('paiements', 'paiements_paydunya_transaction_id_unique')) {
+                $table->dropUnique('paiements_paydunya_transaction_id_unique');
+            }
+
+            $columnsToDrop = array_values(array_filter([
+                Schema::hasColumn('paiements', 'year') ? 'year' : null,
+                Schema::hasColumn('paiements', 'provider') ? 'provider' : null,
+                Schema::hasColumn('paiements', 'paydunya_transaction_id') ? 'paydunya_transaction_id' : null,
+                Schema::hasColumn('paiements', 'paydunya_reference') ? 'paydunya_reference' : null,
+                Schema::hasColumn('paiements', 'payment_status') ? 'payment_status' : null,
+                Schema::hasColumn('paiements', 'return_url') ? 'return_url' : null,
+                Schema::hasColumn('paiements', 'paydunya_response') ? 'paydunya_response' : null,
+            ]));
+
+            if (!empty($columnsToDrop)) {
+                $table->dropColumn($columnsToDrop);
+            }
         });
+    }
+
+    private function indexExists(string $table, string $index): bool
+    {
+        return DB::table('information_schema.statistics')
+            ->where('table_schema', DB::getDatabaseName())
+            ->where('table_name', $table)
+            ->where('index_name', $index)
+            ->exists();
     }
 };

@@ -104,7 +104,8 @@ class ActeLiturgiqueService
         ActeLiturgique $acte,
         string $newStatus,
         User $actor,
-        ?string $commentaire = null
+        ?string $commentaire = null,
+        ?array $extraDetails = null
     ): ActeLiturgique {
         if (!in_array($newStatus, self::STATUTS, true)) {
             throw new InvalidArgumentException('Nouveau statut invalide.');
@@ -117,7 +118,7 @@ class ActeLiturgiqueService
             throw new InvalidArgumentException("Transition interdite: {$currentStatus} -> {$newStatus} ({$role})");
         }
 
-        $acte = DB::transaction(function () use ($acte, $newStatus, $actor, $commentaire, $currentStatus) {
+        $acte = DB::transaction(function () use ($acte, $newStatus, $actor, $commentaire, $currentStatus, $extraDetails) {
             $update = ['statut' => $newStatus];
 
             if ($actor->role === 'conducteur') {
@@ -131,6 +132,26 @@ class ActeLiturgiqueService
                 $update['pasteur_id'] = $actor->id;
                 if ($commentaire !== null && trim((string) $commentaire) !== '') {
                     $update['note_pastorale'] = $commentaire;
+                }
+
+                if ($newStatus === 'VALIDEE' && strtolower((string) $acte->type_acte) === 'mariage') {
+                    $details = (array) ($acte->details ?? []);
+                    if (is_array($extraDetails) && !empty($extraDetails['date_souhaitee'])) {
+                        $details['date_souhaitee'] = $extraDetails['date_souhaitee'];
+                        $update['date_souhaitee'] = $extraDetails['date_souhaitee'];
+                    }
+                    if (is_array($extraDetails) && !empty($extraDetails['ceremonie_creneau'])) {
+                        $details['ceremonie_creneau'] = $extraDetails['ceremonie_creneau'];
+                    }
+                    if (is_array($extraDetails) && !empty($extraDetails['lieu_ceremonie'])) {
+                        $details['lieu_ceremonie'] = $extraDetails['lieu_ceremonie'];
+                    }
+                    if (is_array($extraDetails) && !empty($extraDetails['temoins'])) {
+                        $details['temoins'] = $extraDetails['temoins'];
+                    }
+                    $details['ceremonie_statut'] = 'CEREMONIE_VALIDE_PAR_PASTEUR';
+                    $details['ceremonie_validee_pasteur_at'] = now()->toISOString();
+                    $update['details'] = $details;
                 }
             }
 

@@ -8,7 +8,6 @@ use App\Http\Requests\ActesLiturgiques\StoreActeLiturgiqueRequest;
 use App\Models\ActeLiturgique;
 use App\Models\ActeLiturgiquePieceJointe;
 use App\Models\Classe;
-use App\Models\FormationRequest;
 use App\Models\User;
 use App\Services\ActeLiturgiqueService;
 use Illuminate\Http\Request;
@@ -53,19 +52,12 @@ class LiturgieController extends Controller
             ->latest()
             ->get();
 
-        $formationRequests = FormationRequest::query()
-            ->with(['membre', 'conducteur', 'classe', 'historiques.acteur', 'formationTermineePar'])
-            ->where('family_id', $user->family_id)
-            ->latest()
-            ->get();
-
         return Inertia::render('ResponsableFamille/Liturgie/Index', [
             'actes' => $actes,
             'familyMembers' => $familyMembers,
             'conducteurs' => $conducteurs,
             'annonces' => $annonces,
             'annoncesParoisse' => $annoncesParoisse,
-            'formationRequests' => $formationRequests,
         ]);
     }
 
@@ -138,19 +130,6 @@ class LiturgieController extends Controller
             $payload['classe_id'] = $user->classe_id;
         }
 
-        if (in_array($payload['type_acte'] ?? null, ['mariage', 'bapteme'], true)) {
-            $formation = FormationRequest::query()
-                ->where('family_id', $user->family_id)
-                ->where('membre_id', $targetMemberId)
-                ->where('type_formation', $payload['type_acte'])
-                ->latest()
-                ->first();
-
-            if ($formation) {
-                $payload['formation_request_id'] = $formation->id;
-            }
-        }
-
         try {
             $acte = $this->service->create($payload, $user);
         } catch (\InvalidArgumentException $e) {
@@ -179,7 +158,7 @@ class LiturgieController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Demande liturgique soumise avec succes.',
-            'acte' => $acte->fresh(['membre', 'classe', 'historiques.acteur', 'formationRequest.formationTermineePar']),
+            'acte' => $acte->fresh(['membre', 'classe', 'historiques.acteur']),
         ]);
     }
 
@@ -201,19 +180,40 @@ class LiturgieController extends Controller
             abort(403, 'Acces non autorise a ce certificat.');
         }
 
-        if (!in_array($acte->statut, ['CELEBRE', 'TERMINE'], true)) {
+        if (in_array($typeActe, $typesFiche, true)) {
+            $validFicheStatuses = $typeActe === 'naissance'
+                ? ['SOUMISE', 'EN_ATTENTE_CONDUCTEUR', 'TRANSMISE_AU_PASTEUR', 'VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE']
+                : ['VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'];
+
+            if (!in_array($acte->statut, $validFicheStatuses, true)) {
+                abort(422, "La fiche est disponible uniquement apres validation du pasteur.");
+            }
+        } elseif (!in_array($acte->statut, ['CELEBRE', 'TERMINE'], true)) {
             abort(422, "Le certificat est disponible uniquement apres l'acte effectue.");
         }
 
         if (in_array($typeActe, $typesFiche, true)) {
             $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
             $methoDataUri = $this->buildImageDataUri(public_path('images/metho.jpg'));
-            $view = $typeActe === 'naissance' ? 'pdf.fiche-naissance' : 'pdf.fiche-demande';
+            $view = $typeActe === 'naissance'
+                ? 'pdf.fiche-naissance'
+                : ($typeActe === 'deces' ? 'pdf.fiche-deces' : 'pdf.fiche-demande');
+
+            $conducteurSignatureDataUri = null;
+            if ($acte->conducteur?->signature_path && Storage::disk('public')->exists($acte->conducteur->signature_path)) {
+                $conducteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->conducteur->signature_path));
+            }
+            $pasteurSignatureDataUri = null;
+            if ($acte->pasteur?->signature_path && Storage::disk('public')->exists($acte->pasteur->signature_path)) {
+                $pasteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->pasteur->signature_path));
+            }
 
             $pdf = Pdf::loadView($view, [
                 'acte' => $acte,
                 'logoDataUri' => $logoDataUri,
                 'methoDataUri' => $methoDataUri,
+                'conducteurSignatureDataUri' => $conducteurSignatureDataUri,
+                'pasteurSignatureDataUri' => $pasteurSignatureDataUri,
             ])->setPaper('a4', 'portrait');
 
             $filename = 'fiche-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
@@ -273,7 +273,6 @@ class LiturgieController extends Controller
             'membre',
             'classe',
             'historiques.acteur',
-            'formationRequest.formationTermineePar',
         ])->findOrFail($id);
 
         $isOwner = (int) $acte->created_by === (int) $user->id;
@@ -298,6 +297,21 @@ class LiturgieController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Cette demande ne peut plus etre modifiee.',
+            ], 422);
+        }
+
+        if (!in_array($acte->statut, ['VALIDEE', 'PUBLIEE'], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La date de cérémonie ne peut être choisie qu\'après validation pastorale du dossier.',
+            ], 422);
+        }
+
+        $details = (array) ($acte->details ?? []);
+        if (empty($details['fiche_pasteur_envoyee'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Le pasteur doit envoyer la fiche PDF avant que vous puissiez proposer une date.',
             ], 422);
         }
 
@@ -345,10 +359,20 @@ class LiturgieController extends Controller
             'membre',
             'classe',
             'historiques.acteur',
-            'formationRequest.formationTermineePar',
         ]);
-        $acte->can_choose_date = (bool) optional($acte->formationRequest)->formation_terminee_at
-            || in_array($acte->statut, ['CELEBRE', 'TERMINE'], true);
+        $details = (array) ($acte->details ?? []);
+        $ceremonyStatut = strtoupper((string) ($details['ceremonie_statut'] ?? ""));
+        $blockedStatuses = [
+            'CEREMONIE_SOUMISE_AU_CONDUCTEUR',
+            'CEREMONIE_TRANSMISE_AU_PASTEUR',
+            'CEREMONIE_VALIDEE_PAR_PASTEUR',
+            'CEREMONIE_VALIDE_PAR_PASTEUR',
+        ];
+        $acteType = strtolower((string) $acte->type_acte);
+        $acte->can_choose_date =
+            $acteType === 'mariage'
+            && in_array($acte->statut, ['VALIDEE', 'PUBLIEE'], true)
+            && !in_array($ceremonyStatut, $blockedStatuses, true);
 
         return response()->json([
             'success' => true,
@@ -371,14 +395,26 @@ class LiturgieController extends Controller
             })
             ->findOrFail($id);
 
-        // PDF disponible après validation du pasteur
-        if (!in_array($acte->statut, ['VALIDEE', 'PUBLIEE', 'ARCHIVEE'], true)) {
+        // PDF disponible après transmission au pasteur ou validation pour les fiches naissance/décès
+        $typeActe = strtolower((string) $acte->type_acte);
+        if ($typeActe === 'naissance') {
+            if (!in_array($acte->statut, ['SOUMISE', 'EN_ATTENTE_CONDUCTEUR', 'TRANSMISE_AU_PASTEUR', 'VALIDEE', 'PUBLIEE', 'ARCHIVEE'], true)) {
+                abort(403, 'La fiche PDF est disponible après transmission au pasteur.');
+            }
+        } elseif ($typeActe === 'deces') {
+            if (!in_array($acte->statut, ['VALIDEE', 'PUBLIEE', 'ARCHIVEE'], true)) {
+                abort(403, 'La fiche PDF est disponible après validation du pasteur.');
+            }
+        } elseif (!in_array($acte->statut, ['VALIDEE', 'PUBLIEE', 'ARCHIVEE'], true)) {
             abort(403, 'La fiche PDF est disponible après validation du pasteur.');
         }
 
         $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
+        $view = $acte->type_acte === 'naissance'
+            ? 'pdf.fiche-naissance'
+            : ($acte->type_acte === 'deces' ? 'pdf.fiche-deces' : 'pdf.fiche-demande');
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.fiche-demande', [
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($view, [
             'acte' => $acte,
             'logoDataUri' => $logoDataUri,
         ])
@@ -455,24 +491,11 @@ class LiturgieController extends Controller
             });
         $familyMemberIds = $familyMembers->pluck('id');
 
-        $formationsByKey = FormationRequest::query()
-            ->with(['membre', 'conducteur', 'classe', 'historiques.acteur', 'formationTermineePar'])
-            ->where('family_id', $user->family_id)
-            ->latest()
-            ->get()
-            ->groupBy(function ($formation) {
-                return $formation->membre_id . '|' . strtolower((string) ($formation->type_formation ?: 'mariage'));
-            })
-            ->map(function ($group) {
-                return $group->first();
-            });
-
         $actes = ActeLiturgique::with([
             'membre',
             'classe',
             'createur',
             'historiques.acteur',
-            'formationRequest.formationTermineePar',
         ])
             ->where(function ($query) use ($user, $familyMemberIds) {
                 $query->where('created_by', $user->id)
@@ -481,26 +504,20 @@ class LiturgieController extends Controller
             ->latest()
             ->take(15)
             ->get()
-            ->map(function ($acte) use ($formationsByKey) {
-                if (
-                    !$acte->relationLoaded('formationRequest')
-                    || !$acte->formationRequest
-                ) {
-                    $type = strtolower((string) $acte->type_acte);
-                    if (in_array($type, ['mariage', 'bapteme'], true)) {
-                        $key = $acte->membre_id . '|' . $type;
-                        $linkedFormation = $formationsByKey->get($key);
-                        if ($linkedFormation) {
-                            $acte->setRelation('formationRequest', $linkedFormation);
-                            if (!$acte->formation_request_id) {
-                                $acte->formation_request_id = $linkedFormation->id;
-                            }
-                        }
-                    }
-                }
-
-                $acte->can_choose_date = (bool) optional($acte->formationRequest)->formation_terminee_at
-                    || in_array($acte->statut, ['CELEBRE', 'TERMINE'], true);
+            ->map(function ($acte) {
+                $type = strtolower((string) $acte->type_acte);
+                $details = (array) ($acte->details ?? []);
+                $ceremonyStatut = strtoupper((string) ($details['ceremonie_statut'] ?? ""));
+                $blockedStatuses = [
+                    'CEREMONIE_SOUMISE_AU_CONDUCTEUR',
+                    'CEREMONIE_TRANSMISE_AU_PASTEUR',
+                ];
+                $hasFicheEnvoyee = !empty($details['fiche_pasteur_envoyee']);
+                $acte->can_choose_date =
+                    $type === 'mariage'
+                    && in_array($acte->statut, ['VALIDEE', 'PUBLIEE'], true)
+                    && !in_array($ceremonyStatut, $blockedStatuses, true)
+                    && $hasFicheEnvoyee;
 
                 return $acte;
             });

@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -50,6 +51,30 @@ return new class extends Migration
 
     public function down(): void
     {
+        DB::table('actes_liturgiques')
+            ->whereNotIn('statut', [
+                'SOUMISE',
+                'EN_ATTENTE_CONDUCTEUR',
+                'TRANSMISE_AU_PASTEUR',
+                'VALIDEE',
+                'REFUSEE_PAR_CONDUCTEUR',
+                'REFUSEE_PAR_PASTEUR',
+                'ARCHIVEE',
+            ])
+            ->delete();
+
+        DB::table('actes_liturgiques')
+            ->whereNotIn('type_acte', [
+                'bapteme',
+                'premiere_communion',
+                'mariage',
+                'naissance',
+                'deces',
+                'annonce',
+                'annonce_liturgique',
+            ])
+            ->delete();
+
         Schema::table('actes_liturgiques', function (Blueprint $table) {
             $table->dropForeign(['family_id']);
             $table->dropForeign(['publiee_par']);

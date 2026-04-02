@@ -671,6 +671,8 @@ export default function ConducteurTresorerie({
     const [modalCotisation, setModalCotisation] = useState(false);
     const [modalCollecte, setModalCollecte] = useState(false);
     const [modalRappelGlobal, setModalRappelGlobal] = useState(false);
+    const [modalTresorier, setModalTresorier] = useState(false);
+    const [selectedMemberTresorier, setSelectedMemberTresorier] = useState("");
     const [newCotisation, setNewCotisation] = useState({
         nom: "",
         montant: "",
@@ -1001,6 +1003,30 @@ export default function ConducteurTresorerie({
     const handleExport = (format) =>
         window.open(`/conducteur/tresorerie/export?format=${format}`, "_blank");
 
+    const handleAssignTresorier = async () => {
+        if (!selectedMemberTresorier) {
+            alert("Veuillez selectionner un membre.");
+            return;
+        }
+        
+        try {
+            setLoading(true);
+            const response = await postJson(
+                "/conducteur/tresorerie/assign-tresorier",
+                { user_id: selectedMemberTresorier }
+            );
+            alert("Tresorier assigne avec succes!");
+            setModalTresorier(false);
+            setSelectedMemberTresorier("");
+            // Recharger la page pour voir les changements
+            window.location.reload();
+        } catch (error) {
+            alert("Erreur lors de l'assignation du tresorier: " + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const retardTotal = useMemo(
         () =>
             famillesEnRetard.reduce((s, f) => s + Number(f.montantDu || 0), 0),
@@ -1213,6 +1239,24 @@ export default function ConducteurTresorerie({
                             }}
                         >
                             <FileText size={14} /> PDF
+                        </button>
+                        <button
+                            onClick={() => setModalTresorier(true)}
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 7,
+                                background: "rgba(255,255,255,0.15)",
+                                border: "1px solid rgba(255,255,255,0.25)",
+                                borderRadius: 10,
+                                padding: "8px 14px",
+                                color: "#fff",
+                                fontSize: 12,
+                                fontWeight: 600,
+                                cursor: "pointer",
+                            }}
+                        >
+                            <Plus size={14} /> Assigner Trésorier
                         </button>
                     </div>
                 </div>
@@ -3088,6 +3132,83 @@ export default function ConducteurTresorerie({
                         icon={Target}
                     >
                         Créer la collecte
+                    </GradBtn>
+                </div>
+            </Modal>
+
+            {/* PANNEAU ASSIGNER TRESORIER */}
+            <Modal
+                open={modalTresorier}
+                onClose={() => setModalTresorier(false)}
+                title="Assigner un trésorier"
+            >
+                <div
+                    style={{
+                        background: "#E0F2FE",
+                        border: "1px solid #0084FF40",
+                        borderRadius: 10,
+                        padding: "12px 14px",
+                        marginBottom: 16,
+                        fontSize: 12,
+                        color: "#0C4A6E",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                    }}
+                >
+                    <CheckCircle size={14} />
+                    Le tresorier aidera à assister la trésorerie de votre classe.
+                </div>
+                <FW label="Sélectionner un membre de la classe" span2>
+                    <select
+                        value={selectedMemberTresorier}
+                        onChange={(e) => setSelectedMemberTresorier(e.target.value)}
+                        style={{
+                            ...inputStyle,
+                            cursor: "pointer",
+                        }}
+                    >
+                        <option value="">-- Choisir un membre --</option>
+                        {membresClasse
+                            .filter((m) => m.role === "membre_famille")
+                            .map((m) => (
+                                <option key={m.id} value={m.id}>
+                                    {m.prenom} {m.nom} ({m.famille})
+                                </option>
+                            ))}
+                    </select>
+                </FW>
+                <p
+                    style={{
+                        fontSize: 11,
+                        color: "#888780",
+                        marginTop: 6,
+                        marginBottom: 20,
+                    }}
+                >
+                    Seuls les membres actifs de votre classe peuvent être assignés comme trésorier.
+                </p>
+                <div
+                    style={{
+                        display: "flex",
+                        gap: 10,
+                        justifyContent: "flex-end",
+                    }}
+                >
+                    <OutlineBtn
+                        color="gray"
+                        onClick={() => setModalTresorier(false)}
+                    >
+                        Annuler
+                    </OutlineBtn>
+                    <GradBtn
+                        onClick={handleAssignTresorier}
+                        disabled={loading}
+                        loading={loading}
+                        color="blue"
+                        icon={Plus}
+                    >
+                        Assigner le trésorier
                     </GradBtn>
                 </div>
             </Modal>

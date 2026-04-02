@@ -36,6 +36,10 @@ return new class extends Migration
         $tableName = 'actes_liturgiques';
         $columnName = 'type_acte';
 
+        DB::table($tableName)
+            ->where($columnName, 'bapteme_premiere_communion')
+            ->delete();
+
         $columnType = DB::select("SHOW COLUMNS FROM {$tableName} WHERE Field = ?", [$columnName]);
 
         if (empty($columnType) || strpos($columnType[0]->Type, 'enum') === false) {

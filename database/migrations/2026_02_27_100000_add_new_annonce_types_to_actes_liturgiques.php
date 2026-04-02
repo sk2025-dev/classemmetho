@@ -44,13 +44,16 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Revert to original enum values
         $tableName = 'actes_liturgiques';
         $columnName = 'type_acte';
 
         $originalValues = ['bapteme', 'premiere_communion', 'mariage', 'naissance', 'deces'];
         $enumString = "'" . implode("','", $originalValues) . "'";
         $originalType = "enum({$enumString})";
+
+        DB::table($tableName)
+            ->whereNotIn($columnName, $originalValues)
+            ->delete();
 
         DB::statement("ALTER TABLE {$tableName} MODIFY COLUMN {$columnName} {$originalType}");
     }

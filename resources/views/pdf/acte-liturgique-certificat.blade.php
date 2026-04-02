@@ -335,7 +335,7 @@
                 <td class="col-center zone-name" style="padding:0 8mm;">
 
                     {{-- Sous-titre --}}
-                    <div style="font-size:15px; color:#5a6478; font-style:italic;
+                    <div style="font-size:18px; color:#5a6478; font-style:italic;
                             margin-bottom:4mm; letter-spacing:0.5px;">
                         {{ $subtitleText }}
                     </div>
@@ -523,7 +523,7 @@
                             {{-- Signature à gauche --}}
                             <td width="40%" style="text-align:left;">
 
-                                <div style="font-size:9px; font-weight:700; letter-spacing:3px;
+                                <div style="font-size:20px; font-weight:700; letter-spacing:2px;
                                         text-transform:uppercase; color:#9098b4; margin-bottom:8mm;">
                                     Le Pasteur
                                 </div>
@@ -531,27 +531,23 @@
                                 {{-- Image de signature si disponible --}}
                                 @if(!empty($signatureDataUri))
                                 <img src="{{ $signatureDataUri }}"
-                                    style="max-width:140px; max-height:36px;
+                                    style="max-width:200px; max-height:60px;
                                             display:block; margin:0 0 4mm;">
                                 @else
-                                <div style="height:36px; margin-bottom:4mm;"></div>
+                                <div style="height:60px; margin-bottom:4mm;"></div>
                                 @endif
 
                                 {{-- Nom du pasteur --}}
-                                <div style="font-size:11px; font-weight:800; text-transform:uppercase;
-                                        letter-spacing:2px; color:#0F1E40; margin-bottom:2mm;">
+                                <div style="font-size:14px; font-weight:800; text-transform:uppercase;
+                                        letter-spacing:1px; color:#0F1E40; margin-bottom:2mm;">
                                     {{ strtoupper($signatureDisplayName) }}
-                                </div>
-                                <div style="font-size:8px; color:#9098b4; letter-spacing:1px;
-                                        text-transform:uppercase; font-style:italic;">
-                                    {{ $signatureTitle }}
                                 </div>
 
                             </td>
 
                             {{-- Lieu & Date à droite en bas --}}
                             <td width="60%" style="text-align:right; vertical-align:bottom; padding-bottom:6mm;">
-                                <div style="font-size:10px; color:#4b5563; font-weight:600;
+                                <div style="font-size:20px; color:#4b5563; font-weight:600;
                                         line-height:2.2; letter-spacing:0.3px;">
                                     Fait à Cocody<br>
                                     Le {{ $dateActe }}

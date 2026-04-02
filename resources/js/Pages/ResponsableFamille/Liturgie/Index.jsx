@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "@inertiajs/react";
-import { ArrowLeft, Download } from "lucide-react";
+import { Link, router } from "@inertiajs/react";
+import { ArrowLeft, Download, Eye } from "lucide-react";
 import axios from "axios";
 import { resolveMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
 
@@ -15,7 +15,6 @@ const DONE = ["CELEBRE", "TERMINE"];
 const ACTE_PER_PAGE = 2;
 const FAMILY_PER_PAGE = 6;
 const ANN_PER_PAGE = 2;
-const FORMATION_PER_PAGE = 2;
 const ANNONCE_TYPES = [
     {
         value: "priere",
@@ -50,17 +49,6 @@ const ANNONCE_ACTE_TYPES = [
     "grace",
     "generale",
 ];
-
-const FORMATION_TYPES = [
-    { value: "mariage", label: "Formation mariage" },
-    { value: "bapteme", label: "Formation baptême" },
-];
-
-function getFormationTypeLabel(type) {
-    const normalized = String(type || "mariage").toLowerCase();
-    return normalized === "bapteme" ? "Formation baptême" : "Formation mariage";
-}
-
 function isAnnonceRecord(item) {
     const type = String(item?.type_acte || item?.type_annonce || "")
         .trim()
@@ -77,6 +65,38 @@ function isAnnonceRecord(item) {
     );
 }
 
+const normalizeActe = (acte) => {
+    if (!acte) return acte;
+    const type = String(acte.type_acte || "")
+        .trim()
+        .toLowerCase();
+    const statut = String(acte.statut || "")
+        .trim()
+        .toUpperCase();
+    const details = acte.details || {};
+    const ceremonyStatut = String(details.ceremonie_statut || "").toUpperCase();
+    const validStatuts = ["VALIDEE", "PUBLIEE"];
+    const blockedCeremonyStatuts = [
+        "CEREMONIE_SOUMISE_AU_CONDUCTEUR",
+        "CEREMONIE_TRANSMISE_AU_PASTEUR",
+    ];
+    const hasFicheEnvoyee = Boolean(details.fiche_pasteur_envoyee);
+
+    const canChooseDate =
+        type === "mariage" &&
+        validStatuts.includes(statut) &&
+        !blockedCeremonyStatuts.includes(ceremonyStatut) &&
+        hasFicheEnvoyee;
+
+    return {
+        ...acte,
+        can_choose_date: canChooseDate,
+    };
+};
+
+const normalizeActes = (actes = []) =>
+    Array.isArray(actes) ? actes.map(normalizeActe) : [];
+
 /* ════════════════════════════════════════
    COMPOSANT PRINCIPAL
 ════════════════════════════════════════ */
@@ -85,15 +105,43 @@ export default function Index({
     familyMembers: rawFamilyMembers = [],
     conducteurs = {},
     annonces: rawAnnonces = [],
-    formationRequests: rawFormationRequests = [],
 }) {
     /* ── acte array défensif ── */
-    const [localActes, setLocalActes] = useState(() =>
-        Array.isArray(actes) ? actes : [],
-    );
+    const [localActes, setLocalActes] = useState(() => normalizeActes(actes));
     useEffect(() => {
-        setLocalActes(Array.isArray(actes) ? actes : []);
+        setLocalActes(normalizeActes(actes));
     }, [actes]);
+
+    const needsFicheRefresh = useMemo(() => {
+        return localActes.some((acte) => {
+            const type = String(acte.type_acte || "")
+                .trim()
+                .toLowerCase();
+            const statut = String(acte.statut || "")
+                .trim()
+                .toUpperCase();
+            const details = acte.details || {};
+            return (
+                type === "mariage" &&
+                ["VALIDEE", "PUBLIEE"].includes(statut) &&
+                !Boolean(details.fiche_pasteur_envoyee)
+            );
+        });
+    }, [localActes]);
+
+    useEffect(() => {
+        if (!needsFicheRefresh) {
+            return;
+        }
+        const interval = setInterval(() => {
+            router.reload({
+                only: ["actes"],
+                preserveScroll: true,
+                preserveState: true,
+            });
+        }, 10000);
+        return () => clearInterval(interval);
+    }, [needsFicheRefresh, router]);
 
     /* ── état actes ── */
     const [selectedActe, setSelectedActe] = useState(null);
@@ -106,10 +154,10 @@ export default function Index({
         lieu_ceremonie: "",
         temoins: "",
     });
+    const [detailTab, setDetailTab] = useState("infos");
     const [page, setPage] = useState(1);
     const [contactConducteurs, setContact] = useState(null);
     const [memberPage, setMemberPage] = useState(1);
-    const [formationPage, setFormationPage] = useState(1);
 
     /* ── état annonces ── */
     const [annonces, setAnnonces] = useState([]);
@@ -123,32 +171,6 @@ export default function Index({
         message: "",
         date_annonce: "",
     });
-    const [showFormationModal, setShowFormationModal] = useState(false);
-    const [formationProcessing, setFormationProcessing] = useState(false);
-    const [formationForm, setFormationForm] = useState({
-        membre_id: "",
-        type_formation: "mariage",
-        conjoint_nom: "",
-        conjoint_contact: "",
-        conjoint_profession: "",
-        conjoint_birthdate: "",
-        conjoint_baptized: false,
-        conjoint_church: "",
-        bapteme_nom_parrain: "",
-        bapteme_contact_parrain: "",
-        bapteme_nom_marraine: "",
-        bapteme_contact_marraine: "",
-        bapteme_statut_catechumene: "debutant",
-        message: "",
-    });
-    const [formationRequests, setFormationRequests] = useState(() =>
-        Array.isArray(rawFormationRequests) ? rawFormationRequests : [],
-    );
-    useEffect(() => {
-        setFormationRequests(
-            Array.isArray(rawFormationRequests) ? rawFormationRequests : [],
-        );
-    }, [rawFormationRequests]);
     const [annPage, setAnnPage] = useState(1);
     const [annFilter, setAnnFilter] = useState("tous");
 
@@ -198,6 +220,12 @@ export default function Index({
     }, [quickFilter, searchTerm]);
 
     useEffect(() => {
+        if (selectedActe) {
+            setDetailTab("infos");
+        }
+    }, [selectedActe]);
+
+    useEffect(() => {
         setAnnPage(1);
     }, [quickFilter, searchTerm, annFilter]);
 
@@ -205,22 +233,6 @@ export default function Index({
     const familyMembers = Array.isArray(rawFamilyMembers)
         ? rawFamilyMembers
         : [];
-    const formationLookup = useMemo(() => {
-        const map = new Map();
-
-        formationRequests.forEach((formation) => {
-            const type = String(
-                formation?.type_formation || "mariage",
-            ).toLowerCase();
-            const key = `${formation?.membre_id || ""}|${type}`;
-
-            if (!map.has(key)) {
-                map.set(key, formation);
-            }
-        });
-
-        return map;
-    }, [formationRequests]);
     const acteRequests = useMemo(
         () => localActes.filter((a) => !isAnnonceRecord(a)),
         [localActes],
@@ -244,6 +256,13 @@ export default function Index({
     const detailRows = useMemo(
         () => formatDetails(selectedActe?.details),
         [selectedActe],
+    );
+    const celebrationRows = useMemo(
+        () =>
+            detailRows.filter((row) =>
+                CELEBRATION_FIELDS.includes(row.key),
+            ),
+        [detailRows],
     );
     const filterNeedle = searchTerm.trim().toLowerCase();
     const filteredActes = useMemo(() => {
@@ -290,28 +309,6 @@ export default function Index({
         (page - 1) * ACTE_PER_PAGE,
         page * ACTE_PER_PAGE,
     );
-    const formationInProgress = formationRequests.filter((f) =>
-        IN_PROGRESS.includes(
-            String(f.statut || "")
-                .trim()
-                .toUpperCase(),
-        ),
-    ).length;
-    const formationTotalPages = Math.max(
-        1,
-        Math.ceil(formationRequests.length / FORMATION_PER_PAGE),
-    );
-    const formationPaged = formationRequests.slice(
-        (formationPage - 1) * FORMATION_PER_PAGE,
-        formationPage * FORMATION_PER_PAGE,
-    );
-    useEffect(() => {
-        if (formationPage > formationTotalPages) {
-            setFormationPage(formationTotalPages);
-        }
-    }, [formationPage, formationTotalPages]);
-    const goToFormation = (n) =>
-        setFormationPage(Math.max(1, Math.min(formationTotalPages, n)));
     const memberTotalPages = Math.max(
         1,
         Math.ceil(familyMembers.length / FAMILY_PER_PAGE),
@@ -498,29 +495,6 @@ export default function Index({
         }
     };
 
-    const openFormationModal = () => {
-        setFormationForm({
-            membre_id: "",
-            type_formation: "mariage",
-            conjoint_nom: "",
-            conjoint_contact: "",
-            conjoint_profession: "",
-            conjoint_birthdate: "",
-            conjoint_baptized: false,
-            conjoint_church: "",
-            bapteme_nom_parrain: "",
-            bapteme_contact_parrain: "",
-            bapteme_nom_marraine: "",
-            bapteme_contact_marraine: "",
-            bapteme_statut_catechumene: "debutant",
-            message: "",
-        });
-        setShowFormationModal(true);
-    };
-    const closeFormationModal = () => {
-        if (formationProcessing) return;
-        setShowFormationModal(false);
-    };
     const openCeremonyModal = (acte) => {
         setCeremonyActe(acte);
         setCeremonyForm({
@@ -536,104 +510,6 @@ export default function Index({
         if (ceremonyProcessing) return;
         setCeremonyActe(null);
     };
-    const submitFormationRequest = async () => {
-        const contactDigits = String(
-            formationForm.conjoint_contact || "",
-        ).replace(/\D/g, "");
-        const parrainContactDigits = String(
-            formationForm.bapteme_contact_parrain || "",
-        ).replace(/\D/g, "");
-        const marraineContactDigits = String(
-            formationForm.bapteme_contact_marraine || "",
-        ).replace(/\D/g, "");
-
-        if (!formationForm.membre_id) {
-            notify("Sélectionnez un membre pour la formation.", "error");
-            return;
-        }
-
-        if (!formationForm.type_formation) {
-            notify("Sélectionnez le type de formation.", "error");
-            return;
-        }
-
-        const alreadyRequested = formationRequests.some(
-            (f) =>
-                String(f?.membre_id || "") ===
-                    String(formationForm.membre_id) &&
-                String(f?.type_formation || "mariage") ===
-                    String(formationForm.type_formation || "mariage"),
-        );
-        if (alreadyRequested) {
-            notify(
-                "Ce membre a déjà une demande pour ce type de formation.",
-                "error",
-            );
-            return;
-        }
-
-        if (formationForm.type_formation === "mariage") {
-            if (!formationForm.conjoint_nom || !contactDigits) {
-                notify(
-                    "Pour la formation mariage, renseignez le nom et le contact du conjoint.",
-                    "error",
-                );
-                return;
-            }
-            if (contactDigits.length !== 10) {
-                notify(
-                    "Le contact du conjoint doit contenir 10 chiffres.",
-                    "error",
-                );
-                return;
-            }
-        }
-
-        if (formationForm.type_formation === "bapteme") {
-            if (parrainContactDigits && parrainContactDigits.length !== 10) {
-                notify(
-                    "Le contact du parrain doit contenir 10 chiffres.",
-                    "error",
-                );
-                return;
-            }
-            if (marraineContactDigits && marraineContactDigits.length !== 10) {
-                notify(
-                    "Le contact de la marraine doit contenir 10 chiffres.",
-                    "error",
-                );
-                return;
-            }
-        }
-        try {
-            setFormationProcessing(true);
-            const res = await axios.post("/responsable-famille/formations", {
-                ...formationForm,
-                conjoint_contact: contactDigits,
-                bapteme_contact_parrain: parrainContactDigits,
-                bapteme_contact_marraine: marraineContactDigits,
-            });
-            const formation = res.data?.formation;
-            if (formation) {
-                setFormationRequests((prev) => [formation, ...prev]);
-                setFormationPage(1);
-            }
-            setShowFormationModal(false);
-            notify(
-                "Demande de formation enregistrée. Votre conducteur pourra la valider et la transmettre au pasteur.",
-                "success",
-            );
-            setActiveTab("formations");
-        } catch (e) {
-            notify(
-                e?.response?.data?.message || "Une erreur est survenue.",
-                "error",
-            );
-        } finally {
-            setFormationProcessing(false);
-        }
-    };
-
     const submitCeremonyDetails = async () => {
         if (!ceremonyActe) return;
 
@@ -666,7 +542,9 @@ export default function Index({
             if (updatedActe) {
                 setLocalActes((prev) =>
                     prev.map((item) =>
-                        item.id === updatedActe.id ? updatedActe : item,
+                        item.id === updatedActe.id
+                            ? normalizeActe(updatedActe)
+                            : item,
                     ),
                 );
                 setSelectedActe((prev) =>
@@ -727,13 +605,6 @@ export default function Index({
                             }}
                         >
                             Contacter conducteurs
-                        </button>
-                        <button
-                            type="button"
-                            className="btn-terra"
-                            onClick={openFormationModal}
-                        >
-                            Demander une formation
                         </button>
                     </div>
                 </div>
@@ -848,41 +719,6 @@ export default function Index({
                                 </span>
                             )}
                         </button>
-                        <button
-                            className={`mtab ${activeTab === "formations" ? "active" : ""}`}
-                            onClick={() => setActiveTab("formations")}
-                        >
-                            <svg
-                                width="13"
-                                height="13"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M4 4h16v16H4z"
-                                />
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M7 9h10M7 13h10"
-                                />
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M7 17h6"
-                                />
-                            </svg>
-                            Formations
-                            {formationInProgress > 0 && (
-                                <span className="tbadge tbadge-sage">
-                                    {formationInProgress}
-                                </span>
-                            )}
-                        </button>
                     </div>
                     <div className="quick-tools">
                         <select
@@ -960,13 +796,6 @@ export default function Index({
                                     const statut = String(acte?.statut || "")
                                         .trim()
                                         .toUpperCase();
-                                    const linkedFormation =
-                                        acte?.formationRequest ||
-                                        formationLookup.get(
-                                            `${acte?.membre_id || ""}|${String(
-                                                acte?.type_acte || "",
-                                            ).toLowerCase()}`,
-                                        );
                                     const canChooseDate =
                                         Boolean(acte?.can_choose_date) ||
                                         ["CELEBRE", "TERMINE"].includes(
@@ -974,6 +803,11 @@ export default function Index({
                                                 .trim()
                                                 .toUpperCase(),
                                         );
+                                    const isMarriage =
+                                        String(acte.type_acte || "")
+                                            .trim()
+                                            .toLowerCase() ===
+                                        "mariage";
                                     const hist = Array.isArray(acte.historiques)
                                         ? [...acte.historiques].sort(
                                               (a, b) =>
@@ -992,6 +826,30 @@ export default function Index({
                                         histMap["REFUSEE_PAR_CONDUCTEUR"];
                                     const refusPasteur =
                                         histMap["REFUSEE_PAR_PASTEUR"];
+                                    const celebrationEntry =
+                                        histMap["CEREMONIE_VALIDEE_PAR_PASTEUR"] ||
+                                        histMap["CEREMONIE_VALIDE_PAR_PASTEUR"];
+                                    const celebrationRefus =
+                                        histMap["CEREMONIE_REFUSEE_PAR_PASTEUR"] ||
+                                        histMap["CEREMONIE_REFUSEE_PAR_CONDUCTEUR"];
+                                    const ceremonyStatut = String(
+                                        acte.details?.ceremonie_statut || "",
+                                    )
+                                        .trim()
+                                        .toUpperCase();
+                                    const celebrationDate = celebrationEntry
+                                        ? formatDateTime(
+                                              celebrationEntry.created_at,
+                                          )
+                                        : celebrationRefus
+                                            ? formatDateTime(
+                                                  celebrationRefus.created_at,
+                                              )
+                                            : null;
+                                    const celebrationValidated = [
+                                        "CEREMONIE_VALIDEE_PAR_PASTEUR",
+                                        "CEREMONIE_VALIDE_PAR_PASTEUR",
+                                    ].includes(ceremonyStatut);
                                     const getEtape = (key) => {
                                         const h = histMap[key];
                                         if (!h) return null;
@@ -1007,6 +865,49 @@ export default function Index({
                                         "TRANSMISE_AU_PASTEUR",
                                     );
                                     const etapePasteur = getEtape("VALIDEE");
+                                    const celebrationDone =
+                                        celebrationValidated ||
+                                        DONE.includes(statut);
+                                    const celebrationActive =
+                                        ceremonyStatut ===
+                                        "CEREMONIE_TRANSMISE_AU_PASTEUR";
+                                    const celebrationRefused =
+                                        ceremonyStatut.includes("REFUSEE");
+                                    const canSeeCertificate =
+                                        DONE.includes(statut);
+                                    const validFicheStatuses =
+                                        String(acte.type_acte).toLowerCase() === "naissance"
+                                            ? [
+                                                  "SOUMISE",
+                                                  "EN_ATTENTE_CONDUCTEUR",
+                                                  "TRANSMISE_AU_PASTEUR",
+                                                  "VALIDEE",
+                                                  "PUBLIEE",
+                                                  "ARCHIVEE",
+                                                  "CELEBRE",
+                                                  "TERMINE",
+                                              ]
+                                            : String(acte.type_acte).toLowerCase() === "deces"
+                                            ? [
+                                                  "VALIDEE",
+                                                  "PUBLIEE",
+                                                  "ARCHIVEE",
+                                                  "CELEBRE",
+                                                  "TERMINE",
+                                              ]
+                                            : [
+                                                  "SOUMISE",
+                                                  "EN_ATTENTE_CONDUCTEUR",
+                                                  "TRANSMISE_AU_PASTEUR",
+                                                  "VALIDEE",
+                                                  "PUBLIEE",
+                                                  "ARCHIVEE",
+                                                  "CELEBRE",
+                                                  "TERMINE",
+                                              ];
+                                    const canSeeFiche =
+                                        isFicheType(acte.type_acte) &&
+                                        validFicheStatuses.includes(statut);
                                     const etapeFinal =
                                         getEtape("CELEBRE") ||
                                         getEtape("TERMINE");
@@ -1132,6 +1033,15 @@ export default function Index({
                                                             : etapePasteur?.date
                                                     }
                                                 />
+                                                {isMarriage && (
+                                                    <StatusStep
+                                                        label="Célébration"
+                                                        done={celebrationDone}
+                                                        active={celebrationActive}
+                                                        refused={celebrationRefused}
+                                                        date={celebrationDate}
+                                                    />
+                                                )}
                                             </div>
                                             <div className="d-actions">
                                                 <button
@@ -1143,65 +1053,59 @@ export default function Index({
                                                 >
                                                     Voir le détail
                                                 </button>
-                                                {String(acte.type_acte) ===
-                                                    "mariage" && (
+                                                {String(acte.type_acte) === "mariage" &&
+                                                    !DONE.includes(statut) && (
                                                     <button
                                                         type="button"
                                                         className={`btn-pdf ${!canChooseDate ? "btn-disabled" : ""}`}
-                                                        disabled={
-                                                            !canChooseDate
-                                                        }
-                                                        title={
-                                                            canChooseDate
-                                                                ? "Renseigner les informations de ceremonie"
-                                                                : "Le pasteur doit d'abord cliquer sur Marquer comme terminé."
-                                                        }
+                                                        disabled={!canChooseDate}
+                                                title={
+                                                    !canChooseDate
+                                                        ? "Le pasteur doit envoyer la fiche PDF avant que vous puissiez choisir une date."
+                                                        : "Choisir une date"
+                                                }
                                                         onClick={() =>
-                                                            openCeremonyModal(
-                                                                acte,
-                                                            )
+                                                            canChooseDate &&
+                                                            openCeremonyModal(acte)
                                                         }
                                                     >
                                                         Choisir une date
                                                     </button>
                                                 )}
-                                                {statut === "VALIDEE" && (
+                                                {isFicheType(
+                                                    acte.type_acte,
+                                                ) ? (
                                                     <button
                                                         type="button"
-                                                        className="btn-pdf"
+                                                        className={`btn-pdf ${!canSeeFiche ? "btn-disabled" : ""}`}
+                                                        disabled={!canSeeFiche}
+                                                        title={
+                                                            canSeeFiche
+                                                                ? "Voir la fiche"
+                                                                : "La fiche sera disponible après validation de la demande."
+                                                        }
                                                         onClick={() =>
-                                                            window.open(
-                                                                `/responsable-famille/liturgie/${acte.id}/fiche`,
-                                                                "_blank",
+                                                            canSeeFiche &&
+                                                            setPreviewActe(
+                                                                acte,
                                                             )
                                                         }
                                                     >
                                                         <Download size={13} />{" "}
-                                                        Fiche PDF
+                                                        Voir la fiche
                                                     </button>
-                                                )}
-                                                {!isFicheType(
-                                                    acte.type_acte,
-                                                ) && (
+                                                ) : (
                                                     <button
                                                         type="button"
-                                                        className={`btn-pdf ${!DONE.includes(statut) ? "btn-disabled" : ""}`}
-                                                        disabled={
-                                                            !DONE.includes(
-                                                                statut,
-                                                            )
-                                                        }
+                                                        className={`btn-pdf ${!canSeeCertificate ? "btn-disabled" : ""}`}
+                                                        disabled={!canSeeCertificate}
                                                         title={
-                                                            DONE.includes(
-                                                                statut,
-                                                            )
+                                                            canSeeCertificate
                                                                 ? "Voir le certificat"
-                                                                : "Le certificat sera disponible après la célébration ou la finalisation de l'acte."
+                                                                : "Le certificat sera disponible après validation de la date de célébration."
                                                         }
                                                         onClick={() =>
-                                                            DONE.includes(
-                                                                statut,
-                                                            ) &&
+                                                            canSeeCertificate &&
                                                             setPreviewActe(
                                                                 acte,
                                                             )
@@ -1678,8 +1582,8 @@ export default function Index({
                                                             );
                                                         }}
                                                     >
-                                                        <Download size={11} />{" "}
-                                                        Télécharger fiche
+                                                        <Eye size={11} />{" "}
+                                                        Voir la fiche
                                                     </button>
                                                 )}
                                                 <svg
@@ -1994,236 +1898,6 @@ export default function Index({
                     </div>
                 )}
 
-                {activeTab === "formations" && (
-                    <section className="panel">
-                        <div className="panel-head">
-                            <div>
-                                <div className="ph-title">
-                                    Suivi des demandes de formation
-                                </div>
-                                <div className="ph-sub">
-                                    Chaque demande passe par votre conducteur
-                                    puis le pasteur
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                className="ph-link ph-link-green"
-                                onClick={openFormationModal}
-                            >
-                                + Nouvelle demande
-                            </button>
-                        </div>
-                        {formationRequests.length === 0 ? (
-                            <div className="empty">
-                                Aucune demande de formation pour le moment.
-                            </div>
-                        ) : (
-                            <>
-                                {formationPaged.map((formation) => {
-                                    const statut = String(
-                                        formation?.statut || "",
-                                    )
-                                        .trim()
-                                        .toUpperCase();
-                                    const member = formation.membre;
-                                    const memberFullName = member
-                                        ? `${member.prenom || ""} ${member.nom || ""}`.trim()
-                                        : null;
-                                    const conducteurDone =
-                                        statut === "TRANSMISE_AU_PASTEUR" ||
-                                        VALID.includes(statut) ||
-                                        DONE.includes(statut);
-                                    const conductorActive =
-                                        statut === "EN_ATTENTE_CONDUCTEUR";
-                                    const pasteurActive =
-                                        statut === "TRANSMISE_AU_PASTEUR";
-                                    const conducteurRefused =
-                                        statut === "REFUSEE_PAR_CONDUCTEUR";
-                                    const pasteurRefused =
-                                        statut === "REFUSEE_PAR_PASTEUR";
-                                    const reference =
-                                        formation.reference ||
-                                        `FORMATION-${formation.id || "N/A"}`;
-                                    const memberPhotoUrl = member
-                                        ? resolveMemberPhotoUrl(member)
-                                        : null;
-                                    const hist = Array.isArray(
-                                        formation.historiques,
-                                    )
-                                        ? [...formation.historiques].sort(
-                                              (a, b) =>
-                                                  new Date(a.created_at || 0) -
-                                                  new Date(b.created_at || 0),
-                                          )
-                                        : [];
-                                    const histMap = {};
-                                    hist.forEach((h) => {
-                                        if (h?.statut_nouveau) {
-                                            histMap[h.statut_nouveau] = h;
-                                        }
-                                    });
-                                    const soumiseDate = formation.created_at
-                                        ? formatDateTime(formation.created_at)
-                                        : null;
-                                    const refusConducteur =
-                                        histMap["REFUSEE_PAR_CONDUCTEUR"];
-                                    const refusPasteur =
-                                        histMap["REFUSEE_PAR_PASTEUR"];
-                                    const etapeConducteur =
-                                        histMap["TRANSMISE_AU_PASTEUR"];
-                                    const etapePasteur = histMap["VALIDEE"];
-                                    const requesterTitle = memberFullName
-                                        ? `${getFormationTypeLabel(formation.type_formation)} de ${memberFullName}`
-                                        : getFormationTypeLabel(
-                                              formation.type_formation,
-                                          );
-                                    return (
-                                        <article
-                                            key={
-                                                formation.id ||
-                                                formation.reference
-                                            }
-                                            className="demande"
-                                        >
-                                            <div className="d-top">
-                                                <div className="d-icon amber">
-                                                    {memberPhotoUrl ? (
-                                                        <img
-                                                            src={memberPhotoUrl}
-                                                            alt={
-                                                                memberFullName ||
-                                                                "Membre"
-                                                            }
-                                                            style={{
-                                                                width: "100%",
-                                                                height: "100%",
-                                                                objectFit:
-                                                                    "cover",
-                                                                borderRadius:
-                                                                    "50%",
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        typeIcon(
-                                                            String(
-                                                                formation?.type_formation ||
-                                                                    "mariage",
-                                                            ) === "bapteme"
-                                                                ? "bapteme"
-                                                                : "mariage",
-                                                        )
-                                                    )}
-                                                </div>
-                                                <div className="d-content">
-                                                    <div className="d-name">
-                                                        {requesterTitle}
-                                                    </div>
-                                                    <div className="d-meta">
-                                                        {formation.created_at && (
-                                                            <span>
-                                                                Demandée le{" "}
-                                                                {formatDate(
-                                                                    formation.created_at,
-                                                                )}
-                                                            </span>
-                                                        )}
-                                                        <span>
-                                                            Réf : {reference}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <span
-                                                    className={`badge ${statusBadgeClass(statut)}`}
-                                                >
-                                                    <span className="bdot" />
-                                                    {statusLabel(statut)}
-                                                </span>
-                                            </div>
-                                            <div className="st-track formations-track">
-                                                <StatusStep
-                                                    label="Soumise"
-                                                    done
-                                                    date={soumiseDate}
-                                                />
-                                                <StatusStep
-                                                    label="Validation du conducteur"
-                                                    done={conducteurDone}
-                                                    active={conductorActive}
-                                                    refused={conducteurRefused}
-                                                    date={
-                                                        refusConducteur
-                                                            ? formatDateTime(
-                                                                  refusConducteur.created_at,
-                                                              )
-                                                            : etapeConducteur?.created_at
-                                                              ? formatDateTime(
-                                                                    etapeConducteur.created_at,
-                                                                )
-                                                              : null
-                                                    }
-                                                />
-                                                <StatusStep
-                                                    label="Validation du pasteur"
-                                                    done={
-                                                        VALID.includes(
-                                                            statut,
-                                                        ) ||
-                                                        DONE.includes(statut)
-                                                    }
-                                                    active={pasteurActive}
-                                                    refused={pasteurRefused}
-                                                    date={
-                                                        refusPasteur
-                                                            ? formatDateTime(
-                                                                  refusPasteur.created_at,
-                                                              )
-                                                            : etapePasteur?.created_at
-                                                              ? formatDateTime(
-                                                                    etapePasteur.created_at,
-                                                                )
-                                                              : null
-                                                    }
-                                                />
-                                            </div>
-                                        </article>
-                                    );
-                                })}
-                                {formationTotalPages > 1 && (
-                                    <div className="pager">
-                                        <button
-                                            type="button"
-                                            className="pager-btn"
-                                            onClick={() =>
-                                                goToFormation(formationPage - 1)
-                                            }
-                                            disabled={formationPage === 1}
-                                        >
-                                            Précédent
-                                        </button>
-                                        <span className="pager-info">
-                                            Page {formationPage} /{" "}
-                                            {formationTotalPages}
-                                        </span>
-                                        <button
-                                            type="button"
-                                            className="pager-btn"
-                                            onClick={() =>
-                                                goToFormation(formationPage + 1)
-                                            }
-                                            disabled={
-                                                formationPage ===
-                                                formationTotalPages
-                                            }
-                                        >
-                                            Suivant
-                                        </button>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </section>
-                )}
             </div>
 
             {/* ══════════ MODAL : NOUVELLE ANNONCE 3 ÉTAPES ══════════ */}
@@ -2548,447 +2222,6 @@ export default function Index({
                 </div>
             )}
 
-            {showFormationModal && (
-                <div className="modal-overlay" onClick={closeFormationModal}>
-                    <div
-                        className="modal formation-modal"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="modal-head">
-                            <div>
-                                <div className="modal-title">
-                                    Demande de formation
-                                </div>
-                                <div className="modal-sub">
-                                    Responsable → Conducteur → Pasteur →
-                                    Impression
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                className="modal-close"
-                                onClick={closeFormationModal}
-                            >
-                                ×
-                            </button>
-                        </div>
-                        <div className="modal-body">
-                            <div className="ann-form">
-                                <div className="ann-field">
-                                    <label className="ann-label">
-                                        Type de formation{" "}
-                                        <span className="ann-req">*</span>
-                                    </label>
-                                    <select
-                                        className="ann-input"
-                                        value={formationForm.type_formation}
-                                        onChange={(e) =>
-                                            setFormationForm((prev) => ({
-                                                ...prev,
-                                                type_formation: e.target.value,
-                                            }))
-                                        }
-                                    >
-                                        {FORMATION_TYPES.map((type) => (
-                                            <option
-                                                key={type.value}
-                                                value={type.value}
-                                            >
-                                                {type.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="ann-field">
-                                    <label className="ann-label">
-                                        Membre concerné{" "}
-                                        <span className="ann-req">*</span>
-                                    </label>
-                                    <select
-                                        className="ann-input"
-                                        value={formationForm.membre_id}
-                                        onChange={(e) =>
-                                            setFormationForm((prev) => ({
-                                                ...prev,
-                                                membre_id: e.target.value,
-                                            }))
-                                        }
-                                    >
-                                        <option value="">
-                                            Sélectionner un membre
-                                        </option>
-                                        {familyMembers.map((member) => (
-                                            <option
-                                                key={member.id}
-                                                value={member.id}
-                                            >
-                                                {member.prenom} {member.nom}
-                                                {member.code_membre && (
-                                                    <> ({member.code_membre})</>
-                                                )}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                {formationForm.type_formation === "mariage" && (
-                                    <>
-                                        <div className="ann-field">
-                                            <label className="ann-label">
-                                                Nom du conjoint / partenaire{" "}
-                                                <span className="ann-req">
-                                                    *
-                                                </span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                className="ann-input"
-                                                value={
-                                                    formationForm.conjoint_nom
-                                                }
-                                                onChange={(e) =>
-                                                    setFormationForm(
-                                                        (prev) => ({
-                                                            ...prev,
-                                                            conjoint_nom:
-                                                                e.target.value,
-                                                        }),
-                                                    )
-                                                }
-                                                placeholder="Ex : Fatou Ndiaye"
-                                            />
-                                        </div>
-                                        <div className="ann-field">
-                                            <label className="ann-label">
-                                                Contact du conjoint / partenaire{" "}
-                                                <span className="ann-req">
-                                                    *
-                                                </span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                className="ann-input"
-                                                value={
-                                                    formationForm.conjoint_contact
-                                                }
-                                                onChange={(e) =>
-                                                    setFormationForm(
-                                                        (prev) => ({
-                                                            ...prev,
-                                                            conjoint_contact:
-                                                                e.target.value
-                                                                    .replace(
-                                                                        /\D/g,
-                                                                        "",
-                                                                    )
-                                                                    .slice(
-                                                                        0,
-                                                                        10,
-                                                                    ),
-                                                        }),
-                                                    )
-                                                }
-                                                maxLength={10}
-                                                placeholder="10 chiffres uniquement"
-                                            />
-                                        </div>
-                                        <div className="ann-field">
-                                            <label className="ann-label">
-                                                Baptisé(e)
-                                            </label>
-                                            <div className="ann-switches">
-                                                <label className="ann-switch">
-                                                    <input
-                                                        type="radio"
-                                                        name="conjoint_baptized"
-                                                        checked={
-                                                            formationForm.conjoint_baptized ===
-                                                            true
-                                                        }
-                                                        onChange={() =>
-                                                            setFormationForm(
-                                                                (prev) => ({
-                                                                    ...prev,
-                                                                    conjoint_baptized: true,
-                                                                }),
-                                                            )
-                                                        }
-                                                    />
-                                                    <span>Oui</span>
-                                                </label>
-                                                <label className="ann-switch">
-                                                    <input
-                                                        type="radio"
-                                                        name="conjoint_baptized"
-                                                        checked={
-                                                            formationForm.conjoint_baptized ===
-                                                            false
-                                                        }
-                                                        onChange={() =>
-                                                            setFormationForm(
-                                                                (prev) => ({
-                                                                    ...prev,
-                                                                    conjoint_baptized: false,
-                                                                }),
-                                                            )
-                                                        }
-                                                    />
-                                                    <span>Non</span>
-                                                </label>
-                                            </div>
-                                        </div>
-                                        {formationForm.conjoint_baptized && (
-                                            <div className="ann-field">
-                                                <label className="ann-label">
-                                                    Église d'origine
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    className="ann-input"
-                                                    value={
-                                                        formationForm.conjoint_church
-                                                    }
-                                                    onChange={(e) =>
-                                                        setFormationForm(
-                                                            (prev) => ({
-                                                                ...prev,
-                                                                conjoint_church:
-                                                                    e.target
-                                                                        .value,
-                                                            }),
-                                                        )
-                                                    }
-                                                    placeholder="Ex : Église locale du quartier"
-                                                />
-                                            </div>
-                                        )}
-                                        <div className="ann-field">
-                                            <label className="ann-label">
-                                                Date de naissance du conjoint(e)
-                                            </label>
-                                            <input
-                                                type="date"
-                                                className="ann-input"
-                                                value={
-                                                    formationForm.conjoint_birthdate
-                                                }
-                                                onChange={(e) =>
-                                                    setFormationForm(
-                                                        (prev) => ({
-                                                            ...prev,
-                                                            conjoint_birthdate:
-                                                                e.target.value,
-                                                        }),
-                                                    )
-                                                }
-                                            />
-                                        </div>
-                                        <div className="ann-field">
-                                            <label className="ann-label">
-                                                Profession
-                                            </label>
-                                            <input
-                                                type="text"
-                                                className="ann-input"
-                                                value={
-                                                    formationForm.conjoint_profession
-                                                }
-                                                onChange={(e) =>
-                                                    setFormationForm(
-                                                        (prev) => ({
-                                                            ...prev,
-                                                            conjoint_profession:
-                                                                e.target.value,
-                                                        }),
-                                                    )
-                                                }
-                                                placeholder="Ex : Enseignant, commerçant"
-                                            />
-                                        </div>
-                                    </>
-                                )}
-
-                                {formationForm.type_formation === "bapteme" && (
-                                    <>
-                                        <div className="ann-field">
-                                            <label className="ann-label">
-                                                Nom du parrain
-                                            </label>
-                                            <input
-                                                type="text"
-                                                className="ann-input"
-                                                value={
-                                                    formationForm.bapteme_nom_parrain
-                                                }
-                                                onChange={(e) =>
-                                                    setFormationForm(
-                                                        (prev) => ({
-                                                            ...prev,
-                                                            bapteme_nom_parrain:
-                                                                e.target.value,
-                                                        }),
-                                                    )
-                                                }
-                                                placeholder="Ex : Jean Kouassi"
-                                            />
-                                        </div>
-                                        <div className="ann-field">
-                                            <label className="ann-label">
-                                                Contact du parrain
-                                            </label>
-                                            <input
-                                                type="text"
-                                                className="ann-input"
-                                                value={
-                                                    formationForm.bapteme_contact_parrain
-                                                }
-                                                onChange={(e) =>
-                                                    setFormationForm(
-                                                        (prev) => ({
-                                                            ...prev,
-                                                            bapteme_contact_parrain:
-                                                                e.target.value
-                                                                    .replace(
-                                                                        /\D/g,
-                                                                        "",
-                                                                    )
-                                                                    .slice(
-                                                                        0,
-                                                                        10,
-                                                                    ),
-                                                        }),
-                                                    )
-                                                }
-                                                maxLength={10}
-                                                placeholder="10 chiffres uniquement"
-                                            />
-                                        </div>
-                                        <div className="ann-field">
-                                            <label className="ann-label">
-                                                Nom de la marraine
-                                            </label>
-                                            <input
-                                                type="text"
-                                                className="ann-input"
-                                                value={
-                                                    formationForm.bapteme_nom_marraine
-                                                }
-                                                onChange={(e) =>
-                                                    setFormationForm(
-                                                        (prev) => ({
-                                                            ...prev,
-                                                            bapteme_nom_marraine:
-                                                                e.target.value,
-                                                        }),
-                                                    )
-                                                }
-                                                placeholder="Ex : Marie N'Guessan"
-                                            />
-                                        </div>
-                                        <div className="ann-field">
-                                            <label className="ann-label">
-                                                Contact de la marraine
-                                            </label>
-                                            <input
-                                                type="text"
-                                                className="ann-input"
-                                                value={
-                                                    formationForm.bapteme_contact_marraine
-                                                }
-                                                onChange={(e) =>
-                                                    setFormationForm(
-                                                        (prev) => ({
-                                                            ...prev,
-                                                            bapteme_contact_marraine:
-                                                                e.target.value
-                                                                    .replace(
-                                                                        /\D/g,
-                                                                        "",
-                                                                    )
-                                                                    .slice(
-                                                                        0,
-                                                                        10,
-                                                                    ),
-                                                        }),
-                                                    )
-                                                }
-                                                maxLength={10}
-                                                placeholder="10 chiffres uniquement"
-                                            />
-                                        </div>
-                                        <div className="ann-field">
-                                            <label className="ann-label">
-                                                Niveau de catéchuménat
-                                            </label>
-                                            <select
-                                                className="ann-input"
-                                                value={
-                                                    formationForm.bapteme_statut_catechumene
-                                                }
-                                                onChange={(e) =>
-                                                    setFormationForm(
-                                                        (prev) => ({
-                                                            ...prev,
-                                                            bapteme_statut_catechumene:
-                                                                e.target.value,
-                                                        }),
-                                                    )
-                                                }
-                                            >
-                                                <option value="debutant">
-                                                    Débutant
-                                                </option>
-                                                <option value="en_cours">
-                                                    En cours
-                                                </option>
-                                                <option value="termine">
-                                                    Terminé
-                                                </option>
-                                            </select>
-                                        </div>
-                                    </>
-                                )}
-                                <div className="ann-field">
-                                    <label className="ann-label">
-                                        Observations
-                                    </label>
-                                    <textarea
-                                        className="ann-textarea"
-                                        rows={3}
-                                        placeholder="Lieu souhaité, contraintes, échéance..."
-                                        value={formationForm.message}
-                                        onChange={(e) =>
-                                            setFormationForm((prev) => ({
-                                                ...prev,
-                                                message: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="modal-foot">
-                            <button
-                                type="button"
-                                className="btn-mghost"
-                                onClick={closeFormationModal}
-                            >
-                                Annuler
-                            </button>
-                            <button
-                                type="button"
-                                className="btn-msubmit"
-                                disabled={formationProcessing}
-                                onClick={submitFormationRequest}
-                            >
-                                {formationProcessing
-                                    ? "Envoi..."
-                                    : "Envoyer la demande"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {previewActe && (
                 <div className="modal-overlay" onClick={() => setPreviewActe(null)}>
                     <div
@@ -3187,55 +2420,120 @@ export default function Index({
                             </button>
                         </div>
                         <div className="modal-body">
-                            <div className="rf-info-grid">
-                                <InfoRow
-                                    label="Référence"
-                                    value={
-                                        selectedActe.reference ||
-                                        `ACTE-${selectedActe.id}`
-                                    }
-                                />
-                                <InfoRow
-                                    label="Statut"
-                                    value={statusLabel(selectedActe.statut)}
-                                />
-                                <InfoRow
-                                    label="Date souhaitée"
-                                    value={formatDate(
-                                        selectedActe.date_souhaitee,
+                            <div className="detail-tabs">
+                                <button
+                                    type="button"
+                                    className={`detail-tab ${detailTab === "infos" ? "active" : ""}`}
+                                    onClick={() => setDetailTab("infos")}
+                                >
+                                    Informations
+                                </button>
+                                {isMarriage && (
+                                    <button
+                                        type="button"
+                                        className={`detail-tab ${detailTab === "celebration" ? "active" : ""}`}
+                                        onClick={() => setDetailTab("celebration")}
+                                    >
+                                        Célébration
+                                    </button>
+                                )}
+                            </div>
+                            {detailTab === "infos" && (
+                                <>
+                                    <div className="rf-info-grid">
+                                        <InfoRow
+                                            label="Référence"
+                                            value={
+                                                selectedActe.reference ||
+                                                `ACTE-${selectedActe.id}`
+                                            }
+                                        />
+                                        <InfoRow
+                                            label="Statut"
+                                            value={statusLabel(selectedActe.statut)}
+                                        />
+                                        <InfoRow
+                                            label="Date souhaitée"
+                                            value={formatDate(
+                                                selectedActe.date_souhaitee,
+                                            )}
+                                        />
+                                        <InfoRow
+                                            label="Membre concerné"
+                                            value={
+                                                `${selectedActe.membre?.prenom || ""} ${selectedActe.membre?.nom || ""}`.trim() ||
+                                                "—"
+                                            }
+                                        />
+                                        <InfoRow
+                                            label="Demandé par"
+                                            value={getRequesterName(selectedActe)}
+                                        />
+                                        <InfoRow
+                                            label="Créée le"
+                                            value={formatDate(selectedActe.created_at)}
+                                        />
+                                    </div>
+                                    <div className="rf-details-title">
+                                        Informations renseignées
+                                    </div>
+                                    {detailRows.length === 0 && (
+                                        <div className="rf-empty-details">
+                                            Aucun détail enregistré.
+                                        </div>
                                     )}
-                                />
-                                <InfoRow
-                                    label="Membre concerné"
-                                    value={
-                                        `${selectedActe.membre?.prenom || ""} ${selectedActe.membre?.nom || ""}`.trim() ||
-                                        "—"
-                                    }
-                                />
-                                <InfoRow
-                                    label="Demandé par"
-                                    value={getRequesterName(selectedActe)}
-                                />
-                                <InfoRow
-                                    label="Créée le"
-                                    value={formatDate(selectedActe.created_at)}
-                                />
-                            </div>
-                            <div className="rf-details-title">
-                                Informations renseignées
-                            </div>
-                            {detailRows.length === 0 && (
-                                <div className="rf-empty-details">
-                                    Aucun détail enregistré.
+                                    {detailRows.map((r) => (
+                                        <InfoRow
+                                            key={r.key}
+                                            label={r.label}
+                                            value={r.value}
+                                        />
+                                    ))}
+                                </>
+                            )}
+                            {isMarriage && detailTab === "celebration" && (
+                                <div className="celebration-tab">
+                                    <div className="celebration-summary">
+                                        <div>
+                                            <strong>Date proposée</strong>
+                                            <div className="celebration-value">
+                                                {formatDate(
+                                                    selectedActe.date_souhaitee,
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <strong>Créneau</strong>
+                                            <div className="celebration-value">
+                                                {selectedActe.details?.ceremonie_creneau || "—"}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <strong>Statut</strong>
+                                            <div className="celebration-value">
+                                                {ceremonyDecisionLabel(
+                                                    selectedActe.details?.ceremonie_statut,
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="rf-details-title">
+                                        Détails de la cérémonie
+                                    </div>
+                                    {celebrationRows.length === 0 && (
+                                        <div className="rf-empty-details">
+                                            Aucune information de célébration.
+                                        </div>
+                                    )}
+                                    {celebrationRows.map((r) => (
+                                        <InfoRow
+                                            key={r.key}
+                                            label={r.label}
+                                            value={r.value}
+                                        />
+                                    ))}
                                 </div>
                             )}
-                            {detailRows.map((r) => (
-                                <InfoRow
-                                    key={r.key}
-                                    label={r.label}
-                                    value={r.value}
-                                />
-                            ))}
                         </div>
                     </div>
                 </div>
@@ -3387,8 +2685,7 @@ export default function Index({
                                         )
                                     }
                                 >
-                                    <Download size={13} /> Télécharger la fiche
-                                    PDF
+                                    <Eye size={13} /> Voir la fiche PDF
                                 </button>
                             )}
                         </div>
@@ -3709,90 +3006,6 @@ function statusLabel(s) {
     };
     return m[s] || s;
 }
-function formationStatusTone(status) {
-    if (!status) return "neutral";
-    if (String(status).startsWith("REFUSEE")) return "refuse";
-    if (
-        status === "VALIDEE" ||
-        status === "CELEBRE" ||
-        status === "TERMINE" ||
-        status === "PUBLIEE"
-    )
-        return "sage";
-    if (status === "TRANSMISE_AU_PASTEUR") return "violet";
-    if (status === "EN_ATTENTE_CONDUCTEUR") return "amber";
-    return "neutral";
-}
-function formationStatusIcon(status) {
-    if (!status) return "🕒";
-    if (status.startsWith("REFUSEE")) return "⚠️";
-    if (status === "TRANSMISE_AU_PASTEUR") return "✝";
-    if (status === "VALIDEE" || status === "PUBLIEE") return "✅";
-    if (status === "CELEBRE" || status === "TERMINE") return "🎉";
-    if (status === "EN_ATTENTE_CONDUCTEUR") return "🧾";
-    return "🕒";
-}
-function getFormationHistory(formation) {
-    if (!formation) return [];
-    const events = [];
-    if (formation.created_at) {
-        events.push({
-            key: `created-${formation.created_at}`,
-            label: "Demande soumise",
-            date: formatDateTime(formation.created_at),
-            motif: formation.details?.message || formation.message || null,
-            tone: "neutral",
-            icon: "📝",
-        });
-    }
-    const records = Array.isArray(formation.historiques)
-        ? [...formation.historiques]
-        : [];
-    records
-        .sort(
-            (a, b) =>
-                new Date(a.created_at || 0).getTime() -
-                new Date(b.created_at || 0).getTime(),
-        )
-        .forEach((record, index) => {
-            const actor =
-                record?.acteur?.prenom || record?.acteur?.nom
-                    ? `${record?.acteur?.prenom || ""} ${
-                          record?.acteur?.nom || ""
-                      }`.trim()
-                    : null;
-            const label = `${statusLabel(record.statut_nouveau)}${
-                actor ? ` — ${actor}` : ""
-            }`;
-            events.push({
-                key:
-                    record.id ||
-                    `${record.statut_nouveau || "status"}-${index}`,
-                label,
-                date: formatDateTime(record.created_at),
-                motif: record.commentaire,
-                tone: formationStatusTone(record.statut_nouveau),
-                icon: formationStatusIcon(record.statut_nouveau),
-            });
-        });
-    const finalStatus = formation.statut;
-    const hasFinal = records.some(
-        (record) => record.statut_nouveau === finalStatus,
-    );
-    if (finalStatus && !hasFinal) {
-        events.push({
-            key: `final-${finalStatus}-${formation.id}`,
-            label: statusLabel(finalStatus),
-            date: formation.updated_at
-                ? formatDateTime(formation.updated_at)
-                : null,
-            motif: formation.details?.message || formation.message || null,
-            tone: formationStatusTone(finalStatus),
-            icon: formationStatusIcon(finalStatus),
-        });
-    }
-    return events;
-}
 function finalStepLabel(t) {
     return t === "mariage" || t === "bapteme"
         ? "Célébré"
@@ -4068,6 +3281,18 @@ const DETAIL_LABELS = {
     observations: "Observations",
 };
 
+const CELEBRATION_FIELDS = [
+    "lieu_ceremonie",
+    "temoins",
+    "ceremonie_creneau",
+    "ceremonie_statut",
+    "ceremonie_soumise_at",
+    "ceremonie_transmise_pasteur_at",
+    "ceremonie_validee_pasteur_at",
+    "ceremonie_commentaire_conducteur",
+    "ceremonie_commentaire_pasteur",
+];
+
 /* ════════ STYLES ════════ */
 const styles = `
 *{box-sizing:border-box}
@@ -4151,9 +3376,6 @@ const styles = `
 
 /* ── timeline ── */
 .acte-timeline{margin-top:10px;padding:0 2px}
-.formation-history{margin-top:16px;padding-top:12px;border-top:1px solid #F0ECE4}
-.formation-history-title{font-size:12px;font-weight:700;color:#4A4A4A;margin-bottom:8px;text-transform:uppercase;letter-spacing:.08em}
-.formation-history-list{display:flex;flex-direction:column;gap:10px}
 .tl-event{display:flex;gap:10px;align-items:flex-start;min-height:36px}.tl-event:last-child .tl-vline{display:none}
 .tl-left{display:flex;flex-direction:column;align-items:center;width:24px;flex-shrink:0}
 .tl-dot{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;border:2px solid transparent}
@@ -4340,10 +3562,16 @@ const styles = `
 .ann-detail-refus{display:flex;align-items:flex-start;gap:8px;margin-top:12px;padding:10px 14px;background:rgba(192,96,64,.05);border:1px solid rgba(192,96,64,.18);border-left:3px solid #C06040;border-radius:8px;font-size:12.5px;color:#C06040;font-weight:600;line-height:1.5}
 
 /* ── MODAL SHARED ── */
+.detail-tabs{display:flex;gap:8px;margin-bottom:12px}
+.detail-tab{padding:6px 12px;border-radius:10px;border:1px solid #e0dfe0;background:#f5f5f5;font-size:12px;font-weight:700;color:#5c5748;cursor:pointer;transition:all .2s}
+.detail-tab.active{background:#5b3faf;color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(91,63,175,.2)}
+.celebration-tab{display:flex;flex-direction:column;gap:10px}
+.celebration-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding:12px 14px;border-radius:10px;background:#f5f4f0;border:1px solid #e8e4dc}
+.celebration-summary strong{display:block;font-size:11px;color:#9c9484;margin-bottom:4px}
+.celebration-value{font-size:14px;font-weight:700;color:#1e1b16}
 .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;padding:18px;z-index:120;backdrop-filter:blur(6px)}
 .modal{width:100%;max-width:760px;max-height:90vh;overflow:auto;background:#fff;border:1px solid #E8E4DC;border-radius:14px;box-shadow:0 20px 50px rgba(15,23,42,.3);animation:mIn .28s cubic-bezier(.34,1.56,.64,1) both}
 .modal-pdf-preview{max-width:1020px}
-.formation-modal{max-width:540px}
 @keyframes mIn{from{opacity:0;transform:scale(.97) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
 .modal-head{display:flex;align-items:flex-start;justify-content:space-between;padding:18px 22px;border-bottom:1px solid #E8E4DC}
 .modal-title{font-size:18px;font-weight:800;color:#1E1B16}.modal-sub{font-size:12px;color:#9C9484;margin-top:3px}

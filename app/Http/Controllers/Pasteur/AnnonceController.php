@@ -266,7 +266,8 @@ class AnnonceController extends Controller
         }
 
         $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.fiche-demande', [
+        $view = $acte->type_acte === 'deces' ? 'pdf.fiche-deces' : 'pdf.fiche-demande';
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($view, [
             'acte' => $acte,
             'logoDataUri' => $logoDataUri,
         ])->setPaper('a4', 'portrait');

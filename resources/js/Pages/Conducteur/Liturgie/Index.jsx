@@ -11,9 +11,12 @@ function FichesMariageModal({ open, onClose, acte, ids, onEdit }) {
         if (acte) {
             setLoading(false);
             setSelectedDate(null);
-            setPdfUrl(
-                `/conducteur/liturgie/${acte.id}/fiche-conducteur?preview=1`,
-            );
+            const type = String(acte.type_acte || "").toLowerCase();
+            const previewUrl =
+                type === "naissance" || type === "deces"
+                    ? `/conducteur/liturgie/${acte.id}/fiche?preview=1`
+                    : `/conducteur/liturgie/${acte.id}/fiche-conducteur?preview=1`;
+            setPdfUrl(previewUrl);
             return;
         }
         if (ids?.length > 0) {
@@ -230,6 +233,7 @@ function FichesMariageModal({ open, onClose, acte, ids, onEdit }) {
 }
 import axios from "axios";
 import { Link } from "@inertiajs/react";
+import MiniCalendar from "../../../Components/MiniCalendar";
 
 const SOUMISES_PER_PAGE = 6;
 const HISTO_PER_PAGE = 8;
@@ -303,6 +307,7 @@ export default function Index({
     familyMembers = [],
     classes = [],
     annonces: rawAnnonces = [],
+    calendarEvents = [],
 }) {
     // ...existing code...
     // Modal pour fiches PDF mariage
@@ -316,7 +321,9 @@ export default function Index({
     };
     const openFicheModalForSelected = () => {
         if (selectedIds.size === 0) {
-            showToast("Sélectionnez au moins une demande pour afficher la fiche.");
+            showToast(
+                "Sélectionnez au moins une demande pour afficher la fiche.",
+            );
             return;
         }
         setFicheModalActe(null);
@@ -332,9 +339,12 @@ export default function Index({
     const [localActes, setLocalActes] = useState(actes);
     const [tab, setTab] = useState("soumises");
     const [modal, setModal] = useState(null);
+    const [detailTab, setDetailTab] = useState("infos");
     const [selected, setSelected] = useState(null);
     const [commentaire, setCommentaire] = useState("");
     const [processing, setProcessing] = useState(false);
+    const selectedIsMariage =
+        String(selected?.type_acte || "").toLowerCase() === "mariage";
     const [toast, setToast] = useState("");
     const [soumisesPage, setSoumisesPage] = useState(1);
     const [selectedIds, setSelectedIds] = useState(() => new Set());
@@ -455,6 +465,28 @@ export default function Index({
     const allPageSelected =
         pagedSoumises.length > 0 &&
         pagedSoumises.every((a) => selectedIds.has(a.id));
+
+    const ceremonyActs = useMemo(() => {
+        return [...localActes]
+            .filter((act) => {
+                const date = act.date_souhaitee || act.details?.date_souhaitee;
+                return (
+                    String(act.type_acte || "").toLowerCase() === "mariage" &&
+                    act.details?.ceremonie_statut ===
+                        "CEREMONIE_SOUMISE_AU_CONDUCTEUR" &&
+                    Boolean(date)
+                );
+            })
+            .sort((a, b) => {
+                const dateA = new Date(
+                    a.details?.ceremonie_soumise_at || a.updated_at,
+                ).getTime();
+                const dateB = new Date(
+                    b.details?.ceremonie_soumise_at || b.updated_at,
+                ).getTime();
+                return dateB - dateA;
+            });
+    }, [localActes]);
 
     /* ── COMPUTED annonces ── */
     const filteredAnnonces = useMemo(() => {
@@ -666,6 +698,12 @@ export default function Index({
         if (name === "create") {
             setCreateForm(defaultCreateForm());
         }
+        if (name === "detail") {
+            setDetailTab("infos");
+        }
+        if (name === "ceremony") {
+            setDetailTab("ceremony");
+        }
         setModal(name);
     };
     const closeModal = () => {
@@ -797,8 +835,8 @@ export default function Index({
         }
     };
 
-    const submitCeremonyDecision = async (statut) => {
-        if (!selected?.id) return;
+    const submitCeremonyDecision = async (statut, acte = selected) => {
+        if (!acte?.id) return;
         if (
             statut === "CEREMONIE_REFUSEE_PAR_CONDUCTEUR" &&
             !commentaire.trim()
@@ -809,7 +847,7 @@ export default function Index({
         try {
             setProcessing(true);
             const { data } = await axios.post(
-                `/conducteur/liturgie/${selected.id}/ceremonie/decision`,
+                `/conducteur/liturgie/${acte.id}/ceremonie/decision`,
                 {
                     statut,
                     commentaire,
@@ -817,7 +855,7 @@ export default function Index({
             );
             if (data?.acte) {
                 setLocalActes((prev) =>
-                    prev.map((a) => (a.id === selected.id ? data.acte : a)),
+                    prev.map((a) => (a.id === acte.id ? data.acte : a)),
                 );
                 setSelected(data.acte);
             }
@@ -1351,6 +1389,61 @@ export default function Index({
                                     </span>
                                 )}
                             </button>
+                            <button
+                                className={`tab tab-date ${tab === "dates" ? "active" : ""}`}
+                                onClick={() => setTab("dates")}
+                            >
+                                <svg
+                                    width="13"
+                                    height="13"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"
+                                    />
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M16 2v4M8 2v4M3 10h18"
+                                    />
+                                </svg>
+                                Dates choisies
+                                {ceremonyActs.length > 0 && (
+                                    <span className="tab-count tab-sage">
+                                        {ceremonyActs.length}
+                                    </span>
+                                )}
+                            </button>
+                            <button
+                                className={`tab ${tab === "calendar" ? "active" : ""}`}
+                                onClick={() => setTab("calendar")}
+                            >
+                                <svg
+                                    width="13"
+                                    height="13"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                >
+                                    <rect
+                                        x="3"
+                                        y="5"
+                                        width="18"
+                                        height="16"
+                                        rx="2"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                    />
+                                    <path d="M3 9h18M7 3v4M17 3v4" />
+                                </svg>
+                                Calendrier
+                            </button>
                             {/* ★ ONGLET ANNONCES ★ */}
                             <button
                                 className={`tab tab-ann ${tab === "annonces" ? "active" : ""}`}
@@ -1429,33 +1522,27 @@ export default function Index({
                                 </option>
                                 <optgroup label="Actes liturgiques">
                                     <option value="bapteme">💧 Baptême</option>
+                                    <option value="deces">🕯️ Décès</option>
                                     <option value="mariage">💍 Mariage</option>
-                                    <option value="premiere_communion">
-                                        🍞 Première Communion
-                                    </option>
-                                    <option value="confirmation">
-                                        ✝️ Confirmation
-                                    </option>
                                     <option value="naissance">
                                         👶 Naissance
                                     </option>
-                                    <option value="deces">🕯️ Décès</option>
+                                    <option value="premiere_communion">
+                                        🍞 Première Communion
+                                    </option>
                                 </optgroup>
                                 <optgroup label="Annonces">
-                                    <option value="priere">🙏 Prière</option>
                                     <option value="grace">
                                         🙌 Action de grâce
                                     </option>
-                                    <option value="generale">
-                                        📢 Générale
-                                    </option>
+                                    <option value="priere">🙏 Prière</option>
                                 </optgroup>
                                 <optgroup label="Mes contenus">
-                                    <option value="mes_demandes">
-                                        📋 Mes demandes
-                                    </option>
                                     <option value="mes_annonces">
                                         📣 Mes annonces
+                                    </option>
+                                    <option value="mes_demandes">
+                                        📋 Mes demandes
                                     </option>
                                 </optgroup>
                             </select>
@@ -1534,14 +1621,6 @@ export default function Index({
                                             }
                                         >
                                             Refuser
-                                        </button>
-                                    </div>
-                                    <div style={{ marginBottom: 16 }}>
-                                        <button
-                                            className="btn"
-                                            onClick={openFicheModalForSelected}
-                                        >
-                                            📄 Voir la fiche des demandes sélectionnées
                                         </button>
                                     </div>
                                 </div>
@@ -1991,9 +2070,13 @@ export default function Index({
                                         <div
                                             className={`demande-acte-icon ${tone(acte.type_acte)}`}
                                         >
-                                            {acte.membre?.photo_path ? (
+                                            {acte.membre
+                                                ?.profile_photo_url ? (
                                                 <img
-                                                    src={acte.membre.photo_path}
+                                                    src={
+                                                        acte.membre
+                                                            .profile_photo_url
+                                                    }
                                                     alt={`${acte.membre?.prenom} ${acte.membre?.nom}`}
                                                     style={{
                                                         width: "100%",
@@ -2064,6 +2147,129 @@ export default function Index({
                                     </div>
                                 ))}
                             </div>
+                        </div>
+                    )}
+
+                    {/* ══════════ ONGLET DATES CHOISIES ══════════ */}
+                    {tab === "dates" && (
+                        <div className="date-tab-root">
+                            {ceremonyActs.length === 0 ? (
+                                <div className="empty-state">
+                                    <svg
+                                        width="32"
+                                        height="32"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        strokeWidth="1.2"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M6 2h12a2 2 0 012 2v16a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"
+                                        />
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M6 10h12"
+                                        />
+                                    </svg>
+                                    <div className="empty-title">
+                                        Aucune date de mariage choisie
+                                    </div>
+                                    <div className="empty-sub">
+                                        Les responsables pourront proposer une
+                                        date une fois leur dossier validé.
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="date-grid">
+                                    {ceremonyActs.map((acte) => {
+                                        const statut =
+                                            acte.details?.ceremonie_statut;
+                                        return (
+                                            <article
+                                                className="date-card"
+                                                key={acte.id}
+                                            >
+                                                <div className="date-card-main">
+                                                    <div>
+                                                        <div className="date-card-title">
+                                                            {
+                                                                acte.membre
+                                                                    ?.prenom
+                                                            }{" "}
+                                                            {acte.membre?.nom}
+                                                        </div>
+                                                        <div className="date-card-meta">
+                                                            {formatDate(
+                                                                acte.date_souhaitee,
+                                                            )}{" "}
+                                                            ·{" "}
+                                                            {acte.details
+                                                                ?.ceremonie_creneau ||
+                                                                "—"}
+                                                        </div>
+                                                    </div>
+                                                    <span
+                                                        className={`badge ${
+                                                            statut &&
+                                                            statut.includes(
+                                                                "REFUSEE",
+                                                            )
+                                                                ? "badge-refuse"
+                                                                : "badge-valide"
+                                                        }`}
+                                                    >
+                                                        <span className="badge-dot" />
+                                                        {ceremonyStatusLabel(
+                                                            statut,
+                                                        )}
+                                                    </span>
+                                                </div>
+                                                <div className="date-card-body">
+                                                    <div>
+                                                        <strong>Lieu </strong>
+                                                        {acte.details
+                                                            ?.lieu_ceremonie ||
+                                                            "—"}
+                                                    </div>
+                                                    <div>
+                                                        <strong>
+                                                            Témoins{" "}
+                                                        </strong>
+                                                        {acte.details
+                                                            ?.temoins || "—"}
+                                                    </div>
+                                                </div>
+                                                <div className="date-card-actions">
+                                                    <button
+                                                        className="btn-see date-card-button"
+                                                        type="button"
+                                                        onClick={() =>
+                                                            openModal(
+                                                                "ceremony",
+                                                                acte,
+                                                            )
+                                                        }
+                                                    >
+                                                        Voir la date choisie
+                                                    </button>
+                                                </div>
+                                            </article>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {tab === "calendar" && (
+                        <div className="calendar-tab-root">
+                            <MiniCalendar
+                                events={calendarEvents}
+                                title="Calendrier des mariages"
+                            />
                         </div>
                     )}
 
@@ -3315,110 +3521,212 @@ export default function Index({
                         <div className="modal-body">
                             {modal === "detail" && selected && (
                                 <>
-                                    <div className="modal-info-row">
-                                        <span className="modal-info-key">
-                                            Référence
-                                        </span>
-                                        <span className="modal-info-val mono">
-                                            {selected?.reference || "—"}
-                                        </span>
+                                    <div className="modal-detail-tabs">
+                                        <button
+                                            type="button"
+                                            className={`modal-detail-tab ${detailTab === "infos" ? "active" : ""}`}
+                                            onClick={() => setDetailTab("infos")}
+                                        >
+                                            Informations
+                                        </button>
+                                        {selectedIsMariage && (
+                                            <>
+                                                <button
+                                                    type="button"
+                                                    className={`modal-detail-tab ${detailTab === "ceremony" ? "active" : ""}`}
+                                                    onClick={() => setDetailTab("ceremony")}
+                                                >
+                                                    Date choisie
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={`modal-detail-tab ${detailTab === "calendar" ? "active" : ""}`}
+                                                    onClick={() => setDetailTab("calendar")}
+                                                >
+                                                    Calendrier
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
-                                    <div className="modal-info-row">
-                                        <span className="modal-info-key">
-                                            Type d'acte
-                                        </span>
-                                        <span className="modal-info-val">
-                                            {prettyType(selected?.type_acte)}
-                                        </span>
-                                    </div>
-                                    <div className="modal-info-row">
-                                        <span className="modal-info-key">
-                                            Membre
-                                        </span>
-                                        <span className="modal-info-val">
-                                            {selected?.membre?.prenom}{" "}
-                                            {selected?.membre?.nom}
-                                        </span>
-                                    </div>
-                                    <div className="modal-info-row">
-                                        <span className="modal-info-key">
-                                            Date souhaitée
-                                        </span>
-                                        <span className="modal-info-val">
-                                            {formatDate(
-                                                selected?.date_souhaitee ||
-                                                    selected?.details
-                                                        ?.date_souhaitee ||
-                                                    selected?.details
-                                                        ?.date_presentation ||
-                                                    selected?.details
-                                                        ?.date_deces ||
-                                                    selected?.details
-                                                        ?.date_naissance ||
-                                                    selected?.date_annonce,
+                                    {detailTab === "infos" && (
+                                        <>
+                                            <div className="modal-info-row">
+                                                <span className="modal-info-key">
+                                                    R?f?rence
+                                                </span>
+                                                <span className="modal-info-val mono">
+                                                    {selected?.reference || "?"}
+                                                </span>
+                                            </div>
+                                            <div className="modal-info-row">
+                                                <span className="modal-info-key">
+                                                    Type d'acte
+                                                </span>
+                                                <span className="modal-info-val">
+                                                    {prettyType(selected?.type_acte)}
+                                                </span>
+                                            </div>
+                                            <div className="modal-info-row">
+                                                <span className="modal-info-key">
+                                                    Membre
+                                                </span>
+                                                <span className="modal-info-val">
+                                                    {selected?.membre?.prenom}{" "}
+                                                    {selected?.membre?.nom}
+                                                </span>
+                                            </div>
+                                            <div className="modal-info-row">
+                                                <span className="modal-info-key">
+                                                    Date souhait?e
+                                                </span>
+                                                <span className="modal-info-val">
+                                                    {formatDate(
+                                                        selected?.date_souhaitee ||
+                                                            selected?.details?.date_souhaitee ||
+                                                            selected?.details?.date_presentation ||
+                                                            selected?.details?.date_deces ||
+                                                            selected?.details?.date_naissance ||
+                                                            selected?.date_annonce,
+                                                    )}
+                                                </span>
+                                            </div>
+                                            <div className="modal-info-row no-border">
+                                                <span className="modal-info-key">
+                                                    Statut
+                                                </span>
+                                                <span className="modal-info-val">
+                                                    <span
+                                                        className={`badge ${getActeBadgeClass(getActeStatus(selected))}`}
+                                                    >
+                                                        <span className="badge-dot" />
+                                                        {prettyStatut(getActeStatus(selected))}
+                                                    </span>
+                                                </span>
+                                            </div>
+                                        </>
+                                    )}
+                                    {selectedIsMariage && detailTab === "ceremony" && (
+                                        <div className="ceremony-tab">
+                                            <div className="ceremony-summary">
+                                                <div>
+                                                    <strong>Date choisie</strong>
+                                                    <span className="modal-detail-val">
+                                                        {formatDate(
+                                                            selected?.details?.date_souhaitee ||
+                                                                selected?.date_souhaitee,
+                                                        ) || "?"}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <strong>Cr?neau</strong>
+                                                    <span className="modal-detail-val">
+                                                        {selected?.details?.ceremonie_creneau === "matin"
+                                                            ? "Matin 09h-10h"
+                                                            : selected?.details?.ceremonie_creneau ===
+                                                                "apres_midi"
+                                                              ? "Apr?s-midi 15h-16h"
+                                                              : "?"}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <strong>Statut</strong>
+                                                    <span className="modal-detail-val">
+                                                        {ceremonyStatusLabel(selected?.details?.ceremonie_statut)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="modal-detail-row">
+                                                <span className="modal-detail-key">
+                                                    Lieu
+                                                </span>
+                                                <span className="modal-detail-val">
+                                                    {selected?.details?.lieu_ceremonie || "?"}
+                                                </span>
+                                            </div>
+                                            <div className="modal-detail-row">
+                                                <span className="modal-detail-key">
+                                                    T?moins
+                                                </span>
+                                                <span className="modal-detail-val">
+                                                    {selected?.details?.temoins || "?"}
+                                                </span>
+                                            </div>
+                                            {selected?.details?.ceremonie_commentaire_conducteur && (
+                                                <div className="modal-detail-row">
+                                                    <span className="modal-detail-key">
+                                                        Commentaire conducteur
+                                                    </span>
+                                                    <span className="modal-detail-val">
+                                                        {selected?.details?.ceremonie_commentaire_conducteur}
+                                                    </span>
+                                                </div>
                                             )}
-                                        </span>
-                                    </div>
-                                    <div className="modal-info-row no-border">
-                                        <span className="modal-info-key">
-                                            Statut
-                                        </span>
-                                        <span className="modal-info-val">
-                                            <span
-                                                className={`badge ${getActeBadgeClass(
-                                                    getActeStatus(selected),
-                                                )}`}
-                                            >
-                                                <span className="badge-dot" />
-                                                {prettyStatut(
-                                                    getActeStatus(selected),
-                                                )}
-                                            </span>
-                                        </span>
-                                    </div>
+                                            {selected?.details?.ceremonie_commentaire_pasteur && (
+                                                <div className="modal-detail-row">
+                                                    <span className="modal-detail-key">
+                                                        Commentaire pasteur
+                                                    </span>
+                                                    <span className="modal-detail-val">
+                                                        {selected?.details?.ceremonie_commentaire_pasteur}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {selected?.details?.ceremonie_soumise_at && (
+                                                <div className="modal-detail-row">
+                                                    <span className="modal-detail-key">
+                                                        Soumise le
+                                                    </span>
+                                                    <span className="modal-detail-val">
+                                                        {formatDateTime(selected?.details?.ceremonie_soumise_at)}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {selected?.details?.ceremonie_transmise_pasteur_at && (
+                                                <div className="modal-detail-row">
+                                                    <span className="modal-detail-key">
+                                                        Transmise au pasteur
+                                                    </span>
+                                                    <span className="modal-detail-val">
+                                                        {formatDateTime(selected?.details?.ceremonie_transmise_pasteur_at)}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {selected?.details?.ceremonie_validee_pasteur_at && (
+                                                <div className="modal-detail-row">
+                                                    <span className="modal-detail-key">
+                                                        Valid?e par le pasteur
+                                                    </span>
+                                                    <span className="modal-detail-val">
+                                                        {formatDateTime(selected?.details?.ceremonie_validee_pasteur_at)}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    {selectedIsMariage && detailTab === "calendar" && (
+                                        <MiniCalendar
+                                            events={calendarEvents}
+                                            highlightId={selected?.id}
+                                            title="Calendrier des dates choisies"
+                                        />
+                                    )}
                                     {selected?.statut === "SOUMISE" && (
                                         <div className="modal-actions-inline">
                                             <button
                                                 className="btn-modal btn-modal-gold"
-                                                onClick={() =>
-                                                    setModal("approve")
-                                                }
+                                                onClick={() => setModal("approve")}
                                             >
-                                                <svg
-                                                    width="13"
-                                                    height="13"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                    strokeWidth="2.5"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        d="M5 13l4 4L19 7"
-                                                    />
+                                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                                 </svg>
                                                 Valider & transmettre
                                             </button>
                                             <button
                                                 className="btn-modal btn-modal-red"
-                                                onClick={() =>
-                                                    setModal("refuse")
-                                                }
+                                                onClick={() => setModal("refuse")}
                                             >
-                                                <svg
-                                                    width="13"
-                                                    height="13"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                    strokeWidth="2.5"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        d="M6 18L18 6M6 6l12 12"
-                                                    />
+                                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                                                 </svg>
                                                 Refuser
                                             </button>
@@ -3436,9 +3744,7 @@ export default function Index({
                                                 }
                                                 disabled={processing}
                                             >
-                                                {processing
-                                                    ? "Traitement..."
-                                                    : "Transmettre au pasteur"}
+                                                {processing ? "Traitement..." : "Transmettre au pasteur"}
                                             </button>
                                             <button
                                                 className="btn-modal btn-modal-red"
@@ -3449,15 +3755,11 @@ export default function Index({
                                                 }
                                                 disabled={processing}
                                             >
-                                                {processing
-                                                    ? "Traitement..."
-                                                    : "Refuser la date"}
+                                                {processing ? "Traitement..." : "Refuser la date"}
                                             </button>
                                         </div>
                                     )}
-                                    {["VALIDEE", "PUBLIEE"].includes(
-                                        selected?.statut,
-                                    ) && (
+                                    {["TRANSMISE_AU_PASTEUR", "VALIDEE", "PUBLIEE", "ARCHIVEE"].includes(selected?.statut) && (
                                         <div style={{ marginTop: 16 }}>
                                             <button
                                                 style={{
@@ -3474,41 +3776,203 @@ export default function Index({
                                                     alignItems: "center",
                                                     justifyContent: "center",
                                                     gap: 8,
-                                                    transition:
-                                                        "background 0.2s",
+                                                    transition: "background 0.2s",
                                                 }}
                                                 onMouseEnter={(e) =>
-                                                    (e.target.style.backgroundColor =
-                                                        "#2563eb")
+                                                    (e.target.style.backgroundColor = "#2563eb")
                                                 }
                                                 onMouseLeave={(e) =>
-                                                    (e.target.style.backgroundColor =
-                                                        "#3b82f6")
+                                                    (e.target.style.backgroundColor = "#3b82f6")
                                                 }
                                                 onClick={() => {
-                                                    window.location.href = `/conducteur/liturgie/${selected.id}/fiche`;
+                                                    window.open(`/conducteur/liturgie/${selected.id}/fiche?preview=1`, "_blank");
                                                 }}
                                             >
-                                                <svg
-                                                    width="13"
-                                                    height="13"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                    strokeWidth="2"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                                    />
+                                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                                 </svg>
-                                                Télécharger la fiche
+                                                Voir la fiche
                                             </button>
                                         </div>
                                     )}
                                 </>
                             )}
+            {modal === "ceremony" && selected && (
+                <div className="ceremony-tab">
+                    <div className="ceremony-summary">
+                        <div>
+                            <strong>Date choisie</strong>
+                            <span className="modal-detail-val">
+                                {formatDate(
+                                    selected?.date_souhaitee ||
+                                        selected?.details?.date_souhaitee,
+                                ) || "—"}
+                            </span>
+                        </div>
+                        <div>
+                            <strong>Créneau</strong>
+                            <span className="modal-detail-val">
+                                {selected?.details?.ceremonie_creneau ===
+                                "matin"
+                                    ? "Matin 09h-10h"
+                                    : selected?.details?.ceremonie_creneau ===
+                                      "apres_midi"
+                                    ? "Après-midi 15h-16h"
+                                    : "—"}
+                            </span>
+                        </div>
+                        <div>
+                            <strong>Statut</strong>
+                            <span className="modal-detail-val">
+                                {ceremonyStatusLabel(
+                                    selected?.details?.ceremonie_statut,
+                                )}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="modal-detail-row">
+                        <span className="modal-detail-key">Lieu</span>
+                        <span className="modal-detail-val">
+                            {selected?.details?.lieu_ceremonie || "—"}
+                        </span>
+                    </div>
+                    <div className="modal-detail-row">
+                        <span className="modal-detail-key">Témoins</span>
+                        <span className="modal-detail-val">
+                            {selected?.details?.temoins || "—"}
+                        </span>
+                    </div>
+                    {selected?.details?.ceremonie_commentaire_conducteur && (
+                        <div className="modal-detail-row">
+                            <span className="modal-detail-key">
+                                Commentaire conducteur
+                            </span>
+                            <span className="modal-detail-val">
+                                {selected?.details?.ceremonie_commentaire_conducteur}
+                            </span>
+                        </div>
+                    )}
+                    {selected?.details?.ceremonie_commentaire_pasteur && (
+                        <div className="modal-detail-row">
+                            <span className="modal-detail-key">
+                                Commentaire pasteur
+                            </span>
+                            <span className="modal-detail-val">
+                                {selected?.details?.ceremonie_commentaire_pasteur}
+                            </span>
+                        </div>
+                    )}
+                    {selected?.details?.ceremonie_soumise_at && (
+                        <div className="modal-detail-row">
+                            <span className="modal-detail-key">Soumise le</span>
+                            <span className="modal-detail-val">
+                                {formatDateTime(
+                                    selected?.details?.ceremonie_soumise_at,
+                                )}
+                            </span>
+                        </div>
+                    )}
+                    {selected?.details?.ceremonie_transmise_pasteur_at && (
+                        <div className="modal-detail-row">
+                            <span className="modal-detail-key">
+                                Transmise au pasteur
+                            </span>
+                            <span className="modal-detail-val">
+                                {formatDateTime(
+                                    selected?.details?.ceremonie_transmise_pasteur_at,
+                                )}
+                            </span>
+                        </div>
+                    )}
+                    {selected?.details?.ceremonie_validee_pasteur_at && (
+                        <div className="modal-detail-row">
+                            <span className="modal-detail-key">
+                                Validée par le pasteur
+                            </span>
+                            <span className="modal-detail-val">
+                                {formatDateTime(
+                                    selected?.details?.ceremonie_validee_pasteur_at,
+                                )}
+                            </span>
+                        </div>
+                    )}
+                </div>
+            )}
+            {modal === "ceremony" && ['VALIDEE', 'PUBLIEE'].includes(selected?.statut) && (
+                <div style={{ marginTop: 16 }}>
+                    <button
+                        style={{
+                            width: '100%',
+                            padding: '10px 14px',
+                            backgroundColor: '#3b82f6',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: 6,
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 8,
+                            transition: 'background 0.2s',
+                        }}
+                        onMouseEnter={(e) =>
+                            (e.target.style.backgroundColor =
+                                '#2563eb')
+                        }
+                        onMouseLeave={(e) =>
+                            (e.target.style.backgroundColor =
+                                '#3b82f6')
+                        }
+                        onClick={() => {
+                            window.open(`/conducteur/liturgie/${selected.id}/fiche?preview=1`, "_blank");
+                        }}
+                    >
+                        <svg
+                            width="13"
+                            height="13"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
+                        </svg>
+                        Voir la fiche
+                    </button>
+                </div>
+            )}
+            {modal === "ceremony" && selected?.details?.ceremonie_statut === "CEREMONIE_SOUMISE_AU_CONDUCTEUR" && (
+                <div className="modal-actions-inline" style={{ marginTop: 16 }}>
+                    <button
+                        className="btn-modal btn-modal-gold"
+                        onClick={() =>
+                            submitCeremonyDecision(
+                                "CEREMONIE_TRANSMISE_AU_PASTEUR",
+                            )
+                        }
+                        disabled={processing}
+                    >
+                        {processing ? "Traitement..." : "Valider la date"}
+                    </button>
+                    <button
+                        className="btn-modal btn-modal-red"
+                        onClick={() =>
+                            submitCeremonyDecision(
+                                "CEREMONIE_REFUSEE_PAR_CONDUCTEUR",
+                            )
+                        }
+                        disabled={processing}
+                    >
+                        {processing ? "Traitement..." : "Refuser la date"}
+                    </button>
+                </div>
+            )}
                             {modal === "approve" && (
                                 <div className="modal-field">
                                     <label className="modal-label">
@@ -4767,6 +5231,16 @@ function prettyStatut(s) {
     };
     return m[s] || s;
 }
+function ceremonyStatusLabel(status) {
+    const labels = {
+        CEREMONIE_SOUMISE_AU_CONDUCTEUR: "Date soumise au conducteur",
+        CEREMONIE_TRANSMISE_AU_PASTEUR: "Date transmise au pasteur",
+        CEREMONIE_VALIDEE_PAR_PASTEUR: "Date validée",
+        CEREMONIE_REFUSEE_PAR_CONDUCTEUR: "Date refusée",
+        CEREMONIE_REFUSEE_PAR_PASTEUR: "Date refusée",
+    };
+    return labels[status] || "Date proposée";
+}
 function tone(type) {
     const m = {
         bapteme: "blue",
@@ -4936,6 +5410,22 @@ const styles = `
 .tab-red{background:var(--red);color:white}.tab-gold{background:var(--gold-dim);color:#857400;border:1px solid rgba(182,192,26,.3)}
 .tab-violet{background:var(--violet);color:white}
 .tab-ann.active{color:var(--violet)}
+.tab-date{color:var(--text3)}
+.tab-date.active{color:var(--text);background:rgba(30,64,175,.12);border-color:transparent;box-shadow:0 4px 12px rgba(91,63,175,.25)}
+.tab-count.tab-sage{background:rgba(74,124,94,.2);color:#4a7c5e;border:1px solid rgba(74,124,94,.3)}
+ 
+.date-tab-root{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(15,23,42,.18)}
+.calendar-tab-root{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(15,23,42,.18)}
+.date-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.date-card{padding:16px;border-radius:14px;border:1px solid rgba(15,23,42,.08);background:#fff;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 24px rgba(15,23,42,.12)}
+.date-card-main{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.date-card-title{font-size:15px;font-weight:700}
+.date-card-meta{font-size:12px;color:#64748b}
+.date-card-body{display:flex;flex-direction:column;gap:4px;font-size:13px;color:#1e1b16}
+.date-card-actions{display:flex;justify-content:flex-end}
+.date-card .badge{font-size:10px;padding:3px 10px}
+.date-card-button{display:flex;align-items:center;gap:6px;padding:10px 18px;border-radius:9px;background:rgba(255,255,255,.88);color:var(--text2);border:1px solid var(--border2);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;font-family:inherit}
+.date-card-button:hover{background:rgba(255,255,255,.2);color:var(--text)}
 .quick-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
 .quick-dropdown{min-width:300px;height:40px;background:#ECEFF4;border:2px solid #D9DEE8;border-radius:10px;padding:0 48px 0 46px;font-size:16px;font-weight:800;color:#111827;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23586A84' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23374151' stroke-width='2.2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat,no-repeat;background-position:left 16px center,right 16px center;background-size:18px 18px,18px 18px}
 .quick-dropdown:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(91,63,175,.12)}
@@ -5125,6 +5615,14 @@ const styles = `
 .modal-body{padding:24px 22px;flex:1;overflow-y:auto;}
 .modal-info-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.05);font-size:13px;gap:12px;}
 .modal-info-row.no-border{border-bottom:none}.modal-info-key{color:var(--text3);font-weight:600}.modal-info-val{color:var(--text);font-weight:500;text-align:right}.modal-info-val.mono{font-family:monospace;font-size:12px;background:rgba(0,0,0,.04);padding:2px 7px;border-radius:4px}
+.modal-detail-tabs{display:flex;gap:10px;margin-bottom:16px}
+.modal-detail-tab{padding:8px 16px;border-radius:999px;border:none;background:rgba(15,23,42,.08);color:var(--text2);font-weight:600;cursor:pointer;transition:all .2s}
+.modal-detail-tab:hover{background:rgba(15,23,42,.2)}
+.modal-detail-tab.active{background:var(--surface);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.ceremony-tab{display:flex;flex-direction:column;gap:12px;padding-top:8px}
+.ceremony-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:12px;border-radius:10px;background:#f5f5f5;border:1px solid rgba(0,0,0,.06)}
+.modal-detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.05);font-size:13px;gap:12px}
+.modal-detail-row:last-child{border-bottom:none}
 .modal-actions-inline{display:flex;gap:8px;flex-wrap:wrap;}
 .modal-field{margin-bottom:4px}
 .modal-label{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--text3);font-weight:700;margin-bottom:8px;display:block;}

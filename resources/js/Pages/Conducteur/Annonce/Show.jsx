@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "@inertiajs/react";
-import { Download } from "lucide-react";
+import { Eye } from "lucide-react";
 
 export default function Show({ annonce }) {
     return (
@@ -43,7 +43,7 @@ export default function Show({ annonce }) {
                             )
                         }
                     >
-                        <Download size={13} /> Télécharger fiche
+                        <Eye size={13} /> Voir la fiche
                     </button>
                 )}
             </div>

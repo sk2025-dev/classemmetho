@@ -75,13 +75,28 @@ export default function MariageForm({
         payload.append("membre_id", form.membre_id || "");
         payload.append("classe_id", form.classe_id || "");
         payload.append("details[epoux_nom]", form.details.epoux_nom || "");
-        payload.append("details[epoux_prenom]", form.details.epoux_prenom || "");
-        payload.append("details[epoux_date_naissance]", form.details.epoux_date_naissance || "");
+        payload.append(
+            "details[epoux_prenom]",
+            form.details.epoux_prenom || "",
+        );
+        payload.append(
+            "details[epoux_date_naissance]",
+            form.details.epoux_date_naissance || "",
+        );
         payload.append("details[epoux_nat]", form.details.epoux_nat || "");
         payload.append("details[epoux_prof]", form.details.epoux_prof || "");
-        payload.append("details[epoux_contact]", form.details.epoux_contact || "");
-        payload.append("details[epoux_membre]", form.details.epoux_membre || "");
-        payload.append("details[epoux_baptise]", form.details.epoux_baptise || "");
+        payload.append(
+            "details[epoux_contact]",
+            form.details.epoux_contact || "",
+        );
+        payload.append(
+            "details[epoux_membre]",
+            form.details.epoux_membre || "",
+        );
+        payload.append(
+            "details[epoux_baptise]",
+            form.details.epoux_baptise || "",
+        );
         payload.append(
             "details[epoux_bapteme_lieu]",
             form.details.epoux_bapteme_lieu || "",
@@ -90,7 +105,10 @@ export default function MariageForm({
             "details[epoux_bapteme_date]",
             form.details.epoux_bapteme_date || "",
         );
-        payload.append("details[epoux_eglise]", form.details.epoux_eglise || "");
+        payload.append(
+            "details[epoux_eglise]",
+            form.details.epoux_eglise || "",
+        );
         payload.append(
             "details[observations]",
             form.details.observations || "",
@@ -266,7 +284,10 @@ export default function MariageForm({
                                     <Field label="Date de naissance">
                                         <input
                                             type="date"
-                                            value={form.details.epoux_date_naissance}
+                                            value={
+                                                form.details
+                                                    .epoux_date_naissance
+                                            }
                                             onChange={(e) =>
                                                 setDetail(
                                                     "epoux_date_naissance",

@@ -318,17 +318,25 @@ $signaturePasteurDataUri = $toSignatureDataUri($pasteur->signature_path ?? null)
             border: none;
             width: 33.33%;
             text-align: center;
-            vertical-align: bottom;
+            vertical-align: top;
             padding: 0 8px;
+        }
+
+        .sig-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .sig-space {
             height: 56px;
+            width: 100%;
             display: flex;
             align-items: flex-end;
             justify-content: center;
             overflow: hidden;
-            margin-top: 6px;
+            margin-top: 10px;
+            margin-bottom: 6px;
         }
 
         .sig-image {
@@ -341,10 +349,11 @@ $signaturePasteurDataUri = $toSignatureDataUri($pasteur->signature_path ?? null)
             text-decoration: underline;
             font-weight: 700;
             font-size: 12px;
+            margin-bottom: 6px;
         }
 
         .sig-name {
-            margin-top: 3px;
+            margin-top: 0;
             font-size: 11px;
             font-weight: 700;
             min-height: 14px;
@@ -436,26 +445,32 @@ $signaturePasteurDataUri = $toSignatureDataUri($pasteur->signature_path ?? null)
             <table class="signature-zone">
                 <tr>
                     <td>
-                        <div class="sig-label">Conducteur de la Classe</div>
-                        <div class="sig-name">{{ $nomConducteur }}</div>
-                        <div class="sig-space">
-                            @if(!empty($signatureConducteurDataUri))
-                            <img src="{{ $signatureConducteurDataUri }}" alt="Signature conducteur" class="sig-image">
-                            @endif
+                        <div class="sig-stack">
+                            <div class="sig-label">Conducteur de la Classe</div>
+                            <div class="sig-space">
+                                @if(!empty($signatureConducteurDataUri))
+                                <img src="{{ $signatureConducteurDataUri }}" alt="Signature conducteur" class="sig-image">
+                                @endif
+                            </div>
+                            <div class="sig-name">{{ $nomConducteur }}</div>
                         </div>
                     </td>
                     <td>
-                        <div class="sig-label">Bureau des Conducteurs</div>
-                        <div class="sig-name"></div>
-                        <div class="sig-space"></div>
+                        <div class="sig-stack">
+                            <div class="sig-label">Bureau des Conducteurs</div>
+                            <div class="sig-space"></div>
+                            <div class="sig-name"></div>
+                        </div>
                     </td>
                     <td>
-                        <div class="sig-label">Pasteur</div>
-                        <div class="sig-name">{{ $nomPasteur }}</div>
-                        <div class="sig-space">
-                            @if(!empty($signaturePasteurDataUri))
-                            <img src="{{ $signaturePasteurDataUri }}" alt="Signature pasteur" class="sig-image">
-                            @endif
+                        <div class="sig-stack">
+                            <div class="sig-label">Pasteur</div>
+                            <div class="sig-space">
+                                @if(!empty($signaturePasteurDataUri))
+                                <img src="{{ $signaturePasteurDataUri }}" alt="Signature pasteur" class="sig-image">
+                                @endif
+                            </div>
+                            <div class="sig-name">{{ $nomPasteur }}</div>
                         </div>
                     </td>
                 </tr>

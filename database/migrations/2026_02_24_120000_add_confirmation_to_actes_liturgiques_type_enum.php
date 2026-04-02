@@ -22,6 +22,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        DB::table('actes_liturgiques')
+            ->where('type_acte', 'confirmation')
+            ->delete();
+
         DB::statement("
             ALTER TABLE actes_liturgiques
             MODIFY COLUMN type_acte ENUM(

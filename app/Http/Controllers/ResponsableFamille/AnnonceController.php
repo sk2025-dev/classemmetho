@@ -204,19 +204,26 @@ class AnnonceController extends Controller
             abort(403, 'Vous n\'avez pas accès à cette annonce.');
         }
 
-        // PDF disponible uniquement après validation finale du pasteur
-        if (!in_array($acte->statut, ['VALIDEE', 'PUBLIEE', 'ARCHIVEE'], true) || !$acte->pasteur_id) {
+        // PDF disponible pour les déclarations de naissance avant validation finale,
+        // sinon uniquement après validation finale du pasteur.
+        $typeActe = strtolower((string) $acte->type_acte);
+        if ($typeActe === 'naissance') {
+            if (!in_array($acte->statut, ['SOUMISE', 'EN_ATTENTE_CONDUCTEUR', 'TRANSMISE_AU_PASTEUR', 'VALIDEE', 'PUBLIEE', 'ARCHIVEE'], true)) {
+                abort(403, 'La fiche PDF est disponible après transmission au pasteur.');
+            }
+        } elseif (!in_array($acte->statut, ['VALIDEE', 'PUBLIEE', 'ARCHIVEE'], true) || !$acte->pasteur_id) {
             abort(403, 'La fiche PDF est disponible uniquement après validation du pasteur.');
         }
 
         $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.fiche-demande', [
+        $view = $acte->type_acte === 'deces' ? 'pdf.fiche-deces' : 'pdf.fiche-demande';
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($view, [
             'acte' => $acte,
             'logoDataUri' => $logoDataUri,
         ])->setPaper('a4', 'portrait');
 
         $prefix = $acte->type_acte === 'priere' ? 'Priere' : 'Annonce';
-        return $pdf->download("{$prefix}_{$acte->reference}.pdf");
+        return $pdf->stream("{$prefix}_{$acte->reference}.pdf");
     }
 
     private function buildImageDataUri(string $path): ?string

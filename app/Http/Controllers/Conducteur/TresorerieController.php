@@ -685,4 +685,42 @@ class TresorerieController extends Controller
             'data' => $paiement,
         ], 201);
     }
+
+    public function assignTresorier(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user->classe_id) {
+            return response()->json(['message' => 'Conducteur sans classe associee.'], 422);
+        }
+
+        $validated = $request->validate([
+            'user_id' => ['required', 'exists:users,id'],
+        ]);
+
+        $member = User::query()->findOrFail($validated['user_id']);
+
+        // Vérifier que le membre est dans la même classe
+        if ($member->classe_id !== $user->classe_id) {
+            return response()->json(['message' => 'Ce membre n\'est pas dans votre classe.'], 403);
+        }
+
+        // Vérifier que le membre a un rôle membre_famille
+        if ($member->role !== 'membre_famille') {
+            return response()->json(['message' => 'Seul un membre de famille peut devenir tresorier.'], 422);
+        }
+
+        // Assigner le rôle tresorier
+        $member->update(['role' => 'tresorier']);
+
+        return response()->json([
+            'message' => 'Tresorier assigne avec succes.',
+            'data' => [
+                'id' => $member->id,
+                'nom' => $member->nom,
+                'prenom' => $member->prenom,
+                'role' => $member->role,
+            ],
+        ], 200);
+    }
 }
