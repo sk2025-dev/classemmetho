@@ -3,8 +3,13 @@ import { Link, usePage, router } from "@inertiajs/react";
 import axios from "axios";
 
 import Select2Fonction from "../../../Components/Select2Fonction";
-import Select2Relation from "../../../Components/Select2Relation";
+import Select2Single from "../../../Components/Select2Single";
 import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
+import {
+    GENDER_OPTIONS,
+    MEMBER_MARITAL_STATUS_OPTIONS,
+    RELATION_OPTIONS,
+} from "../../../Helpers/select2SingleOptions";
 import {
     ArrowLeft,
     User,
@@ -569,19 +574,18 @@ export default function EditMember({ member, family }) {
                             </FormField>
 
                             <FormField label="Genre" required>
-                                <select
-                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
-                                    value={data.genre}
-                                    onChange={(e) =>
-                                        setData({
-                                            ...data,
-                                            genre: e.target.value,
-                                        })
-                                    }
-                                >
-                                    <option value="M">Homme</option>
-                                    <option value="F">Femme</option>
-                                </select>
+                                <Select2Single
+                                name="genre"
+                                value={data.genre}
+                                onChange={(e) =>
+                                    setData({
+                                        ...data,
+                                        genre: e.target.value,
+                                    })
+                                }
+                                options={GENDER_OPTIONS}
+                                placeholder="Sélectionner..."
+                            />
                             </FormField>
 
                             <FormField
@@ -649,40 +653,33 @@ export default function EditMember({ member, family }) {
                             </FormField>
 
                             <FormField label="Relation de Famille" icon={Users}>
-                                <Select2Relation
-                                    value={data.relation}
-                                    onChange={(e) =>
-                                        setData({
-                                            ...data,
-                                            relation: e.target.value,
-                                        })
-                                    }
-                                    placeholder="Sélectionner une relation..."
-                                />
+                                <Select2Single
+                                name="relation"
+                                value={data.relation}
+                                onChange={(e) =>
+                                    setData({
+                                        ...data,
+                                        relation: e.target.value,
+                                    })
+                                }
+                                options={RELATION_OPTIONS}
+                                placeholder="Sélectionner une relation..."
+                            />
                             </FormField>
 
                             <FormField label="Statut Marital">
-                                <select
-                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
-                                    value={data.statut_marital}
-                                    onChange={(e) =>
-                                        setData({
-                                            ...data,
-                                            statut_marital: e.target.value,
-                                        })
-                                    }
-                                >
-                                    <option value="">-- Sélectionnez --</option>
-                                    <option value="Célibataire">
-                                        Célibataire
-                                    </option>
-                                    <option value="Marié(e)">Marié(e)</option>
-                                    <option value="Divorcé(e)">
-                                        Divorcé(e)
-                                    </option>
-                                    <option value="Veuf(ve)">Veuf(ve)</option>
-                                    <option value="Dote">Dote</option>
-                                </select>
+                                <Select2Single
+                                name="statut_marital"
+                                value={data.statut_marital}
+                                onChange={(e) =>
+                                    setData({
+                                        ...data,
+                                        statut_marital: e.target.value,
+                                    })
+                                }
+                                options={MEMBER_MARITAL_STATUS_OPTIONS}
+                                placeholder="Sélectionner..."
+                            />
                             </FormField>
 
                             {/* Afficher Date et Lieu de Mariage SEULEMENT si statut marital !== Célibataire */}

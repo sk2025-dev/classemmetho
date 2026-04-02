@@ -6,12 +6,16 @@ import { useDebounce } from "../../Hooks/useDebounce";
 import { usePersistentState, clearFormPersistedData } from "../../Hooks/usePersistentState";
 import { useFormErrors } from "../../Hooks/useFormErrors";
 import { useToastWithErrorHandling } from "../../Hooks/useToastWithErrorHandling";
-import CitySelect from "../../Components/CitySelect";
-import Select2Classe from "../../Components/Select2Classe";
-import Select2Relation from "../../Components/Select2Relation";
+import Select2Single from "../../Components/Select2Single";
 import Select2Fonction from "../../Components/Select2Fonction";
 import ToastContainer from "../../Components/ToastContainer";
 import { sanitizeUppercasePrenom } from "../../Helpers/nameSanitizers";
+import {
+    buildVilleOptions,
+    GENDER_OPTIONS,
+    MARITAL_STATUS_OPTIONS,
+    RELATION_OPTIONS,
+} from "../../Helpers/select2SingleOptions";
 import {
     Home,
     User,
@@ -929,15 +933,18 @@ export default function RegisterFamille({
                                 />
                             </FormField>
                             <FormField label="Ville" icon={Building} required>
-                                <CitySelect
+                                <Select2Single
+                                    name="famille_ville"
                                     value={famille.ville}
-                                    onChange={(value) => {
+                                    onChange={(e) => {
                                         setFamille({
                                             ...famille,
-                                            ville: value,
+                                            ville: e.target.value,
                                         });
                                     }}
+                                    options={buildVilleOptions(villesDatabase)}
                                     placeholder="Sélectionner une ville"
+                                    hasError={Boolean(errors["famille.ville"])}
                                 />
                                 {errors["famille.ville"] && (
                                     <p className="text-red-500 text-xs mt-1">
@@ -1169,8 +1176,8 @@ export default function RegisterFamille({
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField label="Genre" icon={Users} required>
-                                <select
-                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 bg-white"
+                                <Select2Single
+                                    name="responsable_genre"
                                     value={responsable.genre}
                                     onChange={(e) =>
                                         setResponsable({
@@ -1178,14 +1185,13 @@ export default function RegisterFamille({
                                             genre: e.target.value,
                                         })
                                     }
-                                >
-                                    <option value="">Sélectionner...</option>
-                                    <option value="M">Masculin</option>
-                                    <option value="F">Féminin</option>
-                                </select>
+                                    options={GENDER_OPTIONS}
+                                    placeholder="Sélectionner..."
+                                />
                             </FormField>
                             <FormField label="Lien de parenté" icon={Users} required hint="Relation avec la famille">
-                                <Select2Relation
+                                <Select2Single
+                                    name="responsable_lien_parente"
                                     value={responsable.lienParente}
                                     onChange={(e) =>
                                         setResponsable({
@@ -1193,6 +1199,7 @@ export default function RegisterFamille({
                                             lienParente: e.target.value,
                                         })
                                     }
+                                    options={RELATION_OPTIONS}
                                     placeholder="Sélectionner un lien de parenté"
                                 />
                             </FormField>
@@ -1224,8 +1231,8 @@ export default function RegisterFamille({
 
                         <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                             <FormField label="Statut Marital" icon={Heart} required>
-                                <select
-                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 bg-white"
+                                <Select2Single
+                                    name="responsable_statut_marital"
                                     value={responsable.statutMarital}
                                     onChange={(e) =>
                                         setResponsable({
@@ -1233,13 +1240,11 @@ export default function RegisterFamille({
                                             statutMarital: e.target.value,
                                         })
                                     }
-                                >
-                                    <option value="">Sélectionner...</option>
-                                    <option value="celibataire">Célibataire</option>
-                                    <option value="marie">Mariage Civil</option>
-                                    <option value="divorce">Divorcé(e)</option>
-                                    <option value="veuf">Veuf(ve)</option>
-                                </select>
+                                    options={MARITAL_STATUS_OPTIONS.filter(
+                                        (option) => option.value !== "dot",
+                                    )}
+                                    placeholder="Sélectionner..."
+                                />
                             </FormField>
                         </div>
 
@@ -1633,8 +1638,8 @@ export default function RegisterFamille({
                             {/* Genre et Date de naissance */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField label="Genre" icon={Users} required>
-                                    <select
-                                        className={STYLES.input}
+                                    <Select2Single
+                                        name="membre_genre"
                                         value={membreTemp.genre}
                                         onChange={(e) =>
                                             setMembreTemp({
@@ -1642,11 +1647,10 @@ export default function RegisterFamille({
                                                 genre: e.target.value,
                                             })
                                         }
-                                    >
-                                        <option value="">Sélectionner...</option>
-                                        <option value="M">Masculin</option>
-                                        <option value="F">Féminin</option>
-                                    </select>
+                                        options={GENDER_OPTIONS}
+                                        placeholder="Sélectionner..."
+                                        hasError={Boolean(errors["membre.genre"])}
+                                    />
                                     {errors["membre.genre"] && (
                                         <p className="text-red-500 text-xs mt-1">
                                             {errors["membre.genre"]}
@@ -1756,7 +1760,8 @@ export default function RegisterFamille({
                             {/* Lien de parenté et Statut marital */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField label="Lien de parenté" icon={Users} required hint="Relation avec le responsable">
-                                    <Select2Relation
+                                    <Select2Single
+                                        name="membre_relation"
                                         value={membreTemp.relation}
                                         onChange={(e) =>
                                             setMembreTemp({
@@ -1764,6 +1769,7 @@ export default function RegisterFamille({
                                                 relation: e.target.value,
                                             })
                                         }
+                                        options={RELATION_OPTIONS}
                                         placeholder="Sélectionner un lien de parenté"
                                     />
                                     {errors["membre.relation"] && (
@@ -1773,8 +1779,8 @@ export default function RegisterFamille({
                                     )}
                                 </FormField>
                                 <FormField label="Statut marital" icon={Heart} required>
-                                    <select
-                                        className={STYLES.input}
+                                    <Select2Single
+                                        name="membre_statut_marital"
                                         value={membreTemp.statutMarital}
                                         onChange={(e) =>
                                             setMembreTemp({
@@ -1782,14 +1788,10 @@ export default function RegisterFamille({
                                                 statutMarital: e.target.value,
                                             })
                                         }
-                                    >
-                                        <option value="">Sélectionner...</option>
-                                        <option value="celibataire">Célibataire</option>
-                                        <option value="marie">Marié(e)</option>
-                                        <option value="divorce">Divorcé(e)</option>
-                                        <option value="veuf">Veuf(ve)</option>
-                                        <option value="dot">Dot</option>
-                                    </select>
+                                        options={MARITAL_STATUS_OPTIONS}
+                                        placeholder="Sélectionner..."
+                                        hasError={Boolean(errors["membre.statutMarital"])}
+                                    />
                                     {errors["membre.statutMarital"] && (
                                         <p className="text-red-500 text-xs mt-1">
                                             {errors["membre.statutMarital"]}

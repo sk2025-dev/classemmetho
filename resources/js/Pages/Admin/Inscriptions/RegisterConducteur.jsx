@@ -2,10 +2,17 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import { Link } from "@inertiajs/react";
 import AddressAutocomplete from "../../../Components/AddressAutocomplete";
-import Select2Classe from "../../../Components/Select2Classe";
 import Select2Fonction from "../../../Components/Select2Fonction";
-import Select2Relation from "../../../Components/Select2Relation";
-import CitySelect from "../../../Components/CitySelect";
+import Select2Single from "../../../Components/Select2Single";
+import {
+    GENDER_OPTIONS,
+    EMPLOYMENT_STATUS_OPTIONS,
+    MARITAL_STATUS_OPTIONS,
+    RESPONSABLE_MARITAL_STATUS_OPTIONS,
+    RELATION_OPTIONS,
+    buildClasseOptions,
+    buildVilleOptions,
+} from "../../../Helpers/select2SingleOptions";
 import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
 import { useDebounce } from "../../../Hooks/useDebounce";
 import {
@@ -1309,15 +1316,26 @@ export default function RegisterConducteur({
                                 />
                             </FormField>
                             <FormField label="Ville" icon={Building} required>
-                                <CitySelect
+                                <Select2Single
+                                    id="famille_ville"
+                                    name="famille_ville"
                                     value={famille.ville}
-                                    onChange={(value) => {
+                                    onChange={(e) => {
                                         setFamille({
                                             ...famille,
-                                            ville: value,
+                                            ville: e.target.value
+                                                ? parseInt(
+                                                      e.target.value,
+                                                      10,
+                                                  )
+                                                : null,
                                         });
                                     }}
+                                    options={buildVilleOptions(villesDatabase)}
                                     placeholder="Sélectionner une ville"
+                                    hasError={Boolean(
+                                        getFieldError("famille.ville"),
+                                    )}
                                 />
                                 {errors["famille.ville"] && (
                                     <p className="text-red-500 text-xs mt-1">
@@ -1382,7 +1400,7 @@ export default function RegisterConducteur({
                             icon={BookOpen}
                             required
                         >
-                            <Select2Classe
+                            <Select2Single
                                 id="classe_id_select"
                                 name="classe_id"
                                 value={famille.classe_id || ""}
@@ -1394,9 +1412,11 @@ export default function RegisterConducteur({
                                             : null,
                                     })
                                 }
-                                options={classesDatabase}
+                                options={buildClasseOptions(classesDatabase)}
                                 placeholder="Sélectionner une classe"
-                                threshold={5}
+                                hasError={Boolean(
+                                    getFieldError("famille.classe_id"),
+                                )}
                             />
                             {getFieldError("famille.classe_id") && (
                                 <p className="text-red-500 text-xs mt-1">
@@ -1584,8 +1604,10 @@ export default function RegisterConducteur({
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField label="Genre" icon={Users} required>
-                                <select
-                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 bg-white"
+                                <Select2Single
+                                    id="responsable_genre"
+                                    name="responsable_genre"
+                                    options={GENDER_OPTIONS}
                                     value={responsable.genre}
                                     onChange={(e) =>
                                         setResponsable({
@@ -1593,11 +1615,11 @@ export default function RegisterConducteur({
                                             genre: e.target.value,
                                         })
                                     }
-                                >
-                                    <option value="">Sélectionner...</option>
-                                    <option value="M">Masculin</option>
-                                    <option value="F">Féminin</option>
-                                </select>
+                                    placeholder="Sélectionner..."
+                                    hasError={Boolean(
+                                        getFieldError("responsable.genre"),
+                                    )}
+                                />
                             </FormField>
                             <FormField
                                 label="Lien de parenté"
@@ -1605,7 +1627,10 @@ export default function RegisterConducteur({
                                 required
                                 hint="Relation avec la famille"
                             >
-                                <Select2Relation
+                                <Select2Single
+                                    id="responsable_relation"
+                                    name="responsable_relation"
+                                    options={RELATION_OPTIONS}
                                     value={responsable.relation}
                                     onChange={(e) =>
                                         setResponsable({
@@ -1614,6 +1639,9 @@ export default function RegisterConducteur({
                                         })
                                     }
                                     placeholder="Sélectionner un lien de parenté"
+                                    hasError={Boolean(
+                                        getFieldError("responsable.relation"),
+                                    )}
                                 />
                             </FormField>
                         </div>
@@ -1624,8 +1652,10 @@ export default function RegisterConducteur({
                                 icon={Briefcase}
                                 required
                             >
-                                <select
-                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none"
+                                <Select2Single
+                                    id="responsable_employment_status"
+                                    name="responsable_employment_status"
+                                    options={EMPLOYMENT_STATUS_OPTIONS}
                                     value={responsable.employment_status || ""}
                                     onChange={(e) =>
                                         setResponsable({
@@ -1633,23 +1663,13 @@ export default function RegisterConducteur({
                                             employment_status: e.target.value,
                                         })
                                     }
-                                >
-                                    <option value="">
-                                        Sélectionner un statut
-                                    </option>
-                                    <option value="TRAVAILLEUR">
-                                        Travailleur(euse)
-                                    </option>
-                                    <option value="RETRAITE">
-                                        Retraité(e)
-                                    </option>
-                                    <option value="ETUDIANT">
-                                        Étudiant(e)
-                                    </option>
-                                    <option value="SANS_EMPLOI">
-                                        Sans emploi
-                                    </option>
-                                </select>
+                                    placeholder="Sélectionner un statut"
+                                    hasError={Boolean(
+                                        getFieldError(
+                                            "responsable.employment_status",
+                                        ),
+                                    )}
+                                />
                                 {getFieldError(
                                     "responsable.employment_status",
                                 ) && (
@@ -1712,8 +1732,10 @@ export default function RegisterConducteur({
                                 icon={Heart}
                                 required
                             >
-                                <select
-                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 bg-white"
+                                <Select2Single
+                                    id="responsable_statut_marital"
+                                    name="responsable_statut_marital"
+                                    options={RESPONSABLE_MARITAL_STATUS_OPTIONS}
                                     value={responsable.statutMarital}
                                     onChange={(e) =>
                                         setResponsable({
@@ -1721,16 +1743,13 @@ export default function RegisterConducteur({
                                             statutMarital: e.target.value,
                                         })
                                     }
-                                >
-                                    <option value="">Sélectionner...</option>
-                                    <option value="celibataire">
-                                        Célibataire
-                                    </option>
-                                    <option value="marie">Mariage Civil</option>
-                                    <option value="divorce">Divorcé(e)</option>
-                                    <option value="veuf">Veuf(ve)</option>
-                                    <option value="dot">Dot</option>
-                                </select>
+                                    placeholder="Sélectionner..."
+                                    hasError={Boolean(
+                                        getFieldError(
+                                            "responsable.statutMarital",
+                                        ),
+                                    )}
+                                />
                             </FormField>
                         </div>
 
@@ -2197,8 +2216,10 @@ export default function RegisterConducteur({
                             {/* Genre et Date de naissance */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField label="Genre" icon={Users} required>
-                                    <select
-                                        className={STYLES.input}
+                                    <Select2Single
+                                        id="membre_genre"
+                                        name="membre_genre"
+                                        options={GENDER_OPTIONS}
                                         value={membreTemp.genre}
                                         onChange={(e) =>
                                             setMembreTemp({
@@ -2206,13 +2227,11 @@ export default function RegisterConducteur({
                                                 genre: e.target.value,
                                             })
                                         }
-                                    >
-                                        <option value="">
-                                            Sélectionner...
-                                        </option>
-                                        <option value="M">Masculin</option>
-                                        <option value="F">Féminin</option>
-                                    </select>
+                                        placeholder="Sélectionner..."
+                                        hasError={Boolean(
+                                            getFieldError("membre.genre"),
+                                        )}
+                                    />
                                     {getFieldError("membre.genre") && (
                                         <p className="text-red-500 text-xs mt-1">
                                             {getFieldError("membre.genre")}
@@ -2326,8 +2345,10 @@ export default function RegisterConducteur({
                                     icon={Briefcase}
                                     required
                                 >
-                                    <select
-                                        className={STYLES.input}
+                                    <Select2Single
+                                        id="membre_employment_status"
+                                        name="membre_employment_status"
+                                        options={EMPLOYMENT_STATUS_OPTIONS}
                                         value={
                                             membreTemp.employment_status || ""
                                         }
@@ -2338,23 +2359,13 @@ export default function RegisterConducteur({
                                                     e.target.value,
                                             })
                                         }
-                                    >
-                                        <option value="">
-                                            Sélectionner un statut
-                                        </option>
-                                        <option value="TRAVAILLEUR">
-                                            Travailleur(euse)
-                                        </option>
-                                        <option value="RETRAITE">
-                                            Retraité(e)
-                                        </option>
-                                        <option value="ETUDIANT">
-                                            Étudiant(e)
-                                        </option>
-                                        <option value="SANS_EMPLOI">
-                                            Sans emploi
-                                        </option>
-                                    </select>
+                                        placeholder="Sélectionner un statut"
+                                        hasError={Boolean(
+                                            getFieldError(
+                                                "membre.employment_status",
+                                            ),
+                                        )}
+                                    />
                                     {getFieldError(
                                         "membre.employment_status",
                                     ) && (
@@ -2399,7 +2410,10 @@ export default function RegisterConducteur({
                                     required
                                     hint="Relation avec le responsable"
                                 >
-                                    <Select2Relation
+                                    <Select2Single
+                                        id="membre_relation"
+                                        name="membre_relation"
+                                        options={RELATION_OPTIONS}
                                         value={membreTemp.relation}
                                         onChange={(e) =>
                                             setMembreTemp({
@@ -2408,6 +2422,9 @@ export default function RegisterConducteur({
                                             })
                                         }
                                         placeholder="Sélectionner un lien de parenté"
+                                        hasError={Boolean(
+                                            getFieldError("membre.relation"),
+                                        )}
                                     />
                                     {getFieldError("membre.relation") && (
                                         <p className="text-red-500 text-xs mt-1">
@@ -2423,8 +2440,10 @@ export default function RegisterConducteur({
                                     icon={Heart}
                                     required
                                 >
-                                    <select
-                                        className={STYLES.input}
+                                    <Select2Single
+                                        id="membre_statut_marital"
+                                        name="membre_statut_marital"
+                                        options={MARITAL_STATUS_OPTIONS}
                                         value={membreTemp.statutMarital}
                                         onChange={(e) =>
                                             setMembreTemp({
@@ -2432,20 +2451,13 @@ export default function RegisterConducteur({
                                                 statutMarital: e.target.value,
                                             })
                                         }
-                                    >
-                                        <option value="">
-                                            Sélectionner...
-                                        </option>
-                                        <option value="celibataire">
-                                            Célibataire
-                                        </option>
-                                        <option value="marie">Marié(e)</option>
-                                        <option value="divorce">
-                                            Divorcé(e)
-                                        </option>
-                                        <option value="veuf">Veuf(ve)</option>
-                                        <option value="dot">Dot</option>
-                                    </select>
+                                        placeholder="Sélectionner..."
+                                        hasError={Boolean(
+                                            getFieldError(
+                                                "membre.statutMarital",
+                                            ),
+                                        )}
+                                    />
                                     {getFieldError("membre.statutMarital") && (
                                         <p className="text-red-500 text-xs mt-1">
                                             {getFieldError(
