@@ -8,6 +8,7 @@ import {
     Award, Gift, BookOpen, ChevronDown, ChevronUp, Check, X, Users, Briefcase
 } from "lucide-react";
 import { resolveMemberPhotoUrl } from "../../Helpers/PhotoHelper";
+import { sanitizeUppercasePrenom } from "../../Helpers/nameSanitizers";
 
 // Fonction utilitaire pour formater les dates ISO en yyyy-MM-dd
 const formatDateForInput = (dateString) => {
@@ -291,7 +292,14 @@ export default function Profile({ member, family, fonctions }) {
                                     type="text"
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                     value={data.prenom}
-                                    onChange={(e) => setData({ ...data, prenom: e.target.value })}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            prenom: sanitizeUppercasePrenom(
+                                                e.target.value,
+                                            ),
+                                        })
+                                    }
                                 />
                             </FormField>
 

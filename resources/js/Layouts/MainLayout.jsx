@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, router, usePage } from "@inertiajs/react";
 import GoodbyeLoader from "../Components/GoodbyeLoader";
 import ProfilePhoto from "@/Components/ProfilePhoto";
 import VerticalTicker from "@/Components/VerticalTicker";
+import useToast from "../Hooks/useToast";
+import ToastContainer from "../Components/ToastContainer";
 
 // Header professionnel et minimaliste
 function AppHeader({ auth, onLogout }) {
@@ -301,7 +303,24 @@ function AppHeader({ auth, onLogout }) {
 export default function MainLayout({ children, auth }) {
     const [showGoodbyeLoader, setShowGoodbyeLoader] = useState(false);
     const [showInfoMenu, setShowInfoMenu] = useState(false);
-    const { flashAnnouncements = [] } = usePage().props;
+    const { flashAnnouncements = [], flash = {} } = usePage().props;
+    const { toasts, removeToast, success, error } = useToast();
+    const lastSuccessRef = useRef(null);
+    const lastErrorRef = useRef(null);
+
+    useEffect(() => {
+        if (flash?.success && flash.success !== lastSuccessRef.current) {
+            lastSuccessRef.current = flash.success;
+            success(flash.success);
+        }
+    }, [flash?.success, success]);
+
+    useEffect(() => {
+        if (flash?.error && flash.error !== lastErrorRef.current) {
+            lastErrorRef.current = flash.error;
+            error(flash.error);
+        }
+    }, [flash?.error, error]);
 
     const announcements = Array.isArray(flashAnnouncements)
         ? flashAnnouncements
@@ -505,6 +524,7 @@ export default function MainLayout({ children, auth }) {
                 overflowX: "hidden",
             }}
         >
+            <ToastContainer toasts={toasts} removeToast={removeToast} />
             <AppHeader auth={auth} onLogout={handleLogout} />
 
             {mergedTickerMessages.length > 0 && (

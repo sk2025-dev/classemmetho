@@ -5,11 +5,18 @@ namespace App\Http\Controllers\ResponsableFamille;
 use App\Http\Controllers\Controller;
 use App\Models\ActeLiturgique;
 use App\Models\Family;
+use App\Models\Priere;
+use App\Services\SondageService;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
+    public function __construct(
+        private readonly SondageService $sondageService,
+    ) {
+    }
+
     public function index()
     {
         $user = Auth::user();
@@ -60,11 +67,27 @@ class DashboardController extends Controller
             ];
         }
 
+        $surveyBadgeCount = $this->sondageService
+            ->getVisibleSondagesForUser($user)
+            ->filter(fn (array $survey) => ($survey['statut'] ?? null) === 'Actif' && !($survey['aDejaRepondu'] ?? false))
+            ->count();
+        $prayerBadgeCount = Priere::query()
+            ->where('user_id', $user->id)
+            ->where(function ($query) {
+                $query->whereIn('statut', ['Transmise', 'En priere', 'Exaucement partage'])
+                    ->orWhereNotNull('vue_le')
+                    ->orWhereNotNull('prise_en_priere_le')
+                    ->orWhereNotNull('exaucee_le');
+            })
+            ->count();
+
         return Inertia::render('ResponsableFamille/Dashboard', [
             'role' => $user->role,
             'familyStats' => $familyStats,
             'familyData' => $familyData,
             'validatedActesCount' => $validatedActesCount,
+            'surveyBadgeCount' => $surveyBadgeCount,
+            'prayerBadgeCount' => $prayerBadgeCount,
             'flashAnnouncements' => $this->buildFlashAnnouncements(),
         ]);
     }

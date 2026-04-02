@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import axios from "axios";
 import { Link } from "@inertiajs/react";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
 
 export default function CommunionForm({
     backHref,
@@ -230,7 +231,7 @@ export default function CommunionForm({
                                 <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">Responsable de famille ou tuteur legal.</p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <Field label="Nom *"><input value={form.details.dem_nom} onChange={(e) => setDetail("dem_nom", e.target.value)} />{errors.dem_nom && <Err>{errors.dem_nom}</Err>}</Field>
-                                    <Field label="Prenoms *"><input value={form.details.dem_prenom} onChange={(e) => setDetail("dem_prenom", e.target.value)} />{errors.dem_prenom && <Err>{errors.dem_prenom}</Err>}</Field>
+                                    <Field label="Prenoms *"><input value={form.details.dem_prenom} onChange={(e) => setDetail("dem_prenom", sanitizeUppercasePrenom(e.target.value))} />{errors.dem_prenom && <Err>{errors.dem_prenom}</Err>}</Field>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <Field label="Telephone"><input value={form.details.dem_tel} onChange={(e) => setDetail("dem_tel", e.target.value)} /></Field>

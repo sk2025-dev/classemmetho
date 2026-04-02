@@ -4,6 +4,7 @@ import { Link } from "@inertiajs/react";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useToastWithErrorHandling } from "../../../Hooks/useToastWithErrorHandling";
 import ToastContainer from "../../../Components/ToastContainer";
+import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
 
 export default function DecesForm({
     backHref,
@@ -503,7 +504,9 @@ export default function DecesForm({
                                             onChange={(e) =>
                                                 setDetail(
                                                     "prenom_defunt",
-                                                    e.target.value,
+                                                    sanitizeUppercasePrenom(
+                                                        e.target.value,
+                                                    ),
                                                 )
                                             }
                                             readOnly={

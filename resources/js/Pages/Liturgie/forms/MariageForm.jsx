@@ -4,6 +4,7 @@ import { Link } from "@inertiajs/react";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useToastWithErrorHandling } from "../../../Hooks/useToastWithErrorHandling";
 import ToastContainer from "../../../Components/ToastContainer";
+import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
 
 export default function MariageForm({
     backHref,
@@ -259,7 +260,9 @@ export default function MariageForm({
                                             onChange={(e) =>
                                                 setDetail(
                                                     "epoux_prenom",
-                                                    e.target.value,
+                                                    sanitizeUppercasePrenom(
+                                                        e.target.value,
+                                                    ),
                                                 )
                                             }
                                         />

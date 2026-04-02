@@ -4,6 +4,7 @@ import axios from "axios";
 
 import Select2Fonction from "../../../Components/Select2Fonction";
 import Select2Relation from "../../../Components/Select2Relation";
+import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
 import {
     ArrowLeft,
     User,
@@ -517,7 +518,9 @@ export default function EditMember({ member, family }) {
                                     onChange={(e) =>
                                         setData({
                                             ...data,
-                                            prenom: e.target.value,
+                                            prenom: sanitizeUppercasePrenom(
+                                                e.target.value,
+                                            ),
                                         })
                                     }
                                 />

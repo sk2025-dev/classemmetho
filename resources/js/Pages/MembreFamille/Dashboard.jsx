@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, router } from "@inertiajs/react";
+import DashboardIntro from "@/Components/DashboardIntro";
 
 // --- COMPOSANT ICÔNE ---
 const Icon = ({ name, className }) => {
@@ -82,7 +83,32 @@ const Icon = ({ name, className }) => {
     );
 };
 
-export default function Dashboard({ role, pendingInscriptions, auth }) {
+const NotificationBadge = ({ count }) => (
+    <span className="absolute top-4 right-4 inline-flex animate-pulse items-center gap-1 rounded-full bg-red-600 px-2 py-1 text-[10px] font-bold text-white shadow-[0_10px_24px_rgba(220,38,38,0.28)]">
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className="h-3.5 w-3.5"
+        >
+            <path d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5" />
+            <path d="M9 17a3 3 0 006 0" />
+        </svg>
+        <span>{count > 99 ? "99+" : count}</span>
+    </span>
+);
+
+export default function Dashboard({
+    role,
+    pendingInscriptions,
+    surveyBadgeCount = 0,
+    prayerBadgeCount = 0,
+    auth,
+    familyName = null,
+    classeLabel = null,
+}) {
     const menuItems = [
         {
             title: "Inscription",
@@ -169,17 +195,11 @@ export default function Dashboard({ role, pendingInscriptions, auth }) {
         >
             {/* MAIN CONTENT */}
             <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-                <div className="mb-10">
-                    <h2 className="dashboard-title">
-                        Espace Membre de Famille
-                    </h2>
-                    <div className="animated-text-container">
-                        <p className="animated-text">
-                            Bienvenue sur la plateforme de gestion des classes
-                            méthodistes du Jubilé
-                        </p>
-                    </div>
-                </div>
+                <DashboardIntro
+                    title="ESPACE MEMBRE DE FAMILLE"
+                    familyName={familyName}
+                    classeLabel={classeLabel}
+                />
 
                 {/* GRID DASHBOARD - Cartes blanches sur fond violet */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -220,6 +240,14 @@ export default function Dashboard({ role, pendingInscriptions, auth }) {
                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                                             <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
                                         </span>
+                                    )}
+                                {item.icon === "sondage" &&
+                                    surveyBadgeCount > 0 && (
+                                        <NotificationBadge count={surveyBadgeCount} />
+                                    )}
+                                {item.icon === "priere" &&
+                                    prayerBadgeCount > 0 && (
+                                        <NotificationBadge count={prayerBadgeCount} />
                                     )}
                             </div>
                         </Link>
