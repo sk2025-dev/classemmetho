@@ -344,4 +344,12 @@ class User extends Authenticatable
             $this->attributes['nom'] ?? null
         );
     }
+
+    /**
+     * Récupérer tous les événements créés par ce conducteur
+     */
+    public function specialEvents()
+    {
+        return $this->hasMany(SpecialEvent::class, 'created_by');
+    }
 }

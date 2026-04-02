@@ -142,7 +142,7 @@ export default function Dashboard({
             title: "Programme d'Activité",
             desc: "Calendrier des événements",
             icon: "programme",
-            href: "/conducteur/activites",
+            href: "/conducteur/programmes",
             color: "text-red-600",
             bg: "bg-red-100",
         },

@@ -10,16 +10,19 @@ use App\Http\Controllers\Conducteur\InscriptionsController as ConducteurInscript
 use App\Http\Controllers\Conducteur\TresorerieController as ConducteurTresorerieController;
 use App\Http\Controllers\Conducteur\RegisterMemberController as RegisterMemberController;
 use App\Http\Controllers\Conducteur\QuickMemberController;
+use App\Http\Controllers\Conducteur\ProgrammesClasseController;
 use App\Http\Controllers\ResponsableFamille\DashboardController as ResponsableFamilleDashboardController;
 use App\Http\Controllers\ResponsableFamille\AnnuaireController as ResponsableFamilleAnnuaireController;
 use App\Http\Controllers\ResponsableFamille\InscriptionsController as ResponsableFamilleInscriptionsController;
 use App\Http\Controllers\ResponsableFamille\MemberController as ResponsableFamilleMemberController;
+use App\Http\Controllers\ResponsableFamille\ProgrammeMembreController;
 use App\Http\Controllers\Pasteur\AnnuaireController as PasteurAnnuaireController;
 use App\Http\Controllers\Pasteur\DashboardController as PasteurDashboardController;
 use App\Http\Controllers\Pasteur\TresorerieController as PasteurTresorerieController;
 use App\Http\Controllers\MembreFamille\AnnuaireController as MembreFamilleAnnuaireController;
 use App\Http\Controllers\MembreFamille\DashboardController as MembreFamilleDashboardController;
 use App\Http\Controllers\MembreFamille\FinancesController as MembreFamilleFinancesController;
+use App\Http\Controllers\MembreFamille\ProgrammesActivitesController; 
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\Profile\ChangePasswordController;
 use App\Http\Controllers\Admin\AdministrationController;
@@ -28,7 +31,7 @@ use App\Http\Controllers\Admin\ClasseController;
 use App\Http\Controllers\Admin\FonctionController;
 use App\Http\Controllers\Admin\NotificationsController;
 use App\Http\Controllers\Admin\AnnonceController;
-use App\Http\Controllers\Admin\ProgrammesController;
+use App\Http\Controllers\Admin\ProgrammesController; 
 use App\Http\Controllers\Admin\TresorerieController as AdminTresorerieController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\LiturgieController as AdminLiturgieController;
@@ -50,23 +53,6 @@ Route::get('/', function () {
 Route::get('/certificat/verification/{reference}', [VerificationCertificatController::class, 'show'])
     ->name('certificat.verification');
 
-// Route for API documentation using Scramble
-// Route::get('/api-docs', function () {
-//     return view('api-docs');
-// })->name('api.docs');
-
-
-// Route::get('/debug/user-info', function () {
-//     $user = Auth::user();
-//     return response()->json([
-//         'id' => $user?->id,
-//         'identifier' => $user?->identifier,
-//         'role' => $user?->role,
-//         'family_id' => $user?->family_id,
-//         'authenticated' => Auth::check(),
-//     ]);
-// })->middleware('auth');
-
 // Pages d'authentification (Inertia)
 Route::get('/login', function () {
     return Inertia::render('login');
@@ -78,6 +64,7 @@ Route::post('/login', [\App\Http\Controllers\Auth\LoginController::class, 'login
 Route::middleware(['auth'])->group(function () {
     // Route de déconnexion
     Route::post('/logout', [\App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
+    
     // Profil utilisateur
     Route::get('/profile', [\App\Http\Controllers\Profile\ProfileController::class, 'show'])->name('profile.show');
     Route::post('/profile/update', [\App\Http\Controllers\Profile\ProfileController::class, 'update'])->name('profile.update');
@@ -112,7 +99,6 @@ Route::get('/register/famille', function () {
     return Inertia::render('ResponsableFamille/RegisterFamille');
 })->name('register.famille');
 
-
 Route::get('/register/conducteur', function () {
     return Inertia::render('Conducteur/RegisterConducteur');
 })->name('register.conducteur');
@@ -139,14 +125,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/inscriptions', [\App\Http\Controllers\Admin\InscriptionsController::class, 'index'])->name('admin.inscriptions');
         Route::get('/admin/inscriptions/{id}/approval-log', [\App\Http\Controllers\Admin\InscriptionApprovalController::class, 'approvalLog'])->name('admin.inscriptions.approval_log');
         Route::get('/admin/inscriptions/type-selection', [\App\Http\Controllers\Admin\InscriptionsController::class, 'typeSelection'])->name('admin.inscriptions.type-selection');
-        // Route pour importer via Excel (Admin - Authentifié)
         Route::post('/admin/inscriptions/import-excel', [ExcelImportController::class, 'import'])->name('admin.inscriptions.import-excel');
+        
         // Routes pour créer inscriptions directement
         Route::get('/admin/inscriptions/famille/create', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'createFamilyForm'])->name('admin.inscriptions.famille.create');
         Route::get('/admin/inscriptions/conducteur/create', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'createConductorForm'])->name('admin.inscriptions.conducteur.create');
         Route::get('/admin/inscriptions/pasteur/create', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'createPastorForm'])->name('admin.inscriptions.pasteur.create');
 
-        // Routes pour stocker les inscriptions
         Route::post('/admin/inscriptions/famille', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'storeFamily'])->name('admin.inscriptions.famille.store');
         Route::post('/admin/inscriptions/conducteur', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'storeConductor'])->name('admin.inscriptions.conducteur.store');
         Route::post('/admin/inscriptions/pasteur', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'storePastor'])->name('admin.inscriptions.pasteur.store');
@@ -187,9 +172,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/admin/families/generate-all', [FamilyCodeController::class, 'generateAll'])->name('admin.families.generate-all');
         Route::post('/admin/families/{id}/generate', [FamilyCodeController::class, 'generate'])->name('admin.families.generate');
 
-
         // --- Tableau de bord complet (Votre AdministrationController) ---
-        // J'utilise 'administration' comme nom de route pour éviter conflit avec 'dashboard'
         Route::get('/administration', [AdministrationController::class, 'index'])->name('administration');
 
         // --- Actions Legacy (Approve/Reject) ---
@@ -301,6 +284,20 @@ Route::middleware(['auth'])->group(function () {
             ->name('conducteur.tresorerie.collectes.store');
         Route::post('/conducteur/tresorerie/paiements', [ConducteurTresorerieController::class, 'storePaiement'])
             ->name('conducteur.tresorerie.paiements.store');
+
+        // ===== ROUTES PROGRAMMES CONDUCTEUR =====
+        Route::get('/conducteur/programmes', [ProgrammesClasseController::class, 'index'])->name('conducteur.programmes');
+        Route::get('/conducteur/programmes/all', [ProgrammesClasseController::class, 'allProgrammes'])->name('conducteur.programmes.all');
+        Route::post('/conducteur/programmes/event', [ProgrammesClasseController::class, 'storeEvent'])->name('conducteur.programmes.event');
+        Route::put('/conducteur/programmes/event/{id}', [ProgrammesClasseController::class, 'updateEvent'])->name('conducteur.programmes.event.update');
+        Route::delete('/conducteur/programmes/event/{id}', [ProgrammesClasseController::class, 'destroy'])->name('conducteur.programmes.event.destroy');
+        Route::post('/conducteur/programmes/import-events', [ProgrammesClasseController::class, 'importEvents'])->name('conducteur.programmes.import');
+        Route::get('/conducteur/programmes/events-by-month', [ProgrammesClasseController::class, 'getEventsByMonth'])->name('conducteur.programmes.events.by-month');
+        Route::get('/conducteur/programmes/history', [ProgrammesClasseController::class, 'historyProgrammes'])->name('conducteur.programmes.history');
+        // ===== ROUTES GALERIE CONDUCTEUR =====
+        Route::post('/conducteur/galerie/add', [ProgrammesClasseController::class, 'addMedia'])->name('conducteur.galerie.add');
+        Route::get('/conducteur/galerie', [ProgrammesClasseController::class, 'getGalleryMedia'])->name('conducteur.galerie');
+        Route::delete('/conducteur/galerie/{id}', [ProgrammesClasseController::class, 'deleteMedia'])->name('conducteur.galerie.delete');
     });
 
     // Tableau de bord Responsable de Famille
@@ -321,6 +318,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/responsable-famille/liturgie', [ResponsableFamilleLiturgieController::class, 'store'])->name('responsable_famille.liturgie.store');
         Route::get('/responsable-famille/liturgie/{id}/certificat', [ResponsableFamilleLiturgieController::class, 'certificat'])->name('responsable_famille.liturgie.certificat');
         Route::get('/responsable-famille/liturgie/{id}/fiche', [ResponsableFamilleLiturgieController::class, 'fiche'])->name('responsable_famille.liturgie.fiche');
+        
         // Routes Annonces (ResponsableFamille)
         Route::get('/responsable-famille/annonces', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'index'])->name('responsable_famille.annonces.index');
         Route::get('/responsable-famille/annonces/create', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'create'])->name('responsable_famille.annonces.create');
@@ -345,12 +343,19 @@ Route::middleware(['auth'])->group(function () {
 
         // Route de tableau de bord des transferts
         Route::get('/responsable-famille/transferts', [\App\Http\Controllers\ResponsableFamille\TransferController::class, 'index'])->name('responsable_famille.transferts.index');
-        // Route de création de demande de transfert
         Route::post('/responsable-famille/transferts', [\App\Http\Controllers\ResponsableFamille\TransferController::class, 'store'])->name('responsable_famille.transferts.store');
-        // Route de transfert de classe (ancien endpoint pour compatibilité)
         Route::post('/responsable-famille/transfer', [\App\Http\Controllers\ResponsableFamille\TransferController::class, 'transfer'])->name('responsable_famille.transfer');
 
         // Props Inertia dans le contrôleur
+        Route::get('/responsable-famille/programmes', [ProgrammeMembreController::class, 'index'])->name('responsable_famille.programmes');
+        Route::post('/responsable-famille/programmes/agenda', [ProgrammeMembreController::class, 'storeAgenda'])->name('responsable_famille.programmes.agenda');
+        Route::post('/resposanble-famille/programmes/event', [ProgrammeMembreController::class, 'storeEvent'])->name('responsable_famille.programmes.event');
+        Route::get('/responsable-famille/programmes/events-by-month', [ProgrammeMembreController::class, 'getEventsByMonth'])->name('responsable-famille.programmes.events.by-month');
+        Route::get('/responsable-famille/programmes/history', [ProgrammeMembreController::class, 'historyProgrammes'])->name('responsable-famille.programmes.history');
+        // Routes API pour le frontend (Calendrier, Galerie)
+        Route::post('/responsable-famille/galerie/add', [ProgrammeMembreController::class, 'addMedia'])->name('responsable-famille.galerie.add');
+        Route::get('/responsable-famille/galerie', [ProgrammeMembreController::class, 'getGalleryMedia'])->name('responsable-famille.galerie');
+        Route::delete('/responsable-famille/galerie/{id}', [ProgrammeMembreController::class, 'deleteMedia'])->name('responsable-famille.galerie.delete');
 
     });
 
@@ -361,11 +366,9 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:pasteur')->group(function () {
         Route::get('/pasteur/annuaire', [PasteurAnnuaireController::class, 'index'])->name('pasteur.annuaire.index');
         Route::get('/pasteur/dashboard', [PasteurDashboardController::class, 'index'])->name('pasteur.dashboard');
-        // Liste des inscriptions pour le pasteur (module controller)
         Route::get('/pasteur/inscriptions', [\App\Http\Controllers\Pasteur\InscriptionsController::class, 'index'])
             ->name('pasteur.inscriptions');
 
-        // Routes pasteur pour gérer sa famille et ses membres
         Route::get('/pasteur/family/edit', [\App\Http\Controllers\Pasteur\FamilyController::class, 'edit'])->name('pasteur.family.edit');
         Route::post('/pasteur/family/update', [\App\Http\Controllers\Pasteur\FamilyController::class, 'update'])->name('pasteur.family.update');
         Route::get('/pasteur/members/create', [\App\Http\Controllers\Pasteur\MemberController::class, 'create'])->name('pasteur.members.create');
@@ -420,6 +423,10 @@ Route::middleware(['auth'])->group(function () {
             ->name('membre_famille.finances.dons.store');
         Route::get('/membre-famille/finances/paiement/{paiement}/verify', [MembreFamilleFinancesController::class, 'verifyPaiement'])
             ->name('membre_famille.finances.paiement.verify');
+
+        Route::get('/membre-famille/programmes', [ProgrammesActivitesController::class, 'index'])->name('membre_famille.programmes');
+        Route::post('/membre-famille/programmes/agenda', [ProgrammesActivitesController::class, 'storeAgenda'])->name('membre_famille.programmes.agenda');
+        Route::post('/membre-famille/programmes/event', [ProgrammesActivitesController::class, 'storeEvent'])->name('membre_famille.programmes.event');
     });
 
     // Route pour changer le mot de passe
