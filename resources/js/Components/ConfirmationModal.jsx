@@ -1,12 +1,21 @@
 import React, { useEffect } from "react";
-import { X, AlertTriangle, Trash2, Lock, LockOpen, CheckCircle } from "lucide-react";
+import {
+    X,
+    AlertTriangle,
+    Trash2,
+    Lock,
+    LockOpen,
+    CheckCircle,
+    ShieldCheck,
+    ShieldX,
+} from "lucide-react";
 
 /**
  * Composant Modal de Confirmation générique et réutilisable
- * Supporte: suppression, désactivation, activation, action custom
+ * Supporte: suppression, désactivation, activation, approbation, rejet, action custom
  *
  * @param {boolean} isOpen - État d'ouverture du modal
- * @param {string} type - Type d'action: "delete" | "deactivate" | "activate" | "custom"
+ * @param {string} type - Type d'action: "delete" | "deactivate" | "activate" | "approve" | "reject" | "custom"
  * @param {string} title - Titre du modal
  * @param {string} message - Message de confirmation
  * @param {string} confirmText - Texte du bouton de confirmation
@@ -18,7 +27,7 @@ import { X, AlertTriangle, Trash2, Lock, LockOpen, CheckCircle } from "lucide-re
  */
 const ConfirmationModal = ({
     isOpen = false,
-    type = "delete", // delete, deactivate, activate, custom
+    type = "delete", // delete, deactivate, activate, approve, reject, custom
     title = "Confirmer",
     message = "Êtes-vous sûr ?",
     confirmText = "Confirmer",
@@ -94,6 +103,34 @@ const ConfirmationModal = ({
             actionIcon: LockOpen,
             warningText: "Le membre sera activé et pourra accéder au système.",
         },
+        approve: {
+            bgGradient: "from-emerald-50 to-green-100/70",
+            borderColor: "border-emerald-100",
+            iconBg: "bg-emerald-100",
+            iconColor: "text-emerald-700",
+            bodyIconColor: "text-emerald-600",
+            confirmBg:
+                "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800",
+            confirmShadow:
+                "shadow-emerald-500/30 hover:shadow-emerald-500/40",
+            alertIcon: ShieldCheck,
+            actionIcon: CheckCircle,
+            warningText:
+                "Cette action valide l'inscription et déclenche la création des comptes associés.",
+        },
+        reject: {
+            bgGradient: "from-rose-50 to-red-100/60",
+            borderColor: "border-rose-100",
+            iconBg: "bg-rose-100",
+            iconColor: "text-rose-700",
+            bodyIconColor: "text-rose-600",
+            confirmBg: "bg-rose-600 hover:bg-rose-700 active:bg-rose-800",
+            confirmShadow: "shadow-rose-500/30 hover:shadow-rose-500/40",
+            alertIcon: ShieldX,
+            actionIcon: AlertTriangle,
+            warningText:
+                "L'inscription sera marquée comme rejetée et restera non validée.",
+        },
         custom: {
             bgGradient: "from-blue-50 to-blue-100/50",
             borderColor: "border-blue-100",
@@ -127,8 +164,8 @@ const ConfirmationModal = ({
             ></div>
 
             {/* Modal */}
-            <div className="relative z-50 w-full max-w-md mx-4 transform transition-all">
-                <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="relative z-50 w-full max-w-lg mx-4 transform transition-all">
+                <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-white/70">
                     {/* Header */}
                     <div
                         className={`px-6 py-5 border-b ${currentConfig.borderColor} bg-gradient-to-r ${currentConfig.bgGradient}`}

@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Pasteur;
 
 use App\Http\Controllers\Controller;
 use App\Models\ActeLiturgique;
+use App\Models\Priere;
+use App\Models\Sondage;
+use App\Models\SondageView;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
@@ -52,6 +55,18 @@ class DashboardController extends Controller
             'role' => $user->role,
             'pendingLiturgieCount' => ActeLiturgique::query()
                 ->where('statut', ActeLiturgique::STATUT_TRANSMISE_AU_PASTEUR)
+                ->count(),
+            'surveyBadgeCount' => Sondage::query()
+                ->where('statut', 'active')
+                ->whereNotIn(
+                    'id',
+                    SondageView::query()
+                        ->where('user_id', $user->id)
+                        ->select('sondage_id'),
+                )
+                ->count(),
+            'prayerBadgeCount' => Priere::query()
+                ->where('statut', 'Nouvelle')
                 ->count(),
             'flashAnnouncements' => $this->buildFlashAnnouncements(),
             'familyStats' => $familyStats,

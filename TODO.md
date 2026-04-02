@@ -1,77 +1,29 @@
-# TODO - Ajout Statut d'emploi aux formulaires Admin Inscriptions
+# Refactor Conducteur/Liturgie/Index.jsx
 
-## ✅ Compréhension complète
+Status: [IN PROGRESS]
 
-- Publics (Conducteur/RegisterConducteur.jsx, ResponsableFamille/RegisterFamille.jsx) : **DÉJÀ IMPLÉMENTÉS** avec :
-    - State: `employment_status: "", profession_detail: ""`
-    - UI Step 2: FormField select "Statut d'emploi \*" icon Briefcase (4 options: TRAVAILLEUR, RETRAITE, ETUDIANT, SANS_EMPLOI)
-    - Validation requise (`newErrors["responsable.employment_status"] = "Statut d'emploi requis"`)
-    - Placement: Grid md:grid-cols-2 avec Profession_detail
-    - MembreTemp aussi
-    - Affichage vérification Step 4
+## Goals
 
-## 🔄 Plan d'implémentation (3 fichiers identiques)
+- Fix syntax errors (line 5233 styles, line 4912 {value || })
+- Split monolith (~5k lines) into reusable components/hooks
+- Improve performance (memos/effects), fix typos, standardize UI
+- No UX/API changes
 
-**Fichiers** : Admin/Inscriptions/RegisterFamille.jsx, RegisterConducteur.jsx, RegisterPasteur.jsx
+## Breakdown Steps (approved plan)
 
-**1. State responsable** (après profession):
+- [x]   1. Create this TODO.md
+- [ ]   2. Fix syntax errors in Index.jsx (styles template literal, incomplete expressions)
+    - Edit malformed `const styles = `...`;` at end (missing closing `</style>`, syntax)
+    - Fix `{value || }` → `{value || '—'}`
+- [ ]   3. Extract constants (ACTE_TYPES, ANNONCE_TYPES, etc.) to `Liturgie/constants.js`
+- [ ]   4. Extract hooks: `useListData.js` (paging/filter), `useBulkActions.js`, `useModals.js`, `useToasts.js`
+- [ ]   5. Extract UI: `Toolbar.jsx` (tabs/search), `KpiCards.jsx`, `ListPanel.jsx` (generic list/pagination/bulk), `ItemCards/ActeCard.jsx`, `AnnonceCard.jsx`
+- [ ]   6. Extract Modals: `CreateActeModal.jsx`, `CreateAnnonceModal.jsx` (wizard), `DecisionModal.jsx` (approve/refuse)
+- [ ]   7. Extract Stats/Circuits: `StatsPanels.jsx`, `CircuitDiagram.jsx`
+- [ ]   8. Update Index.jsx: Orchestrator composes extracts, minimal state
+- [ ]   9. Create `Liturgie/index.scss` for styles, remove inline
+- [ ]   10. Test: All tabs/filters/bulk/modals/create/submit, responsive, no regressions
+- [ ]   11. Lint/Perf: npm run lint, React DevTools re-renders <50
+- [ ]   12. Complete: attempt_completion
 
-```
-employment_status: "",
-profession_detail: "",
-```
-
-**2. Step 2 UI** (après FormField Profession):
-
-```
-<FormField label="Statut d'emploi" icon={Briefcase} required>
-  <select className="w-full h-12 border... " value={responsable.employment_status || ""} onChange={(e) => setResponsable({...responsable, employment_status: e.target.value})}>
-    <option value="">Sélectionner un statut</option>
-    <option value="TRAVAILLEUR">Travailleur(euse)</option>
-    <option value="RETRAITE">Retraité(e)</option>
-    <option value="ETUDIANT">Étudiant(e)</option>
-    <option value="SANS_EMPLOI">Sans emploi</option>
-  </select>
-  {getFieldError("responsable.employment_status") && <p className="text-red-500 text-xs mt-1">{getFieldError("responsable.employment_status")}</p>}
-</FormField>
-<FormField label="Profession / Activité" icon={Briefcase} required hint="ex: Infirmier, Commerçant">
-  <input className=STYLES.input value={responsable.profession_detail || ""} onChange={(e) => setResponsable({...responsable, profession_detail: e.target.value})} />
-</FormField>
-```
-
-**Grid md:grid-cols-2**
-
-**3. Validation Step 2 + ajouterMembre**:
-
-```
-if (!responsable.employment_status) newErrors["responsable.employment_status"] = "Statut d'emploi requis";
-if (!responsable.profession_detail) newErrors["responsable.profession_detail"] = "Profession requise";
-```
-
-Même pour membreTemp.
-
-**4. Reset states** (Step 4 success):
-
-```
-employment_status: "",
-profession_detail: "",
-```
-
-**5. Vérification Step 4**:
-
-```
-<li><strong>Statut d'emploi:</strong> {responsable.employment_status || "N/A"}</li>
-```
-
-## 📋 Steps à compléter (priorité haute)
-
-- [ ]   1. Créer TODO.md ✅
-- [ ]   2. Edit RegisterFamille.jsx
-- [ ]   3. Edit RegisterConducteur.jsx
-- [ ]   4. Edit RegisterPasteur.jsx
-- [ ]   5. `npm run dev`
-- [ ]   6. Tester /admin/inscriptions/register-famille etc.
-
-**Temps estimé**: 15min
-
-**Procéder ?**
+Next: Fix syntax → Step 2

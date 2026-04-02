@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, router } from "@inertiajs/react";
+import DashboardIntro from "@/Components/DashboardIntro";
 
 // --- COMPOSANT ICÔNE ---
 const Icon = ({ name, className }) => {
@@ -82,6 +83,23 @@ const Icon = ({ name, className }) => {
     );
 };
 
+const NotificationBadge = ({ count }) => (
+    <span className="absolute top-4 right-4 inline-flex animate-pulse items-center gap-1 rounded-full bg-red-600 px-2 py-1 text-[10px] font-bold text-white shadow-[0_10px_24px_rgba(220,38,38,0.28)]">
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className="h-3.5 w-3.5"
+        >
+            <path d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5" />
+            <path d="M9 17a3 3 0 006 0" />
+        </svg>
+        <span>{count > 99 ? "99+" : count}</span>
+    </span>
+);
+
 export default function Dashboard({
     role,
     pendingInscriptions,
@@ -89,6 +107,8 @@ export default function Dashboard({
     familyStats,
     familyData,
     validatedActesCount = 0,
+    surveyBadgeCount = 0,
+    prayerBadgeCount = 0,
 }) {
     const menuItems = [
         {
@@ -127,7 +147,7 @@ export default function Dashboard({
             title: "Sondage",
             desc: "Participez aux sondages",
             icon: "sondage",
-            href: "/admin/sondages",
+            href: "/responsable-famille/sondages",
             color: "text-pink-600",
             bg: "bg-pink-100",
         },
@@ -176,34 +196,13 @@ export default function Dashboard({
         >
             {/* MAIN CONTENT */}
             <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-                <div className="mb-10">
-                    <h2 className="dashboard-title">
-                        Espace Responsable de Famille
-                    </h2>
-                    {familyStats && Object.keys(familyStats).length > 0 ? (
-                        <p
-                            className="mb-8 text-lg"
-                            style={{ color: "#EEE00F" }}
-                        >
-                            Famille:{" "}
-                            <span className="font-bold">
-                                {familyStats.familyName}
-                            </span>{" "}
-                            - Classe Méthodiste:{" "}
-                            <span className="font-bold">
-                                {familyData?.classe_name ||
-                                    familyStats.className}
-                            </span>
-                        </p>
-                    ) : (
-                        <div className="animated-text-container">
-                            <p className="animated-text">
-                                Bienvenue sur la plateforme de gestion des
-                                classes méthodistes du Jubilé
-                            </p>
-                        </div>
-                    )}
-                </div>
+                <DashboardIntro
+                    title="ESPACE RESPONSABLE DE FAMILLE"
+                    familyName={familyStats?.familyName ?? null}
+                    classeLabel={
+                        familyData?.classe_name || familyStats?.className || null
+                    }
+                />
 
                 {/* STATISTIQUES DE FAMILLE - SUPPRIMÉES */}
 
@@ -252,6 +251,14 @@ export default function Dashboard({
                                         <span className="absolute top-4 right-4 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold">
                                             {validatedActesCount}
                                         </span>
+                                    )}
+                                {item.icon === "sondage" &&
+                                    surveyBadgeCount > 0 && (
+                                        <NotificationBadge count={surveyBadgeCount} />
+                                    )}
+                                {item.icon === "priere" &&
+                                    prayerBadgeCount > 0 && (
+                                        <NotificationBadge count={prayerBadgeCount} />
                                     )}
                             </div>
                         </Link>

@@ -595,7 +595,11 @@ export default function Index({
                                                         }
                                                     >
                                                         <Download size={13} />{" "}
-                                                        Certificat PDF
+                                                        {isFicheType(
+                                                            acte.type_acte,
+                                                        )
+                                                            ? "Fiche PDF"
+                                                            : "Certificat PDF"}
                                                     </button>
                                                 )}
                                             </div>
@@ -818,8 +822,8 @@ export default function Index({
                                     },
                                     {
                                         n: "g-n4",
-                                        t: "Certificat disponible",
-                                        s: "Vous pouvez le télécharger depuis cette page.",
+                                        t: "Document PDF disponible",
+                                        s: "Certificat pour baptême/mariage, fiche pour naissance/décès.",
                                     },
                                 ].map((s, i) => (
                                     <div key={i} className="g-step">
@@ -2247,6 +2251,10 @@ function prettyType(t) {
         deces: "Décès",
     };
     return m[t] || t || "Acte";
+}
+function isFicheType(type) {
+    const t = String(type || "").toLowerCase();
+    return t === "naissance" || t === "deces";
 }
 function typeTone(t) {
     const m = {

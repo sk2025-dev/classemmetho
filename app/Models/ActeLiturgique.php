@@ -23,6 +23,7 @@ class ActeLiturgique extends Model
         'classe_id',
         'conducteur_id',
         'pasteur_id',
+        'formation_request_id',
         'date_souhaitee',
         'details',
         'note_conducteur',
@@ -115,6 +116,11 @@ class ActeLiturgique extends Model
     public function pasteur(): BelongsTo
     {
         return $this->belongsTo(User::class, 'pasteur_id');
+    }
+
+    public function formationRequest(): BelongsTo
+    {
+        return $this->belongsTo(FormationRequest::class, 'formation_request_id');
     }
 
     public function createur(): BelongsTo

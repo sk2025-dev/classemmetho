@@ -17,9 +17,7 @@ use Inertia\Inertia;
 
 class LiturgieController extends Controller
 {
-    public function __construct(private ActeLiturgiqueService $service)
-    {
-    }
+    public function __construct(private ActeLiturgiqueService $service) {}
 
     public function index(Request $request)
     {
@@ -201,8 +199,31 @@ class LiturgieController extends Controller
             })
             ->findOrFail($id);
 
+        $typeActe = strtolower((string) $acte->type_acte);
+        $typesCertificat = ['bapteme', 'mariage'];
+        $typesFiche = ['naissance', 'deces'];
+
         if (!in_array($acte->statut, ['VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'], true) || !$acte->pasteur_id) {
             abort(422, "Le certificat est disponible uniquement apres validation du pasteur.");
+        }
+
+        if (in_array($typeActe, $typesFiche, true)) {
+            $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
+            $methoDataUri = $this->buildImageDataUri(public_path('images/metho.jpg'));
+            $view = $typeActe === 'naissance' ? 'pdf.fiche-naissance' : 'pdf.fiche-demande';
+
+            $pdf = Pdf::loadView($view, [
+                'acte' => $acte,
+                'logoDataUri' => $logoDataUri,
+                'methoDataUri' => $methoDataUri,
+            ])->setPaper('a4', 'portrait');
+
+            $filename = 'fiche-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
+            return $pdf->download($filename);
+        }
+
+        if (!in_array($typeActe, $typesCertificat, true)) {
+            abort(422, 'Un certificat PDF est disponible uniquement pour les actes de baptême et mariage.');
         }
 
         $pasteurSignature = $acte->pasteur?->signature_path && Storage::disk('public')->exists($acte->pasteur->signature_path)
@@ -217,10 +238,10 @@ class LiturgieController extends Controller
             : url('/certificat/verification/' . $acte->id);
         $qrDataUri = $this->buildQrDataUri($qrUrl);
         if (empty($qrDataUri)) {
-            $remote = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data='.urlencode($qrUrl);
+            $remote = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' . urlencode($qrUrl);
             $img = @file_get_contents($remote);
             if ($img !== false) {
-                $qrDataUri = 'data:image/png;base64,'.base64_encode($img);
+                $qrDataUri = 'data:image/png;base64,' . base64_encode($img);
             } else {
                 $qrDataUri = null;
             }

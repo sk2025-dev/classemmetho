@@ -9,6 +9,7 @@ import useToast from "../../../Hooks/useToast";
 import ToastContainer from "../../../Components/ToastContainer";
 import Select2Fonction from "../../../Components/Select2Fonction";
 import Select2Relation from "../../../Components/Select2Relation";
+import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
 import {
     ArrowLeft,
     User,
@@ -160,6 +161,7 @@ export default function CreateMember({ family, errors }) {
     }, []);
 
     const formatName = (text) => text.toUpperCase().replace(/\s+/g, " ").trim();
+    const formatPrenom = (text) => sanitizeUppercasePrenom(text);
 
     /**
      * Valider le format téléphone
@@ -512,7 +514,7 @@ export default function CreateMember({ family, errors }) {
                                             onChange={(e) =>
                                                 handleFieldChange(
                                                     "nom",
-                                                    formatName(e.target.value),
+                                                    formatPrenom(e.target.value),
                                                 )
                                             }
                                             onBlur={() =>
@@ -542,7 +544,7 @@ export default function CreateMember({ family, errors }) {
                                             onChange={(e) =>
                                                 handleFieldChange(
                                                     "prenom",
-                                                    formatName(e.target.value),
+                                                    formatPrenom(e.target.value),
                                                 )
                                             }
                                             onBlur={() =>

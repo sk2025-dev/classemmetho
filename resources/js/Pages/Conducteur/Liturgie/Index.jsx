@@ -1,4 +1,234 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { normalizePhotoUrl } from "@/Helpers/PhotoUrlHelper";
+
+// Composant pour visualiser les fiches PDF par date
+function FichesMariageModal({ open, onClose, acte, ids, onEdit }) {
+    const [dates, setDates] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(null);
+    const [pdfUrl, setPdfUrl] = useState("");
+    useEffect(() => {
+        if (!open) return;
+        if (acte) {
+            setLoading(false);
+            setSelectedDate(null);
+            setPdfUrl(
+                `/conducteur/liturgie/${acte.id}/fiche-conducteur?preview=1`,
+            );
+            return;
+        }
+        if (ids?.length > 0) {
+            setLoading(false);
+            setSelectedDate(null);
+            setPdfUrl(
+                `/conducteur/liturgie/${ids[0]}/fiche-conducteur?preview=1&ids=${ids.join(",")}`,
+            );
+            return;
+        }
+        setLoading(true);
+        setSelectedDate(null);
+        setPdfUrl("");
+        axios
+            .get("/api/conducteur/liturgie/fiches-dates")
+            .then((res) => setDates(res.data?.dates || []))
+            .finally(() => setLoading(false));
+    }, [open, acte, ids]);
+    const handleVoirFiche = (date) => {
+        setSelectedDate(date);
+        setPdfUrl(`/api/conducteur/liturgie/fiche-pdf?date=${date}`);
+    };
+    if (!open) return null;
+    return (
+        <div
+            style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                width: "100vw",
+                height: "100vh",
+                background: "rgba(0,0,0,0.35)",
+                zIndex: 1000,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+            }}
+        >
+            <div
+                style={{
+                    background: "#fff",
+                    borderRadius: 8,
+                    padding: 24,
+                    minWidth: 350,
+                    maxWidth: 700,
+                    width: "90%",
+                    maxHeight: "90vh",
+                    overflowY: "auto",
+                    boxShadow: "0 2px 16px rgba(0,0,0,0.15)",
+                }}
+            >
+                <div
+                    style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: 12,
+                    }}
+                >
+                    <h2 style={{ margin: 0, fontSize: 20 }}>
+                        Fiches des demandes de mariage par jour
+                    </h2>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            fontSize: 22,
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                        }}
+                    >
+                        &times;
+                    </button>
+                </div>
+                {loading ? (
+                    <div>Chargement…</div>
+                ) : acte ? (
+                    <div>
+                        <div
+                            style={{
+                                marginBottom: 16,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: 12,
+                            }}
+                        >
+                            <div>
+                                <strong>
+                                    Fiche de la demande de{" "}
+                                    {prettyType(acte.type_acte)}
+                                </strong>
+                                <div>
+                                    {acte.membre?.prenom} {acte.membre?.nom}
+                                </div>
+                            </div>
+                            {onEdit && (
+                                <button
+                                    className="btn"
+                                    onClick={() => onEdit(acte)}
+                                    style={{
+                                        padding: "8px 14px",
+                                        fontSize: 13,
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    Voir / modifier la demande
+                                </button>
+                            )}
+                        </div>
+                        {pdfUrl ? (
+                            <div
+                                style={{
+                                    height: 600,
+                                    border: "1px solid #ccc",
+                                }}
+                            >
+                                <iframe
+                                    src={pdfUrl}
+                                    title="Fiche PDF"
+                                    width="100%"
+                                    height="100%"
+                                    style={{ border: "none" }}
+                                    allow="autoplay"
+                                />
+                            </div>
+                        ) : (
+                            <div>Chargement de la fiche…</div>
+                        )}
+                    </div>
+                ) : ids?.length > 0 ? (
+                    <div>
+                        <div
+                            style={{
+                                marginBottom: 16,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: 12,
+                            }}
+                        >
+                            <div>
+                                <strong>
+                                    Fiche des demandes sélectionnées
+                                </strong>
+                                <div>{ids.length} demande(s)</div>
+                            </div>
+                        </div>
+                        {pdfUrl ? (
+                            <div
+                                style={{
+                                    height: 600,
+                                    border: "1px solid #ccc",
+                                }}
+                            >
+                                <iframe
+                                    src={pdfUrl}
+                                    title="Fiche PDF"
+                                    width="100%"
+                                    height="100%"
+                                    style={{ border: "none" }}
+                                    allow="autoplay"
+                                />
+                            </div>
+                        ) : (
+                            <div>Chargement de la fiche…</div>
+                        )}
+                    </div>
+                ) : (
+                    <div>
+                        <ul style={{ marginBottom: 16 }}>
+                            {dates.length === 0 && (
+                                <li>Aucune fiche disponible.</li>
+                            )}
+                            {dates.map((date) => (
+                                <li key={date} style={{ marginBottom: 8 }}>
+                                    <button
+                                        onClick={() => handleVoirFiche(date)}
+                                        style={{ marginRight: 8 }}
+                                    >
+                                        Voir la fiche du {date}
+                                    </button>
+                                    {selectedDate === date && pdfUrl && (
+                                        <span style={{ color: "green" }}>
+                                            {" "}
+                                            (ouverte ci-dessous)
+                                        </span>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                        {pdfUrl && (
+                            <div
+                                style={{
+                                    height: 600,
+                                    border: "1px solid #ccc",
+                                }}
+                            >
+                                <iframe
+                                    src={pdfUrl}
+                                    title="Fiche PDF"
+                                    width="100%"
+                                    height="100%"
+                                    style={{ border: "none" }}
+                                    allow="autoplay"
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
 import axios from "axios";
 import { Link } from "@inertiajs/react";
 
@@ -75,6 +305,30 @@ export default function Index({
     classes = [],
     annonces: rawAnnonces = [],
 }) {
+    // ...existing code...
+    // Modal pour fiches PDF mariage
+    const [ficheModalOpen, setFicheModalOpen] = useState(false);
+    const [ficheModalActe, setFicheModalActe] = useState(null);
+    const [ficheModalSelectedIds, setFicheModalSelectedIds] = useState([]);
+    const closeFicheModal = () => {
+        setFicheModalOpen(false);
+        setFicheModalActe(null);
+        setFicheModalSelectedIds([]);
+    };
+    const openFicheModalForSelected = () => {
+        if (selectedIds.size === 0) {
+            showToast("Sélectionnez au moins une demande pour afficher la fiche.");
+            return;
+        }
+        setFicheModalActe(null);
+        setFicheModalSelectedIds(Array.from(selectedIds));
+        setFicheModalOpen(true);
+    };
+    const openFicheModalForActe = (acte) => {
+        setFicheModalSelectedIds([]);
+        setFicheModalActe(acte);
+        setFicheModalOpen(true);
+    };
     /* ── ACTES state ── */
     const [localActes, setLocalActes] = useState(actes);
     const [tab, setTab] = useState("soumises");
@@ -544,6 +798,51 @@ export default function Index({
         }
     };
 
+    const submitCeremonyDecision = async (statut) => {
+        if (!selected?.id) return;
+        if (
+            statut === "CEREMONIE_REFUSEE_PAR_CONDUCTEUR" &&
+            !commentaire.trim()
+        ) {
+            showToast("Le motif du refus est obligatoire.");
+            return;
+        }
+        try {
+            setProcessing(true);
+            const { data } = await axios.post(
+                `/conducteur/liturgie/${selected.id}/ceremonie/decision`,
+                {
+                    statut,
+                    commentaire,
+                },
+            );
+            if (data?.acte) {
+                setLocalActes((prev) =>
+                    prev.map((a) => (a.id === selected.id ? data.acte : a)),
+                );
+                setSelected(data.acte);
+            }
+            closeModal();
+            showToast(
+                statut === "CEREMONIE_TRANSMISE_AU_PASTEUR"
+                    ? "La date choisie a été transmise au pasteur."
+                    : "La demande de date a été refusée.",
+            );
+        } catch (e) {
+            showToast(
+                e?.response?.data?.message ||
+                    "Echec de l'envoi de la decision de ceremonie.",
+            );
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const hasCeremonyChoice = (acte) =>
+        acte?.type_acte === "mariage" &&
+        acte?.details?.ceremonie_creneau &&
+        acte?.details?.ceremonie_statut;
+
     /* ── ANNONCES actions ── */
     const openAnnonceModal = (name, ann = null) => {
         setSelectedAnnonce(ann);
@@ -777,6 +1076,19 @@ export default function Index({
     /* ════════════════════════ RENDER ════════════════════════ */
     return (
         <div className="conductor-page">
+            {/* Bouton pour ouvrir le modal des fiches PDF */}
+
+            <FichesMariageModal
+                open={ficheModalOpen}
+                onClose={closeFicheModal}
+                acte={ficheModalActe}
+                ids={ficheModalSelectedIds}
+                onEdit={(acte) => {
+                    setSelected(acte);
+                    closeFicheModal();
+                    setModal("detail");
+                }}
+            />
             <style>{styles}</style>
             <main className="main">
                 <div className="page-content">
@@ -1225,6 +1537,14 @@ export default function Index({
                                             Refuser
                                         </button>
                                     </div>
+                                    <div style={{ marginBottom: 16 }}>
+                                        <button
+                                            className="btn"
+                                            onClick={openFicheModalForSelected}
+                                        >
+                                            📄 Voir la fiche des demandes sélectionnées
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="panel-body">
                                     {soumises.length === 0 && (
@@ -1272,13 +1592,15 @@ export default function Index({
                                             <div
                                                 className={`demande-acte-icon ${tone(acte.type_acte)}`}
                                             >
-                                                {acte.membre
-                                                    ?.profile_photo_url ? (
+                                                {normalizePhotoUrl(
+                                                    acte.membre
+                                                        ?.profile_photo_url,
+                                                ) ? (
                                                     <img
-                                                        src={
+                                                        src={normalizePhotoUrl(
                                                             acte.membre
-                                                                .profile_photo_url
-                                                        }
+                                                                ?.profile_photo_url,
+                                                        )}
                                                         alt={
                                                             acte.membre
                                                                 ?.prenom +
@@ -1306,9 +1628,39 @@ export default function Index({
                                                     openModal("detail", acte)
                                                 }
                                             >
-                                                <div className="demande-name">
+                                                <div
+                                                    className="demande-name"
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 8,
+                                                    }}
+                                                >
                                                     {acte.membre?.prenom}{" "}
                                                     {acte.membre?.nom}
+                                                    {/* Bouton transmettre la fiche à côté du conducteur */}
+                                                    <button
+                                                        className="btn-small btn-fiche"
+                                                        title="Transmettre la fiche PDF de la demande du jour"
+                                                        style={{
+                                                            marginLeft: 8,
+                                                            background:
+                                                                "#e0e7ff",
+                                                            color: "#3730a3",
+                                                            border: "1px solid #a5b4fc",
+                                                            borderRadius: 4,
+                                                            padding: "2px 8px",
+                                                            fontSize: 12,
+                                                        }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openFicheModalForActe(
+                                                                acte,
+                                                            );
+                                                        }}
+                                                    >
+                                                        📄 Transmettre la fiche
+                                                    </button>
                                                 </div>
                                                 <div className="demande-type">
                                                     {prettyType(acte.type_acte)}{" "}
@@ -1355,6 +1707,22 @@ export default function Index({
                                                         </svg>
                                                         Valider
                                                     </button>
+                                                    {hasCeremonyChoice(
+                                                        acte,
+                                                    ) && (
+                                                        <button
+                                                            className="btn-small btn-see"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                openModal(
+                                                                    "ceremony",
+                                                                    acte,
+                                                                );
+                                                            }}
+                                                        >
+                                                            Voir la date choisie
+                                                        </button>
+                                                    )}
                                                     <button
                                                         className="btn-small btn-refuse"
                                                         onClick={() =>
@@ -1705,7 +2073,6 @@ export default function Index({
                     {/* ══════════ ★★★ ONGLET ANNONCES ★★★ ══════════ */}
                     {tab === "annonces" && (
                         <div className="ann-tab-root">
-
                             {/* Corps : liste + sidebar */}
                             <div className="grid-3-1">
                                 {/* COLONNE PRINCIPALE */}
@@ -2429,7 +2796,7 @@ export default function Index({
                                             className="timeline-item"
                                         >
                                             <div
-                                                className={`timeline-dot ${dot(acte.statut)}`}
+                                                className={`timeline-dot ${dot(getActeStatus(acte))}`}
                                             />
                                             <div className="timeline-content">
                                                 <div className="timeline-action">
@@ -2438,14 +2805,83 @@ export default function Index({
                                                     {acte.membre?.nom}
                                                 </div>
                                                 <div className="timeline-detail">
-                                                    {prettyStatut(acte.statut)}
+                                                    {prettyStatut(
+                                                        getActeStatus(acte),
+                                                    )}
                                                 </div>
-                                            </div>
-                                            <div className="timeline-time">
-                                                {formatDate(
-                                                    acte.updated_at ||
-                                                        acte.created_at,
+                                                {String(
+                                                    acte.type_acte || "",
+                                                ).toLowerCase() ===
+                                                    "mariage" && (
+                                                    <div
+                                                        style={{ marginTop: 8 }}
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            className={`btn-see ${!acte?.details?.ceremonie_statut ? "btn-disabled" : ""}`}
+                                                            disabled={
+                                                                !acte?.details
+                                                                    ?.ceremonie_statut
+                                                            }
+                                                            style={{
+                                                                borderRadius: 14,
+                                                                padding:
+                                                                    "8px 12px",
+                                                                fontSize:
+                                                                    "11px",
+                                                                backgroundColor:
+                                                                    acte
+                                                                        ?.details
+                                                                        ?.ceremonie_statut
+                                                                        ? "#c82333"
+                                                                        : "#f3f4f6",
+                                                                borderColor:
+                                                                    acte
+                                                                        ?.details
+                                                                        ?.ceremonie_statut
+                                                                        ? "#c82333"
+                                                                        : "#d1d5db",
+                                                                color: acte
+                                                                    ?.details
+                                                                    ?.ceremonie_statut
+                                                                    ? "#fff"
+                                                                    : "#6b7280",
+                                                            }}
+                                                            title={
+                                                                acte?.details
+                                                                    ?.ceremonie_statut
+                                                                    ? "Voir la date choisie"
+                                                                    : "Aucune date de cérémonie soumise."
+                                                            }
+                                                            onClick={() =>
+                                                                acte?.details
+                                                                    ?.ceremonie_statut &&
+                                                                openModal(
+                                                                    "ceremony",
+                                                                    acte,
+                                                                )
+                                                            }
+                                                        >
+                                                            Voir la date choisie
+                                                        </button>
+                                                    </div>
                                                 )}
+                                            </div>
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    flexDirection: "column",
+                                                    alignItems: "flex-end",
+                                                    gap: 8,
+                                                    minWidth: 140,
+                                                }}
+                                            >
+                                                <div className="timeline-time">
+                                                    {formatDate(
+                                                        acte.updated_at ||
+                                                            acte.created_at,
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -2527,13 +2963,15 @@ export default function Index({
                                                 <div
                                                     className={`demande-acte-icon ${tone(acte.type_acte)}`}
                                                 >
-                                                    {acte.membre
-                                                        ?.profile_photo_url ? (
+                                                    {normalizePhotoUrl(
+                                                        acte.membre
+                                                            ?.profile_photo_url,
+                                                    ) ? (
                                                         <img
-                                                            src={
+                                                            src={normalizePhotoUrl(
                                                                 acte.membre
-                                                                    .profile_photo_url
-                                                            }
+                                                                    ?.profile_photo_url,
+                                                            )}
                                                             alt={
                                                                 acte.membre
                                                                     ?.prenom +
@@ -2848,7 +3286,9 @@ export default function Index({
                                               ? "Valider et transmettre"
                                               : modal === "refuse"
                                                 ? "Refuser la demande"
-                                                : "Créer un acte direct"}
+                                                : modal === "ceremony"
+                                                  ? "Date choisie"
+                                                  : "Créer un acte direct"}
                                     </div>
                                     {modal === "create" && (
                                         <div className="modal-sub">
@@ -2930,29 +3370,14 @@ export default function Index({
                                         </span>
                                         <span className="modal-info-val">
                                             <span
-                                                className={`badge ${
-                                                    selected?.statut ===
-                                                    "SOUMISE"
-                                                        ? "badge-soumise"
-                                                        : selected?.statut ===
-                                                            "TRANSMISE_AU_PASTEUR"
-                                                          ? "badge-transmis"
-                                                          : [
-                                                                  "VALIDEE",
-                                                                  "PUBLIEE",
-                                                              ].includes(
-                                                                  selected?.statut,
-                                                              )
-                                                            ? "badge-valide"
-                                                            : selected?.statut?.includes(
-                                                                    "REFUSEE",
-                                                                )
-                                                              ? "badge-refuse"
-                                                              : "badge-transmis"
-                                                }`}
+                                                className={`badge ${getActeBadgeClass(
+                                                    getActeStatus(selected),
+                                                )}`}
                                             >
                                                 <span className="badge-dot" />
-                                                {prettyStatut(selected?.statut)}
+                                                {prettyStatut(
+                                                    getActeStatus(selected),
+                                                )}
                                             </span>
                                         </span>
                                     </div>
@@ -3001,6 +3426,37 @@ export default function Index({
                                                     />
                                                 </svg>
                                                 Refuser
+                                            </button>
+                                        </div>
+                                    )}
+                                    {selected?.details?.ceremonie_statut ===
+                                        "CEREMONIE_SOUMISE_AU_CONDUCTEUR" && (
+                                        <div className="modal-actions-inline">
+                                            <button
+                                                className="btn-modal btn-modal-gold"
+                                                onClick={() =>
+                                                    submitCeremonyDecision(
+                                                        "CEREMONIE_TRANSMISE_AU_PASTEUR",
+                                                    )
+                                                }
+                                                disabled={processing}
+                                            >
+                                                {processing
+                                                    ? "Traitement..."
+                                                    : "Transmettre au pasteur"}
+                                            </button>
+                                            <button
+                                                className="btn-modal btn-modal-red"
+                                                onClick={() =>
+                                                    submitCeremonyDecision(
+                                                        "CEREMONIE_REFUSEE_PAR_CONDUCTEUR",
+                                                    )
+                                                }
+                                                disabled={processing}
+                                            >
+                                                {processing
+                                                    ? "Traitement..."
+                                                    : "Refuser la date"}
                                             </button>
                                         </div>
                                     )}
@@ -4269,16 +4725,50 @@ function prettyType(type) {
     };
     return m[type] || type || "Acte";
 }
+function getActeStatus(acte) {
+    if (!acte) return null;
+    return acte.details?.ceremonie_statut || acte.statut;
+}
+function getActeBadgeClass(status) {
+    if (["SOUMISE", "CEREMONIE_SOUMISE_AU_CONDUCTEUR"].includes(status))
+        return "badge-soumise";
+    if (
+        ["TRANSMISE_AU_PASTEUR", "CEREMONIE_TRANSMISE_AU_PASTEUR"].includes(
+            status,
+        )
+    )
+        return "badge-transmis";
+    if (
+        [
+            "VALIDEE",
+            "PUBLIEE",
+            "ARCHIVEE",
+            "CEREMONIE_VALIDEE_PAR_PASTEUR",
+        ].includes(status)
+    )
+        return "badge-valide";
+    if (
+        String(status).startsWith("REFUSEE") ||
+        String(status).startsWith("CEREMONIE_REFUSEE")
+    )
+        return "badge-refuse";
+    return "badge-transmis";
+}
 function prettyStatut(s) {
     const m = {
         SOUMISE: "Soumise",
         TRANSMISE_AU_PASTEUR: "Transmise au pasteur",
         EN_ATTENTE_CONDUCTEUR: "En attente du conducteur",
+        CEREMONIE_SOUMISE_AU_CONDUCTEUR: "Date soumise au conducteur",
+        CEREMONIE_TRANSMISE_AU_PASTEUR: "Date transmise au pasteur",
+        CEREMONIE_VALIDEE_PAR_PASTEUR: "Date acceptée",
         VALIDEE: "Validée",
         PUBLIEE: "Publiée",
         ARCHIVEE: "Archivée",
-        REFUSEE_PAR_CONDUCTEUR: "Refusée par conducteur",
+        REFUSEE_PAR_CONDUCTEUR: "Date refusée par conducteur",
+        CEREMONIE_REFUSEE_PAR_CONDUCTEUR: "Date refusée",
         REFUSEE_PAR_PASTEUR: "Refusée par pasteur",
+        CEREMONIE_REFUSEE_PAR_PASTEUR: "Date refusée",
     };
     return m[s] || s;
 }
@@ -4307,8 +4797,20 @@ function iconEmoji(type) {
     return m[type] || "📜";
 }
 function dot(status) {
-    if (["VALIDEE", "PUBLIEE", "ARCHIVEE"].includes(status)) return "green";
-    if (String(status).startsWith("REFUSEE")) return "red";
+    if (
+        [
+            "VALIDEE",
+            "PUBLIEE",
+            "ARCHIVEE",
+            "CEREMONIE_VALIDEE_PAR_PASTEUR",
+        ].includes(status)
+    )
+        return "green";
+    if (
+        String(status).startsWith("REFUSEE") ||
+        String(status).startsWith("CEREMONIE_REFUSEE")
+    )
+        return "red";
     return "gold";
 }
 function formatDate(value) {
@@ -4364,6 +4866,20 @@ function getPlaceholder(type) {
 const styles = `
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 *{box-sizing:border-box}
+.fiche-blue-btn {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 13px;
+    margin-left: 8px;
+    transition: background 0.2s;
+    cursor: pointer;
+}
+.fiche-blue-btn:hover {
+    background: #1d4ed8;
+}
 .conductor-page{
   --grad:linear-gradient(135deg,#6B46C1 0%,#1E40AF 50%,#B6C01A 100%);
   --surface:rgba(255,255,255,0.92);--surface2:rgba(255,255,255,0.75);--surface3:rgba(255,255,255,0.18);
@@ -4426,7 +4942,7 @@ const styles = `
 .tab-violet{background:var(--violet);color:white}
 .tab-ann.active{color:var(--violet)}
 .quick-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-.quick-dropdown{min-width:300px;height:54px;background:#ECEFF4;border:2px solid #D9DEE8;border-radius:22px;padding:0 48px 0 46px;font-size:16px;font-weight:800;color:#111827;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23586A84' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23374151' stroke-width='2.2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat,no-repeat;background-position:left 16px center,right 16px center;background-size:18px 18px,18px 18px}
+.quick-dropdown{min-width:300px;height:40px;background:#ECEFF4;border:2px solid #D9DEE8;border-radius:10px;padding:0 48px 0 46px;font-size:16px;font-weight:800;color:#111827;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23586A84' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23374151' stroke-width='2.2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat,no-repeat;background-position:left 16px center,right 16px center;background-size:18px 18px,18px 18px}
 .quick-dropdown:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(91,63,175,.12)}
 .quick-search{min-width:260px;background:rgba(255,255,255,.95);border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-size:12.5px;color:var(--text);outline:none}
 .quick-search:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(91,63,175,.12)}

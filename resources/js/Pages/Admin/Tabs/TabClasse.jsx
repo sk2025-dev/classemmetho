@@ -9,6 +9,7 @@ import {
     Award, Gift, BookOpen, ChevronDown, ChevronUp, Check, X, Users, Briefcase
 } from "lucide-react";
 import { resolveMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
+import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
 
 // --- CSS GLOBAL (identique à celui de la page utilisateur) ---
 const GLOBAL_STYLES = `
@@ -676,7 +677,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                         <input
                                             className="w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 capitalize border-gray-300 focus:border-blue-500"
                                             value={formData.prenom || ''}
-                                            onChange={(e) => handleChange({ target: { name: 'prenom', value: formatName(e.target.value) } })}
+                                            onChange={(e) => handleChange({ target: { name: 'prenom', value: sanitizeUppercasePrenom(e.target.value) } })}
                                             placeholder="ex: Jean"
                                         />
                                     </FormField>

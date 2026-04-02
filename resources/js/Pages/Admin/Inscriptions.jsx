@@ -1,44 +1,90 @@
-import React, { useState, useEffect } from "react";
-import { Head, Link, usePage, router } from "@inertiajs/react";
-import axios from "axios";
+import React, { useEffect, useState } from "react";
+import { Head, Link, router, usePage } from "@inertiajs/react";
+import ConfirmationModal from "@/Components/ConfirmationModal";
 import ProfilePhoto from "@/Components/ProfilePhoto";
+import { ToastContainer } from "@/Components/Toast";
 
-const StatusBadge = ({ status }) => {
-    const normalizedStatus = status?.toLowerCase();
-    let className = "px-3 py-1 rounded-full text-xs font-semibold border ";
-    let label = status;
-    if (normalizedStatus === "validé" || normalizedStatus === "active") {
-        className += "bg-green-100 text-green-800 border-green-200";
-        label = "Validé";
-    } else if (
-        normalizedStatus === "en attente" ||
-        normalizedStatus === "pending"
-    ) {
-        className += "bg-yellow-100 text-yellow-800 border-yellow-200";
-        label = "En attente";
-    } else if (
-        normalizedStatus === "rejeté" ||
-        normalizedStatus === "inactive"
-    ) {
-        className += "bg-red-100 text-red-800 border-red-200";
-        label = "Rejeté";
-    } else {
-        className += "bg-gray-100 text-gray-800 border-gray-200";
-    }
-    return <span className={className}>{label}</span>;
+const STATUS_MAP = {
+    en_attente: {
+        label: "En attente",
+        bgColor: "#FCD34D",
+        textColor: "#92400E",
+    },
+    approuve: {
+        label: "Approuvé",
+        bgColor: "#86EFAC",
+        textColor: "#166534",
+    },
+    rejete: {
+        label: "Rejeté",
+        bgColor: "#FCA5A5",
+        textColor: "#991B1B",
+    },
 };
 
 export default function Inscriptions() {
     const { inscriptions: initialInscriptions = [] } = usePage().props;
     const [inscriptions, setInscriptions] = useState(initialInscriptions);
     const [searchTerm, setSearchTerm] = useState("");
-    const [statusFilter, setStatusFilter] = useState(""); // Filtre par statut
+    const [statusFilter, setStatusFilter] = useState("");
     const [approving, setApproving] = useState(null);
     const [rejectingId, setRejectingId] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [toasts, setToasts] = useState([]);
+    const [confirmationState, setConfirmationState] = useState({
+        isOpen: false,
+        action: null,
+        inscription: null,
+    });
 
-    // Filtre par recherche ET par statut
+    useEffect(() => {
+        setInscriptions(initialInscriptions);
+    }, [initialInscriptions]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter]);
+
+    const addToast = (message, type = "success", duration = 3500) => {
+        const id = Date.now() + Math.random();
+        setToasts((prev) => [...prev, { id, message, type, duration }]);
+    };
+
+    const removeToast = (id) => {
+        setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    };
+
+    const getInscriptionTypeLabel = (inscription) => {
+        const labels = {
+            famille: "de famille",
+            individuel: "individuelle",
+            pasteur: "de pasteur",
+            conducteur: "de conducteur",
+        };
+
+        return labels[inscription?.type] || "de membre";
+    };
+
+    const getDisplayName = (inscription) =>
+        [inscription?.prenom, inscription?.nom].filter(Boolean).join(" ");
+
+    const openConfirmation = (action, inscription) => {
+        setConfirmationState({
+            isOpen: true,
+            action,
+            inscription,
+        });
+    };
+
+    const closeConfirmation = () => {
+        setConfirmationState({
+            isOpen: false,
+            action: null,
+            inscription: null,
+        });
+    };
+
     const filteredInscriptions = inscriptions.filter((inscription) => {
         const matchSearch =
             (inscription.nom?.toLowerCase() || "").includes(
@@ -54,12 +100,6 @@ export default function Inscriptions() {
         return matchSearch && matchStatus;
     });
 
-    // Réinitialiser la page actuelle quand les filtres changent
-    React.useEffect(() => {
-        setCurrentPage(1);
-    }, [searchTerm, statusFilter]);
-
-    // Calcul de la pagination
     const totalPages = Math.ceil(filteredInscriptions.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const paginatedInscriptions = filteredInscriptions.slice(
@@ -67,96 +107,98 @@ export default function Inscriptions() {
         startIndex + itemsPerPage,
     );
 
-    const handleApprove = async (id) => {
-        if (
-            !window.confirm(
-                "Êtes-vous sûr de vouloir approuver cette inscription ?",
-            )
-        ) {
-            return;
-        }
-
+    const handleApprove = (id) => {
         setApproving(id);
-        try {
-            // Utiliser router.post() pour gérer automatiquement le CSRF token
-            router.post(
-                `/admin/inscriptions/${id}/approve`,
-                {},
-                {
-                    onSuccess: () => {
-                        alert("Inscription approuvée avec succès !");
-                        setApproving(null);
-                        // Mettre à jour le statut localement sans recharger la page
-                        setInscriptions((prevInscriptions) =>
-                            prevInscriptions.map((inscription) =>
-                                inscription.id === id
-                                    ? { ...inscription, status: "approuve" }
-                                    : inscription,
-                            ),
-                        );
-                    },
-                    onError: (err) => {
-                        alert(
-                            "Erreur lors de l'approbation : " +
-                                (err.message || "Une erreur est survenue"),
-                        );
-                        setApproving(null);
-                    },
+
+        router.post(
+            `/admin/inscriptions/${id}/approve`,
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    const approvedInscription =
+                        confirmationState.inscription ||
+                        inscriptions.find((inscription) => inscription.id === id);
+
+                    setApproving(null);
+                    closeConfirmation();
+                    setInscriptions((prev) =>
+                        prev.map((inscription) =>
+                            inscription.id === id
+                                ? { ...inscription, status: "approuve" }
+                                : inscription,
+                        ),
+                    );
+                    addToast(
+                        `Inscription ${getInscriptionTypeLabel(approvedInscription)} de ${getDisplayName(approvedInscription)} approuvée avec succès.`,
+                        "success",
+                    );
                 },
-            );
-        } catch (err) {
-            alert(
-                "Erreur lors de l'approbation : " +
-                    (err.response?.data?.message || err.message),
-            );
-            setApproving(null);
-        }
+                onError: (errors) => {
+                    setApproving(null);
+                    closeConfirmation();
+                    const firstError =
+                        Object.values(errors || {}).flat()[0] ||
+                        "Une erreur est survenue pendant l'approbation.";
+                    addToast(firstError, "error", 5000);
+                },
+            },
+        );
     };
 
-    const handleReject = async (id) => {
-        if (
-            !window.confirm(
-                "Êtes-vous sûr de vouloir rejeter cette inscription ?",
-            )
-        ) {
+    const handleReject = (id) => {
+        setRejectingId(id);
+
+        router.post(
+            `/admin/inscriptions/${id}/reject`,
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    const rejectedInscription =
+                        confirmationState.inscription ||
+                        inscriptions.find((inscription) => inscription.id === id);
+
+                    setRejectingId(null);
+                    closeConfirmation();
+                    setInscriptions((prev) =>
+                        prev.map((inscription) =>
+                            inscription.id === id
+                                ? { ...inscription, status: "rejete" }
+                                : inscription,
+                        ),
+                    );
+                    addToast(
+                        `Inscription ${getInscriptionTypeLabel(rejectedInscription)} de ${getDisplayName(rejectedInscription)} rejetée.`,
+                        "warning",
+                        4500,
+                    );
+                },
+                onError: (errors) => {
+                    setRejectingId(null);
+                    closeConfirmation();
+                    const firstError =
+                        Object.values(errors || {}).flat()[0] ||
+                        "Une erreur est survenue pendant le rejet.";
+                    addToast(firstError, "error", 5000);
+                },
+            },
+        );
+    };
+
+    const confirmCurrentAction = () => {
+        const { action, inscription } = confirmationState;
+
+        if (!action || !inscription?.id) {
             return;
         }
 
-        setRejectingId(id);
-        try {
-            // Utiliser router.post() pour gérer automatiquement le CSRF token
-            router.post(
-                `/admin/inscriptions/${id}/reject`,
-                {},
-                {
-                    onSuccess: () => {
-                        alert("Inscription rejetée");
-                        setRejectingId(null);
-                        // Mettre à jour le statut localement sans recharger la page
-                        setInscriptions((prevInscriptions) =>
-                            prevInscriptions.map((inscription) =>
-                                inscription.id === id
-                                    ? { ...inscription, status: "rejete" }
-                                    : inscription,
-                            ),
-                        );
-                    },
-                    onError: (err) => {
-                        alert(
-                            "Erreur lors du rejet : " +
-                                (err.message || "Une erreur est survenue"),
-                        );
-                        setRejectingId(null);
-                    },
-                },
-            );
-        } catch (err) {
-            alert(
-                "Erreur lors du rejet : " +
-                    (err.response?.data?.message || err.message),
-            );
-            setRejectingId(null);
+        if (action === "approve") {
+            handleApprove(inscription.id);
+            return;
         }
+
+        handleReject(inscription.id);
     };
 
     return (
@@ -171,9 +213,9 @@ export default function Inscriptions() {
             }}
         >
             <Head title="Gestion des inscriptions" />
+            <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
 
             <div className="max-w-7xl mx-auto">
-                {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                     <div className="flex items-center gap-3 text-white">
                         <Link
@@ -204,6 +246,7 @@ export default function Inscriptions() {
                             </p>
                         </div>
                     </div>
+
                     <div className="flex gap-2">
                         <Link
                             href="/admin/inscriptions/type-selection"
@@ -231,7 +274,7 @@ export default function Inscriptions() {
                         </Link>
                     </div>
                 </div>
-                {/* Barre de recherche simplifiée */}
+
                 <div className="flex flex-col sm:flex-row gap-4 mb-6 justify-center">
                     <div className="relative w-full max-w-md">
                         <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -257,7 +300,7 @@ export default function Inscriptions() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    {/* Filtre par statut */}
+
                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
@@ -269,7 +312,7 @@ export default function Inscriptions() {
                         <option value="rejete">Rejeté</option>
                     </select>
                 </div>
-                {/* Table */}
+
                 <div className="bg-white rounded-xl shadow-xl overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200 text-sm">
                         <thead
@@ -295,8 +338,6 @@ export default function Inscriptions() {
                                 <th className="px-4 py-3 text-left font-semibold text-white">
                                     Ville
                                 </th>
-                               
-                                
                                 <th className="px-4 py-3 text-left font-semibold text-white">
                                     Date
                                 </th>
@@ -308,10 +349,18 @@ export default function Inscriptions() {
                                 </th>
                             </tr>
                         </thead>
+
                         <tbody className="bg-white divide-y divide-gray-100">
                             {paginatedInscriptions.length > 0 ? (
-                                paginatedInscriptions.map(
-                                    (inscription, idx) => (
+                                paginatedInscriptions.map((inscription, idx) => {
+                                    const statusInfo =
+                                        STATUS_MAP[inscription.status] || {
+                                            label: inscription.status,
+                                            bgColor: "#D1D5DB",
+                                            textColor: "#374151",
+                                        };
+
+                                    return (
                                         <tr
                                             key={inscription.id}
                                             className="hover:bg-[#EDD31D]/20 transition-colors"
@@ -326,8 +375,7 @@ export default function Inscriptions() {
                                                     rounded={true}
                                                 />
                                                 <span className="font-medium text-gray-900">
-                                                    {inscription.prenom}{" "}
-                                                    {inscription.nom}
+                                                    {getDisplayName(inscription)}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-gray-700 text-xs font-semibold">
@@ -355,8 +403,7 @@ export default function Inscriptions() {
                                                 {inscription.email || "N/A"}
                                             </td>
                                             <td className="px-4 py-3 text-gray-700">
-                                                {inscription.classe ||
-                                                    "Non assignée"}
+                                                {inscription.classe || "Non assignée"}
                                             </td>
                                             <td className="px-4 py-3 text-gray-700">
                                                 {inscription.ville || "N/A"}
@@ -365,60 +412,20 @@ export default function Inscriptions() {
                                                 {inscription.created_at}
                                             </td>
                                             <td className="px-4 py-3">
-                                                {(() => {
-                                                    const status =
-                                                        inscription.status;
-                                                    const statusMap = {
-                                                        en_attente: {
-                                                            label: "En attente",
-                                                            bgColor: "#FCD34D",
-                                                            textColor:
-                                                                "#92400E",
-                                                        },
-                                                        approuve: {
-                                                            label: "Approuvé",
-                                                            bgColor: "#86EFAC",
-                                                            textColor:
-                                                                "#166534",
-                                                        },
-                                                        rejete: {
-                                                            label: "Rejeté",
-                                                            bgColor: "#FCA5A5",
-                                                            textColor:
-                                                                "#991B1B",
-                                                        },
-                                                    };
-
-                                                    const statusInfo =
-                                                        statusMap[status] || {
-                                                            label: status,
-                                                            bgColor: "#D1D5DB",
-                                                            textColor:
-                                                                "#374151",
-                                                        };
-
-                                                    return (
-                                                        <span
-                                                            style={{
-                                                                backgroundColor:
-                                                                    statusInfo.bgColor,
-                                                                color: statusInfo.textColor,
-                                                                borderRadius:
-                                                                    "9999px",
-                                                                padding:
-                                                                    "4px 12px",
-                                                                fontWeight:
-                                                                    "bold",
-                                                                fontSize:
-                                                                    "0.85em",
-                                                                display:
-                                                                    "inline-block",
-                                                            }}
-                                                        >
-                                                            {statusInfo.label}
-                                                        </span>
-                                                    );
-                                                })()}
+                                                <span
+                                                    style={{
+                                                        backgroundColor:
+                                                            statusInfo.bgColor,
+                                                        color: statusInfo.textColor,
+                                                        borderRadius: "9999px",
+                                                        padding: "4px 12px",
+                                                        fontWeight: "bold",
+                                                        fontSize: "0.85em",
+                                                        display: "inline-block",
+                                                    }}
+                                                >
+                                                    {statusInfo.label}
+                                                </span>
                                             </td>
                                             <td className="px-4 py-3 text-center">
                                                 {inscription.status ===
@@ -426,8 +433,9 @@ export default function Inscriptions() {
                                                     <div className="flex items-center justify-center gap-2">
                                                         <button
                                                             onClick={() =>
-                                                                handleApprove(
-                                                                    inscription.id,
+                                                                openConfirmation(
+                                                                    "approve",
+                                                                    inscription,
                                                                 )
                                                             }
                                                             className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded font-semibold shadow transition"
@@ -444,8 +452,9 @@ export default function Inscriptions() {
                                                         </button>
                                                         <button
                                                             onClick={() =>
-                                                                handleReject(
-                                                                    inscription.id,
+                                                                openConfirmation(
+                                                                    "reject",
+                                                                    inscription,
                                                                 )
                                                             }
                                                             className="text-white px-3 py-1 rounded font-semibold shadow transition"
@@ -472,12 +481,12 @@ export default function Inscriptions() {
                                                 )}
                                             </td>
                                         </tr>
-                                    ),
-                                )
+                                    );
+                                })
                             ) : (
                                 <tr>
                                     <td
-                                        colSpan="8"
+                                        colSpan="9"
                                         className="px-6 py-10 text-center text-gray-500"
                                     >
                                         <p>Aucune inscription trouvée.</p>
@@ -487,7 +496,7 @@ export default function Inscriptions() {
                         </tbody>
                     </table>
                 </div>
-                {/* Pagination */}
+
                 {totalPages > 1 && (
                     <div className="flex flex-col sm:flex-row items-center justify-between bg-white px-4 py-4 border-t border-gray-200 mt-4 gap-4 rounded-lg shadow">
                         <div className="text-sm text-gray-600">
@@ -503,6 +512,7 @@ export default function Inscriptions() {
                             sur{" "}
                             <span className="font-semibold">{totalPages}</span>
                         </div>
+
                         <div className="flex items-center justify-center gap-2">
                             <button
                                 onClick={() =>
@@ -514,22 +524,21 @@ export default function Inscriptions() {
                             >
                                 ← Précédent
                             </button>
-                            {Array.from(
-                                { length: totalPages },
-                                (_, i) => i + 1,
-                            ).map((page) => (
-                                <button
-                                    key={page}
-                                    onClick={() => setCurrentPage(page)}
-                                    className={`px-3 py-1 rounded font-medium transition ${
-                                        page === currentPage
-                                            ? "bg-[#B6C01A] text-white border-[#B6C01A]"
-                                            : "border border-gray-300 text-gray-700 hover:bg-gray-100"
-                                    }`}
-                                >
-                                    {page}
-                                </button>
-                            ))}
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                                (page) => (
+                                    <button
+                                        key={page}
+                                        onClick={() => setCurrentPage(page)}
+                                        className={`px-3 py-1 rounded font-medium transition ${
+                                            page === currentPage
+                                                ? "bg-[#B6C01A] text-white border-[#B6C01A]"
+                                                : "border border-gray-300 text-gray-700 hover:bg-gray-100"
+                                        }`}
+                                    >
+                                        {page}
+                                    </button>
+                                ),
+                            )}
                             <button
                                 onClick={() =>
                                     setCurrentPage(
@@ -543,10 +552,11 @@ export default function Inscriptions() {
                                 Suivant →
                             </button>
                         </div>
+
                         <select
                             value={itemsPerPage}
                             onChange={(e) => {
-                                setItemsPerPage(parseInt(e.target.value));
+                                setItemsPerPage(parseInt(e.target.value, 10));
                                 setCurrentPage(1);
                             }}
                             className="px-3 py-1 border border-gray-300 rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#B6C01A]"
@@ -558,7 +568,7 @@ export default function Inscriptions() {
                         </select>
                     </div>
                 )}
-                {/* Barre d'infos et actualisation */}
+
                 <div className="flex justify-end bg-gray-50 px-4 py-3 border-t border-gray-200 mt-4 gap-4 rounded-b-lg">
                     <button
                         onClick={() => window.location.reload()}
@@ -569,6 +579,40 @@ export default function Inscriptions() {
                     </button>
                 </div>
             </div>
+
+            <ConfirmationModal
+                isOpen={confirmationState.isOpen}
+                type={
+                    confirmationState.action === "reject"
+                        ? "reject"
+                        : "approve"
+                }
+                title={
+                    confirmationState.action === "reject"
+                        ? "Rejeter l'inscription"
+                        : "Approuver l'inscription"
+                }
+                message={
+                    confirmationState.action === "reject"
+                        ? `Voulez-vous vraiment rejeter cette inscription ${getInscriptionTypeLabel(confirmationState.inscription)} ?`
+                        : `Voulez-vous approuver cette inscription ${getInscriptionTypeLabel(confirmationState.inscription)} ?`
+                }
+                itemName={getDisplayName(confirmationState.inscription)}
+                confirmText={
+                    confirmationState.action === "reject"
+                        ? "Oui, rejeter"
+                        : "Oui, approuver"
+                }
+                cancelText="Annuler"
+                loading={
+                    (confirmationState.action === "approve" &&
+                        approving === confirmationState.inscription?.id) ||
+                    (confirmationState.action === "reject" &&
+                        rejectingId === confirmationState.inscription?.id)
+                }
+                onConfirm={confirmCurrentAction}
+                onCancel={closeConfirmation}
+            />
         </div>
     );
 }

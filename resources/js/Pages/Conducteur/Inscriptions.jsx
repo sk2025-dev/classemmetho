@@ -5,6 +5,7 @@ import Select from "react-select";
 import Select2Family from "../../Components/Select2Family";
 import Select2Fonction from "../../Components/Select2Fonction";
 import Select2Relation from "../../Components/Select2Relation";
+import { sanitizeUppercasePrenom } from "../../Helpers/nameSanitizers";
 import {
     Eye,
     Edit,
@@ -2857,7 +2858,9 @@ export default function Inscriptions({
                                                                 onChange={(e) =>
                                                                     setData({
                                                                         ...data,
-                                                                        prenom: e.target.value.toUpperCase(),
+                                                                        prenom: sanitizeUppercasePrenom(
+                                                                            e.target.value,
+                                                                        ),
                                                                     })
                                                                 }
                                                                 placeholder="ex: Jean"

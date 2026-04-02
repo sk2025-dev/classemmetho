@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             ClassesSeeder::class,
             FonctionSeeder::class,
             TresorerieSeeder::class,
+            SondageDemoSeeder::class,
         ]);
 
 

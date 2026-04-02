@@ -82,6 +82,9 @@ export default function Index({
     familyMembers = [],
     annonces: rawAnnonces = [],
     annoncesHistorique: rawAnnoncesHistorique = [],
+    formations: rawFormations = [],
+    formationsValidees: rawFormationsValidees = [],
+    formationsHistorique: rawFormationsHistorique = [],
 }) {
     const { url } = usePage();
 
@@ -141,6 +144,20 @@ export default function Index({
     const [selectedAnnIds, setSelectedAnnIds] = useState([]);
     const [annHistPage, setAnnHistPage] = useState(1);
     const annHistPerPage = 6;
+    const [localFormations, setLocalFormations] = useState(rawFormations);
+    const [localValidatedFormations, setLocalValidatedFormations] = useState(
+        rawFormationsValidees,
+    );
+    const [formationsPage, setFormationsPage] = useState(1);
+    const formationsPerPage = 6;
+    const [formationsHistorique, setFormationsHistorique] = useState(
+        rawFormationsHistorique,
+    );
+    const [formationsHistoPage, setFormationsHistoPage] = useState(1);
+    const formationsHistoPerPage = 6;
+    const [selectedFormationHistoIds, setSelectedFormationHistoIds] = useState(
+        [],
+    );
 
     /* ── NOUVELLE ANNONCE (pasteur) ── */
     const [annonceForm, setAnnonceForm] = useState({
@@ -163,6 +180,16 @@ export default function Index({
     useEffect(() => {
         setAnnonces(rawAnnonces || []);
     }, [rawAnnonces]);
+    useEffect(() => {
+        setLocalFormations(rawFormations || []);
+    }, [rawFormations]);
+    useEffect(() => {
+        setLocalValidatedFormations(rawFormationsValidees || []);
+    }, [rawFormationsValidees]);
+
+    useEffect(() => {
+        setFormationsHistorique(rawFormationsHistorique || []);
+    }, [rawFormationsHistorique]);
     const annHistKey = useMemo(
         () =>
             (rawAnnoncesHistorique || [])
@@ -276,6 +303,88 @@ export default function Index({
 
         return result;
     }, [localActes, quickFilter, selectedFamily, selectedClasse, searchNeedle]);
+
+    const filteredFormations = useMemo(() => {
+        let result = localFormations.filter(
+            (f) => String(f.statut) === "TRANSMISE_AU_PASTEUR",
+        );
+
+        if (selectedFamily && selectedFamily !== "all") {
+            result = result.filter(
+                (f) => String(f.family?.id) === selectedFamily,
+            );
+        }
+
+        if (selectedClasse && selectedClasse !== "all") {
+            result = result.filter(
+                (f) => String(f.classe?.id) === selectedClasse,
+            );
+        }
+
+        if (searchNeedle) {
+            result = result.filter((f) =>
+                [
+                    f.reference,
+                    f.statut,
+                    f.message,
+                    f.membre?.prenom,
+                    f.membre?.nom,
+                    f.family?.nom,
+                    f.classe?.nom,
+                ].some((field) =>
+                    String(field || "")
+                        .toLowerCase()
+                        .includes(searchNeedle),
+                ),
+            );
+        }
+
+        return result;
+    }, [localFormations, selectedFamily, selectedClasse, searchNeedle]);
+
+    const filteredValidatedFormations = useMemo(() => {
+        let result = localValidatedFormations.filter(
+            (f) => String(f.statut) === "VALIDEE",
+        );
+
+        if (selectedFamily && selectedFamily !== "all") {
+            result = result.filter(
+                (f) => String(f.family?.id) === selectedFamily,
+            );
+        }
+
+        if (selectedClasse && selectedClasse !== "all") {
+            result = result.filter(
+                (f) => String(f.classe?.id) === selectedClasse,
+            );
+        }
+
+        if (searchNeedle) {
+            result = result.filter((f) =>
+                [
+                    f.reference,
+                    f.statut,
+                    f.message,
+                    f.membre?.prenom,
+                    f.membre?.nom,
+                    f.family?.nom,
+                    f.classe?.nom,
+                    f.conjoint_nom,
+                ].some((field) =>
+                    String(field || "")
+                        .toLowerCase()
+                        .includes(searchNeedle),
+                ),
+            );
+        }
+
+        return result;
+    }, [
+        localValidatedFormations,
+        selectedFamily,
+        selectedClasse,
+        searchNeedle,
+    ]);
 
     const filteredHistorique = useMemo(() => {
         let result = [...historiqueList];
@@ -487,11 +596,39 @@ export default function Index({
     useEffect(() => {
         if (annHistPage > annHistTotalPages) setAnnHistPage(annHistTotalPages);
     }, [annHistPage, annHistTotalPages]);
+    const formationsTotalPages = Math.max(
+        1,
+        Math.ceil(filteredFormations.length / formationsPerPage),
+    );
+    const pagedFormations = filteredFormations.slice(
+        (formationsPage - 1) * formationsPerPage,
+        formationsPage * formationsPerPage,
+    );
+    useEffect(() => {
+        if (formationsPage > formationsTotalPages) {
+            setFormationsPage(formationsTotalPages);
+        }
+    }, [formationsPage, formationsTotalPages]);
+
+    const formationsHistoTotalPages = Math.max(
+        1,
+        Math.ceil(formationsHistorique.length / formationsHistoPerPage),
+    );
+    const pagedFormationsHistorique = formationsHistorique.slice(
+        (formationsHistoPage - 1) * formationsHistoPerPage,
+        formationsHistoPage * formationsHistoPerPage,
+    );
+    useEffect(() => {
+        if (formationsHistoPage > formationsHistoTotalPages) {
+            setFormationsHistoPage(formationsHistoTotalPages);
+        }
+    }, [formationsHistoPage, formationsHistoTotalPages]);
 
     // Reset pages when filters change
     useEffect(() => {
         setSelectedIds([]);
         setAnnPage(1);
+        setFormationsPage(1);
     }, [quickFilter, searchTerm]);
 
     useEffect(() => {
@@ -512,6 +649,12 @@ export default function Index({
         }),
         [annonces, annoncesHistorique],
     );
+    const formationStats = useMemo(
+        () => ({
+            pending: filteredFormations.length,
+        }),
+        [filteredFormations],
+    );
 
     /* ── ACTES HELPERS ── */
     const toggleSelect = (id) =>
@@ -522,12 +665,19 @@ export default function Index({
         setSelectedHistoryIds((prev) =>
             prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
         );
+    const toggleFormationHistoSelect = (id) =>
+        setSelectedFormationHistoIds((prev) =>
+            prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+        );
     const selectAllPending = () =>
         setSelectedIds(filteredActes.map((a) => a.id));
     const selectAllHistory = () =>
         setSelectedHistoryIds(historiqueList.map((h) => h.id));
+    const selectAllFormationHisto = () =>
+        setSelectedFormationHistoIds(formationsHistorique.map((f) => f.id));
     const clearSelection = () => setSelectedIds([]);
     const clearHistorySelection = () => setSelectedHistoryIds([]);
+    const clearFormationHistoSelection = () => setSelectedFormationHistoIds([]);
 
     const stats = useMemo(() => {
         const byClass = localActes.reduce((acc, acte) => {
@@ -605,6 +755,191 @@ export default function Index({
                 error?.response?.data?.errors?.commentaire?.[0] ||
                     error?.response?.data?.message ||
                     "Une erreur est survenue.",
+            );
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const submitFormationDecision = async (formationId, statut) => {
+        const commentaire =
+            statut === "REFUSEE_PAR_PASTEUR"
+                ? window.prompt("Motif du refus ?") || ""
+                : "";
+
+        if (statut === "REFUSEE_PAR_PASTEUR" && !commentaire.trim()) {
+            notify("Le motif du refus est obligatoire.");
+            return;
+        }
+
+        try {
+            setProcessing(true);
+            const { data } = await axios.post(
+                `/pasteur/liturgie/formations/${formationId}/transition`,
+                {
+                    statut,
+                    commentaire,
+                },
+            );
+            setLocalFormations((prev) =>
+                prev.map((formation) =>
+                    formation.id === formationId
+                        ? {
+                              ...formation,
+                              statut,
+                              updated_at: new Date().toISOString(),
+                          }
+                        : formation,
+                ),
+            );
+
+            if (statut === "VALIDEE" && data?.formation) {
+                setLocalValidatedFormations((prev) => [
+                    data.formation,
+                    ...prev.filter(
+                        (formation) => formation.id !== data.formation.id,
+                    ),
+                ]);
+            }
+
+            notify(
+                statut === "VALIDEE"
+                    ? "Formation validée."
+                    : "Formation refusée.",
+            );
+        } catch (error) {
+            notify(
+                error?.response?.data?.message || "Une erreur est survenue.",
+            );
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const submitCeremonyDecision = async (acteId, statut) => {
+        const commentaire =
+            statut === "CEREMONIE_REFUSEE_PAR_PASTEUR"
+                ? window.prompt("Motif du refus de la date ?") || ""
+                : "";
+
+        if (statut === "CEREMONIE_REFUSEE_PAR_PASTEUR" && !commentaire.trim()) {
+            notify("Le motif du refus est obligatoire.");
+            return;
+        }
+
+        try {
+            setProcessing(true);
+            const { data } = await axios.post(
+                `/pasteur/liturgie/${acteId}/ceremonie/decision`,
+                {
+                    statut,
+                    commentaire,
+                },
+            );
+
+            if (data?.acte) {
+                setHistoriqueList((prev) =>
+                    prev.map((item) =>
+                        item.id === acteId
+                            ? {
+                                  ...item,
+                                  details: data.acte.details,
+                                  date_souhaitee:
+                                      data.acte.date_souhaitee ||
+                                      item.date_souhaitee,
+                              }
+                            : item,
+                    ),
+                );
+                setActiveActe((prev) =>
+                    prev?.id === acteId ? { ...prev, ...data.acte } : prev,
+                );
+            }
+
+            notify(
+                data?.message ||
+                    "Décision sur la date de cérémonie enregistrée.",
+            );
+        } catch (error) {
+            notify(
+                error?.response?.data?.message || "Une erreur est survenue.",
+            );
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const markFormationAsCompleted = async (formationId) => {
+        const commentaire =
+            window.prompt(
+                "Commentaire optionnel sur la fin de la formation ?",
+            ) || "";
+
+        try {
+            setProcessing(true);
+            const { data } = await axios.post(
+                `/pasteur/liturgie/formations/${formationId}/terminer`,
+                {
+                    commentaire,
+                },
+            );
+
+            if (data?.formation) {
+                setLocalValidatedFormations((prev) =>
+                    prev.map((formation) =>
+                        formation.id === formationId
+                            ? data.formation
+                            : formation,
+                    ),
+                );
+            }
+
+            notify("Formation marquée comme terminée.");
+        } catch (error) {
+            notify(
+                error?.response?.data?.message || "Une erreur est survenue.",
+            );
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const undoMarkFormationAsCompleted = async (formationId) => {
+        const confirmCancel = window.confirm(
+            "Voulez-vous annuler la fin de cette formation ?",
+        );
+        if (!confirmCancel) {
+            return;
+        }
+
+        const commentaire =
+            window.prompt(
+                "Commentaire optionnel sur l'annulation de la fin de formation ?",
+            ) || "";
+
+        try {
+            setProcessing(true);
+            const { data } = await axios.post(
+                `/pasteur/liturgie/formations/${formationId}/annuler-terminer`,
+                {
+                    commentaire,
+                },
+            );
+
+            if (data?.formation) {
+                setLocalValidatedFormations((prev) =>
+                    prev.map((formation) =>
+                        formation.id === formationId
+                            ? data.formation
+                            : formation,
+                    ),
+                );
+            }
+
+            notify("Fin de formation annulée.");
+        } catch (error) {
+            notify(
+                error?.response?.data?.message || "Une erreur est survenue.",
             );
         } finally {
             setProcessing(false);
@@ -1071,6 +1406,13 @@ export default function Index({
         (h) => h.statut === "REFUSEE_PAR_PASTEUR",
     ).length;
 
+    const tableStyles = {
+        borderCollapse: "collapse",
+        width: "100%",
+        borderSpacing: 0,
+        marginTop: "12px",
+    };
+
     return (
         <div className="pastor-page">
             <style>{styles}</style>
@@ -1489,6 +1831,36 @@ export default function Index({
                                     </span>
                                 )}
                             </button>
+                            <button
+                                className={`ptab ${activeTab === "formations" ? "active" : ""}`}
+                                onClick={() => setActiveTab("formations")}
+                            >
+                                <svg
+                                    width="13"
+                                    height="13"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M12 14l9-5-9-5-9 5 9 5z"
+                                    />
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M12 14l6.16-3.422A12.083 12.083 0 0112 21.5a12.083 12.083 0 01-6.16-10.922L12 14z"
+                                    />
+                                </svg>
+                                Formations
+                                {formationStats.pending > 0 && (
+                                    <span className="ptab-badge">
+                                        {formationStats.pending}
+                                    </span>
+                                )}
+                            </button>
                         </div>
                         <div className="quick-tools">
                             <select
@@ -1891,6 +2263,17 @@ export default function Index({
                                                     Dossier complet
                                                 </button>
                                                 <button
+                                                    className="btn-pdf"
+                                                    onClick={() =>
+                                                        window.open(
+                                                            `/pasteur/liturgie/${acte.id}/fiche-conducteur`,
+                                                            "_blank",
+                                                        )
+                                                    }
+                                                >
+                                                    Fiche conducteur
+                                                </button>
+                                                <button
                                                     className="btn-refuse-sm"
                                                     onClick={() =>
                                                         openModal(
@@ -2277,6 +2660,65 @@ export default function Index({
                                             <div className="hist-date">
                                                 {formatDate(item.validated_at)}
                                             </div>
+                                            {String(item.type_acte || "").toLowerCase() === "mariage" && (
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        gap: 8,
+                                                        marginTop: 8,
+                                                        flexWrap: "wrap",
+                                                    }}
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        className={`btn-pdf ${!item?.details?.ceremonie_statut || item.details.ceremonie_statut === "CEREMONIE_SOUMISE_AU_CONDUCTEUR" ? "btn-disabled" : ""}`}
+                                                        disabled={!item?.details?.ceremonie_statut || item.details.ceremonie_statut === "CEREMONIE_SOUMISE_AU_CONDUCTEUR"}
+                                                        title={
+                                                            !item?.details?.ceremonie_statut
+                                                                ? "Aucune date de cérémonie soumise."
+                                                                : item.details.ceremonie_statut === "CEREMONIE_SOUMISE_AU_CONDUCTEUR"
+                                                                    ? "Le conducteur doit encore valider la date."
+                                                                    : "Voir la date choisie"
+                                                        }
+                                                        onClick={() =>
+                                                            item.details?.ceremonie_statut === "CEREMONIE_TRANSMISE_AU_PASTEUR" &&
+                                                            openModal(
+                                                                "ceremony",
+                                                                item,
+                                                            )
+                                                        }
+                                                    >
+                                                        Voir la date choisie
+                                                    </button>
+                                                    {item.details?.ceremonie_statut ===
+                                                        "CEREMONIE_TRANSMISE_AU_PASTEUR" && (
+                                                        <>
+                                                            <button
+                                                                className="btn-pdf"
+                                                                onClick={() =>
+                                                                    submitCeremonyDecision(
+                                                                        item.id,
+                                                                        "CEREMONIE_VALIDEE_PAR_PASTEUR",
+                                                                    )
+                                                                }
+                                                            >
+                                                                Valider la date
+                                                            </button>
+                                                            <button
+                                                                className="btn-refuse-sm"
+                                                                onClick={() =>
+                                                                    submitCeremonyDecision(
+                                                                        item.id,
+                                                                        "CEREMONIE_REFUSEE_PAR_PASTEUR",
+                                                                    )
+                                                                }
+                                                            >
+                                                                Refuser la date
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            )}
                                             {item.statut === "VALIDEE" && (
                                                 <button
                                                     className="btn-pdf"
@@ -2288,6 +2730,22 @@ export default function Index({
                                                     {finalLabelForType(
                                                         item.type_acte,
                                                     )}
+                                                </button>
+                                            )}
+                                            {[
+                                                "VALIDEE",
+                                                ...DONE_STATUSES,
+                                            ].includes(item.statut) && (
+                                                <button
+                                                    className="btn-pdf"
+                                                    onClick={() =>
+                                                        window.open(
+                                                            `/pasteur/liturgie/${item.id}/fiche`,
+                                                            "_blank",
+                                                        )
+                                                    }
+                                                >
+                                                    Télécharger fiche pasteur
                                                 </button>
                                             )}
                                             {DONE_STATUSES.includes(
@@ -2302,7 +2760,9 @@ export default function Index({
                                                         )
                                                     }
                                                 >
-                                                    Télécharger certificat
+                                                    {isFicheType(item.type_acte)
+                                                        ? "Télécharger fiche"
+                                                        : "Télécharger certificat"}
                                                 </button>
                                             )}
                                         </div>
@@ -2338,6 +2798,705 @@ export default function Index({
                                                 disabled={
                                                     historyPage ===
                                                     historyTotalPages
+                                                }
+                                            >
+                                                Suivant
+                                            </button>
+                                        </div>
+                                    )}
+                            </div>
+                        </>
+                    )}
+
+                    {activeTab === "formations" && (
+                        <>
+                            <div className="panel layout-full">
+                                <div className="panel-head">
+                                    <div>
+                                        <div className="panel-title">
+                                            <svg
+                                                width="16"
+                                                height="16"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M12 14l9-5-9-5-9 5 9 5z"
+                                                />
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M12 14l6.16-3.422A12.083 12.083 0 0112 21.5a12.083 12.083 0 01-6.16-10.922L12 14z"
+                                                />
+                                            </svg>
+                                            Formations à valider
+                                        </div>
+                                        <div className="panel-sub">
+                                            Demandes validées par les
+                                            conducteurs et en attente de
+                                            décision pastorale
+                                        </div>
+                                    </div>
+                                    <div className="panel-actions">
+                                        <button
+                                            type="button"
+                                            className="btn-mini"
+                                            onClick={() =>
+                                                window.open(
+                                                    "/pasteur/liturgie/formations/fiche/validees",
+                                                    "_blank",
+                                                )
+                                            }
+                                        >
+                                            Imprimer fiche secrétariat
+                                        </button>
+                                        <span className="panel-badge">
+                                            {filteredFormations.length}
+                                        </span>
+                                    </div>
+                                </div>
+                                {filteredFormations.length === 0 && (
+                                    <div className="empty-state">
+                                        <svg
+                                            width="36"
+                                            height="36"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            strokeWidth="1"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                            />
+                                        </svg>
+                                        <span>
+                                            Aucune formation en attente de
+                                            validation
+                                        </span>
+                                    </div>
+                                )}
+                                {pagedFormations.map((formation) => (
+                                    <div
+                                        key={formation.id}
+                                        className="acte-card"
+                                    >
+                                        <div className="acte-card-top">
+                                            <div className="acte-emoji-box">
+                                                {formation.membre
+                                                    ?.profile_photo_url ? (
+                                                    <img
+                                                        src={
+                                                            formation.membre
+                                                                .profile_photo_url
+                                                        }
+                                                        alt={`${formation.membre?.prenom || ""} ${formation.membre?.nom || ""}`}
+                                                        className="member-photo"
+                                                        style={{
+                                                            width: "100%",
+                                                            height: "100%",
+                                                            objectFit: "cover",
+                                                            borderRadius: "50%",
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <span className="photo-fallback">
+                                                        🎓
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="acte-info">
+                                                <div className="acte-name">
+                                                    {String(
+                                                        formation.type_formation ||
+                                                            "mariage",
+                                                    ) === "bapteme"
+                                                        ? "Formation baptême"
+                                                        : "Formation mariage"}{" "}
+                                                    — {formation.membre?.prenom}{" "}
+                                                    {formation.membre?.nom}
+                                                </div>
+                                                <div className="acte-meta">
+                                                    <span>
+                                                        {formation.reference ||
+                                                            "—"}
+                                                    </span>
+                                                    <span>
+                                                        {formation.family
+                                                            ?.nom ||
+                                                            "Famille —"}
+                                                    </span>
+                                                    <span>
+                                                        {formation.classe
+                                                            ?.nom || "Classe —"}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <span className="badge badge-transmis">
+                                                <span className="badge-dot" />
+                                                {historyStatusLabel(
+                                                    formation.statut,
+                                                )}
+                                            </span>
+                                        </div>
+                                        <div className="acte-actions">
+                                            <button
+                                                className="btn-validate"
+                                                disabled={processing}
+                                                onClick={() =>
+                                                    submitFormationDecision(
+                                                        formation.id,
+                                                        "VALIDEE",
+                                                    )
+                                                }
+                                            >
+                                                Valider
+                                            </button>
+                                            <button
+                                                className="btn-refuse-sm"
+                                                disabled={processing}
+                                                onClick={() =>
+                                                    submitFormationDecision(
+                                                        formation.id,
+                                                        "REFUSEE_PAR_PASTEUR",
+                                                    )
+                                                }
+                                            >
+                                                Refuser
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                {formationsTotalPages > 1 && (
+                                    <div className="pager">
+                                        <button
+                                            type="button"
+                                            className="pager-btn"
+                                            onClick={() =>
+                                                setFormationsPage((p) =>
+                                                    Math.max(1, p - 1),
+                                                )
+                                            }
+                                            disabled={formationsPage === 1}
+                                        >
+                                            Précédent
+                                        </button>
+                                        <div className="pager-info">
+                                            Page {formationsPage} /{" "}
+                                            {formationsTotalPages}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="pager-btn"
+                                            onClick={() =>
+                                                setFormationsPage((p) =>
+                                                    Math.min(
+                                                        formationsTotalPages,
+                                                        p + 1,
+                                                    ),
+                                                )
+                                            }
+                                            disabled={
+                                                formationsPage ===
+                                                formationsTotalPages
+                                            }
+                                        >
+                                            Suivant
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="panel layout-full">
+                                <div className="panel-head">
+                                    <div>
+                                        <div className="panel-title">
+                                            <svg
+                                                width="16"
+                                                height="16"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M5 13l4 4L19 7"
+                                                />
+                                            </svg>
+                                            Formations validées
+                                        </div>
+                                        <div className="panel-sub">
+                                            Confirmez ici que la formation a
+                                            réellement été suivie avant de
+                                            débloquer la suite du dossier
+                                        </div>
+                                    </div>
+                                    <div className="panel-actions">
+                                        <span className="panel-badge">
+                                            {filteredValidatedFormations.length}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {filteredValidatedFormations.length === 0 && (
+                                    <div className="empty-state">
+                                        <svg
+                                            width="36"
+                                            height="36"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            strokeWidth="1"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                            />
+                                        </svg>
+                                        <span>
+                                            Aucune formation validée pour le
+                                            moment
+                                        </span>
+                                    </div>
+                                )}
+
+                                {filteredValidatedFormations.map(
+                                    (formation) => {
+                                        const isCompleted = Boolean(
+                                            formation.formation_terminee_at,
+                                        );
+
+                                        return (
+                                            <div
+                                                key={`formation-valid-${formation.id}`}
+                                                className="acte-card"
+                                            >
+                                                <div className="acte-card-top">
+                                                    <div className="acte-emoji-box">
+                                                        {formation.membre
+                                                            ?.profile_photo_url ? (
+                                                            <img
+                                                                src={
+                                                                    formation
+                                                                        .membre
+                                                                        .profile_photo_url
+                                                                }
+                                                                alt={`${formation.membre?.prenom || ""} ${formation.membre?.nom || ""}`}
+                                                                className="member-photo"
+                                                                style={{
+                                                                    width: "100%",
+                                                                    height: "100%",
+                                                                    objectFit:
+                                                                        "cover",
+                                                                    borderRadius:
+                                                                        "50%",
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <span className="photo-fallback">
+                                                                ✅
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="acte-info">
+                                                        <div className="acte-name">
+                                                            {String(
+                                                                formation.type_formation ||
+                                                                    "mariage",
+                                                            ) === "bapteme"
+                                                                ? "Formation baptême"
+                                                                : "Formation mariage"}{" "}
+                                                            —{" "}
+                                                            {
+                                                                formation.membre
+                                                                    ?.prenom
+                                                            }{" "}
+                                                            {
+                                                                formation.membre
+                                                                    ?.nom
+                                                            }
+                                                        </div>
+                                                        <div className="acte-meta">
+                                                            <span>
+                                                                {formation.reference ||
+                                                                    "—"}
+                                                            </span>
+                                                            <span>
+                                                                {formation
+                                                                    .family
+                                                                    ?.nom ||
+                                                                    "Famille —"}
+                                                            </span>
+                                                            <span>
+                                                                {formation
+                                                                    .classe
+                                                                    ?.nom ||
+                                                                    "Classe —"}
+                                                            </span>
+                                                            <span>
+                                                                {formation.conjoint_nom ||
+                                                                    "Conjoint —"}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <span
+                                                        className={`badge ${
+                                                            isCompleted
+                                                                ? "badge-approved"
+                                                                : "badge-transmis"
+                                                        }`}
+                                                    >
+                                                        <span className="badge-dot" />
+                                                        {isCompleted
+                                                            ? "FORMATION TERMINÉE"
+                                                            : "VALIDÉE - EN ATTENTE"}
+                                                    </span>
+                                                </div>
+
+                                                <div className="acte-actions">
+                                                    {isCompleted ? (
+                                                        <button
+                                                            className="btn-validate"
+                                                            type="button"
+                                                            disabled={
+                                                                processing
+                                                            }
+                                                            onClick={() =>
+                                                                undoMarkFormationAsCompleted(
+                                                                    formation.id,
+                                                                )
+                                                            }
+                                                        >
+                                                            Annuler la fin de
+                                                            formation
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            className="btn-validate"
+                                                            type="button"
+                                                            disabled={
+                                                                processing
+                                                            }
+                                                            onClick={() =>
+                                                                markFormationAsCompleted(
+                                                                    formation.id,
+                                                                )
+                                                            }
+                                                        >
+                                                            Confirmer fin de
+                                                            formation
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    },
+                                )}
+                            </div>
+
+                            {/* HISTORIQUE FORMATIONS */}
+                            <div className="panel layout-full">
+                                <div className="panel-head">
+                                    <div>
+                                        <div className="panel-title">
+                                            <svg
+                                                width="16"
+                                                height="16"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                />
+                                            </svg>
+                                            Historique des validations
+                                        </div>
+                                        <div className="panel-sub">
+                                            Tableau récapitulatif des formations
+                                            validées et refusées
+                                        </div>
+                                    </div>
+                                    {formationsHistorique.length > 0 && (
+                                        <div className="panel-actions">
+                                            <button
+                                                type="button"
+                                                className="btn-mini"
+                                                onClick={
+                                                    selectAllFormationHisto
+                                                }
+                                                disabled={
+                                                    formationsHistorique.length ===
+                                                    0
+                                                }
+                                            >
+                                                Tout sélectionner
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="btn-mini"
+                                                onClick={
+                                                    clearFormationHistoSelection
+                                                }
+                                                disabled={
+                                                    selectedFormationHistoIds.length ===
+                                                    0
+                                                }
+                                            >
+                                                Effacer
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="btn-mini"
+                                                onClick={() =>
+                                                    window.open(
+                                                        "/pasteur/liturgie/formations/fiche/historique",
+                                                        "_blank",
+                                                    )
+                                                }
+                                            >
+                                                📋 Imprimer historique
+                                            </button>
+                                            <span className="panel-badge">
+                                                {formationsHistorique.length}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                                {formationsHistorique.length === 0 && (
+                                    <div className="empty-state">
+                                        <svg
+                                            width="36"
+                                            height="36"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            strokeWidth="1"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                            />
+                                        </svg>
+                                        <span>
+                                            Aucune validation de formation pour
+                                            le moment
+                                        </span>
+                                    </div>
+                                )}
+                                <div style={{ overflowX: "auto" }}>
+                                    <table style={tableStyles}>
+                                        <thead>
+                                            <tr>
+                                                <th style={{ width: "50px" }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={
+                                                            selectedFormationHistoIds.length ===
+                                                                formationsHistorique.length &&
+                                                            formationsHistorique.length >
+                                                                0
+                                                        }
+                                                        onChange={() =>
+                                                            selectedFormationHistoIds.length ===
+                                                            formationsHistorique.length
+                                                                ? clearFormationHistoSelection()
+                                                                : selectAllFormationHisto()
+                                                        }
+                                                    />
+                                                </th>
+                                                <th>Référence</th>
+                                                <th>Membre</th>
+                                                <th>Conjoint</th>
+                                                <th>Famille</th>
+                                                <th>Classe</th>
+                                                <th>Tél. Conjoint</th>
+                                                <th>Statut</th>
+                                                <th>Date</th>
+                                                <th>Commentaire</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {pagedFormationsHistorique.map(
+                                                (entry) => (
+                                                    <tr
+                                                        key={`fhisto-${entry.id}`}
+                                                    >
+                                                        <td
+                                                            style={{
+                                                                textAlign:
+                                                                    "center",
+                                                            }}
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedFormationHistoIds.includes(
+                                                                    entry.id,
+                                                                )}
+                                                                onChange={() =>
+                                                                    toggleFormationHistoSelect(
+                                                                        entry.id,
+                                                                    )
+                                                                }
+                                                            />
+                                                        </td>
+                                                        <td
+                                                            style={{
+                                                                fontWeight:
+                                                                    "bold",
+                                                                color: "#0047ab",
+                                                            }}
+                                                        >
+                                                            {entry.reference ||
+                                                                "—"}
+                                                        </td>
+                                                        <td>
+                                                            <strong>
+                                                                {entry.membre
+                                                                    ?.prenom ||
+                                                                    "—"}{" "}
+                                                                {entry.membre
+                                                                    ?.nom ||
+                                                                    "—"}
+                                                            </strong>
+                                                            <br />
+                                                            <small>
+                                                                {entry.membre
+                                                                    ?.email ||
+                                                                    "—"}
+                                                            </small>
+                                                        </td>
+                                                        <td>
+                                                            {entry.conjoint_nom ||
+                                                                "—"}
+                                                        </td>
+                                                        <td>
+                                                            {entry.family
+                                                                ?.nom || "—"}
+                                                            <br />
+                                                            <small>
+                                                                {entry.family
+                                                                    ?.adresse ||
+                                                                    ""}
+                                                            </small>
+                                                        </td>
+                                                        <td>
+                                                            {entry.classe
+                                                                ?.nom || "—"}
+                                                        </td>
+                                                        <td>
+                                                            {entry.conjoint_phone ||
+                                                                "—"}
+                                                        </td>
+                                                        <td>
+                                                            <span
+                                                                style={{
+                                                                    display:
+                                                                        "inline-block",
+                                                                    padding:
+                                                                        "4px 8px",
+                                                                    borderRadius:
+                                                                        "3px",
+                                                                    fontSize:
+                                                                        "12px",
+                                                                    fontWeight:
+                                                                        "bold",
+                                                                    backgroundColor:
+                                                                        entry.statut ===
+                                                                        "VALIDEE"
+                                                                            ? "#d4edda"
+                                                                            : "#f8d7da",
+                                                                    color:
+                                                                        entry.statut ===
+                                                                        "VALIDEE"
+                                                                            ? "#155724"
+                                                                            : "#721c24",
+                                                                }}
+                                                            >
+                                                                {entry.statut ===
+                                                                "VALIDEE"
+                                                                    ? "✓ VALIDÉE"
+                                                                    : "✗ REFUSÉE"}
+                                                            </span>
+                                                        </td>
+                                                        <td
+                                                            style={{
+                                                                fontSize:
+                                                                    "12px",
+                                                            }}
+                                                        >
+                                                            {new Date(
+                                                                entry.validated_at,
+                                                            ).toLocaleDateString(
+                                                                "fr-FR",
+                                                            )}
+                                                        </td>
+                                                        <td
+                                                            style={{
+                                                                fontSize:
+                                                                    "12px",
+                                                                maxWidth:
+                                                                    "150px",
+                                                            }}
+                                                        >
+                                                            {entry.commentaire ||
+                                                                "—"}
+                                                        </td>
+                                                    </tr>
+                                                ),
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {formationsHistorique.length > 0 &&
+                                    formationsHistoTotalPages > 1 && (
+                                        <div className="pager">
+                                            <button
+                                                type="button"
+                                                className="pager-btn"
+                                                onClick={() =>
+                                                    setFormationsHistoPage(
+                                                        (p) =>
+                                                            Math.max(1, p - 1),
+                                                    )
+                                                }
+                                                disabled={
+                                                    formationsHistoPage === 1
+                                                }
+                                            >
+                                                Précédent
+                                            </button>
+                                            <div className="pager-info">
+                                                Page {formationsHistoPage} /{" "}
+                                                {formationsHistoTotalPages}
+                                            </div>
+                                            <button
+                                                type="button"
+                                                className="pager-btn"
+                                                onClick={() =>
+                                                    setFormationsHistoPage(
+                                                        (p) =>
+                                                            Math.min(
+                                                                formationsHistoTotalPages,
+                                                                p + 1,
+                                                            ),
+                                                    )
+                                                }
+                                                disabled={
+                                                    formationsHistoPage ===
+                                                    formationsHistoTotalPages
                                                 }
                                             >
                                                 Suivant
@@ -3052,6 +4211,19 @@ export default function Index({
                             </div>
                         </div>
                         <div className="modal-foot">
+                            {activeActe?.statut === "TRANSMISE_AU_PASTEUR" && (
+                                <button
+                                    className="btn-modal btn-ghost"
+                                    onClick={() =>
+                                        window.open(
+                                            `/pasteur/liturgie/${activeActe.id}/fiche-conducteur`,
+                                            "_blank",
+                                        )
+                                    }
+                                >
+                                    Télécharger fiche du conducteur
+                                </button>
+                            )}
                             <button
                                 className="btn-modal btn-ghost"
                                 onClick={closeModal}
@@ -3098,6 +4270,142 @@ export default function Index({
                                 </svg>
                                 Valider
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {modal === "ceremony" && activeActe && (
+                <div className="modal-overlay open" onClick={closeModal}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-head">
+                            <div className="modal-head-left">
+                                <div className="modal-head-icon blue">
+                                    <svg
+                                        width="16"
+                                        height="16"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                        />
+                                    </svg>
+                                </div>
+                                <div className="modal-title">Date choisie</div>
+                            </div>
+                            <button
+                                className="modal-close"
+                                onClick={closeModal}
+                            >
+                                <svg
+                                    width="13"
+                                    height="13"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="2.5"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
+                        <div className="modal-body">
+                            <DetailRow
+                                label="Référence"
+                                value={activeActe.reference}
+                                mono
+                            />
+                            <DetailRow
+                                label="Type d'acte"
+                                value={prettyType(activeActe.type_acte)}
+                            />
+                            <DetailRow
+                                label="Membre"
+                                value={`${activeActe.membre?.prenom || ""} ${activeActe.membre?.nom || ""}`}
+                            />
+                            <DetailRow
+                                label="Date choisie"
+                                value={formatDate(
+                                    activeActe.details?.date_souhaitee,
+                                )}
+                            />
+                            <DetailRow
+                                label="Créneau"
+                                value={
+                                    activeActe.details?.ceremonie_creneau ===
+                                    "matin"
+                                        ? "Matin"
+                                        : activeActe.details
+                                                ?.ceremonie_creneau ===
+                                            "apres_midi"
+                                          ? "Après-midi"
+                                          : "—"
+                                }
+                            />
+                            <DetailRow
+                                label="Lieu"
+                                value={
+                                    activeActe.details?.lieu_ceremonie || "—"
+                                }
+                            />
+                            <DetailRow
+                                label="Témoins"
+                                value={activeActe.details?.temoins || "—"}
+                            />
+                            {activeActe.details
+                                ?.ceremonie_commentaire_conducteur && (
+                                <DetailRow
+                                    label="Commentaire conducteur"
+                                    value={
+                                        activeActe.details
+                                            ?.ceremonie_commentaire_conducteur
+                                    }
+                                />
+                            )}
+                        </div>
+                        <div className="modal-foot">
+                            <button
+                                className="btn-modal btn-ghost"
+                                onClick={closeModal}
+                            >
+                                Fermer
+                            </button>
+                            {activeActe.details?.ceremonie_statut ===
+                                "CEREMONIE_TRANSMISE_AU_PASTEUR" && (
+                                <>
+                                    <button
+                                        className="btn-modal btn-refuse-modal"
+                                        onClick={() =>
+                                            submitCeremonyDecision(
+                                                activeActe.id,
+                                                "CEREMONIE_REFUSEE_PAR_PASTEUR",
+                                            )
+                                        }
+                                    >
+                                        Refuser la date
+                                    </button>
+                                    <button
+                                        className="btn-modal btn-gold"
+                                        onClick={() =>
+                                            submitCeremonyDecision(
+                                                activeActe.id,
+                                                "CEREMONIE_VALIDEE_PAR_PASTEUR",
+                                            )
+                                        }
+                                    >
+                                        Valider la date
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -4533,8 +5841,15 @@ function finalStatusForType(type) {
 function finalLabelForType(type) {
     return type === "mariage" || type === "bapteme" ? "célébré" : "terminé";
 }
+function isFicheType(type) {
+    const t = String(type || "").toLowerCase();
+    return t === "naissance" || t === "deces";
+}
 function historyStatusLabel(status) {
     if (status === "VALIDEE") return "VALIDÉE";
+    if (status === "CEREMONIE_TRANSMISE_AU_PASTEUR") return "DATE TRANSMISE";
+    if (status === "CEREMONIE_VALIDEE_PAR_PASTEUR") return "DATE ACCEPTÉE";
+    if (status === "CEREMONIE_REFUSEE_PAR_PASTEUR") return "DATE REFUSÉE";
     if (status === "REFUSEE_PAR_PASTEUR") return "REFUSÉE";
     if (status === "CELEBRE") return "CÉLÉBRÉ";
     if (status === "TERMINE") return "TERMINÉ";
@@ -4706,7 +6021,7 @@ h1.hero-title{
 .tab-toolbar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:22px}
 .main-tabs{display:flex;gap:3px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:4px;width:fit-content;backdrop-filter:blur(12px)}
 .quick-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-.quick-dropdown{min-width:300px;height:54px;background:#ECEFF4;border:2px solid #D9DEE8;border-radius:22px;padding:0 48px 0 46px;font-size:16px;font-weight:800;color:#111827;cursor:pointer;font-family:'Outfit',system-ui,sans-serif;appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23586A84' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23374151' stroke-width='2.2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat,no-repeat;background-position:left 16px center,right 16px center;background-size:18px 18px,18px 18px}
+.quick-dropdown{min-width:300px;height:35px;background:#ECEFF4;border:2px solid #D9DEE8;border-radius:10px;padding:0 48px 0 46px;font-size:16px;font-weight:800;color:#111827;cursor:pointer;font-family:'Outfit',system-ui,sans-serif;appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23586A84' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' viewBox='0 0 24 24' stroke='%23374151' stroke-width='2.2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat,no-repeat;background-position:left 16px center,right 16px center;background-size:18px 18px,18px 18px}
 .quick-dropdown:focus{outline:none;border-color:var(--primary)}
 .quick-search{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-family:'Outfit',system-ui,sans-serif;min-width:280px;backdrop-filter:blur(12px)}
 .quick-search:focus{outline:none;border-color:var(--primary)}
@@ -4891,4 +6206,14 @@ h1.hero-title{
 @media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}.layout-grid{grid-template-columns:1fr}.hero-header-inner{flex-wrap:wrap;justify-content:center}.hero-header-center{order:1;width:100%}.hero-header-actions{order:2;flex-direction:row}}
 @media(max-width:700px){.content{padding:14px}.kpi-row{grid-template-columns:1fr 1fr}.acte-actions{flex-direction:column}.pastoral-box{flex-wrap:wrap}.pastoral-stats{width:100%;justify-content:center}.tab-toolbar{align-items:stretch}.main-tabs{width:100%}.quick-tools{width:100%;justify-content:flex-start}.quick-dropdown{width:100%;min-width:0}.quick-search{width:100%;min-width:0}.ann-type-grid{grid-template-columns:1fr}.hero-stats-row{flex-wrap:wrap}.h1.hero-title{font-size:20px}}
 @media(max-width:480px){.kpi-row{grid-template-columns:1fr}.hero-header-actions{flex-direction:column;width:100%}.btn-hero-annonce,.btn-hero-acte{width:100%;justify-content:center}}
+
+/* ════════════════ FORMATIONS HISTORIQUE TABLE ════════════════ */
+table{border-collapse:collapse;width:100%;margin:16px 0;background:rgba(255,255,255,0.94);border-radius:8px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.08)}
+table thead{background:linear-gradient(135deg,rgba(0,71,171,0.95) 0%,rgba(30,64,175,0.95) 100%);color:#fff;font-weight:600;font-size:12px}
+table thead tr th{padding:12px 16px;text-align:left;border-bottom:2px solid rgba(0,71,171,0.3);white-space:nowrap}
+table tbody tr{border-bottom:1px solid rgba(0,0,0,0.08);transition:background .15s}
+table tbody tr:nth-child(odd){background:rgba(248,250,252,0.5)}
+table tbody tr:hover{background:rgba(248,250,252,1)}
+table tbody td{padding:11px 16px;font-size:13px;color:#0f172a;vertical-align:top}
+table tbody input[type="checkbox"]{cursor:pointer}
 `;

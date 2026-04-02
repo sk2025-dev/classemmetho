@@ -15,7 +15,11 @@ use App\Http\Controllers\ResponsableFamille\DashboardController as ResponsableFa
 use App\Http\Controllers\ResponsableFamille\AnnuaireController as ResponsableFamilleAnnuaireController;
 use App\Http\Controllers\ResponsableFamille\InscriptionsController as ResponsableFamilleInscriptionsController;
 use App\Http\Controllers\ResponsableFamille\MemberController as ResponsableFamilleMemberController;
+<<<<<<< HEAD
 use App\Http\Controllers\ResponsableFamille\ProgrammeMembreController;
+=======
+use App\Http\Controllers\ResponsableFamille\FormationController as ResponsableFamilleFormationController;
+>>>>>>> c712b42032eb29828647cf7899ab84d9998199a8
 use App\Http\Controllers\Pasteur\AnnuaireController as PasteurAnnuaireController;
 use App\Http\Controllers\Pasteur\DashboardController as PasteurDashboardController;
 use App\Http\Controllers\Pasteur\TresorerieController as PasteurTresorerieController;
@@ -53,6 +57,19 @@ Route::get('/', function () {
 Route::get('/certificat/verification/{reference}', [VerificationCertificatController::class, 'show'])
     ->name('certificat.verification');
 
+<<<<<<< HEAD
+=======
+Route::get('/sondages/public/{token}', [\App\Http\Controllers\Public\SondageController::class, 'show'])
+    ->name('sondages.public.show');
+Route::post('/sondages/public/{token}/acces', [\App\Http\Controllers\Public\SondageController::class, 'verifyAccess'])
+    ->name('sondages.public.access');
+Route::get('/sondages/public/{token}/repondre', [\App\Http\Controllers\Public\SondageController::class, 'respond'])
+    ->name('sondages.public.respond');
+Route::post('/sondages/public/{token}/reponses', [\App\Http\Controllers\Public\SondageController::class, 'storeResponse'])
+    ->name('sondages.public.responses.store');
+
+
+>>>>>>> c712b42032eb29828647cf7899ab84d9998199a8
 // Pages d'authentification (Inertia)
 Route::get('/login', function () {
     return Inertia::render('login');
@@ -122,6 +139,10 @@ Route::middleware(['auth'])->group(function () {
     // Tableau de bord Admin
     Route::middleware('role:admin')->group(function () {
         Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
+        Route::get('/admin/prieres', [\App\Http\Controllers\Admin\PrieresController::class, 'index'])->name('admin.prieres.index');
+        Route::get('/admin/sondages', [\App\Http\Controllers\Admin\Sondage\SondageController::class, 'index'])->name('admin.sondages.index');
+        Route::get('/admin/sondages/{id}/export', [\App\Http\Controllers\Admin\Sondage\SondageController::class, 'export'])->whereNumber('id')->name('admin.sondages.export');
+        Route::get('/admin/sondages/{id}', [\App\Http\Controllers\Admin\Sondage\SondageController::class, 'show'])->whereNumber('id')->name('admin.sondages.show');
         Route::get('/admin/inscriptions', [\App\Http\Controllers\Admin\InscriptionsController::class, 'index'])->name('admin.inscriptions');
         Route::get('/admin/inscriptions/{id}/approval-log', [\App\Http\Controllers\Admin\InscriptionApprovalController::class, 'approvalLog'])->name('admin.inscriptions.approval_log');
         Route::get('/admin/inscriptions/type-selection', [\App\Http\Controllers\Admin\InscriptionsController::class, 'typeSelection'])->name('admin.inscriptions.type-selection');
@@ -215,6 +236,21 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:conducteur')->group(function () {
         Route::get('/conducteur/annuaire', [ConducteurAnnuaireController::class, 'index'])->name('conducteur.annuaire.index');
         Route::get('/conducteur/dashboard', [ConducteurDashboardController::class, 'index'])->name('conducteur.dashboard');
+        Route::get('/conducteur/prieres', [\App\Http\Controllers\Conducteur\PrieresController::class, 'index'])->name('conducteur.prieres.index');
+        Route::post('/conducteur/prieres', [\App\Http\Controllers\Conducteur\PrieresController::class, 'store'])->name('conducteur.prieres.store');
+        Route::patch('/conducteur/prieres/{priere}/commentaire', [\App\Http\Controllers\Conducteur\PrieresController::class, 'updateTestimony'])->name('conducteur.prieres.testimony');
+        Route::patch('/conducteur/prieres/{priere}/exaucee', [\App\Http\Controllers\Conducteur\PrieresController::class, 'markFulfilled'])->name('conducteur.prieres.fulfilled');
+        Route::get('/conducteur/sondages', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'index'])->name('conducteur.sondages.index');
+        Route::get('/conducteur/sondages/create', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'create'])->name('conducteur.sondages.create');
+        Route::get('/conducteur/sondages/{id}/edit', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'edit'])->whereNumber('id')->name('conducteur.sondages.edit');
+        Route::get('/conducteur/sondages/{id}/repondre', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'respond'])->whereNumber('id')->name('conducteur.sondages.respond');
+        Route::post('/conducteur/sondages/{id}/reponses', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'storeResponse'])->whereNumber('id')->name('conducteur.sondages.responses.store');
+        Route::get('/conducteur/sondages/{id}/export', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'export'])->whereNumber('id')->name('conducteur.sondages.export');
+        Route::get('/conducteur/sondages/{id}', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'show'])->whereNumber('id')->name('conducteur.sondages.show');
+        Route::post('/conducteur/sondages', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'store'])->name('conducteur.sondages.store');
+        Route::post('/conducteur/sondages/{id}/publish', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'publish'])->whereNumber('id')->name('conducteur.sondages.publish');
+        Route::put('/conducteur/sondages/{id}', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'update'])->whereNumber('id')->name('conducteur.sondages.update');
+        Route::get('/conducteur/sondages/preview/{id?}', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'preview'])->name('conducteur.sondages.preview');
         Route::post('/conducteur/dashboard/inscriptions/{inscriptionId}/approve', [ConducteurDashboardController::class, 'approveInscription'])->name('conducteur.dashboard.inscriptions.approve');
         Route::post('/conducteur/dashboard/inscriptions/{inscriptionId}/reject', [ConducteurDashboardController::class, 'rejectInscription'])->name('conducteur.dashboard.inscriptions.reject');
 
@@ -249,7 +285,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/conducteur/liturgie', [ConducteurLiturgieController::class, 'index'])->name('conducteur.liturgie.index');
         Route::post('/conducteur/liturgie', [ConducteurLiturgieController::class, 'store'])->name('conducteur.liturgie.store');
         Route::post('/conducteur/liturgie/{id}/transition', [ConducteurLiturgieController::class, 'transition'])->name('conducteur.liturgie.transition');
+        Route::post('/conducteur/liturgie/{id}/ceremonie/decision', [ConducteurLiturgieController::class, 'decisionCeremonie'])->name('conducteur.liturgie.ceremonie.decision');
+        Route::post('/conducteur/liturgie/formations/{id}/transition', [ConducteurLiturgieController::class, 'transitionFormation'])->name('conducteur.liturgie.formations.transition');
         Route::get('/conducteur/liturgie/{id}/certificat', [ConducteurLiturgieController::class, 'certificat'])->name('conducteur.liturgie.certificat');
+        Route::get('/conducteur/liturgie/{id}/fiche-conducteur', [ConducteurLiturgieController::class, 'ficheConducteur'])->name('conducteur.liturgie.fiche_conducteur');
         Route::get('/conducteur/liturgie/{id}/fiche', [ConducteurLiturgieController::class, 'fiche'])->name('conducteur.liturgie.fiche');
 
         // Routes Annonces (Conducteur)
@@ -304,6 +343,13 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:responsable_famille')->group(function () {
         Route::get('/responsable-famille/annuaire', [ResponsableFamilleAnnuaireController::class, 'index'])->name('responsable_famille.annuaire.index');
         Route::get('/responsable-famille/dashboard', [ResponsableFamilleDashboardController::class, 'index'])->name('responsable_famille.dashboard');
+        Route::get('/responsable-famille/prieres', [\App\Http\Controllers\ResponsableFamille\PrieresController::class, 'index'])->name('responsable_famille.prieres.index');
+        Route::post('/responsable-famille/prieres', [\App\Http\Controllers\ResponsableFamille\PrieresController::class, 'store'])->name('responsable_famille.prieres.store');
+        Route::patch('/responsable-famille/prieres/{priere}/commentaire', [\App\Http\Controllers\ResponsableFamille\PrieresController::class, 'updateTestimony'])->name('responsable_famille.prieres.testimony');
+        Route::patch('/responsable-famille/prieres/{priere}/exaucee', [\App\Http\Controllers\ResponsableFamille\PrieresController::class, 'markFulfilled'])->name('responsable_famille.prieres.fulfilled');
+        Route::get('/responsable-famille/sondages', [\App\Http\Controllers\ResponsableFamille\Sondage\SondageController::class, 'index'])->name('responsable_famille.sondages.index');
+        Route::get('/responsable-famille/sondages/{id}', [\App\Http\Controllers\ResponsableFamille\Sondage\SondageController::class, 'show'])->name('responsable_famille.sondages.show');
+        Route::post('/responsable-famille/sondages/{id}/reponses', [\App\Http\Controllers\ResponsableFamille\Sondage\SondageController::class, 'storeResponse'])->name('responsable_famille.sondages.responses.store');
         Route::get('/responsable-famille/inscriptions', [ResponsableFamilleInscriptionsController::class, 'index'])->name('responsable_famille.inscriptions');
         Route::get('/responsable-famille/family/edit', [\App\Http\Controllers\ResponsableFamille\FamilyController::class, 'edit'])->name('responsable_famille.family.edit');
         Route::post('/responsable-famille/family/update', [\App\Http\Controllers\ResponsableFamille\FamilyController::class, 'update'])->name('responsable_famille.family.update');
@@ -316,6 +362,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/responsable-famille/liturgie/nouvelle', [ResponsableFamilleLiturgieController::class, 'create'])->name('responsable_famille.liturgie.create');
         Route::get('/responsable-famille/liturgie/nouvelle/formulaire', [ResponsableFamilleLiturgieController::class, 'createForm'])->name('responsable_famille.liturgie.form');
         Route::post('/responsable-famille/liturgie', [ResponsableFamilleLiturgieController::class, 'store'])->name('responsable_famille.liturgie.store');
+        Route::put('/responsable-famille/liturgie/{id}/ceremonie', [ResponsableFamilleLiturgieController::class, 'updateCeremonie'])->name('responsable_famille.liturgie.ceremonie.update');
         Route::get('/responsable-famille/liturgie/{id}/certificat', [ResponsableFamilleLiturgieController::class, 'certificat'])->name('responsable_famille.liturgie.certificat');
         Route::get('/responsable-famille/liturgie/{id}/fiche', [ResponsableFamilleLiturgieController::class, 'fiche'])->name('responsable_famille.liturgie.fiche');
         
@@ -323,6 +370,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/responsable-famille/annonces', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'index'])->name('responsable_famille.annonces.index');
         Route::get('/responsable-famille/annonces/create', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'create'])->name('responsable_famille.annonces.create');
         Route::post('/responsable-famille/annonces', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'store'])->name('responsable_famille.annonces.store');
+        Route::post('/responsable-famille/formations', [ResponsableFamilleFormationController::class, 'store'])->name('responsable_famille.formations.store');
         Route::get('/responsable-famille/annonces/{id}', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'show'])->name('responsable_famille.annonces.show');
         Route::get('/responsable-famille/annonces/{id}/fiche', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'fiche'])->name('responsable_famille.annonces.fiche');
         Route::get('/responsable-famille/annonces/{id}/edit', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'edit'])->name('responsable_famille.annonces.edit');
@@ -366,6 +414,17 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:pasteur')->group(function () {
         Route::get('/pasteur/annuaire', [PasteurAnnuaireController::class, 'index'])->name('pasteur.annuaire.index');
         Route::get('/pasteur/dashboard', [PasteurDashboardController::class, 'index'])->name('pasteur.dashboard');
+<<<<<<< HEAD
+=======
+        Route::get('/pasteur/prieres', [\App\Http\Controllers\Pasteur\PrieresController::class, 'index'])->name('pasteur.prieres.index');
+        Route::patch('/pasteur/prieres/{priere}/status', [\App\Http\Controllers\Pasteur\PrieresController::class, 'updateStatus'])->name('pasteur.prieres.status');
+        Route::patch('/pasteur/prieres/{priere}/exaucee', [\App\Http\Controllers\Pasteur\PrieresController::class, 'markFulfilled'])->name('pasteur.prieres.fulfilled');
+        Route::patch('/pasteur/prieres/{priere}/reaction', [\App\Http\Controllers\Pasteur\PrieresController::class, 'toggleReaction'])->name('pasteur.prieres.reaction');
+        Route::get('/pasteur/sondages', [\App\Http\Controllers\Pasteur\Sondage\SondageController::class, 'index'])->name('pasteur.sondages.index');
+        Route::get('/pasteur/sondages/{id}/export', [\App\Http\Controllers\Pasteur\Sondage\SondageController::class, 'export'])->whereNumber('id')->name('pasteur.sondages.export');
+        Route::get('/pasteur/sondages/{id}', [\App\Http\Controllers\Pasteur\Sondage\SondageController::class, 'show'])->whereNumber('id')->name('pasteur.sondages.show');
+        // Liste des inscriptions pour le pasteur (module controller)
+>>>>>>> c712b42032eb29828647cf7899ab84d9998199a8
         Route::get('/pasteur/inscriptions', [\App\Http\Controllers\Pasteur\InscriptionsController::class, 'index'])
             ->name('pasteur.inscriptions');
 
@@ -379,7 +438,15 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/pasteur/liturgie', [PasteurLiturgieController::class, 'index'])->name('pasteur.liturgie.index');
         Route::post('/pasteur/liturgie', [PasteurLiturgieController::class, 'store'])->name('pasteur.liturgie.store');
         Route::post('/pasteur/liturgie/{id}/transition', [PasteurLiturgieController::class, 'transition'])->name('pasteur.liturgie.transition');
+        Route::post('/pasteur/liturgie/{id}/ceremonie/decision', [PasteurLiturgieController::class, 'decisionCeremonie'])->name('pasteur.liturgie.ceremonie.decision');
+        Route::post('/pasteur/liturgie/formations/{id}/transition', [PasteurLiturgieController::class, 'transitionFormation'])->name('pasteur.liturgie.formations.transition');
+        Route::post('/pasteur/liturgie/formations/{id}/terminer', [PasteurLiturgieController::class, 'terminerFormation'])->name('pasteur.liturgie.formations.terminer');
+        Route::post('/pasteur/liturgie/formations/{id}/annuler-terminer', [PasteurLiturgieController::class, 'annulerFinFormation'])->name('pasteur.liturgie.formations.annuler_terminer');
+        Route::get('/pasteur/liturgie/formations/fiche/validees', [PasteurLiturgieController::class, 'ficheFormationsValidees'])->name('pasteur.liturgie.formations.fiche_validees');
+        Route::get('/pasteur/liturgie/formations/fiche/historique', [PasteurLiturgieController::class, 'ficheFormationsHistorique'])->name('pasteur.liturgie.formations.fiche_historique');
         Route::get('/pasteur/liturgie/{id}/certificat', [PasteurLiturgieController::class, 'certificat'])->name('pasteur.liturgie.certificat');
+        Route::get('/pasteur/liturgie/{id}/fiche-conducteur', [PasteurLiturgieController::class, 'ficheConducteur'])->name('pasteur.liturgie.fiche_conducteur');
+        Route::get('/pasteur/liturgie/{id}/fiche', [PasteurLiturgieController::class, 'fiche'])->name('pasteur.liturgie.fiche');
 
         // Routes Annonces (Pasteur)
         Route::post('/pasteur/annonces', [\App\Http\Controllers\Pasteur\AnnonceController::class, 'store'])->name('pasteur.annonces.store');
@@ -400,6 +467,13 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['auth', 'role:membre_famille'])->group(function () {
         Route::get('/membre-famille/annuaire', [MembreFamilleAnnuaireController::class, 'index'])->name('membre_famille.annuaire.index');
         Route::get('/membre-famille/dashboard', [MembreFamilleDashboardController::class, 'index'])->name('membre_famille.dashboard');
+        Route::get('/membre-famille/prieres', [\App\Http\Controllers\MembreFamille\PrieresController::class, 'index'])->name('membre_famille.prieres.index');
+        Route::post('/membre-famille/prieres', [\App\Http\Controllers\MembreFamille\PrieresController::class, 'store'])->name('membre_famille.prieres.store');
+        Route::patch('/membre-famille/prieres/{priere}/commentaire', [\App\Http\Controllers\MembreFamille\PrieresController::class, 'updateTestimony'])->name('membre_famille.prieres.testimony');
+        Route::patch('/membre-famille/prieres/{priere}/exaucee', [\App\Http\Controllers\MembreFamille\PrieresController::class, 'markFulfilled'])->name('membre_famille.prieres.fulfilled');
+        Route::get('/membre-famille/sondages', [\App\Http\Controllers\MembreFamille\Sondage\SondageController::class, 'index'])->name('membre_famille.sondages.index');
+        Route::get('/membre-famille/sondages/{id}', [\App\Http\Controllers\MembreFamille\Sondage\SondageController::class, 'show'])->whereNumber('id')->name('membre_famille.sondages.show');
+        Route::post('/membre-famille/sondages/{id}/reponses', [\App\Http\Controllers\MembreFamille\Sondage\SondageController::class, 'storeResponse'])->whereNumber('id')->name('membre_famille.sondages.responses.store');
         Route::get('/membre-famille/inscriptions', [\App\Http\Controllers\MembreFamille\InscriptionsController::class, 'index'])->name('membre_famille.inscriptions');
         Route::get('/membre-famille/family', [MembreFamilleFamilyController::class, 'index'])->name('membre_famille.family');
         Route::get('/membre-famille/profile/edit', [MembreFamilleProfileController::class, 'edit'])->name('membre_famille.profile.edit');

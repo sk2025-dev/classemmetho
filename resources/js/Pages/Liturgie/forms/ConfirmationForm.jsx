@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import axios from "axios";
 import { Link } from "@inertiajs/react";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
 
 export default function ConfirmationForm({
     backHref,
@@ -177,7 +178,7 @@ export default function ConfirmationForm({
                                 <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">Personne soumettant la demande de confirmation.</p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <Field label="Nom *"><input value={form.details.dec_nom} onChange={(e) => setDetail("dec_nom", e.target.value)} />{errors.dec_nom && <Err>{errors.dec_nom}</Err>}</Field>
-                                    <Field label="Prenoms *"><input value={form.details.dec_prenom} onChange={(e) => setDetail("dec_prenom", e.target.value)} />{errors.dec_prenom && <Err>{errors.dec_prenom}</Err>}</Field>
+                                    <Field label="Prenoms *"><input value={form.details.dec_prenom} onChange={(e) => setDetail("dec_prenom", sanitizeUppercasePrenom(e.target.value))} />{errors.dec_prenom && <Err>{errors.dec_prenom}</Err>}</Field>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <Field label="Telephone"><input value={form.details.dec_tel} onChange={(e) => setDetail("dec_tel", e.target.value)} /></Field>
