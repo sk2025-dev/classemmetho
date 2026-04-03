@@ -300,7 +300,7 @@ export default function ConducteurSondageCreate({
                         "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
                 }}
             >
-                <div className="mx-auto max-w-7xl">
+                <div className="w-full">
                     <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div className="flex items-center gap-3 text-white">
                             <Link

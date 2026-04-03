@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Head, Link } from "@inertiajs/react";
+import Select2Single from "../../../Components/Select2Single";
 import {
     ArrowLeft,
     BarChart3,
@@ -163,6 +164,30 @@ export default function AdminSondageIndex({
         .filter(Boolean)
         .sort((a, b) => a.localeCompare(b, "fr"));
 
+    const statusFilterOptions = [
+        { value: "all", label: "Tous les statuts" },
+        ...statusOptions.map((statut) => ({
+            value: statut,
+            label: statut,
+        })),
+    ];
+
+    const classeFilterOptions = [
+        { value: "all", label: "Toutes les classes" },
+        ...classeOptions.map((classe) => ({
+            value: classe,
+            label: classe,
+        })),
+    ];
+
+    const cibleFilterOptions = [
+        { value: "all", label: "Toutes les cibles" },
+        ...cibleOptions.map((cible) => ({
+            value: cible,
+            label: cible,
+        })),
+    ];
+
     const sondagesFiltres = sondagesNormalises.filter((sondage) => {
         const term = search.trim().toLowerCase();
         const matchesSearch =
@@ -215,7 +240,7 @@ export default function AdminSondageIndex({
                         "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
                 }}
             >
-                <div className="mx-auto max-w-7xl">
+                <div className="w-full">
                     <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-3 text-white">
                             <Link
@@ -277,7 +302,7 @@ export default function AdminSondageIndex({
                                 </p>
                             </div>
 
-                            <div className="grid w-full gap-3 lg:max-w-5xl lg:grid-cols-4">
+                            <div className="grid w-full gap-3 lg:grid-cols-4">
                                 <label className="relative block">
                                     <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                                     <input
@@ -291,50 +316,38 @@ export default function AdminSondageIndex({
                                     />
                                 </label>
 
-                                <select
+                                <Select2Single
+                                    name="status_filter"
                                     value={statusFilter}
                                     onChange={(event) =>
                                         setStatusFilter(event.target.value)
                                     }
-                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                >
-                                    <option value="all">Tous les statuts</option>
-                                    {statusOptions.map((statut) => (
-                                        <option key={statut} value={statut}>
-                                            {statut}
-                                        </option>
-                                    ))}
-                                </select>
+                                    options={statusFilterOptions}
+                                    placeholder="Tous les statuts"
+                                    allowClearOption={false}
+                                />
 
-                                <select
+                                <Select2Single
+                                    name="classe_filter"
                                     value={classeFilter}
                                     onChange={(event) =>
                                         setClasseFilter(event.target.value)
                                     }
-                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                >
-                                    <option value="all">Toutes les classes</option>
-                                    {classeOptions.map((classe) => (
-                                        <option key={classe} value={classe}>
-                                            {classe}
-                                        </option>
-                                    ))}
-                                </select>
+                                    options={classeFilterOptions}
+                                    placeholder="Toutes les classes"
+                                    allowClearOption={false}
+                                />
 
-                                <select
+                                <Select2Single
+                                    name="cible_filter"
                                     value={cibleFilter}
                                     onChange={(event) =>
                                         setCibleFilter(event.target.value)
                                     }
-                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                >
-                                    <option value="all">Toutes les cibles</option>
-                                    {cibleOptions.map((cible) => (
-                                        <option key={cible} value={cible}>
-                                            {cible}
-                                        </option>
-                                    ))}
-                                </select>
+                                    options={cibleFilterOptions}
+                                    placeholder="Toutes les cibles"
+                                    allowClearOption={false}
+                                />
                             </div>
                         </div>
 

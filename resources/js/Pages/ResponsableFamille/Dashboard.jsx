@@ -155,7 +155,7 @@ export default function Dashboard({
             title: "Sujets de Prières",
             desc: "Partagez vos intentions",
             icon: "priere",
-            href: "/admin/prieres",
+            href: "/responsable-famille/prieres",
             color: "text-indigo-600",
             bg: "bg-indigo-100",
         },

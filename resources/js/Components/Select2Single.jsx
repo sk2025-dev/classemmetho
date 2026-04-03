@@ -32,6 +32,14 @@ const VARIANT_STYLES = {
     },
 };
 
+const FIELD_TYPOGRAPHY = {
+    fontSize: "0.875rem",
+    textColor: "#334155",
+    placeholderColor: "#94a3b8",
+    fontWeight: 400,
+    lineHeight: 1.4,
+};
+
 const DropdownIndicator = (props) => (
     <components.DropdownIndicator {...props}>
         {props.selectProps.menuIsOpen || props.selectProps.isFocused ? (
@@ -63,8 +71,8 @@ const Option = (props) => {
                     style={{
                         color: isFocused ? "#334155" : "#475569",
                         backgroundColor: isFocused ? "#f8fafc" : "#ffffff",
-                        fontSize: "0.8125rem",
-                        lineHeight: 1.4,
+                        fontSize: FIELD_TYPOGRAPHY.fontSize,
+                        lineHeight: FIELD_TYPOGRAPHY.lineHeight,
                     }}
                 >
                     Aucune selection
@@ -92,9 +100,9 @@ const Option = (props) => {
                     <span
                         className="truncate"
                         style={{
-                            fontSize: "0.8125rem",
-                            fontWeight: isSelected ? 600 : 500,
-                            lineHeight: 1.4,
+                            fontSize: FIELD_TYPOGRAPHY.fontSize,
+                            fontWeight: isSelected ? 600 : FIELD_TYPOGRAPHY.fontWeight,
+                            lineHeight: FIELD_TYPOGRAPHY.lineHeight,
                             color: isFocused
                                 ? variantStyle.activeText
                                 : variantStyle.text,
@@ -129,7 +137,10 @@ const NoOptionsMessage = (props) => {
             <div className="px-2 py-2 text-center">
                 <div
                     className="font-medium text-slate-600"
-                    style={{ fontSize: "0.8125rem", lineHeight: 1.4 }}
+                    style={{
+                        fontSize: FIELD_TYPOGRAPHY.fontSize,
+                        lineHeight: FIELD_TYPOGRAPHY.lineHeight,
+                    }}
                 >
                     {inputValue
                         ? "Aucun resultat trouve"
@@ -204,23 +215,26 @@ const buildStyles = (variant = "default", hasError = false) => {
         }),
         input: (provided) => ({
             ...provided,
-            color: palette.text,
-            fontSize: "0.8125rem",
-            fontWeight: 500,
+            color: FIELD_TYPOGRAPHY.textColor,
+            fontSize: FIELD_TYPOGRAPHY.fontSize,
+            fontWeight: FIELD_TYPOGRAPHY.fontWeight,
+            lineHeight: FIELD_TYPOGRAPHY.lineHeight,
             margin: 0,
             padding: 0,
         }),
         placeholder: (provided) => ({
             ...provided,
-            color: "#475569",
-            fontSize: "0.8125rem",
-            fontWeight: 500,
+            color: FIELD_TYPOGRAPHY.placeholderColor,
+            fontSize: FIELD_TYPOGRAPHY.fontSize,
+            fontWeight: FIELD_TYPOGRAPHY.fontWeight,
+            lineHeight: FIELD_TYPOGRAPHY.lineHeight,
         }),
         singleValue: (provided) => ({
             ...provided,
-            color: palette.text,
-            fontSize: "0.8125rem",
-            fontWeight: 500,
+            color: FIELD_TYPOGRAPHY.textColor,
+            fontSize: FIELD_TYPOGRAPHY.fontSize,
+            fontWeight: FIELD_TYPOGRAPHY.fontWeight,
+            lineHeight: FIELD_TYPOGRAPHY.lineHeight,
         }),
         indicatorSeparator: () => ({
             display: "none",

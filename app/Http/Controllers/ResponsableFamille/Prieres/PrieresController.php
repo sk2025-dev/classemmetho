@@ -1,36 +1,40 @@
 <?php
 
-namespace App\Http\Controllers\MembreFamille;
+namespace App\Http\Controllers\ResponsableFamille\Prieres;
 
 use App\Http\Controllers\Controller;
 use App\Models\Priere;
+use App\Support\PrierePresenter;
+use App\Support\PriereTargeting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PrieresController extends Controller
 {
-    private const AVAILABLE_REACTIONS = ['🙏', '❤️', '🙌', '😊', '🔥'];
-
     public function index(): Response
     {
         $user = Auth::user();
 
-        return Inertia::render('MembreFamille/Prieres/Index', [
+        return Inertia::render('ResponsableFamille/Prieres/Index', [
             'authUser' => [
                 'id' => $user?->id,
                 'nom' => $user?->nom,
                 'prenom' => $user?->prenom,
                 'classe_id' => $user?->classe_id,
             ],
+            'targeting' => $user ? PriereTargeting::availableTargetsForResponsible($user) : null,
+            'receivedPrayerRequests' => [],
             'prayerRequests' => $user
                 ? Priere::query()
+                    ->with('requester')
                     ->where('user_id', $user->id)
                     ->latest()
                     ->get()
-                    ->map(fn (Priere $request) => $this->transformOwnerRequest($request))
+                    ->map(fn (Priere $request) => PrierePresenter::forOwner($request))
                     ->values()
                 : [],
         ]);
@@ -42,10 +46,12 @@ class PrieresController extends Controller
         abort_unless($user, 403);
 
         $validated = $request->validate([
-            'sujet' => ['required', 'string', 'max:255'],
+            'sujet' => ['required', 'string', 'max:40'],
             'demande' => ['required', 'string', 'max:5000'],
             'mode_identite' => ['required', 'in:anonymous,visible'],
             'nom_affiche' => ['nullable', 'string', 'max:255'],
+            'type_cible' => ['required', 'string'],
+            'user_cible_id' => ['nullable', 'integer'],
         ]);
 
         $isAnonymous = $validated['mode_identite'] === 'anonymous';
@@ -57,16 +63,33 @@ class PrieresController extends Controller
             ]);
         }
 
-        Priere::create([
-            'user_id' => $user->id,
-            'classe_id' => $isAnonymous ? null : $user->classe_id,
-            'role_soumission' => $user->role ?? 'membre_famille',
-            'sujet' => trim($validated['sujet']),
-            'demande' => trim($validated['demande']),
-            'est_anonyme' => $isAnonymous,
-            'nom_affiche' => $visibleName,
-            'statut' => 'Nouvelle',
-        ]);
+        $destinations = PriereTargeting::buildDestinationsForResponsible(
+            $user,
+            $validated['type_cible'],
+            isset($validated['user_cible_id']) ? (int) $validated['user_cible_id'] : null,
+        );
+
+        DB::transaction(function () use ($user, $validated, $isAnonymous, $visibleName, $destinations) {
+            $priere = Priere::create([
+                'user_id' => $user->id,
+                'classe_id' => $isAnonymous ? null : $user->classe_id,
+                'role_soumission' => $user->role ?? 'responsable_famille',
+                'sujet' => trim($validated['sujet']),
+                'demande' => trim($validated['demande']),
+                'est_anonyme' => $isAnonymous,
+                'nom_affiche' => $visibleName,
+                'statut' => 'Transmise',
+            ]);
+
+            $priere->setDestinataires($destinations);
+            $priere->addHistorique(
+                $user,
+                'creation',
+                'Priere creee et transmise vers ' . collect($priere->resolveDestinataireLabels())->join(', ') . '.',
+                ['type_cible' => $validated['type_cible']],
+            );
+            $priere->save();
+        });
 
         return back()->with('success', 'Votre demande de priere a ete enregistree.');
     }
@@ -76,17 +99,18 @@ class PrieresController extends Controller
         $user = Auth::user();
         abort_unless($user && $priere->user_id === $user->id, 403);
 
-        if ($priere->temoignage) {
-            return back()->with('error', 'Un seul commentaire est autorise pour cette priere.');
-        }
-
         $validated = $request->validate([
             'temoignage' => ['required', 'string', 'max:5000'],
+            'reply_to_comment_id' => ['nullable', 'integer'],
         ]);
 
-        $priere->update([
-            'temoignage' => trim($validated['temoignage']),
-        ]);
+        $priere->addCommentaire(
+            $user,
+            trim($validated['temoignage']),
+            isset($validated['reply_to_comment_id']) ? (int) $validated['reply_to_comment_id'] : null,
+        );
+        $priere->addHistorique($user, 'temoignage', 'Un commentaire a ete ajoute par l auteur de la priere.');
+        $priere->save();
 
         return back()->with('success', 'Votre commentaire a ete ajoute.');
     }
@@ -96,7 +120,7 @@ class PrieresController extends Controller
         $user = Auth::user();
         abort_unless($user && $priere->user_id === $user->id, 403);
 
-        if (!$priere->temoignage) {
+        if (count($priere->commentaires()) === 0) {
             return back()->with('error', 'Ajoutez d abord un commentaire avant de marquer cette priere comme exaucee.');
         }
 
@@ -109,51 +133,9 @@ class PrieresController extends Controller
             'exaucee_le' => $priere->exaucee_le ?: now(),
         ]);
 
+        $priere->addHistorique($user, 'exaucement', 'La priere a ete marquee comme exaucee par son auteur.');
+        $priere->save();
+
         return back()->with('success', 'La priere a ete marquee comme exaucee.');
-    }
-
-    private function transformOwnerRequest(Priere $request): array
-    {
-        return [
-            'id' => $request->id,
-            'subject' => $request->sujet,
-            'message' => $request->demande,
-            'isAnonymous' => (bool) $request->est_anonyme,
-            'authorLabel' => $request->est_anonyme
-                ? 'Anonyme'
-                : ($request->nom_affiche ?: 'Nom visible'),
-            'status' => $request->statut,
-            'createdAt' => $this->formatPrayerCreatedAt($request->created_at),
-            'comments' => $request->temoignage ? [[
-                'message' => $request->temoignage,
-                'reactions' => $this->formatReactions($request->reactions_emoji ?? []),
-            ]] : [],
-        ];
-    }
-
-    private function formatPrayerCreatedAt($createdAt): ?string
-    {
-        if (!$createdAt) {
-            return null;
-        }
-
-        return sprintf(
-            'Cree le %s a %s',
-            $createdAt->locale('fr')->translatedFormat('d F Y'),
-            $createdAt->format('H:i'),
-        );
-    }
-
-    private function formatReactions(array $reactions): array
-    {
-        return collect($reactions)
-            ->filter(fn ($reaction) => in_array($reaction['emoji'] ?? null, self::AVAILABLE_REACTIONS, true))
-            ->groupBy('emoji')
-            ->map(fn ($items, $emoji) => [
-                'emoji' => $emoji,
-                'count' => $items->count(),
-            ])
-            ->values()
-            ->all();
     }
 }

@@ -1,5 +1,6 @@
 import { Head, Link } from "@inertiajs/react";
 import { useMemo, useState } from "react";
+import Select2Single from "../../../Components/Select2Single";
 import {
     ArrowLeft,
     CalendarDays,
@@ -531,6 +532,13 @@ export default function PasteurSondageShow({
         }));
     }, [computedResponseStats]);
 
+    const questionFilterOptions = useMemo(() => {
+        return [
+            { value: "all", label: "Toutes les questions" },
+            ...questionOptions,
+        ];
+    }, [questionOptions]);
+
     const filteredResponses = useMemo(() => {
         return (responses || []).filter((response) => {
             const hasMatchingAnswer = questionFilter === "all"
@@ -768,7 +776,7 @@ export default function PasteurSondageShow({
                         "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
                 }}
             >
-                <div className="mx-auto max-w-7xl">
+                <div className="w-full">
                     <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-3 text-white">
                             <Link
@@ -1030,19 +1038,19 @@ export default function PasteurSondageShow({
                                 >
                                     Filtre par question
                                 </label>
-                                <select
-                                    id="question-filter"
-                                    value={questionFilter}
-                                    onChange={(event) => setQuestionFilter(event.target.value)}
-                                    className="mt-3 w-full rounded-2xl border border-white/80 bg-white/95 px-4 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none ring-1 ring-white/80 transition focus:border-emerald-200 focus:ring-emerald-200"
-                                >
-                                    <option value="all">Toutes les questions</option>
-                                    {questionOptions.map((question) => (
-                                        <option key={question.value} value={question.value}>
-                                            {question.label}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className="mt-3">
+                                    <Select2Single
+                                        id="question-filter"
+                                        name="question_filter"
+                                        value={questionFilter}
+                                        onChange={(event) =>
+                                            setQuestionFilter(event.target.value)
+                                        }
+                                        options={questionFilterOptions}
+                                        placeholder="Toutes les questions"
+                                        allowClearOption={false}
+                                    />
+                                </div>
                             </div>
 
                             <div className="rounded-[26px] border border-emerald-100 bg-[linear-gradient(145deg,#ecfccb_0%,#f0fdf4_52%,#ffffff_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
