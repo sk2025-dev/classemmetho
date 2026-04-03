@@ -42,8 +42,6 @@ Route::middleware(['auth:web'])->group(function () {
     // Inscriptions API
     Route::get('/inscriptions/pending', [InscriptionController::class, 'pending']);
     Route::get('/inscriptions/{id}', [InscriptionController::class, 'show']);
-    // Route pour importer via Excel (Admin - Authentifié)
-    Route::post('/admin/inscriptions/import-excel', [ExcelImportController::class, 'import'])->name('admin.inscriptions.import-excel');
 
     // Ajout de membre à la famille
     Route::post('/members/add-to-family', [MemberController::class, 'addToFamily']);
