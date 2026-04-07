@@ -15,6 +15,7 @@ import {
 } from "../../../Hooks/usePersistentState";
 import { useToastWithErrorHandling } from "../../../Hooks/useToastWithErrorHandling";
 import ToastContainer from "../../../Components/ToastContainer";
+import { withBasePath } from "../../../Utils/urlHelper";
 import {
     Home,
     User,
@@ -415,7 +416,9 @@ export default function RegisterFamille({
         const fetchData = async () => {
             try {
                 // Charger les classes depuis la base de données
-                const classesRes = await fetch("/api/classes");
+                const classesRes = await fetch(
+                    withBasePath("", "/api/classes"),
+                );
                 if (classesRes.ok) {
                     const classesData = await classesRes.json();
                     setClassesDatabase(
@@ -434,7 +437,7 @@ export default function RegisterFamille({
                 }
 
                 // Charger les villes depuis la base de données
-                const villesRes = await fetch("/api/villes");
+                const villesRes = await fetch(withBasePath("", "/api/villes"));
                 if (villesRes.ok) {
                     const villesData = await villesRes.json();
                     setVillesDatabase(
@@ -453,7 +456,9 @@ export default function RegisterFamille({
                 }
 
                 // Charger les fonctions d'église
-                const rolesRes = await fetch("/api/fonctions");
+                const rolesRes = await fetch(
+                    withBasePath("", "/api/fonctions"),
+                );
                 if (rolesRes.ok) {
                     const rolesData = await rolesRes.json();
                     setChurchRoles(
@@ -1610,7 +1615,9 @@ export default function RegisterFamille({
                                     onChange={(e) =>
                                         setResponsable({
                                             ...responsable,
-                                            prenom: formatPrenom(e.target.value),
+                                            prenom: formatPrenom(
+                                                e.target.value,
+                                            ),
                                         })
                                     }
                                     placeholder="ex: Jean"
@@ -3399,7 +3406,10 @@ export default function RegisterFamille({
                 {/* Header avec lien retour */}
                 <div className="max-w-4xl mx-auto mb-6 flex justify-between items-center">
                     <Link
-                        href="/admin/inscriptions/type-selection"
+                        href={withBasePath(
+                            "",
+                            "/admin/inscriptions/type-selection",
+                        )}
                         className="inline-flex items-center gap-2 text-white hover:text-yellow-300 font-semibold transition-colors"
                     >
                         <ArrowLeft size={20} />

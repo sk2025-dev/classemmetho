@@ -8,6 +8,7 @@ import {
     MessageSquare,
     ArrowLeft,
 } from "lucide-react";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 export default function PasteurTresorerie({
     globalStats: globalStatsProp,
@@ -115,7 +116,7 @@ export default function PasteurTresorerie({
                 <div className="max-w-7xl mx-auto px-4 py-6">
                     <div className="flex items-center gap-4">
                         <Link
-                            href="/dashboard"
+                            href={withBasePath("", "/pasteur/dashboard")}
                             className="p-2 hover:bg-white/20 rounded-lg transition"
                         >
                             <ArrowLeft size={24} className="text-white" />

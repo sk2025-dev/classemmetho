@@ -10,6 +10,7 @@ import {
     MessageSquareHeart,
     ShieldCheck,
 } from "lucide-react";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 function normalizeRequests(prayerRequests = []) {
     return prayerRequests.map((request, index) => ({
@@ -70,28 +71,32 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
             {
                 title: "Demandes recues",
                 value: total,
-                subtitle: "Toutes les demandes de priere recues depuis les differents espaces.",
+                subtitle:
+                    "Toutes les demandes de priere recues depuis les differents espaces.",
                 icon: MessageSquareHeart,
                 iconClass: "bg-sky-100 text-sky-700",
             },
             {
                 title: "En priere",
                 value: inPrayer,
-                subtitle: "Demandes actuellement suivies dans la priere pastorale.",
+                subtitle:
+                    "Demandes actuellement suivies dans la priere pastorale.",
                 icon: HeartHandshake,
                 iconClass: "bg-blue-100 text-blue-700",
             },
             {
                 title: "Mode anonyme",
                 value: anonymousCount,
-                subtitle: "Demandes preservees sans affichage du nom et prenom.",
+                subtitle:
+                    "Demandes preservees sans affichage du nom et prenom.",
                 icon: EyeOff,
                 iconClass: "bg-violet-100 text-violet-700",
             },
             {
                 title: "Exaucements",
                 value: testimonyCount,
-                subtitle: "Demandes marquees comme exaucees ou accompagnees d'un retour.",
+                subtitle:
+                    "Demandes marquees comme exaucees ou accompagnees d'un retour.",
                 icon: CheckCheck,
                 iconClass: "bg-emerald-100 text-emerald-700",
             },
@@ -100,7 +105,7 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
 
     const updateRequestStatus = (requestId, status) => {
         router.patch(
-            `/pasteur/prieres/${requestId}/status`,
+            withBasePath("", `/pasteur/prieres/${requestId}/status`),
             { statut: status },
             { preserveScroll: true },
         );
@@ -108,7 +113,7 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
 
     const toggleReaction = (requestId, emoji) => {
         router.patch(
-            `/pasteur/prieres/${requestId}/reaction`,
+            withBasePath("", `/pasteur/prieres/${requestId}/reaction`),
             { emoji },
             { preserveScroll: true },
         );
@@ -124,20 +129,23 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
             {
                 id: "new",
                 label: "Nouvelles demandes",
-                count: requests.filter((request) => request.status === "Nouvelle")
-                    .length,
+                count: requests.filter(
+                    (request) => request.status === "Nouvelle",
+                ).length,
             },
             {
                 id: "in_prayer",
                 label: "En priere",
-                count: requests.filter((request) => request.status === "En priere")
-                    .length,
+                count: requests.filter(
+                    (request) => request.status === "En priere",
+                ).length,
             },
             {
                 id: "fulfilled",
                 label: "Exaucees",
-                count: requests.filter((request) => request.status === "Exaucement")
-                    .length,
+                count: requests.filter(
+                    (request) => request.status === "Exaucement",
+                ).length,
             },
         ],
         [requests],
@@ -153,7 +161,9 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
         }
 
         if (activeTab === "fulfilled") {
-            return requests.filter((request) => request.status === "Exaucement");
+            return requests.filter(
+                (request) => request.status === "Exaucement",
+            );
         }
 
         return requests;
@@ -206,7 +216,7 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div className="flex items-center gap-3 text-white">
                             <Link
-                                href="/pasteur/dashboard"
+                                href={withBasePath("", "/pasteur/dashboard")}
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
                             >
                                 <ArrowLeft className="h-5 w-5" />
@@ -216,7 +226,8 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
                                     Demandes de priere
                                 </h1>
                                 <p className="text-sm text-blue-100">
-                                    Vue pastorale centralisee pour suivre toutes les demandes recues.
+                                    Vue pastorale centralisee pour suivre toutes
+                                    les demandes recues.
                                 </p>
                             </div>
                         </div>
@@ -262,44 +273,46 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
                             </div>
 
                             <div className="mt-4 flex flex-wrap gap-2">
-                            {tabs.map((tab) => {
-                                const isActive = activeTab === tab.id;
+                                {tabs.map((tab) => {
+                                    const isActive = activeTab === tab.id;
 
-                                return (
-                                    <button
-                                        key={tab.id}
-                                        type="button"
-                                        onClick={() => setActiveTab(tab.id)}
-                                        className={`inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-[13px] font-semibold transition ${
-                                            isActive
-                                                ? "border-blue-500 bg-blue-600 text-white shadow-[0_12px_28px_rgba(37,99,235,0.30)]"
-                                                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                                        }`}
-                                    >
-                                        <span>{tab.label}</span>
-                                        <span
-                                            className={`rounded-full px-2 py-0.5 text-xs ${
+                                    return (
+                                        <button
+                                            key={tab.id}
+                                            type="button"
+                                            onClick={() => setActiveTab(tab.id)}
+                                            className={`inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-[13px] font-semibold transition ${
                                                 isActive
-                                                    ? "bg-white/20 text-white"
-                                                    : "bg-slate-100 text-slate-600"
+                                                    ? "border-blue-500 bg-blue-600 text-white shadow-[0_12px_28px_rgba(37,99,235,0.30)]"
+                                                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                                             }`}
                                         >
-                                            {tab.count}
-                                        </span>
-                                    </button>
-                                );
-                            })}
-                        </div>
+                                            <span>{tab.label}</span>
+                                            <span
+                                                className={`rounded-full px-2 py-0.5 text-xs ${
+                                                    isActive
+                                                        ? "bg-white/20 text-white"
+                                                        : "bg-slate-100 text-slate-600"
+                                                }`}
+                                            >
+                                                {tab.count}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
 
                         <div className="px-4 py-4">
                             {filteredRequests.length === 0 ? (
                                 <div className="rounded-[30px] border border-dashed border-slate-300 bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5f9_100%)] px-6 py-14 text-center">
                                     <p className="text-base font-semibold text-slate-900">
-                                        Aucune demande de priere dans cet onglet.
+                                        Aucune demande de priere dans cet
+                                        onglet.
                                     </p>
                                     <p className="mt-2 text-sm leading-6 text-slate-600">
-                                        Ajustez le filtre ou attendez de nouvelles demandes dans cette categorie.
+                                        Ajustez le filtre ou attendez de
+                                        nouvelles demandes dans cette categorie.
                                     </p>
                                 </div>
                             ) : (
@@ -325,17 +338,23 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
                                                             ) : (
                                                                 <Eye className="h-3.5 w-3.5" />
                                                             )}
-                                                            {request.authorLabel}
+                                                            {
+                                                                request.authorLabel
+                                                            }
                                                         </span>
                                                         {request.sourceLabel ? (
                                                             <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
                                                                 <Clock3 className="h-3.5 w-3.5" />
-                                                                {request.sourceLabel}
+                                                                {
+                                                                    request.sourceLabel
+                                                                }
                                                             </span>
                                                         ) : null}
                                                         {request.createdAt ? (
                                                             <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200">
-                                                                {request.createdAt}
+                                                                {
+                                                                    request.createdAt
+                                                                }
                                                             </span>
                                                         ) : null}
                                                     </div>
@@ -351,36 +370,60 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
                                                         <div className="mt-3.5 rounded-[20px] border border-slate-200 bg-slate-50/80 p-3">
                                                             <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-900">
                                                                 <MessageSquareHeart className="h-4 w-4 text-sky-700" />
-                                                                Commentaire d'exaucement
+                                                                Commentaire
+                                                                d'exaucement
                                                             </div>
 
                                                             <div className="mt-2.5 rounded-2xl border border-emerald-200 bg-white px-3.5 py-2.5 shadow-sm">
                                                                 <div className="text-sm leading-6 text-emerald-900">
-                                                                    {request.testimony}
+                                                                    {
+                                                                        request.testimony
+                                                                    }
                                                                 </div>
 
                                                                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                                                                    {AVAILABLE_REACTIONS.map((emoji) => {
-                                                                        const reaction = request.reactions.find(
-                                                                            (item) => item.emoji === emoji,
-                                                                        );
+                                                                    {AVAILABLE_REACTIONS.map(
+                                                                        (
+                                                                            emoji,
+                                                                        ) => {
+                                                                            const reaction =
+                                                                                request.reactions.find(
+                                                                                    (
+                                                                                        item,
+                                                                                    ) =>
+                                                                                        item.emoji ===
+                                                                                        emoji,
+                                                                                );
 
-                                                                        return (
-                                                                            <button
-                                                                                key={`${request.id}-${emoji}`}
-                                                                                type="button"
-                                                                                onClick={() => toggleReaction(request.id, emoji)}
-                                                                                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition ${
-                                                                                    reaction
-                                                                                        ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                                                                                        : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
-                                                                                }`}
-                                                                            >
-                                                                                <span>{emoji}</span>
-                                                                                <span>{reaction?.count ?? 0}</span>
-                                                                            </button>
-                                                                        );
-                                                                    })}
+                                                                            return (
+                                                                                <button
+                                                                                    key={`${request.id}-${emoji}`}
+                                                                                    type="button"
+                                                                                    onClick={() =>
+                                                                                        toggleReaction(
+                                                                                            request.id,
+                                                                                            emoji,
+                                                                                        )
+                                                                                    }
+                                                                                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition ${
+                                                                                        reaction
+                                                                                            ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                                                                                            : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
+                                                                                    }`}
+                                                                                >
+                                                                                    <span>
+                                                                                        {
+                                                                                            emoji
+                                                                                        }
+                                                                                    </span>
+                                                                                    <span>
+                                                                                        {reaction?.count ??
+                                                                                            0}
+                                                                                    </span>
+                                                                                </button>
+                                                                            );
+                                                                        },
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -391,10 +434,15 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
                                                     <p className="text-[13px] font-semibold text-slate-900">
                                                         Actions pastorales
                                                     </p>
-                                                    {request.status === "Nouvelle" || request.status === "Vu" ? (
+                                                    {request.status ===
+                                                        "Nouvelle" ||
+                                                    request.status === "Vu" ? (
                                                         <>
                                                             <p className="mt-1 text-sm leading-5 text-slate-600">
-                                                                Mettez a jour l'etat de prise en charge de cette demande.
+                                                                Mettez a jour
+                                                                l'etat de prise
+                                                                en charge de
+                                                                cette demande.
                                                             </p>
 
                                                             <div className="mt-auto grid gap-3 pt-4">
@@ -409,17 +457,28 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
                                                                     className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(37,99,235,0.24)] transition hover:bg-blue-700"
                                                                 >
                                                                     <HeartHandshake className="h-4 w-4" />
-                                                                    Mettre en priere et marquer vue
+                                                                    Mettre en
+                                                                    priere et
+                                                                    marquer vue
                                                                 </button>
                                                             </div>
                                                         </>
-                                                    ) : request.status === "Exaucement" ? (
+                                                    ) : request.status ===
+                                                      "Exaucement" ? (
                                                         <p className="mt-1 text-sm leading-5 text-slate-600">
-                                                            Cette priere a ete marquee comme exaucee par son auteur et apparait automatiquement dans les exaucements.
+                                                            Cette priere a ete
+                                                            marquee comme
+                                                            exaucee par son
+                                                            auteur et apparait
+                                                            automatiquement dans
+                                                            les exaucements.
                                                         </p>
                                                     ) : (
                                                         <p className="mt-1 text-sm leading-5 text-slate-600">
-                                                            Cette demande est deja prise en charge dans le suivi pastoral.
+                                                            Cette demande est
+                                                            deja prise en charge
+                                                            dans le suivi
+                                                            pastoral.
                                                         </p>
                                                     )}
                                                 </div>

@@ -3,6 +3,7 @@ import { Link } from "@inertiajs/react";
 import { ArrowLeft, Download } from "lucide-react";
 import axios from "axios";
 import { resolveMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 /* ── CONSTANTS ── */
 const IN_PROGRESS = [
@@ -198,7 +199,7 @@ export default function Index({
         try {
             setAnnonceProcessing(true);
             const res = await axios.post(
-                "/membre-famille/annonces",
+                withBasePath("", "/membre-famille/annonces"),
                 annonceForm,
             );
             const newA = res.data?.annonce || {
@@ -232,7 +233,7 @@ export default function Index({
                 {/* ── BARRE ACTIONS ── */}
                 <div className="rf-actions">
                     <Link
-                        href="/membre-famille/dashboard"
+                        href={withBasePath("", "/membre-famille/dashboard")}
                         className="btn-ghost"
                     >
                         <ArrowLeft size={16} /> Retour
@@ -394,7 +395,10 @@ export default function Index({
                                         </div>
                                     </div>
                                     <Link
-                                        href="/membre-famille/liturgie/nouvelle"
+                                        href={withBasePath(
+                                            "",
+                                            "/membre-famille/liturgie/nouvelle",
+                                        )}
                                         className="ph-link"
                                     >
                                         + Nouvelle
@@ -589,7 +593,10 @@ export default function Index({
                                                         className="btn-pdf"
                                                         onClick={() =>
                                                             window.open(
-                                                                `/membre-famille/liturgie/${acte.id}/certificat`,
+                                                                withBasePath(
+                                                                    "",
+                                                                    `/membre-famille/liturgie/${acte.id}/certificat`,
+                                                                ),
                                                                 "_blank",
                                                             )
                                                         }
@@ -794,7 +801,10 @@ export default function Index({
                                     ))}
                                 </div>
                                 <Link
-                                    href="/membre-famille/liturgie/nouvelle"
+                                    href={withBasePath(
+                                        "",
+                                        "/membre-famille/liturgie/nouvelle",
+                                    )}
                                     className="btn-cta"
                                 >
                                     + Nouvelle demande d'acte
@@ -848,8 +858,8 @@ export default function Index({
                 {/* ══════════ ★★★ TAB ANNONCES ★★★ ══════════ */}
                 {activeTab === "annonces" && (
                     <div className="ann-tab-root">
-                {/* ── SOUS-TABS ── */}
-                <div className="ann-subtabs-bar">
+                        {/* ── SOUS-TABS ── */}
+                        <div className="ann-subtabs-bar">
                             <div className="ann-subtabs">
                                 <button
                                     className="ann-stab active"

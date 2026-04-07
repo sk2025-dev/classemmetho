@@ -3,6 +3,7 @@ import { Head, Link, router, usePage } from "@inertiajs/react";
 import ConfirmationModal from "@/Components/ConfirmationModal";
 import ProfilePhoto from "@/Components/ProfilePhoto";
 import { ToastContainer } from "@/Components/Toast";
+import { withBasePath } from "../../Utils/urlHelper";
 
 const STATUS_MAP = {
     en_attente: {
@@ -118,7 +119,9 @@ export default function Inscriptions() {
                 onSuccess: () => {
                     const approvedInscription =
                         confirmationState.inscription ||
-                        inscriptions.find((inscription) => inscription.id === id);
+                        inscriptions.find(
+                            (inscription) => inscription.id === id,
+                        );
 
                     setApproving(null);
                     closeConfirmation();
@@ -157,7 +160,9 @@ export default function Inscriptions() {
                 onSuccess: () => {
                     const rejectedInscription =
                         confirmationState.inscription ||
-                        inscriptions.find((inscription) => inscription.id === id);
+                        inscriptions.find(
+                            (inscription) => inscription.id === id,
+                        );
 
                     setRejectingId(null);
                     closeConfirmation();
@@ -219,7 +224,7 @@ export default function Inscriptions() {
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                     <div className="flex items-center gap-3 text-white">
                         <Link
-                            href="/admin/dashboard"
+                            href={withBasePath("", "/admin/dashboard")}
                             className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition"
                         >
                             <svg
@@ -249,7 +254,10 @@ export default function Inscriptions() {
 
                     <div className="flex gap-2">
                         <Link
-                            href="/admin/inscriptions/type-selection"
+                            href={withBasePath(
+                                "",
+                                "/admin/inscriptions/type-selection",
+                            )}
                             className="text-white px-5 py-2.5 rounded-lg shadow-lg transition flex items-center gap-2 font-medium"
                             style={{
                                 backgroundColor: "#B6C01A",
@@ -352,137 +360,147 @@ export default function Inscriptions() {
 
                         <tbody className="bg-white divide-y divide-gray-100">
                             {paginatedInscriptions.length > 0 ? (
-                                paginatedInscriptions.map((inscription, idx) => {
-                                    const statusInfo =
-                                        STATUS_MAP[inscription.status] || {
+                                paginatedInscriptions.map(
+                                    (inscription, idx) => {
+                                        const statusInfo = STATUS_MAP[
+                                            inscription.status
+                                        ] || {
                                             label: inscription.status,
                                             bgColor: "#D1D5DB",
                                             textColor: "#374151",
                                         };
 
-                                    return (
-                                        <tr
-                                            key={inscription.id}
-                                            className="hover:bg-[#EDD31D]/20 transition-colors"
-                                        >
-                                            <td className="px-4 py-3 font-mono text-xs text-gray-400">
-                                                {startIndex + idx + 1}
-                                            </td>
-                                            <td className="px-4 py-3 whitespace-nowrap flex items-center gap-3">
-                                                <ProfilePhoto
-                                                    user={inscription}
-                                                    size="md"
-                                                    rounded={true}
-                                                />
-                                                <span className="font-medium text-gray-900">
-                                                    {getDisplayName(inscription)}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-gray-700 text-xs font-semibold">
-                                                <span
-                                                    style={{
-                                                        backgroundColor:
-                                                            inscription.created_by ===
-                                                            "Famille (Responsable)"
-                                                                ? "#DDD6FE"
-                                                                : "#FEE2E2",
-                                                        color:
-                                                            inscription.created_by ===
-                                                            "Famille (Responsable)"
-                                                                ? "#4F46E5"
-                                                                : "#DC2626",
-                                                        borderRadius: "9999px",
-                                                        padding: "3px 10px",
-                                                        display: "inline-block",
-                                                    }}
-                                                >
-                                                    {inscription.created_by}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-gray-700">
-                                                {inscription.email || "N/A"}
-                                            </td>
-                                            <td className="px-4 py-3 text-gray-700">
-                                                {inscription.classe || "Non assignée"}
-                                            </td>
-                                            <td className="px-4 py-3 text-gray-700">
-                                                {inscription.ville || "N/A"}
-                                            </td>
-                                            <td className="px-4 py-3 text-gray-500">
-                                                {inscription.created_at}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <span
-                                                    style={{
-                                                        backgroundColor:
-                                                            statusInfo.bgColor,
-                                                        color: statusInfo.textColor,
-                                                        borderRadius: "9999px",
-                                                        padding: "4px 12px",
-                                                        fontWeight: "bold",
-                                                        fontSize: "0.85em",
-                                                        display: "inline-block",
-                                                    }}
-                                                >
-                                                    {statusInfo.label}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
-                                                {inscription.status ===
-                                                "en_attente" ? (
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <button
-                                                            onClick={() =>
-                                                                openConfirmation(
-                                                                    "approve",
-                                                                    inscription,
-                                                                )
-                                                            }
-                                                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded font-semibold shadow transition"
-                                                            title="Approuver"
-                                                            disabled={
-                                                                approving ===
-                                                                inscription.id
-                                                            }
-                                                        >
-                                                            {approving ===
-                                                            inscription.id
-                                                                ? "Approbation..."
-                                                                : "Approuver"}
-                                                        </button>
-                                                        <button
-                                                            onClick={() =>
-                                                                openConfirmation(
-                                                                    "reject",
-                                                                    inscription,
-                                                                )
-                                                            }
-                                                            className="text-white px-3 py-1 rounded font-semibold shadow transition"
-                                                            style={{
-                                                                backgroundColor:
-                                                                    "#800020",
-                                                            }}
-                                                            title="Rejeter"
-                                                            disabled={
-                                                                rejectingId ===
-                                                                inscription.id
-                                                            }
-                                                        >
-                                                            {rejectingId ===
-                                                            inscription.id
-                                                                ? "Rejet..."
-                                                                : "Rejeter"}
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-gray-500 italic">
-                                                        Action effectuée
+                                        return (
+                                            <tr
+                                                key={inscription.id}
+                                                className="hover:bg-[#EDD31D]/20 transition-colors"
+                                            >
+                                                <td className="px-4 py-3 font-mono text-xs text-gray-400">
+                                                    {startIndex + idx + 1}
+                                                </td>
+                                                <td className="px-4 py-3 whitespace-nowrap flex items-center gap-3">
+                                                    <ProfilePhoto
+                                                        user={inscription}
+                                                        size="md"
+                                                        rounded={true}
+                                                    />
+                                                    <span className="font-medium text-gray-900">
+                                                        {getDisplayName(
+                                                            inscription,
+                                                        )}
                                                     </span>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    );
-                                })
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-700 text-xs font-semibold">
+                                                    <span
+                                                        style={{
+                                                            backgroundColor:
+                                                                inscription.created_by ===
+                                                                "Famille (Responsable)"
+                                                                    ? "#DDD6FE"
+                                                                    : "#FEE2E2",
+                                                            color:
+                                                                inscription.created_by ===
+                                                                "Famille (Responsable)"
+                                                                    ? "#4F46E5"
+                                                                    : "#DC2626",
+                                                            borderRadius:
+                                                                "9999px",
+                                                            padding: "3px 10px",
+                                                            display:
+                                                                "inline-block",
+                                                        }}
+                                                    >
+                                                        {inscription.created_by}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-700">
+                                                    {inscription.email || "N/A"}
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-700">
+                                                    {inscription.classe ||
+                                                        "Non assignée"}
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-700">
+                                                    {inscription.ville || "N/A"}
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-500">
+                                                    {inscription.created_at}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span
+                                                        style={{
+                                                            backgroundColor:
+                                                                statusInfo.bgColor,
+                                                            color: statusInfo.textColor,
+                                                            borderRadius:
+                                                                "9999px",
+                                                            padding: "4px 12px",
+                                                            fontWeight: "bold",
+                                                            fontSize: "0.85em",
+                                                            display:
+                                                                "inline-block",
+                                                        }}
+                                                    >
+                                                        {statusInfo.label}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    {inscription.status ===
+                                                    "en_attente" ? (
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <button
+                                                                onClick={() =>
+                                                                    openConfirmation(
+                                                                        "approve",
+                                                                        inscription,
+                                                                    )
+                                                                }
+                                                                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded font-semibold shadow transition"
+                                                                title="Approuver"
+                                                                disabled={
+                                                                    approving ===
+                                                                    inscription.id
+                                                                }
+                                                            >
+                                                                {approving ===
+                                                                inscription.id
+                                                                    ? "Approbation..."
+                                                                    : "Approuver"}
+                                                            </button>
+                                                            <button
+                                                                onClick={() =>
+                                                                    openConfirmation(
+                                                                        "reject",
+                                                                        inscription,
+                                                                    )
+                                                                }
+                                                                className="text-white px-3 py-1 rounded font-semibold shadow transition"
+                                                                style={{
+                                                                    backgroundColor:
+                                                                        "#800020",
+                                                                }}
+                                                                title="Rejeter"
+                                                                disabled={
+                                                                    rejectingId ===
+                                                                    inscription.id
+                                                                }
+                                                            >
+                                                                {rejectingId ===
+                                                                inscription.id
+                                                                    ? "Rejet..."
+                                                                    : "Rejeter"}
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-gray-500 italic">
+                                                            Action effectuée
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    },
+                                )
                             ) : (
                                 <tr>
                                     <td
@@ -524,21 +542,22 @@ export default function Inscriptions() {
                             >
                                 ← Précédent
                             </button>
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                                (page) => (
-                                    <button
-                                        key={page}
-                                        onClick={() => setCurrentPage(page)}
-                                        className={`px-3 py-1 rounded font-medium transition ${
-                                            page === currentPage
-                                                ? "bg-[#B6C01A] text-white border-[#B6C01A]"
-                                                : "border border-gray-300 text-gray-700 hover:bg-gray-100"
-                                        }`}
-                                    >
-                                        {page}
-                                    </button>
-                                ),
-                            )}
+                            {Array.from(
+                                { length: totalPages },
+                                (_, i) => i + 1,
+                            ).map((page) => (
+                                <button
+                                    key={page}
+                                    onClick={() => setCurrentPage(page)}
+                                    className={`px-3 py-1 rounded font-medium transition ${
+                                        page === currentPage
+                                            ? "bg-[#B6C01A] text-white border-[#B6C01A]"
+                                            : "border border-gray-300 text-gray-700 hover:bg-gray-100"
+                                    }`}
+                                >
+                                    {page}
+                                </button>
+                            ))}
                             <button
                                 onClick={() =>
                                     setCurrentPage(
@@ -583,9 +602,7 @@ export default function Inscriptions() {
             <ConfirmationModal
                 isOpen={confirmationState.isOpen}
                 type={
-                    confirmationState.action === "reject"
-                        ? "reject"
-                        : "approve"
+                    confirmationState.action === "reject" ? "reject" : "approve"
                 }
                 title={
                     confirmationState.action === "reject"

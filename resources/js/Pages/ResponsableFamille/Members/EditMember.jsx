@@ -6,6 +6,7 @@ import Select2Fonction from "../../../Components/Select2Fonction";
 import Select2Relation from "../../../Components/Select2Relation";
 import { resolveMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
 import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
+import { withBasePath } from "../../../Utils/urlHelper";
 import {
     ArrowLeft,
     User,
@@ -213,7 +214,9 @@ export default function EditMember({ member, family }) {
     useEffect(() => {
         const loadFonctions = async () => {
             try {
-                const fonctionsRes = await axios.get("/api/fonctions");
+                const fonctionsRes = await axios.get(
+                    withBasePath("", "/api/fonctions"),
+                );
                 setFonctions(fonctionsRes.data);
             } catch (error) {
                 console.error(

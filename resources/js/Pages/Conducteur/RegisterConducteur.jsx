@@ -16,6 +16,7 @@ import CitySelect from "../../Components/CitySelect";
 import { useToastWithErrorHandling } from "../../Hooks/useToastWithErrorHandling";
 import ToastContainer from "../../Components/ToastContainer";
 import { sanitizeUppercasePrenom } from "../../Helpers/nameSanitizers";
+import { withBasePath } from "../../Utils/urlHelper";
 import {
     Home,
     User,
@@ -429,7 +430,9 @@ export default function RegisterConducteur({
         const fetchData = async () => {
             try {
                 // Charger les classes depuis la base de données
-                const classesRes = await fetch("/api/classes");
+                const classesRes = await fetch(
+                    withBasePath("", "/api/classes"),
+                );
                 if (classesRes.ok) {
                     const classesData = await classesRes.json();
                     setClassesDatabase(
@@ -448,7 +451,7 @@ export default function RegisterConducteur({
                 }
 
                 // Charger les villes depuis la base de données
-                const villesRes = await fetch("/api/villes");
+                const villesRes = await fetch(withBasePath("", "/api/villes"));
                 if (villesRes.ok) {
                     const villesData = await villesRes.json();
                     setVillesDatabase(
@@ -467,7 +470,9 @@ export default function RegisterConducteur({
                 }
 
                 // Charger les fonctions d'église
-                const rolesRes = await fetch("/api/fonctions");
+                const rolesRes = await fetch(
+                    withBasePath("", "/api/fonctions"),
+                );
                 if (rolesRes.ok) {
                     const rolesData = await rolesRes.json();
                     setChurchRoles(
@@ -1010,9 +1015,13 @@ export default function RegisterConducteur({
                 headers["X-CSRF-TOKEN"] = csrfToken;
             }
 
-            const res = await axios.post("/register/conducteur", formData, {
-                headers: headers,
-            });
+            const res = await axios.post(
+                withBasePath("", "/register/conducteur"),
+                formData,
+                {
+                    headers: headers,
+                },
+            );
 
             // Succès
             const message =
@@ -1387,7 +1396,9 @@ export default function RegisterConducteur({
                                     onChange={(e) =>
                                         setResponsable({
                                             ...responsable,
-                                            prenom: formatPrenom(e.target.value),
+                                            prenom: formatPrenom(
+                                                e.target.value,
+                                            ),
                                         })
                                     }
                                     placeholder="ex: Jean"
@@ -3380,7 +3391,7 @@ export default function RegisterConducteur({
                 {/* Header avec lien retour */}
                 <div className="max-w-4xl mx-auto mb-6">
                     <Link
-                        href="/"
+                        href={withBasePath("", "/")}
                         className="inline-flex items-center gap-2 text-white hover:text-yellow-300 font-semibold transition-colors"
                     >
                         <ArrowLeft size={20} />

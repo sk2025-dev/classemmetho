@@ -8,6 +8,7 @@ import {
     ArrowLeft,
     X,
 } from "lucide-react";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 const fmt = (n) => new Intl.NumberFormat("fr-FR").format(n);
 const fmtCurrency = (n) => `${fmt(n)} F`;
@@ -239,7 +240,10 @@ export default function MembreFamilleFinances({
             const response =
                 paymentMethod === "MOBILE_MONEY"
                     ? await fetch(
-                          "/membre-famille/finances/paiements/initiate",
+                          withBasePath(
+                              "",
+                              "/membre-famille/finances/paiements/initiate",
+                          ),
                           {
                               method: "POST",
                               headers: {
@@ -255,20 +259,26 @@ export default function MembreFamilleFinances({
                               }),
                           },
                       )
-                    : await fetch("/membre-famille/finances/paiements", {
-                          method: "POST",
-                          headers: {
-                              "Content-Type": "application/json",
-                              "X-CSRF-TOKEN": getCsrfToken(),
-                              Accept: "application/json",
+                    : await fetch(
+                          withBasePath(
+                              "",
+                              "/membre-famille/finances/paiements",
+                          ),
+                          {
+                              method: "POST",
+                              headers: {
+                                  "Content-Type": "application/json",
+                                  "X-CSRF-TOKEN": getCsrfToken(),
+                                  Accept: "application/json",
+                              },
+                              credentials: "same-origin",
+                              body: JSON.stringify({
+                                  ...basePayload,
+                                  mode_paiement: paymentMethod,
+                                  note: "Paiement saisi depuis l'espace membre famille",
+                              }),
                           },
-                          credentials: "same-origin",
-                          body: JSON.stringify({
-                              ...basePayload,
-                              mode_paiement: paymentMethod,
-                              note: "Paiement saisi depuis l'espace membre famille",
-                          }),
-                      });
+                      );
 
             if (!response.ok) {
                 throw new Error("Paiement impossible");
@@ -302,27 +312,30 @@ export default function MembreFamilleFinances({
 
         setIsSubmittingDon(true);
         try {
-            const response = await fetch("/membre-famille/finances/dons", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": getCsrfToken(),
-                    Accept: "application/json",
+            const response = await fetch(
+                withBasePath("", "/membre-famille/finances/dons"),
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": getCsrfToken(),
+                        Accept: "application/json",
+                    },
+                    credentials: "same-origin",
+                    body: JSON.stringify({
+                        campagne_id: null,
+                        montant: amount,
+                        type: "LIBRE",
+                        mode_paiement: donPaymentMethod,
+                        provider:
+                            donPaymentMethod === "MOBILE_MONEY"
+                                ? donMobileProvider
+                                : null,
+                        date_don: new Date().toISOString().slice(0, 10),
+                        note: "Don libre depuis l'espace membre famille",
+                    }),
                 },
-                credentials: "same-origin",
-                body: JSON.stringify({
-                    campagne_id: null,
-                    montant: amount,
-                    type: "LIBRE",
-                    mode_paiement: donPaymentMethod,
-                    provider:
-                        donPaymentMethod === "MOBILE_MONEY"
-                            ? donMobileProvider
-                            : null,
-                    date_don: new Date().toISOString().slice(0, 10),
-                    note: "Don libre depuis l'espace membre famille",
-                }),
-            });
+            );
 
             if (!response.ok) {
                 throw new Error("Don impossible");
@@ -464,7 +477,7 @@ export default function MembreFamilleFinances({
                 <div className="max-w-6xl mx-auto px-4 py-6">
                     <div className="flex items-center gap-4">
                         <Link
-                            href="/dashboard"
+                            href={withBasePath("", "/membre-famille/dashboard")}
                             className="p-2 hover:bg-white/20 rounded-lg transition"
                         >
                             <ArrowLeft size={24} className="text-white" />
@@ -703,7 +716,9 @@ export default function MembreFamilleFinances({
                                                                 value={cot.id}
                                                             >
                                                                 {cot.nom} —{" "}
-                                                                 {fmtCurrency(cot.du)}
+                                                                {fmtCurrency(
+                                                                    cot.du,
+                                                                )}
                                                             </option>
                                                         ),
                                                     )}

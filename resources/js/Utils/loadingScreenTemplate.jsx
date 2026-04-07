@@ -3,12 +3,16 @@
  * Utilisé par app.jsx, AppLayout.jsx et LoadingScreen.jsx
  */
 
+import { withBasePath } from "./urlHelper";
+
+const LOGO_URL = withBasePath("", "/images/image.png");
+
 // Précharger l'image dès que possible
-if (typeof window !== 'undefined') {
-    const link = document.createElement('link');
-    link.rel = 'preload';
-    link.as = 'image';
-    link.href = '/images/image.png';
+if (typeof window !== "undefined") {
+    const link = document.createElement("link");
+    link.rel = "preload";
+    link.as = "image";
+    link.href = LOGO_URL;
     document.head.appendChild(link);
 }
 
@@ -24,7 +28,7 @@ export const loadingScreenHTML = `
         <div class="logo-wrapper">
             <div class="logo-glow"></div>
             <img
-                src="/images/image.png"
+                src="${LOGO_URL}"
                 alt="Logo"
                 class="loading-logo"
                 loading="eager"
@@ -65,14 +69,16 @@ export const LoadingScreenComponent = () => (
             <div className="logo-wrapper">
                 <div className="logo-glow"></div>
                 <img
-                    src="/images/image.png"
+                    src={LOGO_URL}
                     alt="Logo"
                     className="loading-logo"
                     loading="eager"
                     decoding="async"
                     onError={(e) => {
-                        e.target.style.background = 'radial-gradient(circle, rgba(212, 175, 55, 0.6) 0%, transparent 70%)';
-                        e.target.style.border = '3px solid rgba(212, 175, 55, 0.6)';
+                        e.target.style.background =
+                            "radial-gradient(circle, rgba(212, 175, 55, 0.6) 0%, transparent 70%)";
+                        e.target.style.border =
+                            "3px solid rgba(212, 175, 55, 0.6)";
                     }}
                 />
             </div>

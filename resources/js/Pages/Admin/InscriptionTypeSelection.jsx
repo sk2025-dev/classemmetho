@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "@inertiajs/react";
 import { ArrowLeft, User, Users, ArrowRight, FileUp } from "lucide-react";
 import ExcelImportForm from "./Inscriptions/ExcelImportForm";
+import { withBasePath } from "../../Utils/urlHelper";
 
 export default function SelectionTypeInscription() {
     const [showExcelForm, setShowExcelForm] = useState(false);
@@ -10,7 +11,7 @@ export default function SelectionTypeInscription() {
         {
             title: "Pasteur",
             desc: "Inscrire un nouveau pasteur",
-            href: "/admin/inscriptions/pasteur/create",
+            href: withBasePath("", "/admin/inscriptions/pasteur/create"),
             colorClass: "text-indigo-600",
             bgIconClass: "bg-indigo-50",
             hoverBorder: "hover:border-indigo-500",
@@ -19,7 +20,7 @@ export default function SelectionTypeInscription() {
         {
             title: "Conducteur",
             desc: "Inscrire un nouveau conducteur",
-            href: "/admin/inscriptions/conducteur/create",
+            href: withBasePath("", "/admin/inscriptions/conducteur/create"),
             colorClass: "text-blue-600",
             bgIconClass: "bg-blue-50",
             hoverBorder: "hover:border-blue-500",
@@ -28,7 +29,7 @@ export default function SelectionTypeInscription() {
         {
             title: "Responsable de Famille",
             desc: "Inscrire un responsable de famille",
-            href: "/admin/inscriptions/famille/create",
+            href: withBasePath("", "/admin/inscriptions/famille/create"),
             colorClass: "text-emerald-600",
             bgIconClass: "bg-emerald-50",
             hoverBorder: "hover:border-emerald-500",
@@ -64,7 +65,7 @@ export default function SelectionTypeInscription() {
                         {/* Header */}
                         <div className="mb-8 flex justify-between items-center">
                             <Link
-                                href="/admin/inscriptions/"
+                                href={withBasePath("", "/admin/inscriptions/")}
                                 className="inline-flex items-center gap-2 text-white/80 hover:text-white font-medium transition-all duration-300 bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-full border border-white/20 hover:bg-white/20"
                             >
                                 <ArrowLeft size={18} />
@@ -77,12 +78,13 @@ export default function SelectionTypeInscription() {
                                 Type d'inscription
                             </h1>
                             <p className="text-white/80 text-lg font-medium">
-                                Choisissez le profil que vous souhaitez enregistrer
+                                Choisissez le profil que vous souhaitez
+                                enregistrer
                             </p>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
-                            {cards.map((card, idx) => (
+                            {cards.map((card, idx) =>
                                 card.isAction ? (
                                     <button
                                         key={idx}
@@ -100,11 +102,13 @@ export default function SelectionTypeInscription() {
                                         `}
                                     >
                                         {/* Zone de l'icône */}
-                                        <div className={`
+                                        <div
+                                            className={`
                                             mb-6 p-5 rounded-full transition-all duration-500 ease-out shadow-sm
                                             group-hover:scale-110 group-hover:rotate-3
                                             ${card.bgIconClass}
-                                        `}>
+                                        `}
+                                        >
                                             <div className={card.colorClass}>
                                                 {card.icon}
                                             </div>
@@ -149,11 +153,13 @@ export default function SelectionTypeInscription() {
                                         `}
                                     >
                                         {/* Zone de l'icône */}
-                                        <div className={`
+                                        <div
+                                            className={`
                                             mb-6 p-5 rounded-full transition-all duration-500 ease-out shadow-sm
                                             group-hover:scale-110 group-hover:rotate-3
                                             ${card.bgIconClass}
-                                        `}>
+                                        `}
+                                        >
                                             <div className={card.colorClass}>
                                                 {card.icon}
                                             </div>
@@ -182,8 +188,8 @@ export default function SelectionTypeInscription() {
                                         {/* Petit indicateur visuel en bas (optionnel) */}
                                         <div className="absolute bottom-0 left-0 w-full h-1.5 bg-gradient-to-r from-transparent via-slate-100 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                                     </Link>
-                                )
-                            ))}
+                                ),
+                            )}
                         </div>
                     </div>
                 </div>

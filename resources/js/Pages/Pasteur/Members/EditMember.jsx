@@ -24,6 +24,7 @@ import {
     Briefcase,
 } from "lucide-react";
 import { resolveMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 // Fonction utilitaire pour formater les dates ISO en yyyy-MM-dd
 const formatDateForInput = (dateString) => {
@@ -214,7 +215,9 @@ export default function EditMember({ member, family }) {
     useEffect(() => {
         const loadFonctions = async () => {
             try {
-                const fonctionsRes = await axios.get("/api/fonctions");
+                const fonctionsRes = await axios.get(
+                    withBasePath("", "/api/fonctions"),
+                );
                 setFonctions(fonctionsRes.data);
             } catch (error) {
                 console.error(

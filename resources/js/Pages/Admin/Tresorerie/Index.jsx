@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Head, Link } from "@inertiajs/react";
+import { withBasePath } from "../../../Utils/urlHelper";
 import {
     BarChart3,
     TrendingUp,
@@ -289,7 +290,7 @@ export default function AdminTresorerie({
                 <div className="max-w-7xl mx-auto px-4 py-6">
                     <div className="flex items-center gap-4">
                         <Link
-                            href="/admin/dashboard"
+                            href={withBasePath("", "/admin/dashboard")}
                             className="p-2 hover:bg-white/20 rounded-lg transition"
                         >
                             <ArrowLeft size={24} className="text-white" />
@@ -529,9 +530,9 @@ export default function AdminTresorerie({
                                                                 {paiement.type}
                                                             </td>
                                                             <td className="px-4 py-3 font-semibold text-gray-900">
-                                                            {fmtCurrency(
-                                                                paiement.montant,
-                                                            )}
+                                                                {fmtCurrency(
+                                                                    paiement.montant,
+                                                                )}
                                                             </td>
                                                             <td className="px-4 py-3 text-gray-600">
                                                                 {paiement.mode}

@@ -1,14 +1,32 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, usePage, router } from "@inertiajs/react";
-import { usePersistentState, clearFormPersistedData } from "../../Hooks/usePersistentState";
+import {
+    usePersistentState,
+    clearFormPersistedData,
+} from "../../Hooks/usePersistentState";
 import Select2Fonction from "../../Components/Select2Fonction";
 import Select2Relation from "../../Components/Select2Relation";
 import {
-    ArrowLeft, User, Mail, Phone, Heart, Calendar, MapPin,
-    Award, Gift, BookOpen, ChevronDown, ChevronUp, Check, X, Users, Briefcase
+    ArrowLeft,
+    User,
+    Mail,
+    Phone,
+    Heart,
+    Calendar,
+    MapPin,
+    Award,
+    Gift,
+    BookOpen,
+    ChevronDown,
+    ChevronUp,
+    Check,
+    X,
+    Users,
+    Briefcase,
 } from "lucide-react";
 import { resolveMemberPhotoUrl } from "../../Helpers/PhotoHelper";
 import { sanitizeUppercasePrenom } from "../../Helpers/nameSanitizers";
+import { withBasePath } from "../../Utils/urlHelper";
 
 // Fonction utilitaire pour formater les dates ISO en yyyy-MM-dd
 const formatDateForInput = (dateString) => {
@@ -37,7 +55,14 @@ const FormField = ({ label, children, icon: Icon, required }) => (
 );
 
 // Sous-composant pour les sections de Sacrements (Accordéon)
-const SacrementSection = ({ title, icon: Icon, color, checked, onChange, children }) => {
+const SacrementSection = ({
+    title,
+    icon: Icon,
+    color,
+    checked,
+    onChange,
+    children,
+}) => {
     const [isOpen, setIsOpen] = useState(checked);
 
     useEffect(() => {
@@ -60,21 +85,35 @@ const SacrementSection = ({ title, icon: Icon, color, checked, onChange, childre
                         }}
                         onClick={(e) => e.stopPropagation()}
                         className={`w-5 h-5 rounded border-gray-300 cursor-pointer ${
-                            color === 'blue' ? 'text-blue-600 focus:ring-blue-500' :
-                            color === 'emerald' ? 'text-emerald-600 focus:ring-emerald-500' :
-                            color === 'rose' ? 'text-rose-600 focus:ring-rose-500' :
-                            'text-gray-600 focus:ring-gray-500'
+                            color === "blue"
+                                ? "text-blue-600 focus:ring-blue-500"
+                                : color === "emerald"
+                                  ? "text-emerald-600 focus:ring-emerald-500"
+                                  : color === "rose"
+                                    ? "text-rose-600 focus:ring-rose-500"
+                                    : "text-gray-600 focus:ring-gray-500"
                         }`}
                     />
-                    <Icon className={`w-5 h-5 ${
-                        color === 'blue' ? 'text-blue-600' :
-                        color === 'emerald' ? 'text-emerald-600' :
-                        color === 'rose' ? 'text-rose-600' :
-                        'text-gray-600'
-                    }`} />
-                    <span className="font-semibold text-gray-700 select-none">{title}</span>
+                    <Icon
+                        className={`w-5 h-5 ${
+                            color === "blue"
+                                ? "text-blue-600"
+                                : color === "emerald"
+                                  ? "text-emerald-600"
+                                  : color === "rose"
+                                    ? "text-rose-600"
+                                    : "text-gray-600"
+                        }`}
+                    />
+                    <span className="font-semibold text-gray-700 select-none">
+                        {title}
+                    </span>
                 </div>
-                {isOpen ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                {isOpen ? (
+                    <ChevronUp className="w-5 h-5 text-gray-400" />
+                ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                )}
             </div>
 
             {isOpen && (
@@ -118,10 +157,14 @@ export default function Profile({ member, family, fonctions }) {
         date_bapteme: formatDateForInput(sacrements.bapteme_date),
         lieu_bapteme: sacrements.bapteme_lieu || "",
         premiere_communion: sacrements.premiere_communion || false,
-        date_premiere_communion: formatDateForInput(sacrements.premiere_communion_date),
+        date_premiere_communion: formatDateForInput(
+            sacrements.premiere_communion_date,
+        ),
         lieu_premiere_communion: sacrements.premiere_communion_lieu || "",
         marie_religieusement: sacrements.marie_religieusement || false,
-        date_mariage_religieux: formatDateForInput(sacrements.mariage_religieux_date),
+        date_mariage_religieux: formatDateForInput(
+            sacrements.mariage_religieux_date,
+        ),
         lieu_mariage_religieux: sacrements.mariage_religieux_lieu || "",
     });
 
@@ -170,41 +213,54 @@ export default function Profile({ member, family, fonctions }) {
                 return;
             }
 
-            if (k === 'baptise' || k === 'premiere_communion' || k === 'marie_religieusement') {
-                submitData[k] = v ? '1' : '0';
+            if (
+                k === "baptise" ||
+                k === "premiere_communion" ||
+                k === "marie_religieusement"
+            ) {
+                submitData[k] = v ? "1" : "0";
                 return;
             }
 
             submitData[k] = v;
         });
 
-        router.put('/membre-famille/profile/update', submitData, {
-            onSuccess: () => {
-                alert("Modifications sauvegardées avec succès !");
+        router.put(
+            withBasePath("", "/membre-famille/profile/update"),
+            submitData,
+            {
+                onSuccess: () => {
+                    alert("Modifications sauvegardées avec succès !");
+                },
+                onError: (errors) => {
+                    console.error("Erreurs de validation:", errors);
+                    const errorMessages = Object.entries(errors).map(
+                        ([field, message]) => {
+                            return `${field}: ${message}`;
+                        },
+                    );
+                    alert(`Erreur de validation:\n${errorMessages.join("\n")}`);
+                },
+                onFinish: () => {
+                    setLoading(false);
+                },
             },
-            onError: (errors) => {
-                console.error("Erreurs de validation:", errors);
-                const errorMessages = Object.entries(errors).map(([field, message]) => {
-                    return `${field}: ${message}`;
-                });
-                alert(`Erreur de validation:\n${errorMessages.join('\n')}`);
-            },
-            onFinish: () => {
-                setLoading(false);
-            },
-        });
+        );
     };
 
     return (
-        <div className="min-h-screen font-sans text-gray-800 selection:bg-purple-200"
-             style={{ background: "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)" }}>
-
+        <div
+            className="min-h-screen font-sans text-gray-800 selection:bg-purple-200"
+            style={{
+                background:
+                    "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
+            }}
+        >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-6">
                     <Link
-                        href="/membre-famille/family"
+                        href={withBasePath("", "/membre-famille/family")}
                         className="p-2 bg-white/90 backdrop-blur-xl rounded-full border border-white/50 shadow-lg hover:shadow-xl hover:bg-white transition-all"
                     >
                         <ArrowLeft className="w-5 h-5 text-gray-700" />
@@ -213,13 +269,18 @@ export default function Profile({ member, family, fonctions }) {
                         <h1 className="text-3xl font-bold text-white drop-shadow-lg">
                             Modifier Mon Profil
                         </h1>
-                        <p className="text-white/80 text-sm">Mettez à jour vos informations personnelles</p>
+                        <p className="text-white/80 text-sm">
+                            Mettez à jour vos informations personnelles
+                        </p>
                     </div>
                 </div>
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} encType="multipart/form-data" className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-white/50">
-
+                <form
+                    onSubmit={handleSubmit}
+                    encType="multipart/form-data"
+                    className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-white/50"
+                >
                     {/* Photo Section */}
                     <section className="mb-8 p-6 border border-gray-200 rounded-xl bg-white">
                         <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2 pb-3 border-b">
@@ -254,10 +315,19 @@ export default function Profile({ member, family, fonctions }) {
                                         accept="image/*"
                                         className="hidden"
                                     />
-                                    <label htmlFor="photoInput" className="flex">
+                                    <label
+                                        htmlFor="photoInput"
+                                        className="flex"
+                                    >
                                         <button
                                             type="button"
-                                            onClick={() => document.getElementById('photoInput').click()}
+                                            onClick={() =>
+                                                document
+                                                    .getElementById(
+                                                        "photoInput",
+                                                    )
+                                                    .click()
+                                            }
                                             className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
                                         >
                                             <Award className="w-4 h-4" />
@@ -273,17 +343,23 @@ export default function Profile({ member, family, fonctions }) {
                     </section>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
                         {/* Section Personnelle */}
                         <section className="space-y-4 p-6 border border-gray-200 rounded-xl bg-gray-50">
-                            <h2 className="text-lg font-bold text-gray-900 border-b pb-2">Informations Personnelles</h2>
+                            <h2 className="text-lg font-bold text-gray-900 border-b pb-2">
+                                Informations Personnelles
+                            </h2>
 
                             <FormField label="Nom" icon={User} required>
                                 <input
                                     type="text"
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                     value={data.nom}
-                                    onChange={(e) => setData({ ...data, nom: e.target.value })}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            nom: e.target.value,
+                                        })
+                                    }
                                 />
                             </FormField>
 
@@ -308,7 +384,12 @@ export default function Profile({ member, family, fonctions }) {
                                     type="email"
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                     value={data.email}
-                                    onChange={(e) => setData({ ...data, email: e.target.value })}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            email: e.target.value,
+                                        })
+                                    }
                                 />
                             </FormField>
 
@@ -317,7 +398,12 @@ export default function Profile({ member, family, fonctions }) {
                                     type="tel"
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                     value={data.telephone}
-                                    onChange={(e) => setData({ ...data, telephone: e.target.value })}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            telephone: e.target.value,
+                                        })
+                                    }
                                 />
                             </FormField>
 
@@ -326,7 +412,12 @@ export default function Profile({ member, family, fonctions }) {
                                     type="tel"
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                     value={data.telephone2}
-                                    onChange={(e) => setData({ ...data, telephone2: e.target.value })}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            telephone2: e.target.value,
+                                        })
+                                    }
                                 />
                             </FormField>
 
@@ -334,42 +425,76 @@ export default function Profile({ member, family, fonctions }) {
                                 <select
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                     value={data.genre}
-                                    onChange={(e) => setData({ ...data, genre: e.target.value })}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            genre: e.target.value,
+                                        })
+                                    }
                                 >
                                     <option value="M">Homme</option>
                                     <option value="F">Femme</option>
                                 </select>
                             </FormField>
 
-                            <FormField label="Date de Naissance" icon={Calendar}>
+                            <FormField
+                                label="Date de Naissance"
+                                icon={Calendar}
+                            >
                                 <input
                                     type="date"
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                     value={data.date_naissance}
-                                    onChange={(e) => setData({ ...data, date_naissance: e.target.value })}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            date_naissance: e.target.value,
+                                        })
+                                    }
                                 />
                             </FormField>
                         </section>
 
                         {/* Section Professionnelle */}
                         <section className="space-y-4 p-6 border border-gray-200 rounded-xl bg-gray-50">
-                            <h2 className="text-lg font-bold text-gray-900 border-b pb-2">Informations Professionnelles</h2>
+                            <h2 className="text-lg font-bold text-gray-900 border-b pb-2">
+                                Informations Professionnelles
+                            </h2>
 
                             <FormField label="Profession" icon={Briefcase}>
                                 <input
                                     type="text"
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                     value={data.profession}
-                                    onChange={(e) => setData({ ...data, profession: e.target.value })}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            profession: e.target.value,
+                                        })
+                                    }
                                 />
                             </FormField>
 
-                            <FormField label="Fonction dans l'Église" icon={Award}>
+                            <FormField
+                                label="Fonction dans l'Église"
+                                icon={Award}
+                            >
                                 <Select2Fonction
-                                    value={data.fonction_id ? [data.fonction_id] : []}
+                                    value={
+                                        data.fonction_id
+                                            ? [data.fonction_id]
+                                            : []
+                                    }
                                     onChange={(e) => {
-                                        const value = e.target.value && e.target.value.length > 0 ? e.target.value[0] : "";
-                                        setData({ ...data, fonction_id: value });
+                                        const value =
+                                            e.target.value &&
+                                            e.target.value.length > 0
+                                                ? e.target.value[0]
+                                                : "";
+                                        setData({
+                                            ...data,
+                                            fonction_id: value,
+                                        });
                                     }}
                                     options={fonctions}
                                     placeholder="S\u00e9lectionner une fonction..."
@@ -379,7 +504,12 @@ export default function Profile({ member, family, fonctions }) {
                             <FormField label="Relation de Famille" icon={Users}>
                                 <Select2Relation
                                     value={data.relation}
-                                    onChange={(e) => setData({ ...data, relation: e.target.value })}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            relation: e.target.value,
+                                        })
+                                    }
                                     placeholder="Sélectionner une relation..."
                                 />
                             </FormField>
@@ -388,60 +518,96 @@ export default function Profile({ member, family, fonctions }) {
                                 <select
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                     value={data.statut_marital}
-                                    onChange={(e) => setData({ ...data, statut_marital: e.target.value })}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            statut_marital: e.target.value,
+                                        })
+                                    }
                                 >
                                     <option value="">-- Sélectionnez --</option>
-                                    <option value="Célibataire">Célibataire</option>
+                                    <option value="Célibataire">
+                                        Célibataire
+                                    </option>
                                     <option value="Marié(e)">Marié(e)</option>
-                                    <option value="Divorcé(e)">Divorcé(e)</option>
+                                    <option value="Divorcé(e)">
+                                        Divorcé(e)
+                                    </option>
                                     <option value="Veuf(ve)">Veuf(ve)</option>
                                     <option value="Dote">Dote</option>
                                 </select>
                             </FormField>
 
                             {/* Afficher Date et Lieu de Mariage SEULEMENT si statut marital !== Célibataire */}
-                            {data.statut_marital && data.statut_marital !== "Célibataire" && (
-                                <>
-                                    <FormField label="Date de Mariage" icon={Calendar}>
-                                        <input
-                                            type="date"
-                                            className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
-                                            value={data.date_mariage}
-                                            onChange={(e) => setData({ ...data, date_mariage: e.target.value })}
-                                        />
-                                    </FormField>
+                            {data.statut_marital &&
+                                data.statut_marital !== "Célibataire" && (
+                                    <>
+                                        <FormField
+                                            label="Date de Mariage"
+                                            icon={Calendar}
+                                        >
+                                            <input
+                                                type="date"
+                                                className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
+                                                value={data.date_mariage}
+                                                onChange={(e) =>
+                                                    setData({
+                                                        ...data,
+                                                        date_mariage:
+                                                            e.target.value,
+                                                    })
+                                                }
+                                            />
+                                        </FormField>
 
-                                    <FormField label="Lieu de Mariage" icon={MapPin}>
-                                        <input
-                                            type="text"
-                                            className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
-                                            value={data.lieu_mariage}
-                                            onChange={(e) => setData({ ...data, lieu_mariage: e.target.value })}
-                                        />
-                                    </FormField>
-                                </>
-                            )}
+                                        <FormField
+                                            label="Lieu de Mariage"
+                                            icon={MapPin}
+                                        >
+                                            <input
+                                                type="text"
+                                                className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
+                                                value={data.lieu_mariage}
+                                                onChange={(e) =>
+                                                    setData({
+                                                        ...data,
+                                                        lieu_mariage:
+                                                            e.target.value,
+                                                    })
+                                                }
+                                            />
+                                        </FormField>
+                                    </>
+                                )}
                         </section>
-
                     </div>
 
                     {/* Section Sacrements */}
                     <section className="mt-6 space-y-4">
-                        <h2 className="text-lg font-bold text-gray-900">Sacrements Religieux</h2>
+                        <h2 className="text-lg font-bold text-gray-900">
+                            Sacrements Religieux
+                        </h2>
 
                         <SacrementSection
                             title="Baptême"
                             icon={Gift}
                             color="blue"
                             checked={data.baptise}
-                            onChange={(checked) => setData({ ...data, baptise: checked })}
+                            onChange={(checked) =>
+                                setData({ ...data, baptise: checked })
+                            }
                         >
                             <FormField label="Date du Baptême" icon={Calendar}>
                                 <input
                                     type="date"
                                     className="w-full h-10 border border-gray-300 rounded px-2 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                     value={data.date_bapteme}
-                                    onChange={(e) => setData({ ...data, date_bapteme: e.target.value })}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            date_bapteme: e.target.value,
+                                        })
+                                    }
                                 />
                             </FormField>
                             <FormField label="Lieu du Baptême" icon={MapPin}>
@@ -449,7 +615,12 @@ export default function Profile({ member, family, fonctions }) {
                                     type="text"
                                     className="w-full h-10 border border-gray-300 rounded px-2 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                     value={data.lieu_bapteme}
-                                    onChange={(e) => setData({ ...data, lieu_bapteme: e.target.value })}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            lieu_bapteme: e.target.value,
+                                        })
+                                    }
                                 />
                             </FormField>
                         </SacrementSection>
@@ -459,14 +630,28 @@ export default function Profile({ member, family, fonctions }) {
                             icon={Gift}
                             color="emerald"
                             checked={data.premiere_communion}
-                            onChange={(checked) => setData({ ...data, premiere_communion: checked })}
+                            onChange={(checked) =>
+                                setData({
+                                    ...data,
+                                    premiere_communion: checked,
+                                })
+                            }
                         >
-                            <FormField label="Date de la Première Communion" icon={Calendar}>
+                            <FormField
+                                label="Date de la Première Communion"
+                                icon={Calendar}
+                            >
                                 <input
                                     type="date"
                                     className="w-full h-10 border border-gray-300 rounded px-2 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                     value={data.date_premiere_communion}
-                                    onChange={(e) => setData({ ...data, date_premiere_communion: e.target.value })}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            date_premiere_communion:
+                                                e.target.value,
+                                        })
+                                    }
                                 />
                             </FormField>
                             <FormField label="Lieu" icon={MapPin}>
@@ -474,7 +659,13 @@ export default function Profile({ member, family, fonctions }) {
                                     type="text"
                                     className="w-full h-10 border border-gray-300 rounded px-2 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                     value={data.lieu_premiere_communion}
-                                    onChange={(e) => setData({ ...data, lieu_premiere_communion: e.target.value })}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            lieu_premiere_communion:
+                                                e.target.value,
+                                        })
+                                    }
                                 />
                             </FormField>
                         </SacrementSection>
@@ -484,22 +675,45 @@ export default function Profile({ member, family, fonctions }) {
                             icon={Heart}
                             color="rose"
                             checked={data.marie_religieusement}
-                            onChange={(checked) => setData({ ...data, marie_religieusement: checked })}
+                            onChange={(checked) =>
+                                setData({
+                                    ...data,
+                                    marie_religieusement: checked,
+                                })
+                            }
                         >
-                            <FormField label="Date du Mariage Religieux" icon={Calendar}>
+                            <FormField
+                                label="Date du Mariage Religieux"
+                                icon={Calendar}
+                            >
                                 <input
                                     type="date"
                                     className="w-full h-10 border border-gray-300 rounded px-2 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                     value={data.date_mariage_religieux}
-                                    onChange={(e) => setData({ ...data, date_mariage_religieux: e.target.value })}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            date_mariage_religieux:
+                                                e.target.value,
+                                        })
+                                    }
                                 />
                             </FormField>
-                            <FormField label="Lieu du Mariage Religieux" icon={MapPin}>
+                            <FormField
+                                label="Lieu du Mariage Religieux"
+                                icon={MapPin}
+                            >
                                 <input
                                     type="text"
                                     className="w-full h-10 border border-gray-300 rounded px-2 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
                                     value={data.lieu_mariage_religieux}
-                                    onChange={(e) => setData({ ...data, lieu_mariage_religieux: e.target.value })}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            lieu_mariage_religieux:
+                                                e.target.value,
+                                        })
+                                    }
                                 />
                             </FormField>
                         </SacrementSection>
@@ -508,7 +722,7 @@ export default function Profile({ member, family, fonctions }) {
                     {/* Footer Actions */}
                     <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end gap-3 bg-gray-50/50 -mx-6 -mb-6 p-6 rounded-b-2xl">
                         <Link
-                            href="/membre-famille/family"
+                            href={withBasePath("", "/membre-famille/family")}
                             className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2"
                         >
                             <X className="w-4 h-4" /> Annuler
@@ -521,11 +735,13 @@ export default function Profile({ member, family, fonctions }) {
                             {loading ? (
                                 <>Enregistrement...</>
                             ) : (
-                                <><Check className="w-4 h-4" /> Modifier Mon Profil</>
+                                <>
+                                    <Check className="w-4 h-4" /> Modifier Mon
+                                    Profil
+                                </>
                             )}
                         </button>
                     </div>
-
                 </form>
             </div>
 

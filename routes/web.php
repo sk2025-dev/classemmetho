@@ -315,8 +315,8 @@ Route::middleware(['auth'])->group(function () {
             ->name('conducteur.tresorerie.collectes.store');
         Route::post('/conducteur/tresorerie/paiements', [ConducteurTresorerieController::class, 'storePaiement'])
             ->name('conducteur.tresorerie.paiements.store');
-            Route::post('/conducteur/tresorerie/assign-tresorier', [ConducteurTresorerieController::class, 'assignTresorier'])
-                ->name('conducteur.tresorerie.assign-tresorier');
+        Route::post('/conducteur/tresorerie/assign-tresorier', [ConducteurTresorerieController::class, 'assignTresorier'])
+            ->name('conducteur.tresorerie.assign-tresorier');
     });
 
     // Tableau de bord Responsable de Famille

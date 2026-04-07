@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Head, Link } from "@inertiajs/react";
 import { CheckCircle, AlertCircle, Clock, ArrowLeft } from "lucide-react";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 export default function PaiementResultat({
     paiement = {},
@@ -53,7 +54,7 @@ export default function PaiementResultat({
             <div className="max-w-2xl mx-auto px-4 py-8">
                 <div className="mb-6">
                     <Link
-                        href="/membre-famille/tresorerie"
+                        href={withBasePath("", "/membre-famille/tresorerie")}
                         className="inline-flex items-center gap-2 text-white/90 hover:text-white"
                     >
                         <ArrowLeft size={18} /> Retour finances
@@ -119,7 +120,10 @@ export default function PaiementResultat({
 
                     <div className="mt-6">
                         <Link
-                            href="/membre-famille/tresorerie"
+                            href={withBasePath(
+                                "",
+                                "/membre-famille/tresorerie",
+                            )}
                             className="w-full inline-flex justify-center px-4 py-3 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700"
                         >
                             Retour à mes finances

@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Head, Link, router, usePage } from "@inertiajs/react";
-import { ArrowLeft, CalendarDays, ChevronRight, Send, Star, Users } from "lucide-react";
+import {
+    ArrowLeft,
+    CalendarDays,
+    ChevronRight,
+    Send,
+    Star,
+    Users,
+} from "lucide-react";
 import { ToastContainer } from "../../../Components/Toast";
 import useToast from "../../../Hooks/useToast";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 function formatDate(dateString) {
     if (!dateString) {
@@ -40,9 +48,7 @@ const ratingScaleLabels = {
 
 function getRatingLabel(question, option) {
     return (
-        question?.scaleLabels?.[option] ||
-        ratingScaleLabels[option] ||
-        option
+        question?.scaleLabels?.[option] || ratingScaleLabels[option] || option
     );
 }
 
@@ -67,7 +73,12 @@ export default function ConducteurSondageRespond({
     const { errors = {}, flash = {} } = usePage().props;
     const [answers, setAnswers] = useState(previousAnswers || {});
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const { toasts, removeToast, success: showSuccess, error: showError } = useToast();
+    const {
+        toasts,
+        removeToast,
+        success: showSuccess,
+        error: showError,
+    } = useToast();
     const lastSuccessRef = useRef(null);
     const lastErrorRef = useRef(null);
 
@@ -132,7 +143,9 @@ export default function ConducteurSondageRespond({
 
     return (
         <>
-            <Head title={`${survey?.titre || "Sondage"} - Reponse conducteur`} />
+            <Head
+                title={`${survey?.titre || "Sondage"} - Reponse conducteur`}
+            />
             <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
 
             <div
@@ -146,7 +159,7 @@ export default function ConducteurSondageRespond({
                     <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-3 text-white">
                             <Link
-                                href="/conducteur/sondages"
+                                href={withBasePath("", "/conducteur/sondages")}
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
                             >
                                 <ArrowLeft className="h-5 w-5" />
@@ -182,31 +195,40 @@ export default function ConducteurSondageRespond({
                                     </span>
                                     <span className="inline-flex items-center gap-2 text-sm text-slate-500">
                                         <CalendarDays className="h-4 w-4" />
-                                        Cree le {formatDate(survey.dateCreation)}
+                                        Cree le{" "}
+                                        {formatDate(survey.dateCreation)}
                                     </span>
                                     <span className="inline-flex items-center gap-2 text-sm text-slate-500">
                                         <CalendarDays className="h-4 w-4" />
-                                        Date de cloture: {formatDate(survey.dateEcheance)}
+                                        Date de cloture:{" "}
+                                        {formatDate(survey.dateEcheance)}
                                     </span>
                                 </div>
                                 <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-900">
                                     {survey.titre}
                                 </h2>
                                 <p className="mt-3 text-base leading-7 text-slate-600">
-                                    {survey.description || "Aucune description renseignee."}
+                                    {survey.description ||
+                                        "Aucune description renseignee."}
                                 </p>
                                 <div className="mt-5 flex flex-wrap gap-3 text-sm text-slate-600">
                                     <span className="rounded-full bg-slate-100 px-3 py-1.5">
-                                        Audience: <strong>{survey.audience}</strong>
+                                        Audience:{" "}
+                                        <strong>{survey.audience}</strong>
                                     </span>
                                     <span className="rounded-full bg-slate-100 px-3 py-1.5">
                                         Classe:{" "}
                                         <strong>
-                                            {survey.classe || classe?.nom || "Non renseignee"}
+                                            {survey.classe ||
+                                                classe?.nom ||
+                                                "Non renseignee"}
                                         </strong>
                                     </span>
                                     <span className="rounded-full bg-slate-100 px-3 py-1.5">
-                                        Createur: <strong>{survey.createur || "Non renseigne"}</strong>
+                                        Createur:{" "}
+                                        <strong>
+                                            {survey.createur || "Non renseigne"}
+                                        </strong>
                                     </span>
                                 </div>
                             </div>
@@ -216,10 +238,11 @@ export default function ConducteurSondageRespond({
                                     Confidentialite
                                 </p>
                                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                                    Le systeme enregistre une participation anonyme.
-                                    Aucun nom, email ou telephone n'apparaitra dans les
-                                    resultats. Seules des statistiques globales de profil
-                                    peuvent etre utilisees.
+                                    Le systeme enregistre une participation
+                                    anonyme. Aucun nom, email ou telephone
+                                    n'apparaitra dans les resultats. Seules des
+                                    statistiques globales de profil peuvent etre
+                                    utilisees.
                                 </p>
                             </div>
                         </div>
@@ -227,13 +250,15 @@ export default function ConducteurSondageRespond({
 
                     {hasResponded ? (
                         <div className="mt-6 rounded-[24px] border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-700">
-                            Votre reponse anonyme a deja ete enregistree pour ce sondage.
+                            Votre reponse anonyme a deja ete enregistree pour ce
+                            sondage.
                         </div>
                     ) : null}
 
                     {isExpired ? (
                         <div className="mt-6 rounded-[24px] border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">
-                            Ce sondage est expire. Vous ne pouvez plus soumettre de reponse.
+                            Ce sondage est expire. Vous ne pouvez plus soumettre
+                            de reponse.
                         </div>
                     ) : null}
 
@@ -255,7 +280,8 @@ export default function ConducteurSondageRespond({
                                             Question {index + 1}
                                         </p>
                                         <h3 className="mt-2 text-lg font-semibold text-slate-900">
-                                            {question.title || "Question sans titre"}
+                                            {question.title ||
+                                                "Question sans titre"}
                                         </h3>
                                     </div>
                                     <div className="flex flex-wrap items-center justify-end gap-2">
@@ -276,7 +302,8 @@ export default function ConducteurSondageRespond({
                                         onChange={(event) =>
                                             setAnswers((current) => ({
                                                 ...current,
-                                                [question.id]: event.target.value,
+                                                [question.id]:
+                                                    event.target.value,
                                             }))
                                         }
                                         disabled={hasResponded || isExpired}
@@ -288,102 +315,142 @@ export default function ConducteurSondageRespond({
 
                                 {question.type === "rating" ? (
                                     <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                                        {(question.options || []).map((option, optionIndex) => {
-                                            const isActive = answers[question.id] === option;
+                                        {(question.options || []).map(
+                                            (option, optionIndex) => {
+                                                const isActive =
+                                                    answers[question.id] ===
+                                                    option;
 
-                                            return (
-                                                <button
-                                                    key={`${question.id}-${optionIndex}`}
-                                                    type="button"
-                                                    disabled={hasResponded || isExpired}
-                                                    onClick={() =>
-                                                        setAnswers((current) => ({
-                                                            ...current,
-                                                            [question.id]: option,
-                                                        }))
-                                                    }
-                                                    className={`rounded-2xl border px-4 py-3 text-center transition ${
-                                                        isActive
-                                                            ? "border-amber-500 bg-amber-50 text-amber-700"
-                                                            : "border-slate-200 bg-white text-slate-500 hover:border-amber-300"
-                                                    }`}
-                                                >
-                                                    <div
-                                                        className={`mx-auto flex h-11 w-11 items-center justify-center rounded-full border ${
+                                                return (
+                                                    <button
+                                                        key={`${question.id}-${optionIndex}`}
+                                                        type="button"
+                                                        disabled={
+                                                            hasResponded ||
+                                                            isExpired
+                                                        }
+                                                        onClick={() =>
+                                                            setAnswers(
+                                                                (current) => ({
+                                                                    ...current,
+                                                                    [question.id]:
+                                                                        option,
+                                                                }),
+                                                            )
+                                                        }
+                                                        className={`rounded-2xl border px-4 py-3 text-center transition ${
                                                             isActive
-                                                                ? "border-amber-400 bg-amber-100"
-                                                                : "border-slate-200 bg-slate-50"
+                                                                ? "border-amber-500 bg-amber-50 text-amber-700"
+                                                                : "border-slate-200 bg-white text-slate-500 hover:border-amber-300"
                                                         }`}
                                                     >
-                                                        <Star className="h-4 w-4 fill-current" />
-                                                        <span className="ml-1 text-sm font-semibold">
-                                                            {option}
-                                                        </span>
-                                                    </div>
-                                                    <p className="mt-2 text-xs font-medium leading-5">
-                                                        {getRatingLabel(question, option)}
-                                                    </p>
-                                                </button>
-                                            );
-                                        })}
+                                                        <div
+                                                            className={`mx-auto flex h-11 w-11 items-center justify-center rounded-full border ${
+                                                                isActive
+                                                                    ? "border-amber-400 bg-amber-100"
+                                                                    : "border-slate-200 bg-slate-50"
+                                                            }`}
+                                                        >
+                                                            <Star className="h-4 w-4 fill-current" />
+                                                            <span className="ml-1 text-sm font-semibold">
+                                                                {option}
+                                                            </span>
+                                                        </div>
+                                                        <p className="mt-2 text-xs font-medium leading-5">
+                                                            {getRatingLabel(
+                                                                question,
+                                                                option,
+                                                            )}
+                                                        </p>
+                                                    </button>
+                                                );
+                                            },
+                                        )}
                                     </div>
                                 ) : null}
 
-                                {question.type === "checkbox" || question.type === "yes_no" ? (
+                                {question.type === "checkbox" ||
+                                question.type === "yes_no" ? (
                                     <div className="mt-5 grid gap-3">
-                                        {(question.options || []).map((option) => (
-                                            <button
-                                                key={option}
-                                                type="button"
-                                                disabled={hasResponded || isExpired}
-                                                onClick={() =>
-                                                    setAnswers((current) => ({
-                                                        ...current,
-                                                        [question.id]: option,
-                                                    }))
-                                                }
-                                                className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left text-sm transition ${
-                                                    answers[question.id] === option
-                                                        ? "border-blue-400 bg-blue-50 text-blue-700"
-                                                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
-                                                }`}
-                                            >
-                                                <span
-                                                    className={`h-4 w-4 rounded-md border-2 ${
-                                                        answers[question.id] === option
-                                                            ? "border-blue-500 bg-blue-500"
-                                                            : "border-slate-300"
+                                        {(question.options || []).map(
+                                            (option) => (
+                                                <button
+                                                    key={option}
+                                                    type="button"
+                                                    disabled={
+                                                        hasResponded ||
+                                                        isExpired
+                                                    }
+                                                    onClick={() =>
+                                                        setAnswers(
+                                                            (current) => ({
+                                                                ...current,
+                                                                [question.id]:
+                                                                    option,
+                                                            }),
+                                                        )
+                                                    }
+                                                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left text-sm transition ${
+                                                        answers[question.id] ===
+                                                        option
+                                                            ? "border-blue-400 bg-blue-50 text-blue-700"
+                                                            : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
                                                     }`}
-                                                />
-                                                {option}
-                                            </button>
-                                        ))}
+                                                >
+                                                    <span
+                                                        className={`h-4 w-4 rounded-md border-2 ${
+                                                            answers[
+                                                                question.id
+                                                            ] === option
+                                                                ? "border-blue-500 bg-blue-500"
+                                                                : "border-slate-300"
+                                                        }`}
+                                                    />
+                                                    {option}
+                                                </button>
+                                            ),
+                                        )}
                                     </div>
                                 ) : null}
 
                                 {question.type === "multiple" ? (
                                     <div className="mt-5 grid gap-3">
-                                        {(question.options || []).map((option) => (
-                                            <label
-                                                key={option}
-                                                className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700"
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    value={option}
-                                                    checked={Array.isArray(answers[question.id]) && answers[question.id].includes(option)}
-                                                    onChange={(event) =>
-                                                        updateCheckboxAnswer(
-                                                            question.id,
-                                                            option,
-                                                            event.target.checked,
-                                                        )
-                                                    }
-                                                    disabled={hasResponded || isExpired}
-                                                />
-                                                {option}
-                                            </label>
-                                        ))}
+                                        {(question.options || []).map(
+                                            (option) => (
+                                                <label
+                                                    key={option}
+                                                    className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        value={option}
+                                                        checked={
+                                                            Array.isArray(
+                                                                answers[
+                                                                    question.id
+                                                                ],
+                                                            ) &&
+                                                            answers[
+                                                                question.id
+                                                            ].includes(option)
+                                                        }
+                                                        onChange={(event) =>
+                                                            updateCheckboxAnswer(
+                                                                question.id,
+                                                                option,
+                                                                event.target
+                                                                    .checked,
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            hasResponded ||
+                                                            isExpired
+                                                        }
+                                                    />
+                                                    {option}
+                                                </label>
+                                            ),
+                                        )}
                                     </div>
                                 ) : null}
                             </section>
@@ -394,7 +461,12 @@ export default function ConducteurSondageRespond({
                         <button
                             type="button"
                             onClick={submitAnswers}
-                            disabled={hasResponded || isExpired || isSubmitting || questions.length === 0}
+                            disabled={
+                                hasResponded ||
+                                isExpired ||
+                                isSubmitting ||
+                                questions.length === 0
+                            }
                             className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-8 py-3 text-base font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             <Send className="h-4 w-4" />

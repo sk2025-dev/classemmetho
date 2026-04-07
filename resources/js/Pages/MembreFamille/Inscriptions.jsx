@@ -12,6 +12,7 @@ import {
     User,
 } from "lucide-react";
 import ProfilePhoto from "@/Components/ProfilePhoto";
+import { withBasePath } from "../../Utils/urlHelper";
 
 // Composant Badge pour le Rôle
 const StatusBadge = ({ role }) => {
@@ -74,7 +75,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                 {/* Header Section */}
                 <div className="mb-8">
                     <Link
-                        href="/membre-famille/dashboard"
+                        href={withBasePath("", "/membre-famille/dashboard")}
                         className="inline-flex items-center gap-2 text-white/90 hover:text-white hover:bg-white/10 px-4 py-2 rounded-full transition-all mb-4 text-sm font-medium backdrop-blur-sm"
                     >
                         <ArrowLeft className="w-4 h-4" />
@@ -175,7 +176,12 @@ export default function Inscriptions({ family, members, familyStats }) {
                     <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
                         <button
                             onClick={() =>
-                                router.get("/membre-famille/profile/edit")
+                                router.get(
+                                    withBasePath(
+                                        "",
+                                        "/membre-famille/profile/edit",
+                                    ),
+                                )
                             }
                             className="flex items-center justify-center gap-2 px-4 py-2.5 text-white font-medium rounded-lg transition-all text-sm shadow-sm"
                             style={{ backgroundColor: "#1E40AF" }}
@@ -296,12 +302,14 @@ export default function Inscriptions({ family, members, familyStats }) {
                                                 </td>
                                                 <td className="px-6 py-4 text-left text-sm">
                                                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
-                                                        {member.code_famille || "N/A"}
+                                                        {member.code_famille ||
+                                                            "N/A"}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-left text-sm">
                                                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-xs font-semibold text-blue-700">
-                                                        {member.code_membre || "N/A"}
+                                                        {member.code_membre ||
+                                                            "N/A"}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">

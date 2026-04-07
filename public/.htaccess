@@ -3,13 +3,10 @@
         Options -MultiViews -Indexes
     </IfModule>
 
-    # UTF-8 Encoding
-    AddDefaultCharset utf-8
-    <IfModule mod_headers.c>
-        Header set Content-Type "text/html; charset=utf-8"
-    </IfModule>
-
     RewriteEngine On
+
+    # Si l’URL est https://monapp.com/demo, décommente la ligne suivante (adapte /demo) :
+     RewriteBase /demo
 
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
@@ -28,4 +25,5 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+
 </IfModule>

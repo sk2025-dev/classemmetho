@@ -10,6 +10,7 @@ import ToastContainer from "../../../Components/ToastContainer";
 import { useDebounce } from "../../../Hooks/useDebounce";
 import CitySelect from "../../../Components/CitySelect";
 import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
+import { withBasePath } from "../../../Utils/urlHelper";
 import {
     usePersistentState,
     clearFormPersistedData,
@@ -523,13 +524,28 @@ export default function RegisterFamille({
             [/must be a valid email/i, "doit contenir un email valide"],
             [/invalid email/i, "email invalide"],
             [/field must be a date/i, "doit être une date valide"],
-            [/field must be before today/i, "doit être antérieure à aujourd'hui"],
-            [/field must be before/i, "doit être antérieure à la date attendue"],
-            [/field must be after/i, "doit être postérieure à la date attendue"],
-            [/already exists|already been taken/i, "est déjà utilisé dans le système"],
+            [
+                /field must be before today/i,
+                "doit être antérieure à aujourd'hui",
+            ],
+            [
+                /field must be before/i,
+                "doit être antérieure à la date attendue",
+            ],
+            [
+                /field must be after/i,
+                "doit être postérieure à la date attendue",
+            ],
+            [
+                /already exists|already been taken/i,
+                "est déjà utilisé dans le système",
+            ],
             [/already registered/i, "est déjà enregistré"],
             [/invalid/i, "est invalide"],
-            [/network error/i, "Problème de connexion. Vérifiez Internet puis réessayez."],
+            [
+                /network error/i,
+                "Problème de connexion. Vérifiez Internet puis réessayez.",
+            ],
             [/server error/i, "Erreur serveur. Veuillez réessayer."],
         ];
 
@@ -586,7 +602,10 @@ export default function RegisterFamille({
         return fieldTranslations[field] || field;
     };
 
-    const buildErrorToastMessage = (errorMap, title = "Veuillez corriger les champs suivants :") => {
+    const buildErrorToastMessage = (
+        errorMap,
+        title = "Veuillez corriger les champs suivants :",
+    ) => {
         const lines = Object.entries(errorMap).map(([field, message]) => {
             if (!message) return null;
             const fieldKey = field
@@ -609,7 +628,9 @@ export default function RegisterFamille({
         const fetchData = async () => {
             try {
                 // Charger les classes depuis la base de données
-                const classesRes = await fetch("/api/classes");
+                const classesRes = await fetch(
+                    withBasePath("", "/api/classes"),
+                );
                 if (classesRes.ok) {
                     const classesData = await classesRes.json();
                     setClassesDatabase(
@@ -628,7 +649,7 @@ export default function RegisterFamille({
                 }
 
                 // Charger les villes depuis la base de données
-                const villesRes = await fetch("/api/villes");
+                const villesRes = await fetch(withBasePath("", "/api/villes"));
                 if (villesRes.ok) {
                     const villesData = await villesRes.json();
                     setVillesDatabase(
@@ -647,7 +668,9 @@ export default function RegisterFamille({
                 }
 
                 // Charger les fonctions d'église
-                const rolesRes = await fetch("/api/fonctions");
+                const rolesRes = await fetch(
+                    withBasePath("", "/api/fonctions"),
+                );
                 if (rolesRes.ok) {
                     const rolesData = await rolesRes.json();
                     // L'API retourne { success: true, fonctions: [...], count: ... }
@@ -1118,7 +1141,9 @@ export default function RegisterFamille({
         }
 
         if (!consentement) {
-            showWarning("Veuillez accepter le consentement avant de continuer.");
+            showWarning(
+                "Veuillez accepter le consentement avant de continuer.",
+            );
             focusField("consentement");
             return;
         }
@@ -1240,8 +1265,9 @@ export default function RegisterFamille({
                     "❌ Erreurs validation données membres:",
                     membreValidationErrors,
                 );
-                const firstMemberError = Object.keys(membreValidationErrors)[0]
-                    ?.replace(/^membres\[\d+\]\./, "membre.");
+                const firstMemberError = Object.keys(
+                    membreValidationErrors,
+                )[0]?.replace(/^membres\[\d+\]\./, "membre.");
                 showError(
                     buildErrorToastMessage(
                         membreValidationErrors,
@@ -1933,7 +1959,9 @@ export default function RegisterFamille({
                                     onChange={(e) =>
                                         setResponsable({
                                             ...responsable,
-                                            prenom: formatPrenom(e.target.value),
+                                            prenom: formatPrenom(
+                                                e.target.value,
+                                            ),
                                         })
                                     }
                                     placeholder="ex: Jean"
@@ -3750,7 +3778,10 @@ export default function RegisterFamille({
                 {/* Header avec lien retour */}
                 <div className="max-w-4xl mx-auto mb-6 flex justify-between items-center">
                     <Link
-                        href="/admin/inscriptions/type-selection"
+                        href={withBasePath(
+                            "",
+                            "/admin/inscriptions/type-selection",
+                        )}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 hover:bg-white/25 rounded-lg transition-all duration-300 text-white font-medium shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
                     >
                         <ArrowLeft size={20} className="flex-shrink-0" />

@@ -3,6 +3,7 @@ import { Link, router } from "@inertiajs/react";
 import { ArrowLeft, Download, Eye } from "lucide-react";
 import axios from "axios";
 import { resolveMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 /* ── CONSTANTS ── */
 const IN_PROGRESS = [
@@ -258,10 +259,7 @@ export default function Index({
         [selectedActe],
     );
     const celebrationRows = useMemo(
-        () =>
-            detailRows.filter((row) =>
-                CELEBRATION_FIELDS.includes(row.key),
-            ),
+        () => detailRows.filter((row) => CELEBRATION_FIELDS.includes(row.key)),
         [detailRows],
     );
     const filterNeedle = searchTerm.trim().toLowerCase();
@@ -576,7 +574,10 @@ export default function Index({
                 {/* ── BARRE ACTIONS ── */}
                 <div className="rf-actions">
                     <Link
-                        href="/responsable-famille/dashboard"
+                        href={withBasePath(
+                            "",
+                            "/responsable-famille/dashboard",
+                        )}
                         className="btn-ghost"
                     >
                         <ArrowLeft size={16} /> Retour
@@ -781,7 +782,10 @@ export default function Index({
                                         </div>
                                     </div>
                                     <Link
-                                        href="/responsable-famille/liturgie/nouvelle"
+                                        href={withBasePath(
+                                            "",
+                                            "/responsable-famille/liturgie/nouvelle",
+                                        )}
                                         className="ph-link ph-link-green"
                                     >
                                         + Nouvelle demande
@@ -806,8 +810,7 @@ export default function Index({
                                     const isMarriage =
                                         String(acte.type_acte || "")
                                             .trim()
-                                            .toLowerCase() ===
-                                        "mariage";
+                                            .toLowerCase() === "mariage";
                                     const hist = Array.isArray(acte.historiques)
                                         ? [...acte.historiques].sort(
                                               (a, b) =>
@@ -827,11 +830,17 @@ export default function Index({
                                     const refusPasteur =
                                         histMap["REFUSEE_PAR_PASTEUR"];
                                     const celebrationEntry =
-                                        histMap["CEREMONIE_VALIDEE_PAR_PASTEUR"] ||
+                                        histMap[
+                                            "CEREMONIE_VALIDEE_PAR_PASTEUR"
+                                        ] ||
                                         histMap["CEREMONIE_VALIDE_PAR_PASTEUR"];
                                     const celebrationRefus =
-                                        histMap["CEREMONIE_REFUSEE_PAR_PASTEUR"] ||
-                                        histMap["CEREMONIE_REFUSEE_PAR_CONDUCTEUR"];
+                                        histMap[
+                                            "CEREMONIE_REFUSEE_PAR_PASTEUR"
+                                        ] ||
+                                        histMap[
+                                            "CEREMONIE_REFUSEE_PAR_CONDUCTEUR"
+                                        ];
                                     const ceremonyStatut = String(
                                         acte.details?.ceremonie_statut || "",
                                     )
@@ -842,10 +851,10 @@ export default function Index({
                                               celebrationEntry.created_at,
                                           )
                                         : celebrationRefus
-                                            ? formatDateTime(
-                                                  celebrationRefus.created_at,
-                                              )
-                                            : null;
+                                          ? formatDateTime(
+                                                celebrationRefus.created_at,
+                                            )
+                                          : null;
                                     const celebrationValidated = [
                                         "CEREMONIE_VALIDEE_PAR_PASTEUR",
                                         "CEREMONIE_VALIDE_PAR_PASTEUR",
@@ -876,7 +885,8 @@ export default function Index({
                                     const canSeeCertificate =
                                         DONE.includes(statut);
                                     const validFicheStatuses =
-                                        String(acte.type_acte).toLowerCase() === "naissance"
+                                        String(acte.type_acte).toLowerCase() ===
+                                        "naissance"
                                             ? [
                                                   "SOUMISE",
                                                   "EN_ATTENTE_CONDUCTEUR",
@@ -887,24 +897,26 @@ export default function Index({
                                                   "CELEBRE",
                                                   "TERMINE",
                                               ]
-                                            : String(acte.type_acte).toLowerCase() === "deces"
-                                            ? [
-                                                  "VALIDEE",
-                                                  "PUBLIEE",
-                                                  "ARCHIVEE",
-                                                  "CELEBRE",
-                                                  "TERMINE",
-                                              ]
-                                            : [
-                                                  "SOUMISE",
-                                                  "EN_ATTENTE_CONDUCTEUR",
-                                                  "TRANSMISE_AU_PASTEUR",
-                                                  "VALIDEE",
-                                                  "PUBLIEE",
-                                                  "ARCHIVEE",
-                                                  "CELEBRE",
-                                                  "TERMINE",
-                                              ];
+                                            : String(
+                                                    acte.type_acte,
+                                                ).toLowerCase() === "deces"
+                                              ? [
+                                                    "VALIDEE",
+                                                    "PUBLIEE",
+                                                    "ARCHIVEE",
+                                                    "CELEBRE",
+                                                    "TERMINE",
+                                                ]
+                                              : [
+                                                    "SOUMISE",
+                                                    "EN_ATTENTE_CONDUCTEUR",
+                                                    "TRANSMISE_AU_PASTEUR",
+                                                    "VALIDEE",
+                                                    "PUBLIEE",
+                                                    "ARCHIVEE",
+                                                    "CELEBRE",
+                                                    "TERMINE",
+                                                ];
                                     const canSeeFiche =
                                         isFicheType(acte.type_acte) &&
                                         validFicheStatuses.includes(statut);
@@ -1037,8 +1049,12 @@ export default function Index({
                                                     <StatusStep
                                                         label="Célébration"
                                                         done={celebrationDone}
-                                                        active={celebrationActive}
-                                                        refused={celebrationRefused}
+                                                        active={
+                                                            celebrationActive
+                                                        }
+                                                        refused={
+                                                            celebrationRefused
+                                                        }
                                                         date={celebrationDate}
                                                     />
                                                 )}
@@ -1053,28 +1069,31 @@ export default function Index({
                                                 >
                                                     Voir le détail
                                                 </button>
-                                                {String(acte.type_acte) === "mariage" &&
+                                                {String(acte.type_acte) ===
+                                                    "mariage" &&
                                                     !DONE.includes(statut) && (
-                                                    <button
-                                                        type="button"
-                                                        className={`btn-pdf ${!canChooseDate ? "btn-disabled" : ""}`}
-                                                        disabled={!canChooseDate}
-                                                title={
-                                                    !canChooseDate
-                                                        ? "Le pasteur doit envoyer la fiche PDF avant que vous puissiez choisir une date."
-                                                        : "Choisir une date"
-                                                }
-                                                        onClick={() =>
-                                                            canChooseDate &&
-                                                            openCeremonyModal(acte)
-                                                        }
-                                                    >
-                                                        Choisir une date
-                                                    </button>
-                                                )}
-                                                {isFicheType(
-                                                    acte.type_acte,
-                                                ) ? (
+                                                        <button
+                                                            type="button"
+                                                            className={`btn-pdf ${!canChooseDate ? "btn-disabled" : ""}`}
+                                                            disabled={
+                                                                !canChooseDate
+                                                            }
+                                                            title={
+                                                                !canChooseDate
+                                                                    ? "Le pasteur doit envoyer la fiche PDF avant que vous puissiez choisir une date."
+                                                                    : "Choisir une date"
+                                                            }
+                                                            onClick={() =>
+                                                                canChooseDate &&
+                                                                openCeremonyModal(
+                                                                    acte,
+                                                                )
+                                                            }
+                                                        >
+                                                            Choisir une date
+                                                        </button>
+                                                    )}
+                                                {isFicheType(acte.type_acte) ? (
                                                     <button
                                                         type="button"
                                                         className={`btn-pdf ${!canSeeFiche ? "btn-disabled" : ""}`}
@@ -1086,9 +1105,7 @@ export default function Index({
                                                         }
                                                         onClick={() =>
                                                             canSeeFiche &&
-                                                            setPreviewActe(
-                                                                acte,
-                                                            )
+                                                            setPreviewActe(acte)
                                                         }
                                                     >
                                                         <Download size={13} />{" "}
@@ -1098,7 +1115,9 @@ export default function Index({
                                                     <button
                                                         type="button"
                                                         className={`btn-pdf ${!canSeeCertificate ? "btn-disabled" : ""}`}
-                                                        disabled={!canSeeCertificate}
+                                                        disabled={
+                                                            !canSeeCertificate
+                                                        }
                                                         title={
                                                             canSeeCertificate
                                                                 ? "Voir le certificat"
@@ -1106,9 +1125,7 @@ export default function Index({
                                                         }
                                                         onClick={() =>
                                                             canSeeCertificate &&
-                                                            setPreviewActe(
-                                                                acte,
-                                                            )
+                                                            setPreviewActe(acte)
                                                         }
                                                     >
                                                         <Download size={13} />{" "}
@@ -1328,7 +1345,10 @@ export default function Index({
                                     ))}
                                 </div>
                                 <Link
-                                    href="/responsable-famille/liturgie/nouvelle"
+                                    href={withBasePath(
+                                        "",
+                                        "/responsable-famille/liturgie/nouvelle",
+                                    )}
                                     className="btn-cta"
                                 >
                                     + Nouvelle demande d'acte
@@ -1582,8 +1602,8 @@ export default function Index({
                                                             );
                                                         }}
                                                     >
-                                                        <Eye size={11} />{" "}
-                                                        Voir la fiche
+                                                        <Eye size={11} /> Voir
+                                                        la fiche
                                                     </button>
                                                 )}
                                                 <svg
@@ -1897,7 +1917,6 @@ export default function Index({
                         </div>
                     </div>
                 )}
-
             </div>
 
             {/* ══════════ MODAL : NOUVELLE ANNONCE 3 ÉTAPES ══════════ */}
@@ -2223,7 +2242,10 @@ export default function Index({
             )}
 
             {previewActe && (
-                <div className="modal-overlay" onClick={() => setPreviewActe(null)}>
+                <div
+                    className="modal-overlay"
+                    onClick={() => setPreviewActe(null)}
+                >
                     <div
                         className="modal modal-pdf-preview"
                         onClick={(e) => e.stopPropagation()}
@@ -2312,8 +2334,7 @@ export default function Index({
                                         onChange={(e) =>
                                             setCeremonyForm((prev) => ({
                                                 ...prev,
-                                                date_souhaitee:
-                                                    e.target.value,
+                                                date_souhaitee: e.target.value,
                                             }))
                                         }
                                     />
@@ -2350,8 +2371,7 @@ export default function Index({
                                         onChange={(e) =>
                                             setCeremonyForm((prev) => ({
                                                 ...prev,
-                                                lieu_ceremonie:
-                                                    e.target.value,
+                                                lieu_ceremonie: e.target.value,
                                             }))
                                         }
                                     />
@@ -2432,7 +2452,9 @@ export default function Index({
                                     <button
                                         type="button"
                                         className={`detail-tab ${detailTab === "celebration" ? "active" : ""}`}
-                                        onClick={() => setDetailTab("celebration")}
+                                        onClick={() =>
+                                            setDetailTab("celebration")
+                                        }
                                     >
                                         Célébration
                                     </button>
@@ -2450,7 +2472,9 @@ export default function Index({
                                         />
                                         <InfoRow
                                             label="Statut"
-                                            value={statusLabel(selectedActe.statut)}
+                                            value={statusLabel(
+                                                selectedActe.statut,
+                                            )}
                                         />
                                         <InfoRow
                                             label="Date souhaitée"
@@ -2467,11 +2491,15 @@ export default function Index({
                                         />
                                         <InfoRow
                                             label="Demandé par"
-                                            value={getRequesterName(selectedActe)}
+                                            value={getRequesterName(
+                                                selectedActe,
+                                            )}
                                         />
                                         <InfoRow
                                             label="Créée le"
-                                            value={formatDate(selectedActe.created_at)}
+                                            value={formatDate(
+                                                selectedActe.created_at,
+                                            )}
                                         />
                                     </div>
                                     <div className="rf-details-title">
@@ -2505,14 +2533,16 @@ export default function Index({
                                         <div>
                                             <strong>Créneau</strong>
                                             <div className="celebration-value">
-                                                {selectedActe.details?.ceremonie_creneau || "—"}
+                                                {selectedActe.details
+                                                    ?.ceremonie_creneau || "—"}
                                             </div>
                                         </div>
                                         <div>
                                             <strong>Statut</strong>
                                             <div className="celebration-value">
                                                 {ceremonyDecisionLabel(
-                                                    selectedActe.details?.ceremonie_statut,
+                                                    selectedActe.details
+                                                        ?.ceremonie_statut,
                                                 )}
                                             </div>
                                         </div>
@@ -3217,10 +3247,7 @@ function formatDetailValue(v) {
     if (typeof v === "boolean") return v ? "Oui" : "Non";
     if (v === "1") return "Oui";
     if (v === "0") return "Non";
-    if (
-        typeof v === "string" &&
-        v.startsWith("CEREMONIE_")
-    ) {
+    if (typeof v === "string" && v.startsWith("CEREMONIE_")) {
         return ceremonyDecisionLabel(v);
     }
     if (

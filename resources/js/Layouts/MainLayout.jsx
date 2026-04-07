@@ -5,10 +5,12 @@ import ProfilePhoto from "@/Components/ProfilePhoto";
 import VerticalTicker from "@/Components/VerticalTicker";
 import useToast from "../Hooks/useToast";
 import ToastContainer from "../Components/ToastContainer";
+import { withBasePath } from "../Utils/urlHelper";
 
 // Header professionnel et minimaliste
-function AppHeader({ auth, onLogout }) {
+function AppHeader({ auth, onLogout, basePath }) {
     const [profileOpen, setProfileOpen] = useState(false);
+    const withBase = (path) => withBasePath(basePath, path);
 
     const getRoleLabel = (role) => {
         const labels = {
@@ -30,7 +32,7 @@ function AppHeader({ auth, onLogout }) {
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center overflow-hidden">
                             <img
-                                src="/images/image.png"
+                                src={withBase("/images/image.png")}
                                 alt="Logo Jubilé"
                                 className="w-full h-full object-contain"
                             />
@@ -243,7 +245,7 @@ function AppHeader({ auth, onLogout }) {
                                     {/* Actions */}
                                     <div className="p-2">
                                         <Link
-                                            href="/profile"
+                                            href={withBase("/profile")}
                                             className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
                                             onClick={() =>
                                                 setProfileOpen(false)
@@ -303,7 +305,8 @@ function AppHeader({ auth, onLogout }) {
 export default function MainLayout({ children, auth }) {
     const [showGoodbyeLoader, setShowGoodbyeLoader] = useState(false);
     const [showInfoMenu, setShowInfoMenu] = useState(false);
-    const { flashAnnouncements = [], flash = {} } = usePage().props;
+    const { flashAnnouncements = [], flash = {}, app } = usePage().props;
+    const basePath = app?.basePath || "";
     const { toasts, removeToast, success, error } = useToast();
     const lastSuccessRef = useRef(null);
     const lastErrorRef = useRef(null);
@@ -437,9 +440,10 @@ export default function MainLayout({ children, auth }) {
             return raw;
         }
         const cut = raw.slice(0, limit).trim();
-        const trimmed = cut.endsWith(",") || cut.endsWith(";")
-            ? cut.slice(0, -1).trim()
-            : cut;
+        const trimmed =
+            cut.endsWith(",") || cut.endsWith(";")
+                ? cut.slice(0, -1).trim()
+                : cut;
         return `${trimmed}…`;
     };
 
@@ -477,12 +481,9 @@ export default function MainLayout({ children, auth }) {
 
     const categorizedInfo = {
         annonces: announcements.filter((a) =>
-            [
-            "annonce",
-            "annonce_liturgique",
-            "grace",
-            "generale",
-            ].includes(String(a?.type_acte || "").toLowerCase()),
+            ["annonce", "annonce_liturgique", "grace", "generale"].includes(
+                String(a?.type_acte || "").toLowerCase(),
+            ),
         ),
         mariage: announcements.filter(
             (a) => String(a?.type_acte || "").toLowerCase() === "mariage",
@@ -510,7 +511,7 @@ export default function MainLayout({ children, auth }) {
 
     const handleGoodbyeAnimationComplete = () => {
         // Effectuer la déconnexion après l'animation
-        router.post("/logout");
+        router.post(withBasePath(basePath, "/logout"));
     };
 
     return (
@@ -525,7 +526,11 @@ export default function MainLayout({ children, auth }) {
             }}
         >
             <ToastContainer toasts={toasts} removeToast={removeToast} />
-            <AppHeader auth={auth} onLogout={handleLogout} />
+            <AppHeader
+                auth={auth}
+                onLogout={handleLogout}
+                basePath={basePath}
+            />
 
             {mergedTickerMessages.length > 0 && (
                 <section className="w-full sticky top-16 z-40 relative">

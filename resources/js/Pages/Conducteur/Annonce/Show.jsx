@@ -1,13 +1,17 @@
 import React from "react";
 import { Link } from "@inertiajs/react";
 import { Eye } from "lucide-react";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 export default function Show({ annonce }) {
     return (
         <div className="conducteur-annonce-show">
             <div className="page-header">
                 <h1>Détail de l'annonce</h1>
-                <Link href="/conducteur/annonces" className="btn-ghost">
+                <Link
+                    href={withBasePath("", "/conducteur/annonces")}
+                    className="btn-ghost"
+                >
                     ← Retour
                 </Link>
             </div>

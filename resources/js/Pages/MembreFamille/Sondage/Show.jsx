@@ -1,4 +1,5 @@
 import ResponsableFamilleSondageShow from "../../ResponsableFamille/Sondage/Show";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 export default function MembreFamilleSondageShow(props) {
     const surveyId = props?.survey?.id;
@@ -6,10 +7,13 @@ export default function MembreFamilleSondageShow(props) {
     return (
         <ResponsableFamilleSondageShow
             {...props}
-            backHref="/membre-famille/sondages"
+            backHref={withBasePath("", "/membre-famille/sondages")}
             submitUrl={
                 surveyId
-                    ? `/membre-famille/sondages/${surveyId}/reponses`
+                    ? withBasePath(
+                          "",
+                          `/membre-famille/sondages/${surveyId}/reponses`,
+                      )
                     : null
             }
         />

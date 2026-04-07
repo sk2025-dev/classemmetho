@@ -37,12 +37,18 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $basePath = parse_url((string) config('app.url'), PHP_URL_PATH) ?: '';
+        $basePath = $basePath === '/' ? '' : rtrim($basePath, '/');
+
         return [
             ...parent::share($request),
+            'app' => [
+                'basePath' => $basePath,
+            ],
             'csrf_token' => csrf_token(),
             'flash' => [
-                'success' => fn () => $request->session()->get('success'),
-                'error' => fn () => $request->session()->get('error'),
+                'success' => fn() => $request->session()->get('success'),
+                'error' => fn() => $request->session()->get('error'),
             ],
             'flashAnnouncements' => fn() => ActeLiturgique::query()
                 ->with(['membre:id,prenom,nom', 'family:id,nom'])

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Upload, Trash2, Camera, X } from "lucide-react";
+import { withBasePath } from "../Utils/urlHelper";
 
 /**
  * Composant pour uploader une photo de profil
@@ -227,14 +228,17 @@ export default function PhotoUploadInput({
         try {
             // Essayer d'abord la route publique pour l'inscription
             // Si l'utilisateur est authentifié, ce sera quand même accepté
-            const response = await fetch("/api/photo/upload-inscription", {
-                method: "POST",
-                body: formData,
-                headers: {
-                    "X-Requested-With": "XMLHttpRequest",
-                    ...(csrfToken ? { "X-CSRF-TOKEN": csrfToken } : {}),
+            const response = await fetch(
+                withBasePath("", "/api/photo/upload-inscription"),
+                {
+                    method: "POST",
+                    body: formData,
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest",
+                        ...(csrfToken ? { "X-CSRF-TOKEN": csrfToken } : {}),
+                    },
                 },
-            });
+            );
 
             const data = await response.json();
 

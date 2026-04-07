@@ -16,6 +16,7 @@ import Select2Classe from "../../Components/Select2Classe";
 import CitySelect from "../../Components/CitySelect";
 import Select2Relation from "../../Components/Select2Relation";
 import Select2Fonction from "../../Components/Select2Fonction";
+import { withBasePath } from "../../Utils/urlHelper";
 import {
     Home,
     User,
@@ -445,7 +446,9 @@ export default function RegisterFamille({
         const fetchData = async () => {
             try {
                 // Charger les classes depuis la base de donn?es
-                const classesRes = await fetch("/api/classes");
+                const classesRes = await fetch(
+                    withBasePath("", "/api/classes"),
+                );
                 if (classesRes.ok) {
                     const classesData = await classesRes.json();
                     console.log("Classes chargées:", classesData);
@@ -465,7 +468,7 @@ export default function RegisterFamille({
                 }
 
                 // Charger les villes depuis la base de donn?es
-                const villesRes = await fetch("/api/villes");
+                const villesRes = await fetch(withBasePath("", "/api/villes"));
                 if (villesRes.ok) {
                     const villesData = await villesRes.json();
                     setVillesDatabase(
@@ -484,7 +487,9 @@ export default function RegisterFamille({
                 }
 
                 // Charger les fonctions d'église
-                const rolesRes = await fetch("/api/fonctions");
+                const rolesRes = await fetch(
+                    withBasePath("", "/api/fonctions"),
+                );
                 if (rolesRes.ok) {
                     const rolesData = await rolesRes.json();
                     setChurchRoles(
@@ -859,9 +864,11 @@ export default function RegisterFamille({
                     "La date ne doit pas être dans le futur";
             if (!responsable.genre) newErrors["responsable.genre"] = "Requis";
             if (!responsable.employment_status)
-                newErrors["responsable.employment_status"] = "Statut d'emploi requis";
+                newErrors["responsable.employment_status"] =
+                    "Statut d'emploi requis";
             if (!responsable.profession_detail)
-                newErrors["responsable.profession_detail"] = "Profession requise";
+                newErrors["responsable.profession_detail"] =
+                    "Profession requise";
             if (!responsable.statutMarital)
                 newErrors["responsable.statutMarital"] = "Requis";
             if (!responsable.lienParente)
@@ -1091,9 +1098,13 @@ export default function RegisterFamille({
                 consentement,
             });
 
-            const res = await axios.post("/register", formData, {
-                headers: headers,
-            });
+            const res = await axios.post(
+                withBasePath("", "/register"),
+                formData,
+                {
+                    headers: headers,
+                },
+            );
 
             // Succès
             const message =
@@ -1278,10 +1289,7 @@ export default function RegisterFamille({
                                 </p>
                             )}
                         </FormField>
-                        <FormField
-                            label="Adresse"
-                            icon={MapPin}
-                        >
+                        <FormField label="Adresse" icon={MapPin}>
                             <AddressAutocomplete
                                 value={famille.adresse}
                                 onChange={(value) =>
@@ -1479,7 +1487,9 @@ export default function RegisterFamille({
                                     onChange={(e) =>
                                         setResponsable({
                                             ...responsable,
-                                            prenom: formatPrenom(e.target.value),
+                                            prenom: formatPrenom(
+                                                e.target.value,
+                                            ),
                                         })
                                     }
                                     placeholder="ex: Jean"
@@ -1646,15 +1656,29 @@ export default function RegisterFamille({
                                         })
                                     }
                                 >
-                                    <option value="">Sélectionner un statut</option>
-                                    <option value="TRAVAILLEUR">Travailleur(euse)</option>
-                                    <option value="RETRAITE">Retraité(e)</option>
-                                    <option value="ETUDIANT">Étudiant(e)</option>
-                                    <option value="SANS_EMPLOI">Sans emploi</option>
+                                    <option value="">
+                                        Sélectionner un statut
+                                    </option>
+                                    <option value="TRAVAILLEUR">
+                                        Travailleur(euse)
+                                    </option>
+                                    <option value="RETRAITE">
+                                        Retraité(e)
+                                    </option>
+                                    <option value="ETUDIANT">
+                                        Étudiant(e)
+                                    </option>
+                                    <option value="SANS_EMPLOI">
+                                        Sans emploi
+                                    </option>
                                 </select>
-                                {getFieldError("responsable.employment_status") && (
+                                {getFieldError(
+                                    "responsable.employment_status",
+                                ) && (
                                     <p className="text-red-500 text-xs mt-1">
-                                        {getFieldError("responsable.employment_status")}
+                                        {getFieldError(
+                                            "responsable.employment_status",
+                                        )}
                                     </p>
                                 )}
                             </FormField>
@@ -1675,7 +1699,9 @@ export default function RegisterFamille({
                                     }
                                     placeholder="ex: Enseignant, Commerçant"
                                 />
-                                {getFieldError("responsable.profession_detail") && (
+                                {getFieldError(
+                                    "responsable.profession_detail",
+                                ) && (
                                     <p className="text-red-500 text-xs mt-1">
                                         {getFieldError(
                                             "responsable.profession_detail",
@@ -1697,9 +1723,7 @@ export default function RegisterFamille({
                                     ).filter(Boolean)}
                                     onChange={(e) => {
                                         if (!e.target.value) return;
-                                        setSelectedMembresRoles(
-                                            e.target.value,
-                                        );
+                                        setSelectedMembresRoles(e.target.value);
                                         setResponsable({
                                             ...responsable,
                                             fonction: e.target.value.join(","),
@@ -2423,19 +2447,33 @@ export default function RegisterFamille({
                                         >
                                             <select
                                                 className={STYLES.input}
-                                                value={membreTemp.employment_status || ""}
+                                                value={
+                                                    membreTemp.employment_status ||
+                                                    ""
+                                                }
                                                 onChange={(e) =>
                                                     setMembreTemp({
                                                         ...membreTemp,
-                                                        employment_status: e.target.value,
+                                                        employment_status:
+                                                            e.target.value,
                                                     })
                                                 }
                                             >
-                                                <option value="">Sélectionner un statut</option>
-                                                <option value="TRAVAILLEUR">Travailleur(euse)</option>
-                                                <option value="RETRAITE">Retraité(e)</option>
-                                                <option value="ETUDIANT">Étudiant(e)</option>
-                                                <option value="SANS_EMPLOI">Sans emploi</option>
+                                                <option value="">
+                                                    Sélectionner un statut
+                                                </option>
+                                                <option value="TRAVAILLEUR">
+                                                    Travailleur(euse)
+                                                </option>
+                                                <option value="RETRAITE">
+                                                    Retraité(e)
+                                                </option>
+                                                <option value="ETUDIANT">
+                                                    Étudiant(e)
+                                                </option>
+                                                <option value="SANS_EMPLOI">
+                                                    Sans emploi
+                                                </option>
                                             </select>
                                             {getFieldError(
                                                 "membre.employment_status",
@@ -2457,7 +2495,10 @@ export default function RegisterFamille({
                                         >
                                             <input
                                                 className={STYLES.input}
-                                                value={membreTemp.profession_detail || ""}
+                                                value={
+                                                    membreTemp.profession_detail ||
+                                                    ""
+                                                }
                                                 onChange={(e) =>
                                                     setMembreTemp({
                                                         ...membreTemp,
@@ -3437,7 +3478,7 @@ export default function RegisterFamille({
                 {/* Header avec lien retour */}
                 <div className="max-w-4xl mx-auto mb-6">
                     <Link
-                        href="/"
+                        href={withBasePath("", "/")}
                         className="inline-flex items-center gap-2 text-white hover:text-yellow-300 font-semibold transition-colors"
                     >
                         <ArrowLeft size={20} />

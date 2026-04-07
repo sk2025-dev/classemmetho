@@ -21,6 +21,7 @@ import {
     Calendar,
     MapPin,
 } from "lucide-react";
+import { withBasePath } from "../../Utils/urlHelper";
 
 // --- DONNÉES SIMULÉES (Pour la démonstration) ---
 // Dans votre projet réel, ces données proviendront du backend via les props
@@ -191,7 +192,7 @@ export default function ClassesView({ classes = [], pendingCount = 0 }) {
                     <div className="flex items-center justify-between mb-8">
                         <div className="flex items-center gap-4 text-white">
                             <Link
-                                href="/dashboard"
+                                href={withBasePath("", "/pasteur/dashboard")}
                                 className="hover:text-blue-200 transition p-2 bg-white/10 rounded-full"
                             >
                                 <ArrowLeft className="w-6 h-6" />

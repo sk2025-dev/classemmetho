@@ -3,6 +3,7 @@ import { Head, Link, router } from "@inertiajs/react";
 import html2pdf from "html2pdf.js";
 import { QRCodeCanvas } from "qrcode.react";
 import axios from "axios";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 // ==================== STYLES GLOBAUX ====================
 const GLOBAL_STYLES = `
@@ -1107,7 +1108,7 @@ const CertificateDisplay = ({ acte }) => {
                     <div className="cert-header">
                         <div className="logo-container">
                             <img
-                                src="/images/image.png"
+                                src={withBasePath("", "/images/image.png")}
                                 alt="Logo Jubilé"
                                 className="logo-img"
                             />
@@ -1154,7 +1155,10 @@ const CertificateDisplay = ({ acte }) => {
                             </div>
                             <div className="signature-block">
                                 <img
-                                    src="/images/signature.jpg"
+                                    src={withBasePath(
+                                        "",
+                                        "/images/signature.jpg",
+                                    )}
                                     alt="Cachet"
                                     className="stamp-img"
                                 />
@@ -1247,7 +1251,7 @@ const ActeDetailsModal = ({ acte }) => {
                         <header className="fiche-header">
                             <div className="fiche-logo">
                                 <img
-                                    src="/images/image.png"
+                                    src={withBasePath("", "/images/image.png")}
                                     alt="Logo Jubilé"
                                     className="w-full h-full object-contain"
                                 />
@@ -1447,7 +1451,11 @@ export default function ActesLiturgique({ auth, actes = [] }) {
         setLoading(true);
         try {
             // Utiliser Inertia pour recharger complètement les données
-            router.get("/admin/liturgie", {}, { preserveScroll: true });
+            router.get(
+                withBasePath("", "/admin/liturgie"),
+                {},
+                { preserveScroll: true },
+            );
         } catch (error) {
             console.error("Erreur lors du chargement des actes:", error);
         } finally {
@@ -1461,7 +1469,7 @@ export default function ActesLiturgique({ auth, actes = [] }) {
 
         try {
             setLoading(true);
-            await axios.delete(`/admin/liturgie/${id}`);
+            await axios.delete(withBasePath("", `/admin/liturgie/${id}`));
             setAllActs((prev) => prev.filter((act) => act.id !== id));
             alert("Acte supprimé avec succès");
         } catch (error) {
@@ -1478,10 +1486,13 @@ export default function ActesLiturgique({ auth, actes = [] }) {
         try {
             setLoading(true);
             // Utiliser la route POST /transition pour changer le statut
-            await axios.post(`/admin/liturgie/${id}/transition`, {
-                statut: newStatus,
-                commentaire: "",
-            });
+            await axios.post(
+                withBasePath("", `/admin/liturgie/${id}/transition`),
+                {
+                    statut: newStatus,
+                    commentaire: "",
+                },
+            );
             setAllActs((prev) =>
                 prev.map((act) =>
                     act.id === id
@@ -1706,7 +1717,7 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                     <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4 w-full">
                         <div className="w-full md:w-auto flex-shrink-0">
                             <Link
-                                href="/dashboard"
+                                href={withBasePath("", "/dashboard")}
                                 className="btn btn-secondary gap-2 w-full md:w-auto justify-center"
                             >
                                 <svg
@@ -1732,7 +1743,7 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                         {/* BOUTON FAIRE UNE DEMANDE - commenté pour plus tard */}
                         {/*
                         <div className="w-full md:w-auto flex-shrink-0">
-                            <Link href="/admin/liturgie" className="btn btn-secondary gap-2 w-full md:w-auto justify-center">
+                            <Link href={withBasePath("", "/admin/liturgie")} className="btn btn-secondary gap-2 w-full md:w-auto justify-center">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                                 Mon espace liturgique
                             </Link>

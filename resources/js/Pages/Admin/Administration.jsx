@@ -10,6 +10,7 @@ import TabUtilisateurs from "./Tabs/TabUtilisateurs";
 import TabFamille from "./Tabs/TabFamille";
 import TabClasses from "./Tabs/TabClasse";
 import TabFonctions from "./Tabs/TabFonctions";
+import { withBasePath } from "../../Utils/urlHelper";
 
 export default function AdminPage({
     auth,
@@ -64,11 +65,11 @@ export default function AdminPage({
 
     // Classes
     const handleSaveClass = (newClassData) => {
-        router.post("/admin/classes", newClassData, {
+        router.post(withBasePath("", "/admin/classes"), newClassData, {
             onSuccess: () => {
                 toast.success("Classe créée avec succès");
                 // Recharger les classes
-                fetch("/api/admin/classes", {
+                fetch(withBasePath("", "/api/admin/classes"), {
                     headers: { Accept: "application/json" },
                 })
                     .then((r) => r.json())
@@ -85,7 +86,7 @@ export default function AdminPage({
     };
 
     const handleUpdateClass = (updatedClass) => {
-        router.put(`/admin/classes/${updatedClass.id}`, updatedClass, {
+        router.put(withBasePath("", `/admin/classes/${updatedClass.id}`), updatedClass, {
             onSuccess: () => {
                 toast.success("Classe mise à jour avec succès");
                 router.reload({ only: ["availableClasses"] });
@@ -118,7 +119,7 @@ export default function AdminPage({
                 "✅ Classe vide, envoi DELETE request via router.delete()",
             );
 
-            router.delete(`/admin/classes/${classe.id}`, {
+            router.delete(withBasePath("", `/admin/classes/${classe.id}`), {
                 onSuccess: (page) => {
                     console.log("✅ DELETE réussi");
                     toast.success(
@@ -202,7 +203,7 @@ export default function AdminPage({
 
     // Membres
     const handleUpdateMember = (updatedMember) => {
-        router.put(`/admin/membres/${updatedMember.id}`, updatedMember, {
+        router.put(withBasePath("", `/admin/membres/${updatedMember.id}`), updatedMember, {
             preserveScroll: true,
             onSuccess: () => toast.success("Membre modifié avec succès"),
             onError: (errors) => {
@@ -213,7 +214,7 @@ export default function AdminPage({
     };
 
     const handleDeleteMember = (member) => {
-        router.delete(`/admin/membres/${member.id}`, {
+        router.delete(withBasePath("", `/admin/membres/${member.id}`), {
             preserveScroll: true,
             onSuccess: () => toast.success("Membre supprimé avec succès"),
             onError: (errors) => {
@@ -270,7 +271,7 @@ export default function AdminPage({
             }
         });
 
-        router.post("/admin/membres", formData, {
+        router.post(withBasePath("", "/admin/membres"), formData, {
             headers: { "Content-Type": "multipart/form-data" },
             preserveScroll: true,
             onSuccess: (response) => {
@@ -285,11 +286,11 @@ export default function AdminPage({
 
     // --- LOGIQUE POUR FONCTIONS ---
     const handleAddFonction = (newFonctionData) => {
-        router.post("/admin/fonctions", newFonctionData, {
+        router.post(withBasePath("", "/admin/fonctions"), newFonctionData, {
             onSuccess: () => {
                 toast.success("Fonction créée avec succès");
                 // Recharger les fonctions
-                fetch("/api/admin/fonctions", {
+                fetch(withBasePath("", "/api/admin/fonctions"), {
                     headers: { Accept: "application/json" },
                 })
                     .then((r) => r.json())
@@ -306,7 +307,7 @@ export default function AdminPage({
     };
 
     const handleUpdateFonction = (updatedFonction) => {
-        router.put(`/admin/fonctions/${updatedFonction.id}`, updatedFonction, {
+        router.put(withBasePath("", `/admin/fonctions/${updatedFonction.id}`), updatedFonction, {
             onSuccess: () => {
                 toast.success("Fonction mise à jour avec succès");
                 router.reload({ only: ["availableFonctions"] });
@@ -320,7 +321,7 @@ export default function AdminPage({
 
     const handleDeleteFonction = (item) => {
         if (confirm(`Supprimer la fonction "${item.nom}" ?`)) {
-            router.delete(`/admin/fonctions/${item.id}`, {
+            router.delete(withBasePath("", `/admin/fonctions/${item.id}`), {
                 onSuccess: () => {
                     toast.success("Fonction supprimée avec succès");
                     router.reload({ only: ["availableFonctions"] });
@@ -404,7 +405,7 @@ export default function AdminPage({
             {/* Bouton Retour Dashboard et Navigation */}
             <div className="relative mt-4 z-20 px-4">
                 <Link
-                    href="/admin/dashboard"
+                    href={withBasePath("", "/admin/dashboard")}
                     className="absolute left-4 inline-flex items-center p-2 bg-white/10 hover:bg-white/20 rounded-full transition text-white"
                 >
                     <svg

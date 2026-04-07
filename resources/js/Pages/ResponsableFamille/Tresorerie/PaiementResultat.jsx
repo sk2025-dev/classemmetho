@@ -7,6 +7,7 @@ import {
     ArrowLeft,
     Clock,
 } from "lucide-react";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 export default function PaiementResultat({
     paiement = {},
@@ -79,7 +80,10 @@ export default function PaiementResultat({
                     }}
                 >
                     <Link
-                        href="/responsable-famille/tresorerie"
+                        href={withBasePath(
+                            "",
+                            "/responsable-famille/tresorerie",
+                        )}
                         style={{
                             width: 34,
                             height: 34,
@@ -371,7 +375,10 @@ export default function PaiementResultat({
                     )}
 
                     <Link
-                        href="/responsable-famille/tresorerie"
+                        href={withBasePath(
+                            "",
+                            "/responsable-famille/tresorerie",
+                        )}
                         style={{
                             padding: 14,
                             background: "#f5f5f5",

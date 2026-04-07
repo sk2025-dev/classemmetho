@@ -17,6 +17,7 @@ import {
     ChevronDown,
 } from "lucide-react";
 import { PaymentModal } from "../../../Components/PaymentModal";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 /* ─────────────────────────────────────────
    FALLBACK DATA
@@ -1483,7 +1484,7 @@ function TabPaiement({
                                 }}
                             >
                                 <img
-                                    src="/images/wave.jpg"
+                                    src={withBasePath("", "/images/wave.jpg")}
                                     alt="Wave"
                                     style={{
                                         width: 88,
@@ -1532,7 +1533,10 @@ function TabPaiement({
                                 }}
                             >
                                 <img
-                                    src="/images/OM-logo.jpg"
+                                    src={withBasePath(
+                                        "",
+                                        "/images/OM-logo.jpg",
+                                    )}
                                     alt="Orange Money"
                                     style={{
                                         width: 88,
@@ -1584,7 +1588,10 @@ function TabPaiement({
                                 }}
                             >
                                 <img
-                                    src="/images/mtn-logo.png"
+                                    src={withBasePath(
+                                        "",
+                                        "/images/mtn-logo.png",
+                                    )}
                                     alt="MTN Money"
                                     style={{
                                         width: 88,
@@ -1974,34 +1981,37 @@ function TabDons({ membres, donsFamille, campagnesActives, familyInfo }) {
                       ? "VIREMENT"
                       : "MOBILE_MONEY";
 
-            await fetch("/responsable-famille/tresorerie/dons", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": getCsrfToken(),
-                    Accept: "application/json",
+            await fetch(
+                withBasePath("", "/responsable-famille/tresorerie/dons"),
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": getCsrfToken(),
+                        Accept: "application/json",
+                    },
+                    credentials: "same-origin",
+                    body: JSON.stringify({
+                        family_id: familyInfo?.id,
+                        user_id: donMembre,
+                        campagne_id:
+                            selectedCampagne === "LIBRE" || !selectedCampagne
+                                ? null
+                                : Number(selectedCampagne),
+                        montant: Number(donMontant),
+                        type:
+                            selectedCampagne === "LIBRE" || !selectedCampagne
+                                ? "LIBRE"
+                                : "CAMPAGNE",
+                        mode_paiement: modePaiement,
+                        date_don: new Date().toISOString().slice(0, 10),
+                        note:
+                            selectedCampagne === "LIBRE" || !selectedCampagne
+                                ? "Don libre"
+                                : "Don campagne",
+                    }),
                 },
-                credentials: "same-origin",
-                body: JSON.stringify({
-                    family_id: familyInfo?.id,
-                    user_id: donMembre,
-                    campagne_id:
-                        selectedCampagne === "LIBRE" || !selectedCampagne
-                            ? null
-                            : Number(selectedCampagne),
-                    montant: Number(donMontant),
-                    type:
-                        selectedCampagne === "LIBRE" || !selectedCampagne
-                            ? "LIBRE"
-                            : "CAMPAGNE",
-                    mode_paiement: modePaiement,
-                    date_don: new Date().toISOString().slice(0, 10),
-                    note:
-                        selectedCampagne === "LIBRE" || !selectedCampagne
-                            ? "Don libre"
-                            : "Don campagne",
-                }),
-            });
+            );
             setDonSuccess(true);
             setDonMontant("");
             setSelectedCampagne(null);
@@ -3283,7 +3293,7 @@ export default function ResponsableFamilleFinances({
                     }}
                 >
                     <Link
-                        href="/dashboard"
+                        href={withBasePath("", "/dashboard")}
                         style={{
                             width: 34,
                             height: 34,

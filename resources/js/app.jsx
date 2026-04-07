@@ -1,20 +1,20 @@
-import './bootstrap';
-import '../css/app.css';
+import "./bootstrap";
+import "../css/app.css";
 
-import React from 'react'
-import { createInertiaApp } from '@inertiajs/react'
-import { createRoot } from 'react-dom/client'
-import { migrateCorruptedStorageData } from './Hooks/migrateStorage'
-import { router } from '@inertiajs/react'
-import AppLayout from './Layouts/AppLayout'
-import MainLayout from './Layouts/MainLayout'
-import { loadingScreenHTML } from './Utils/loadingScreenTemplate.jsx'
+import React from "react";
+import { createInertiaApp } from "@inertiajs/react";
+import { createRoot } from "react-dom/client";
+import { migrateCorruptedStorageData } from "./Hooks/migrateStorage";
+import { router } from "@inertiajs/react";
+import AppLayout from "./Layouts/AppLayout";
+import MainLayout from "./Layouts/MainLayout";
+import { loadingScreenHTML } from "./Utils/loadingScreenTemplate.jsx";
 
 // Migrer les données localStorage corrompues au démarrage
 migrateCorruptedStorageData();
 
 // Exposer la clé API Google Maps globalement
-window.GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+window.GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
 /**
  * Afficher le loading screen initial au chargement de la page
@@ -22,13 +22,14 @@ window.GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
  */
 const showInitialLoadingScreen = () => {
     // Ne pas afficher le loader sur la page de login
-    if (window.location.pathname === '/login') {
+    const normalizedPath = window.location.pathname.replace(/\/+$/, "") || "/";
+    if (normalizedPath.endsWith("/login")) {
         return;
     }
 
     // Ne pas afficher si on vient du welcome loader
-    if (sessionStorage.getItem('comingFromWelcomeLoader')) {
-        sessionStorage.removeItem('comingFromWelcomeLoader');
+    if (sessionStorage.getItem("comingFromWelcomeLoader")) {
+        sessionStorage.removeItem("comingFromWelcomeLoader");
         return;
     }
 
@@ -38,7 +39,7 @@ const showInitialLoadingScreen = () => {
         </div>
     `;
 
-    document.body.insertAdjacentHTML('beforeend', loadingHTML_with_wrapper);
+    document.body.insertAdjacentHTML("beforeend", loadingHTML_with_wrapper);
 };
 
 // Afficher le loading screen initial
@@ -58,11 +59,11 @@ const hideInitialLoadingScreen = () => {
 
     initialLoadingHidden = true;
 
-    const initialScreen = document.getElementById('initialLoadingScreen');
+    const initialScreen = document.getElementById("initialLoadingScreen");
     if (initialScreen) {
         // Attendre un petit délai pour s'assurer que le contenu est rendu
         setTimeout(() => {
-            initialScreen.style.animation = 'fadeOut 0.8s ease-out forwards';
+            initialScreen.style.animation = "fadeOut 0.8s ease-out forwards";
             setTimeout(() => {
                 initialScreen.remove();
             }, 800);
@@ -85,7 +86,7 @@ if (!window.welcomeUserName) {
     window.welcomeUserName = null;
 }
 if (!window.welcomeRedirectUrl) {
-    window.welcomeRedirectUrl = '/dashboard';
+    window.welcomeRedirectUrl = "/dashboard";
 }
 if (!window.isWelcomeLoaderActive) {
     window.isWelcomeLoaderActive = false;
@@ -104,7 +105,39 @@ window.setGoodbyeLoaderActive = (active) => {
     window.isGoodbyeLoaderActive = active;
 };
 
-router.on('before', (visit) => {
+const normalizeInertiaUrl = (url) => {
+    if (typeof url !== "string") {
+        return url;
+    }
+
+    const basePath = (window.__APP_BASE_PATH__ || "").replace(/\/+$/, "");
+    if (!basePath) {
+        return url;
+    }
+
+    // Ignore absolute/special schemes and already-prefixed paths.
+    if (
+        /^(https?:)?\/\//i.test(url) ||
+        /^[a-z]+:/i.test(url) ||
+        url.startsWith(basePath + "/") ||
+        url === basePath
+    ) {
+        return url;
+    }
+
+    if (url.startsWith("/")) {
+        return `${basePath}${url}`;
+    }
+
+    return url;
+};
+
+const originalVisit = router.visit.bind(router);
+router.visit = (url, options = {}) => {
+    return originalVisit(normalizeInertiaUrl(url), options);
+};
+
+router.on("before", (visit) => {
     // Ne pas afficher de loader si:
     // 1. Le welcome loader est actif
     // 2. Le goodbye loader est actif
@@ -118,26 +151,28 @@ router.on('before', (visit) => {
     // Si on change vraiment de page (pas juste erreur de validation)
     if (newUrl !== currentPageUrl) {
         // Afficher le loader de navigation
-        const existingLoader = document.getElementById('navigationLoadingScreen');
+        const existingLoader = document.getElementById(
+            "navigationLoadingScreen",
+        );
         if (!existingLoader) {
             const loadingHTML = `
                 <div class="loading-screen active" id="navigationLoadingScreen">
                     ${loadingScreenHTML}
                 </div>
             `;
-            document.body.insertAdjacentHTML('beforeend', loadingHTML);
+            document.body.insertAdjacentHTML("beforeend", loadingHTML);
         }
     }
 });
 
-router.on('finish', (visit) => {
+router.on("finish", (visit) => {
     // Mettre à jour l'URL courante
     currentPageUrl = window.location.pathname;
 
     // Masquer le loader de navigation
-    const navScreen = document.getElementById('navigationLoadingScreen');
+    const navScreen = document.getElementById("navigationLoadingScreen");
     if (navScreen) {
-        navScreen.style.animation = 'fadeOut 0.8s ease-out forwards';
+        navScreen.style.animation = "fadeOut 0.8s ease-out forwards";
         setTimeout(() => {
             navScreen.remove();
         }, 800);
@@ -156,23 +191,23 @@ router.on('finish', (visit) => {
  * Configuration de l'app Inertia
  */
 createInertiaApp({
-    resolve: name => {
-        const pages = import.meta.glob('./Pages/**/*.jsx', { eager: true })
-        const page = pages[`./Pages/${name}.jsx`]
+    resolve: (name) => {
+        const pages = import.meta.glob("./Pages/**/*.jsx", { eager: true });
+        const page = pages[`./Pages/${name}.jsx`];
         if (!page) {
-            console.error(`Page not found: ./Pages/${name}.jsx`)
-            console.log('Available pages:', Object.keys(pages))
+            console.error(`Page not found: ./Pages/${name}.jsx`);
+            console.log("Available pages:", Object.keys(pages));
         }
 
         // Appliquer automatiquement MainLayout à TOUTES les pages AUTHENTIFIÉES UNIQUEMENT
         // (sauf les pages d'authentification qui n'ont pas besoin de layout)
         const authRoutes = [
-            'Auth/Login',
-            'Auth/Register',
-            'Auth/ForgotPassword',
-            'Auth/ResetPassword',
-            'Welcome',
-            'login', // Page de login - IMPORTANT: en minuscule
+            "Auth/Login",
+            "Auth/Register",
+            "Auth/ForgotPassword",
+            "Auth/ResetPassword",
+            "Welcome",
+            "login", // Page de login - IMPORTANT: en minuscule
         ];
 
         // Si la page n'a pas déjà un layout défini et qu'elle n'est pas une page d'authentification
@@ -195,11 +230,14 @@ createInertiaApp({
         return page;
     },
     setup({ el, App, props }) {
+        window.__APP_BASE_PATH__ =
+            props?.initialPage?.props?.app?.basePath || "";
+
         createRoot(el).render(
             <AppLayout>
                 <App {...props} />
-            </AppLayout>
-        )
+            </AppLayout>,
+        );
 
         // Masquer le loading screen après que React ait rendu le contenu
         // On utilise requestAnimationFrame pour s'assurer que le DOM est mis à jour
@@ -209,5 +247,5 @@ createInertiaApp({
             }, 200);
         });
     },
-    progress: false // Désactiver la progress bar d'Inertia (on gère le loader manuellement)
-})
+    progress: false, // Désactiver la progress bar d'Inertia (on gère le loader manuellement)
+});

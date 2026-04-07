@@ -1,5 +1,6 @@
 import { Head, Link } from "@inertiajs/react";
 import { ArrowLeft } from "lucide-react";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 export default function AdminPrieresIndex() {
     return (
@@ -16,7 +17,7 @@ export default function AdminPrieresIndex() {
                 <div className="mx-auto max-w-4xl">
                     <div className="flex items-center gap-3 text-white">
                         <Link
-                            href="/admin/dashboard"
+                            href={withBasePath("", "/admin/dashboard")}
                             className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
                         >
                             <ArrowLeft className="h-5 w-5" />
@@ -36,7 +37,8 @@ export default function AdminPrieresIndex() {
                             Espace prieres
                         </h2>
                         <p className="mt-3 text-sm text-slate-600">
-                            Cette page sert de base pour le module prieres cote admin.
+                            Cette page sert de base pour le module prieres cote
+                            admin.
                         </p>
                     </div>
                 </div>

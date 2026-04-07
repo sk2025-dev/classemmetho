@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Head, Link, router } from "@inertiajs/react";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 // ==================== STYLES GLOBAUX ====================
 const GLOBAL_STYLES = `
@@ -506,40 +507,56 @@ const GLOBAL_STYLES = `
 `;
 
 // ==================== FONCTIONS UTILITAIRES ====================
-const toText = (value, fallback = '-') => {
+const toText = (value, fallback = "-") => {
     if (value === null || value === undefined) return fallback;
-    if (typeof value === 'string' || typeof value === 'number') return String(value);
-    if (typeof value === 'object') {
-        return String(value.nom ?? value.label ?? value.name ?? value.code ?? fallback);
+    if (typeof value === "string" || typeof value === "number")
+        return String(value);
+    if (typeof value === "object") {
+        return String(
+            value.nom ?? value.label ?? value.name ?? value.code ?? fallback,
+        );
     }
     return fallback;
 };
 
 const normalizeMember = (member) => {
     if (!member) return null;
-    const prenoms = toText(member?.prenoms || member?.prenom || member?.full_name, '');
-    const classeName = toText(member?.classe?.nom || member?.classeMethodiste || member?.classe, '-');
+    const prenoms = toText(
+        member?.prenoms || member?.prenom || member?.full_name,
+        "",
+    );
+    const classeName = toText(
+        member?.classe?.nom || member?.classeMethodiste || member?.classe,
+        "-",
+    );
     const familleName = toText(
-        member?.famille || member?.family?.nom || member?.family?.code_famille || member?.family_code,
-        '-'
+        member?.famille ||
+            member?.family?.nom ||
+            member?.family?.code_famille ||
+            member?.family_code,
+        "-",
     );
     return {
         ...member,
         prenoms,
         classeMethodiste: classeName,
         famille: familleName,
-        codeFamille: member?.code_famille || member?.family?.code_famille || null,
+        codeFamille:
+            member?.code_famille || member?.family?.code_famille || null,
         codeMembre: member?.numMembre || member?.code_membre || null,
-        photo: member?.photo || member?.profile_photo_url || '',
-        sexe: toText(member?.sexe || member?.genre, ''),
+        photo: member?.photo || member?.profile_photo_url || "",
+        sexe: toText(member?.sexe || member?.genre, ""),
         dateNaissance: member?.dateNaissance || member?.date_naissance || null,
-        telephone: toText(member?.telephone, '-'),
-        email: toText(member?.email, '-'),
-        fonction: toText(member?.fonction, '-'),
-        profession: toText(member?.profession, '-'),
-        relation: toText(member?.relation, '-'),
-        adresse: toText(member?.adresse || member?.family?.adresse || member?.address, '-'),
-        quartier: toText(member?.quartier || member?.family?.quartier, '-'),
+        telephone: toText(member?.telephone, "-"),
+        email: toText(member?.email, "-"),
+        fonction: toText(member?.fonction, "-"),
+        profession: toText(member?.profession, "-"),
+        relation: toText(member?.relation, "-"),
+        adresse: toText(
+            member?.adresse || member?.family?.adresse || member?.address,
+            "-",
+        ),
+        quartier: toText(member?.quartier || member?.family?.quartier, "-"),
     };
 };
 
@@ -550,24 +567,50 @@ const MemberStatusBadge = ({ member }) => {
         ? "status-badge bg-green-100 text-green-800 border-green-200"
         : "status-badge bg-gray-100 text-gray-800 border-gray-200";
     const icon = isBaptized ? (
-        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        <svg
+            className="w-3 h-3 mr-1"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+        >
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+            />
         </svg>
     ) : (
-        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        <svg
+            className="w-3 h-3 mr-1"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+        >
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+            />
         </svg>
     );
     return (
         <span className={`${className} items-center`}>
             {icon}
-            {isBaptized ? 'Baptisé' : 'Non baptisé'}
+            {isBaptized ? "Baptisé" : "Non baptisé"}
         </span>
     );
 };
 
 // --- Composant pour les détails du membre ---
-const MemberDetailsModal = ({ member, cotisations, actesLiturgiques, userData, onClose }) => {
+const MemberDetailsModal = ({
+    member,
+    cotisations,
+    actesLiturgiques,
+    userData,
+    onClose,
+}) => {
     const getFallbackAvatar = (initial) => {
         return `data:image/svg+xml,${encodeURIComponent(
             `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
@@ -575,11 +618,13 @@ const MemberDetailsModal = ({ member, cotisations, actesLiturgiques, userData, o
                 <text x="50" y="65" font-size="40" text-anchor="middle" fill="white" font-weight="bold">
                     ${initial}
                 </text>
-            </svg>`
+            </svg>`,
         )}`;
     };
 
-    const initial = (member?.prenoms || member?.nom || '?').charAt(0).toUpperCase();
+    const initial = (member?.prenoms || member?.nom || "?")
+        .charAt(0)
+        .toUpperCase();
     const fallbackAvatar = getFallbackAvatar(initial);
     const photoSrc = member?.photo || fallbackAvatar;
 
@@ -602,15 +647,43 @@ const MemberDetailsModal = ({ member, cotisations, actesLiturgiques, userData, o
                         />
                     </div>
                     <div className="member-identity-info">
-                        <p><strong>Nom & Prénoms:</strong> {member.prenoms} {member.nom}</p>
-                        <p><strong>Famille:</strong> {member.famille || '-'}</p>
-                        <p><strong>Genre:</strong> {member.sexe === 'M' ? 'Masculin' : 'Féminin'}</p>
-                        <p><strong>Date de naissance:</strong> {member.dateNaissance ? new Date(member.dateNaissance).toLocaleDateString() : '-'}</p>
-                        <p><strong>Code membre:</strong> {member.codeMembre || '-'}</p>
-                        <p><strong>Classe méthodiste:</strong> {member.classeMethodiste || '-'}</p>
-                        <p><strong>Profession:</strong> {member.profession || '-'}</p>
-                        <p><strong>Fonction:</strong> {member.fonction || '-'}</p>
-                        <p><strong>Relation:</strong> {member.relation || '-'}</p>
+                        <p>
+                            <strong>Nom & Prénoms:</strong> {member.prenoms}{" "}
+                            {member.nom}
+                        </p>
+                        <p>
+                            <strong>Famille:</strong> {member.famille || "-"}
+                        </p>
+                        <p>
+                            <strong>Genre:</strong>{" "}
+                            {member.sexe === "M" ? "Masculin" : "Féminin"}
+                        </p>
+                        <p>
+                            <strong>Date de naissance:</strong>{" "}
+                            {member.dateNaissance
+                                ? new Date(
+                                      member.dateNaissance,
+                                  ).toLocaleDateString()
+                                : "-"}
+                        </p>
+                        <p>
+                            <strong>Code membre:</strong>{" "}
+                            {member.codeMembre || "-"}
+                        </p>
+                        <p>
+                            <strong>Classe méthodiste:</strong>{" "}
+                            {member.classeMethodiste || "-"}
+                        </p>
+                        <p>
+                            <strong>Profession:</strong>{" "}
+                            {member.profession || "-"}
+                        </p>
+                        <p>
+                            <strong>Fonction:</strong> {member.fonction || "-"}
+                        </p>
+                        <p>
+                            <strong>Relation:</strong> {member.relation || "-"}
+                        </p>
                     </div>
                 </div>
             </div>
@@ -619,17 +692,43 @@ const MemberDetailsModal = ({ member, cotisations, actesLiturgiques, userData, o
             <div className="detail-section">
                 <h3>🕊️ Informations spirituelles</h3>
                 <div className="spiritual-info">
-                    <p><strong>Baptême:</strong> {member.baptise ? 'Oui' : 'Non'} {member.dateBapteme && `(${new Date(member.dateBapteme).toLocaleDateString()})`}</p>
-                    {member.lieuBapteme && <p><strong>Lieu de baptême:</strong> {member.lieuBapteme}</p>}
-                    <p><strong>1ère communion:</strong> {member.premiereCommunion ? 'Oui' : 'Non'} {member.dateCommunion && `(${new Date(member.dateCommunion).toLocaleDateString()})`}</p>
-                    <p><strong>Confirmation:</strong> {member.confirme ? 'Oui' : 'Non'}</p>
-                    <p><strong>Mariage religieux:</strong> {member.marieReligieusement ? 'Oui' : 'Non'}</p>
+                    <p>
+                        <strong>Baptême:</strong>{" "}
+                        {member.baptise ? "Oui" : "Non"}{" "}
+                        {member.dateBapteme &&
+                            `(${new Date(member.dateBapteme).toLocaleDateString()})`}
+                    </p>
+                    {member.lieuBapteme && (
+                        <p>
+                            <strong>Lieu de baptême:</strong>{" "}
+                            {member.lieuBapteme}
+                        </p>
+                    )}
+                    <p>
+                        <strong>1ère communion:</strong>{" "}
+                        {member.premiereCommunion ? "Oui" : "Non"}{" "}
+                        {member.dateCommunion &&
+                            `(${new Date(member.dateCommunion).toLocaleDateString()})`}
+                    </p>
+                    <p>
+                        <strong>Confirmation:</strong>{" "}
+                        {member.confirme ? "Oui" : "Non"}
+                    </p>
+                    <p>
+                        <strong>Mariage religieux:</strong>{" "}
+                        {member.marieReligieusement ? "Oui" : "Non"}
+                    </p>
                     <div className="actes-list">
                         <strong>Actes liturgiques associés:</strong>
                         {actesLiturgiques && actesLiturgiques.length > 0 ? (
                             <ul>
                                 {actesLiturgiques.map((acte, index) => (
-                                    <li key={index}>{acte.typeName} - {new Date(acte.proposedDate).toLocaleDateString()}</li>
+                                    <li key={index}>
+                                        {acte.typeName} -{" "}
+                                        {new Date(
+                                            acte.proposedDate,
+                                        ).toLocaleDateString()}
+                                    </li>
                                 ))}
                             </ul>
                         ) : (
@@ -643,9 +742,16 @@ const MemberDetailsModal = ({ member, cotisations, actesLiturgiques, userData, o
             <div className="detail-section">
                 <h3>👪 Informations familiales</h3>
                 <div className="spiritual-info">
-                    <p><strong>Mariage civil:</strong> {member.mariageCivil ? 'Oui' : 'Non'}</p>
-                    <p><strong>Doté:</strong> {member.dote ? 'Oui' : 'Non'}</p>
-                    <p><strong>Veuf:</strong> {member.veuf ? 'Oui' : 'Non'}</p>
+                    <p>
+                        <strong>Mariage civil:</strong>{" "}
+                        {member.mariageCivil ? "Oui" : "Non"}
+                    </p>
+                    <p>
+                        <strong>Doté:</strong> {member.dote ? "Oui" : "Non"}
+                    </p>
+                    <p>
+                        <strong>Veuf:</strong> {member.veuf ? "Oui" : "Non"}
+                    </p>
                 </div>
             </div>
 
@@ -653,10 +759,20 @@ const MemberDetailsModal = ({ member, cotisations, actesLiturgiques, userData, o
             <div className="detail-section">
                 <h3>🧾 Contact</h3>
                 <div className="contact-info">
-                    <p><strong>Téléphone:</strong> {member.telephone || '-'}</p>
-                    <p><strong>Email:</strong> {member.email || '-'}</p>
-                    <p><strong>Adresse:</strong> {member.adresse || '-'}</p>
-                    {member.quartier && <p><strong>Quartier:</strong> {member.quartier}</p>}
+                    <p>
+                        <strong>Téléphone:</strong> {member.telephone || "-"}
+                    </p>
+                    <p>
+                        <strong>Email:</strong> {member.email || "-"}
+                    </p>
+                    <p>
+                        <strong>Adresse:</strong> {member.adresse || "-"}
+                    </p>
+                    {member.quartier && (
+                        <p>
+                            <strong>Quartier:</strong> {member.quartier}
+                        </p>
+                    )}
                 </div>
             </div>
 
@@ -666,8 +782,12 @@ const MemberDetailsModal = ({ member, cotisations, actesLiturgiques, userData, o
                 <div className="cotisations-info">
                     {cotisations?.fimeco ? (
                         <div className="cotisation-item">
-                            <strong>FIMECO:</strong> {cotisations.fimeco.montantPaye} FCFA / {cotisations.fimeco.montantDu} FCFA
-                            <span className="solde">Solde: {cotisations.fimeco.solde} FCFA</span>
+                            <strong>FIMECO:</strong>{" "}
+                            {cotisations.fimeco.montantPaye} FCFA /{" "}
+                            {cotisations.fimeco.montantDu} FCFA
+                            <span className="solde">
+                                Solde: {cotisations.fimeco.solde} FCFA
+                            </span>
                         </div>
                     ) : (
                         <p>FIMECO: Aucune souscription</p>
@@ -677,7 +797,9 @@ const MemberDetailsModal = ({ member, cotisations, actesLiturgiques, userData, o
                             <strong>Autres cotisations:</strong>
                             <ul>
                                 {cotisations.autres.map((c, index) => (
-                                    <li key={index}>{c.nom}: {c.montant} FCFA</li>
+                                    <li key={index}>
+                                        {c.nom}: {c.montant} FCFA
+                                    </li>
                                 ))}
                             </ul>
                         </div>
@@ -688,12 +810,21 @@ const MemberDetailsModal = ({ member, cotisations, actesLiturgiques, userData, o
             </div>
 
             {/* AUTRES INFORMATIONS (visible seulement pour les admins) */}
-            {userData?.role === 'admin' && (
+            {userData?.role === "admin" && (
                 <div className="detail-section">
                     <h3>📌 Autres informations</h3>
                     <div className="other-info">
-                        <p><strong>Statut:</strong> {member.statutVie || '-'}</p>
-                        <p><strong>Date de création:</strong> {member.dateCreation ? new Date(member.dateCreation).toLocaleDateString() : '-'}</p>
+                        <p>
+                            <strong>Statut:</strong> {member.statutVie || "-"}
+                        </p>
+                        <p>
+                            <strong>Date de création:</strong>{" "}
+                            {member.dateCreation
+                                ? new Date(
+                                      member.dateCreation,
+                                  ).toLocaleDateString()
+                                : "-"}
+                        </p>
                     </div>
                 </div>
             )}
@@ -702,27 +833,42 @@ const MemberDetailsModal = ({ member, cotisations, actesLiturgiques, userData, o
 };
 
 // ==================== COMPOSANT PRINCIPAL ====================
-const Annuaire = ({ 
-    members = null, 
-    families = null, 
-    classes = null, 
-    view = 'all', 
-    cotisations = {}, 
-    user = { role: 'user' }, 
+const Annuaire = ({
+    members = null,
+    families = null,
+    classes = null,
+    view = "all",
+    cotisations = {},
+    user = { role: "user" },
     filters = {},
-    filterOptions = { classes: [], familles: [], professions: [], roles: [] }  // <-- professions remplace statuts
+    filterOptions = { classes: [], familles: [], professions: [], roles: [] }, // <-- professions remplace statuts
 }) => {
     const toPaginated = (source, defaultPerPage = 10) => {
-        if (!source) return { data: [], links: [], current_page: 1, per_page: defaultPerPage, total: 0 };
+        if (!source)
+            return {
+                data: [],
+                links: [],
+                current_page: 1,
+                per_page: defaultPerPage,
+                total: 0,
+            };
         if (Array.isArray(source)) {
-            return { data: source, links: [], current_page: 1, per_page: source.length || defaultPerPage, total: source.length };
+            return {
+                data: source,
+                links: [],
+                current_page: 1,
+                per_page: source.length || defaultPerPage,
+                total: source.length,
+            };
         }
         return {
             data: Array.isArray(source.data) ? source.data : [],
             links: Array.isArray(source.links) ? source.links : [],
             current_page: source.current_page || 1,
             per_page: source.per_page || defaultPerPage,
-            total: source.total || (Array.isArray(source.data) ? source.data.length : 0),
+            total:
+                source.total ||
+                (Array.isArray(source.data) ? source.data.length : 0),
         };
     };
 
@@ -730,13 +876,21 @@ const Annuaire = ({
     const familiesPage = toPaginated(families, 10);
     const classesPage = toPaginated(classes, 10);
 
-    const { data: paginatedMembers, links: membersLinks, current_page: membersCurrentPage, per_page: membersPerPage, total: membersTotal } = membersPage;
+    const {
+        data: paginatedMembers,
+        links: membersLinks,
+        current_page: membersCurrentPage,
+        per_page: membersPerPage,
+        total: membersTotal,
+    } = membersPage;
 
     // États des filtres
     const [searchTerm, setSearchTerm] = useState(filters.search || "");
     const [classeFilter, setClasseFilter] = useState(filters.classe || "");
     const [familleFilter, setFamilleFilter] = useState(filters.famille || "");
-    const [professionFilter, setProfessionFilter] = useState(filters.profession || "");
+    const [professionFilter, setProfessionFilter] = useState(
+        filters.profession || "",
+    );
     const [roleFilter, setRoleFilter] = useState(filters.role || "");
     const [itemsPerPage, setItemsPerPage] = useState(filters.perPage || 10);
 
@@ -747,7 +901,13 @@ const Annuaire = ({
     const [selectedMember, setSelectedMember] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isExiting, setIsExiting] = useState(false);
-    const [photoPopup, setPhotoPopup] = useState({ visible: false, src: "", x: 0, y: 0, exiting: false });
+    const [photoPopup, setPhotoPopup] = useState({
+        visible: false,
+        src: "",
+        x: 0,
+        y: 0,
+        exiting: false,
+    });
     const popupRef = useRef(null);
     const [actesLiturgiques, setActesLiturgiques] = useState([]);
     const [classMemberPages, setClassMemberPages] = useState({});
@@ -766,9 +926,17 @@ const Annuaire = ({
                 view: currentView,
                 page: 1,
             },
-            { preserveState: true, preserveScroll: true, replace: true }
+            { preserveState: true, preserveScroll: true, replace: true },
         );
-    }, [searchTerm, classeFilter, familleFilter, professionFilter, roleFilter, itemsPerPage, currentView]);
+    }, [
+        searchTerm,
+        classeFilter,
+        familleFilter,
+        professionFilter,
+        roleFilter,
+        itemsPerPage,
+        currentView,
+    ]);
 
     useEffect(() => {
         const handler = setTimeout(() => applyFilters(), 100);
@@ -790,19 +958,22 @@ const Annuaire = ({
                 familiesPerPage: 5,
                 classesPerPage: 1,
             },
-            { preserveState: true, preserveScroll: true }
+            { preserveState: true, preserveScroll: true },
         );
         setClassMemberPages({});
     };
 
     const handlePageChange = (url) => {
-        if (url) router.get(url, {}, { preserveState: true, preserveScroll: true });
+        if (url)
+            router.get(url, {}, { preserveState: true, preserveScroll: true });
     };
     const handleFamilyPageChange = (url) => {
-        if (url) router.get(url, {}, { preserveState: true, preserveScroll: true });
+        if (url)
+            router.get(url, {}, { preserveState: true, preserveScroll: true });
     };
     const handleClassPageChange = (url) => {
-        if (url) router.get(url, {}, { preserveState: true, preserveScroll: true });
+        if (url)
+            router.get(url, {}, { preserveState: true, preserveScroll: true });
         setClassMemberPages({});
     };
     const handlePerPageChange = (newPerPage) => setItemsPerPage(newPerPage);
@@ -839,38 +1010,66 @@ const Annuaire = ({
         setPhotoPopup({ visible: true, src, x, y, exiting: false });
     };
     const closePhotoPopup = () => {
-        setPhotoPopup(prev => ({ ...prev, exiting: true }));
-        setTimeout(() => setPhotoPopup({ visible: false, src: "", x: 0, y: 0, exiting: false }), 150);
+        setPhotoPopup((prev) => ({ ...prev, exiting: true }));
+        setTimeout(
+            () =>
+                setPhotoPopup({
+                    visible: false,
+                    src: "",
+                    x: 0,
+                    y: 0,
+                    exiting: false,
+                }),
+            150,
+        );
     };
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (photoPopup.visible && popupRef.current && !popupRef.current.contains(event.target)) closePhotoPopup();
+            if (
+                photoPopup.visible &&
+                popupRef.current &&
+                !popupRef.current.contains(event.target)
+            )
+                closePhotoPopup();
         };
         document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
+        return () =>
+            document.removeEventListener("mousedown", handleClickOutside);
     }, [photoPopup.visible]);
 
     const getFallbackImage = (member) => {
         const normalized = normalizeMember(member);
-        const initial = (normalized.prenoms || normalized.nom || "?").charAt(0).toUpperCase();
+        const initial = (normalized.prenoms || normalized.nom || "?")
+            .charAt(0)
+            .toUpperCase();
         return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#2563eb"/><text x="50" y="65" font-size="40" text-anchor="middle" fill="white" font-weight="bold">${initial}</text></svg>`)}`;
     };
 
     const loadMemberCotisations = (member) => {
-        if (!cotisations || typeof cotisations !== "object") return { fimeco: null, autres: [] };
+        if (!cotisations || typeof cotisations !== "object")
+            return { fimeco: null, autres: [] };
         let fimecoData = null;
-        if (Array.isArray(cotisations.fimeco)) fimecoData = cotisations.fimeco.find(c => c.famille === member.famille) || null;
-        let autresData = Array.isArray(cotisations.autres) ? cotisations.autres : [];
+        if (Array.isArray(cotisations.fimeco))
+            fimecoData =
+                cotisations.fimeco.find((c) => c.famille === member.famille) ||
+                null;
+        let autresData = Array.isArray(cotisations.autres)
+            ? cotisations.autres
+            : [];
         return { fimeco: fimecoData, autres: autresData };
     };
 
     const getPopupStyle = () => {
         if (!photoPopup.visible) return {};
-        const popupWidth = 260, popupHeight = 260;
-        let left = photoPopup.x + 10, top = photoPopup.y - popupHeight / 2;
-        if (left + popupWidth > window.innerWidth) left = photoPopup.x - popupWidth - 10;
+        const popupWidth = 260,
+            popupHeight = 260;
+        let left = photoPopup.x + 10,
+            top = photoPopup.y - popupHeight / 2;
+        if (left + popupWidth > window.innerWidth)
+            left = photoPopup.x - popupWidth - 10;
         if (top < 0) top = 10;
-        if (top + popupHeight > window.innerHeight) top = window.innerHeight - popupHeight - 10;
+        if (top + popupHeight > window.innerHeight)
+            top = window.innerHeight - popupHeight - 10;
         return { left, top };
     };
 
@@ -906,7 +1105,8 @@ const Annuaire = ({
 
         const rows = paginatedMembers.map((member, idx) => {
             const normalized = normalizeMember(member);
-            const rowNumber = (membersCurrentPage - 1) * membersPerPage + idx + 1;
+            const rowNumber =
+                (membersCurrentPage - 1) * membersPerPage + idx + 1;
             return [
                 rowNumber,
                 normalized.nom || "",
@@ -933,19 +1133,28 @@ const Annuaire = ({
 
         const csvContent = [
             columns.join(";"),
-            ...rows.map(row =>
-                row.map(cell => {
-                    const cellStr = cell.toString().replace(/"/g, '""');
-                    return cellStr.includes(";") || cellStr.includes('"') ? `"${cellStr}"` : cellStr;
-                }).join(";")
+            ...rows.map((row) =>
+                row
+                    .map((cell) => {
+                        const cellStr = cell.toString().replace(/"/g, '""');
+                        return cellStr.includes(";") || cellStr.includes('"')
+                            ? `"${cellStr}"`
+                            : cellStr;
+                    })
+                    .join(";"),
             ),
         ].join("\n");
 
-        const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+        const blob = new Blob(["\uFEFF" + csvContent], {
+            type: "text/csv;charset=utf-8;",
+        });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
         link.href = url;
-        link.setAttribute("download", `annuaire_membres_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.setAttribute(
+            "download",
+            `annuaire_membres_${new Date().toISOString().slice(0, 10)}.csv`,
+        );
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -969,13 +1178,15 @@ const Annuaire = ({
                 if (response.ok) {
                     const blob = await response.blob();
                     const reader = new FileReader();
-                    const logoData = await new Promise(resolve => {
+                    const logoData = await new Promise((resolve) => {
                         reader.onloadend = () => resolve(reader.result);
                         reader.readAsDataURL(blob);
                     });
                     doc.addImage(logoData, "PNG", 257, 10, 30, 15);
                 }
-            } catch (e) { console.log("Logo non chargé, génération sans logo."); }
+            } catch (e) {
+                console.log("Logo non chargé, génération sans logo.");
+            }
 
             doc.setFontSize(18);
             doc.text("Annuaire des membres", 14, 22);
@@ -1008,7 +1219,8 @@ const Annuaire = ({
 
             const data = paginatedMembers.map((member, idx) => {
                 const normalized = normalizeMember(member);
-                const rowNumber = (membersCurrentPage - 1) * membersPerPage + idx + 1;
+                const rowNumber =
+                    (membersCurrentPage - 1) * membersPerPage + idx + 1;
                 return {
                     index: rowNumber,
                     nom: normalized.nom || "",
@@ -1022,9 +1234,13 @@ const Annuaire = ({
                     email: normalized.email || "",
                     baptise: normalized.baptise ? "Oui" : "Non",
                     relation: normalized.relation || "",
-                    premiereCommunion: normalized.premiereCommunion ? "Oui" : "Non",
+                    premiereCommunion: normalized.premiereCommunion
+                        ? "Oui"
+                        : "Non",
                     mariageCivil: normalized.mariageCivil ? "Oui" : "Non",
-                    marieReligieusement: normalized.marieReligieusement ? "Oui" : "Non",
+                    marieReligieusement: normalized.marieReligieusement
+                        ? "Oui"
+                        : "Non",
                     dote: normalized.dote ? "Oui" : "Non",
                     veuf: normalized.veuf ? "Oui" : "Non",
                     dateNaissance: normalized.dateNaissance || "",
@@ -1041,25 +1257,37 @@ const Annuaire = ({
                 headStyles: { fillColor: [37, 99, 235], textColor: 255 },
                 alternateRowStyles: { fillColor: [245, 247, 250] },
             });
-            doc.save(`annuaire_membres_${new Date().toISOString().slice(0, 10)}.pdf`);
+            doc.save(
+                `annuaire_membres_${new Date().toISOString().slice(0, 10)}.pdf`,
+            );
         } catch (error) {
             console.error("Erreur lors de la génération du PDF :", error);
-            alert("Impossible de générer le PDF. Vérifiez que les bibliothèques 'jspdf' et 'jspdf-autotable' sont installées.");
+            alert(
+                "Impossible de générer le PDF. Vérifiez que les bibliothèques 'jspdf' et 'jspdf-autotable' sont installées.",
+            );
         }
     };
 
-    const Pagination = ({ links, currentPage, perPage, total, onPageChange }) => {
+    const Pagination = ({
+        links,
+        currentPage,
+        perPage,
+        total,
+        onPageChange,
+    }) => {
         if (!links || links.length <= 3) return null;
         return (
             <div className="flex items-center justify-between px-4 py-3 bg-white/50 backdrop-blur-sm border-t border-white/50">
                 <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-700">
-                        Affichage de {(currentPage - 1) * perPage + 1} à {Math.min(currentPage * perPage, total)} sur {total} membres
+                        Affichage de {(currentPage - 1) * perPage + 1} à{" "}
+                        {Math.min(currentPage * perPage, total)} sur {total}{" "}
+                        membres
                     </span>
                     {currentView === "all" && (
                         <select
                             value={perPage}
-                            onChange={e => {
+                            onChange={(e) => {
                                 const newPerPage = parseInt(e.target.value);
                                 onPageChange(null, newPerPage);
                             }}
@@ -1079,7 +1307,9 @@ const Annuaire = ({
                                 <span
                                     key={index}
                                     className="btn btn-secondary !py-1 !px-3 disabled opacity-50 cursor-not-allowed"
-                                    dangerouslySetInnerHTML={{ __html: link.label }}
+                                    dangerouslySetInnerHTML={{
+                                        __html: link.label,
+                                    }}
                                 />
                             );
                         }
@@ -1119,7 +1349,9 @@ const Annuaire = ({
                                 <th className="text-center">Relation</th>
                                 <th className="text-center">1ère communion</th>
                                 <th className="text-center">Mariage civil</th>
-                                <th className="text-center">Mariage religieux</th>
+                                <th className="text-center">
+                                    Mariage religieux
+                                </th>
                                 <th className="text-center">Doté</th>
                                 <th className="text-center">Veuf</th>
                                 <th className="text-center">Date naiss.</th>
@@ -1132,44 +1364,137 @@ const Annuaire = ({
                             {paginatedMembers.length > 0 ? (
                                 paginatedMembers.map((rawMember, idx) => {
                                     const member = normalizeMember(rawMember);
-                                    const rowNumber = (membersCurrentPage - 1) * membersPerPage + idx + 1;
+                                    const rowNumber =
+                                        (membersCurrentPage - 1) *
+                                            membersPerPage +
+                                        idx +
+                                        1;
                                     return (
-                                        <tr key={member.id} className="hover:bg-white/90 transition">
-                                            <td className="text-center">{rowNumber}</td>
+                                        <tr
+                                            key={member.id}
+                                            className="hover:bg-white/90 transition"
+                                        >
+                                            <td className="text-center">
+                                                {rowNumber}
+                                            </td>
                                             <td className="text-center">
                                                 <img
-                                                    src={member.photo || getFallbackImage(member)}
+                                                    src={
+                                                        member.photo ||
+                                                        getFallbackImage(member)
+                                                    }
                                                     className="member-photo-small mx-auto"
-                                                    onClick={(e) => openPhotoPopup(member.photo || getFallbackImage(member), e)}
-                                                    onError={(e) => { e.target.src = getFallbackImage(member); }}
+                                                    onClick={(e) =>
+                                                        openPhotoPopup(
+                                                            member.photo ||
+                                                                getFallbackImage(
+                                                                    member,
+                                                                ),
+                                                            e,
+                                                        )
+                                                    }
+                                                    onError={(e) => {
+                                                        e.target.src =
+                                                            getFallbackImage(
+                                                                member,
+                                                            );
+                                                    }}
                                                     alt={member.prenoms}
                                                 />
                                             </td>
-                                            <td className="text-center font-medium">{member.prenoms} {member.nom}</td>
-                                            <td className="text-center">{member.sexe === "M" ? "Masculin" : "Féminin"}</td>
-                                            <td className="text-center">{member.famille || "-"}</td>
-                                            <td className="text-center">{member.codeFamille || "-"}</td>
-                                            <td className="text-center">{member.codeMembre || "-"}</td>
-                                            <td className="text-center">{member.classeMethodiste || "-"}</td>
-                                            <td className="text-center">{member.telephone || "-"}</td>
-                                            <td className="text-center">{member.email || "-"}</td>
-                                            <td className="text-center">{member.baptise ? "Oui" : "Non"}</td>
-                                            <td className="text-center">{member.relation || "-"}</td>
-                                            <td className="text-center">{member.premiereCommunion ? "Oui" : "Non"}</td>
-                                            <td className="text-center">{member.mariageCivil ? "Oui" : "Non"}</td>
-                                            <td className="text-center">{member.marieReligieusement ? "Oui" : "Non"}</td>
-                                            <td className="text-center">{member.dote ? "Oui" : "Non"}</td>
-                                            <td className="text-center">{member.veuf ? "Oui" : "Non"}</td>
-                                            <td className="text-center">
-                                                {member.dateNaissance ? new Date(member.dateNaissance).toLocaleDateString("fr-FR") : "-"}
+                                            <td className="text-center font-medium">
+                                                {member.prenoms} {member.nom}
                                             </td>
-                                            <td className="text-center">{member.fonction || "-"}</td>
-                                            <td className="text-center">{member.profession || "-"}</td>
                                             <td className="text-center">
-                                                <button onClick={() => openModal(member)} className="btn btn-view text-xs px-3 py-1.5">
-                                                    <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                {member.sexe === "M"
+                                                    ? "Masculin"
+                                                    : "Féminin"}
+                                            </td>
+                                            <td className="text-center">
+                                                {member.famille || "-"}
+                                            </td>
+                                            <td className="text-center">
+                                                {member.codeFamille || "-"}
+                                            </td>
+                                            <td className="text-center">
+                                                {member.codeMembre || "-"}
+                                            </td>
+                                            <td className="text-center">
+                                                {member.classeMethodiste || "-"}
+                                            </td>
+                                            <td className="text-center">
+                                                {member.telephone || "-"}
+                                            </td>
+                                            <td className="text-center">
+                                                {member.email || "-"}
+                                            </td>
+                                            <td className="text-center">
+                                                {member.baptise ? "Oui" : "Non"}
+                                            </td>
+                                            <td className="text-center">
+                                                {member.relation || "-"}
+                                            </td>
+                                            <td className="text-center">
+                                                {member.premiereCommunion
+                                                    ? "Oui"
+                                                    : "Non"}
+                                            </td>
+                                            <td className="text-center">
+                                                {member.mariageCivil
+                                                    ? "Oui"
+                                                    : "Non"}
+                                            </td>
+                                            <td className="text-center">
+                                                {member.marieReligieusement
+                                                    ? "Oui"
+                                                    : "Non"}
+                                            </td>
+                                            <td className="text-center">
+                                                {member.dote ? "Oui" : "Non"}
+                                            </td>
+                                            <td className="text-center">
+                                                {member.veuf ? "Oui" : "Non"}
+                                            </td>
+                                            <td className="text-center">
+                                                {member.dateNaissance
+                                                    ? new Date(
+                                                          member.dateNaissance,
+                                                      ).toLocaleDateString(
+                                                          "fr-FR",
+                                                      )
+                                                    : "-"}
+                                            </td>
+                                            <td className="text-center">
+                                                {member.fonction || "-"}
+                                            </td>
+                                            <td className="text-center">
+                                                {member.profession || "-"}
+                                            </td>
+                                            <td className="text-center">
+                                                <button
+                                                    onClick={() =>
+                                                        openModal(member)
+                                                    }
+                                                    className="btn btn-view text-xs px-3 py-1.5"
+                                                >
+                                                    <svg
+                                                        className="w-4 h-4 inline mr-1"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                        />
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                        />
                                                     </svg>
                                                     Voir
                                                 </button>
@@ -1179,7 +1504,10 @@ const Annuaire = ({
                                 })
                             ) : (
                                 <tr>
-                                    <td colSpan={21} className="text-center py-12 text-gray-400 italic">
+                                    <td
+                                        colSpan={21}
+                                        className="text-center py-12 text-gray-400 italic"
+                                    >
                                         Aucun membre trouvé.
                                     </td>
                                 </tr>
@@ -1202,37 +1530,93 @@ const Annuaire = ({
     };
 
     const renderGridView = () => {
-        const normalizedMembers = paginatedMembers.map(normalizeMember).filter(Boolean);
+        const normalizedMembers = paginatedMembers
+            .map(normalizeMember)
+            .filter(Boolean);
         return (
             <>
                 <div className="grid-view">
                     {normalizedMembers.length > 0 ? (
-                        normalizedMembers.map(member => (
+                        normalizedMembers.map((member) => (
                             <div key={member.id} className="grid-card">
                                 <div className="grid-cover"></div>
                                 <div className="grid-profile-container">
-                                    <div className="grid-profile-photo" onClick={(e) => openPhotoPopup(member.photo || getFallbackImage(member), e)}>
-                                        <img src={member.photo || getFallbackImage(member)} onError={(e) => { e.target.src = getFallbackImage(member); }} alt={member.prenoms} />
+                                    <div
+                                        className="grid-profile-photo"
+                                        onClick={(e) =>
+                                            openPhotoPopup(
+                                                member.photo ||
+                                                    getFallbackImage(member),
+                                                e,
+                                            )
+                                        }
+                                    >
+                                        <img
+                                            src={
+                                                member.photo ||
+                                                getFallbackImage(member)
+                                            }
+                                            onError={(e) => {
+                                                e.target.src =
+                                                    getFallbackImage(member);
+                                            }}
+                                            alt={member.prenoms}
+                                        />
                                     </div>
                                 </div>
                                 <div className="grid-card-info">
-                                    <h4>{member.prenoms} {member.nom}</h4>
-                                    <div className="grid-card-famille">{member.famille || "-"}</div>
-                                    <div className="grid-card-classe">{member.classeMethodiste || "-"}</div>
+                                    <h4>
+                                        {member.prenoms} {member.nom}
+                                    </h4>
+                                    <div className="grid-card-famille">
+                                        {member.famille || "-"}
+                                    </div>
+                                    <div className="grid-card-classe">
+                                        {member.classeMethodiste || "-"}
+                                    </div>
                                     <div className="grid-card-contact">
-                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                                        <svg
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                                            />
+                                        </svg>
                                         {member.telephone || "-"}
                                     </div>
                                     <div className="grid-card-contact">
-                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                                        <svg
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                            />
+                                        </svg>
                                         {member.email || "-"}
                                     </div>
-                                    <button onClick={() => openModal(member)} className="btn btn-view mt-3 w-full">Voir profil</button>
+                                    <button
+                                        onClick={() => openModal(member)}
+                                        className="btn btn-view mt-3 w-full"
+                                    >
+                                        Voir profil
+                                    </button>
                                 </div>
                             </div>
                         ))
                     ) : (
-                        <p className="col-span-full text-center py-12 text-gray-400 italic">Aucun membre trouvé.</p>
+                        <p className="col-span-full text-center py-12 text-gray-400 italic">
+                            Aucun membre trouvé.
+                        </p>
                     )}
                 </div>
                 <Pagination
@@ -1251,25 +1635,67 @@ const Annuaire = ({
 
     const renderFamiliesView = () => {
         const familyData = familiesPage.data || [];
-        if (familyData.length === 0) return <p className="text-center py-12 text-gray-400 italic">Aucune famille trouvée.</p>;
+        if (familyData.length === 0)
+            return (
+                <p className="text-center py-12 text-gray-400 italic">
+                    Aucune famille trouvée.
+                </p>
+            );
         return (
             <div className="families-list">
-                {familyData.map(family => (
+                {familyData.map((family) => (
                     <div key={family.id} className="family-group">
                         <div className="family-header">
                             <h3>{family.nom}</h3>
                             <span className="family-count">{family.count}</span>
                         </div>
                         <div className="family-members">
-                            {(family.members || []).map(member => {
+                            {(family.members || []).map((member) => {
                                 const normalized = normalizeMember(member);
                                 return (
-                                    <div key={normalized.id} className="family-member-item">
-                                        <img src={normalized.photo || getFallbackImage(normalized)} onClick={(e) => openPhotoPopup(normalized.photo || getFallbackImage(normalized), e)} onError={(e) => { e.target.src = getFallbackImage(normalized); }} alt={normalized.prenoms} />
-                                        <div className="member-info" onClick={() => openModal(normalized)}>
-                                            <strong>{normalized.prenoms} {normalized.nom}</strong>
-                                            <p>{normalized.classeMethodiste || "-"}</p>
-                                            <p className="text-sm text-gray-600">{normalized.telephone || "-"}</p>
+                                    <div
+                                        key={normalized.id}
+                                        className="family-member-item"
+                                    >
+                                        <img
+                                            src={
+                                                normalized.photo ||
+                                                getFallbackImage(normalized)
+                                            }
+                                            onClick={(e) =>
+                                                openPhotoPopup(
+                                                    normalized.photo ||
+                                                        getFallbackImage(
+                                                            normalized,
+                                                        ),
+                                                    e,
+                                                )
+                                            }
+                                            onError={(e) => {
+                                                e.target.src =
+                                                    getFallbackImage(
+                                                        normalized,
+                                                    );
+                                            }}
+                                            alt={normalized.prenoms}
+                                        />
+                                        <div
+                                            className="member-info"
+                                            onClick={() =>
+                                                openModal(normalized)
+                                            }
+                                        >
+                                            <strong>
+                                                {normalized.prenoms}{" "}
+                                                {normalized.nom}
+                                            </strong>
+                                            <p>
+                                                {normalized.classeMethodiste ||
+                                                    "-"}
+                                            </p>
+                                            <p className="text-sm text-gray-600">
+                                                {normalized.telephone || "-"}
+                                            </p>
                                         </div>
                                     </div>
                                 );
@@ -1290,33 +1716,82 @@ const Annuaire = ({
 
     const renderClassesView = () => {
         const classData = classesPage.data || [];
-        if (classData.length === 0) return <p className="text-center py-12 text-gray-400 italic">Aucune classe trouvée.</p>;
+        if (classData.length === 0)
+            return (
+                <p className="text-center py-12 text-gray-400 italic">
+                    Aucune classe trouvée.
+                </p>
+            );
         return (
             <div className="classes-list">
-                {classData.map(classe => {
+                {classData.map((classe) => {
                     const members = classe.members || [];
                     const totalMembers = members.length;
                     const membersPerPageLocal = 10;
                     const currentPage = classMemberPages[classe.id] || 1;
-                    const totalPages = Math.ceil(totalMembers / membersPerPageLocal);
+                    const totalPages = Math.ceil(
+                        totalMembers / membersPerPageLocal,
+                    );
                     const startIndex = (currentPage - 1) * membersPerPageLocal;
-                    const displayedMembers = members.slice(startIndex, startIndex + membersPerPageLocal);
+                    const displayedMembers = members.slice(
+                        startIndex,
+                        startIndex + membersPerPageLocal,
+                    );
                     return (
                         <div key={classe.id} className="class-group">
                             <div className="class-header">
                                 <h3>{classe.nom}</h3>
-                                <span className="class-count">{totalMembers}</span>
+                                <span className="class-count">
+                                    {totalMembers}
+                                </span>
                             </div>
                             <div className="class-members">
-                                {displayedMembers.map(member => {
+                                {displayedMembers.map((member) => {
                                     const normalized = normalizeMember(member);
                                     return (
-                                        <div key={normalized.id} className="class-member-item">
-                                            <img src={normalized.photo || getFallbackImage(normalized)} onClick={(e) => openPhotoPopup(normalized.photo || getFallbackImage(normalized), e)} onError={(e) => { e.target.src = getFallbackImage(normalized); }} alt={normalized.prenoms} />
-                                            <div className="member-info" onClick={() => openModal(normalized)}>
-                                                <strong>{normalized.prenoms} {normalized.nom}</strong>
-                                                <p>{normalized.famille || "-"}</p>
-                                                <p className="text-sm text-gray-600">{normalized.telephone || "-"}</p>
+                                        <div
+                                            key={normalized.id}
+                                            className="class-member-item"
+                                        >
+                                            <img
+                                                src={
+                                                    normalized.photo ||
+                                                    getFallbackImage(normalized)
+                                                }
+                                                onClick={(e) =>
+                                                    openPhotoPopup(
+                                                        normalized.photo ||
+                                                            getFallbackImage(
+                                                                normalized,
+                                                            ),
+                                                        e,
+                                                    )
+                                                }
+                                                onError={(e) => {
+                                                    e.target.src =
+                                                        getFallbackImage(
+                                                            normalized,
+                                                        );
+                                                }}
+                                                alt={normalized.prenoms}
+                                            />
+                                            <div
+                                                className="member-info"
+                                                onClick={() =>
+                                                    openModal(normalized)
+                                                }
+                                            >
+                                                <strong>
+                                                    {normalized.prenoms}{" "}
+                                                    {normalized.nom}
+                                                </strong>
+                                                <p>
+                                                    {normalized.famille || "-"}
+                                                </p>
+                                                <p className="text-sm text-gray-600">
+                                                    {normalized.telephone ||
+                                                        "-"}
+                                                </p>
                                             </div>
                                         </div>
                                     );
@@ -1325,21 +1800,57 @@ const Annuaire = ({
                             {totalPages > 1 && (
                                 <div className="flex items-center justify-center gap-4 p-4 border-t border-white/50">
                                     <button
-                                        onClick={() => setClassMemberPages(prev => ({ ...prev, [classe.id]: currentPage - 1 }))}
+                                        onClick={() =>
+                                            setClassMemberPages((prev) => ({
+                                                ...prev,
+                                                [classe.id]: currentPage - 1,
+                                            }))
+                                        }
                                         disabled={currentPage === 1}
                                         className="btn btn-icon !p-2 disabled:opacity-50"
                                         aria-label="Page précédente"
                                     >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                                        <svg
+                                            className="w-5 h-5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M15 19l-7-7 7-7"
+                                            />
+                                        </svg>
                                     </button>
-                                    <span className="text-sm text-gray-700">Page {currentPage} / {totalPages}</span>
+                                    <span className="text-sm text-gray-700">
+                                        Page {currentPage} / {totalPages}
+                                    </span>
                                     <button
-                                        onClick={() => setClassMemberPages(prev => ({ ...prev, [classe.id]: currentPage + 1 }))}
+                                        onClick={() =>
+                                            setClassMemberPages((prev) => ({
+                                                ...prev,
+                                                [classe.id]: currentPage + 1,
+                                            }))
+                                        }
                                         disabled={currentPage === totalPages}
                                         className="btn btn-icon !p-2 disabled:opacity-50"
                                         aria-label="Page suivante"
                                     >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                                        <svg
+                                            className="w-5 h-5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M9 5l7 7-7 7"
+                                            />
+                                        </svg>
                                     </button>
                                 </div>
                             )}
@@ -1359,10 +1870,16 @@ const Annuaire = ({
 
     const renderActiveView = () => {
         switch (currentView) {
-            case "all": return viewMode === "table" ? renderTableView() : renderGridView();
-            case "families": return renderFamiliesView();
-            case "classes": return renderClassesView();
-            default: return renderTableView();
+            case "all":
+                return viewMode === "table"
+                    ? renderTableView()
+                    : renderGridView();
+            case "families":
+                return renderFamiliesView();
+            case "classes":
+                return renderClassesView();
+            default:
+                return renderTableView();
         }
     };
 
@@ -1372,98 +1889,226 @@ const Annuaire = ({
             <style>{GLOBAL_STYLES}</style>
 
             {isModalOpen && (
-                <div className={`modal-overlay ${isExiting ? "closing" : ""}`} onClick={closeModal}>
-                    <div className={`modal-content ${isExiting ? "closing" : ""}`} onClick={(e) => e.stopPropagation()}>
+                <div
+                    className={`modal-overlay ${isExiting ? "closing" : ""}`}
+                    onClick={closeModal}
+                >
+                    <div
+                        className={`modal-content ${isExiting ? "closing" : ""}`}
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="modal-header">
                             <h2 className="text-xl font-bold">Fiche membre</h2>
                             <button onClick={closeModal}>
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                <svg
+                                    className="w-5 h-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
+                                </svg>
                             </button>
                         </div>
                         <div className="modal-body">
                             <MemberDetailsModal
                                 member={selectedMember}
-                                cotisations={selectedMember ? loadMemberCotisations(selectedMember) : {}}
+                                cotisations={
+                                    selectedMember
+                                        ? loadMemberCotisations(selectedMember)
+                                        : {}
+                                }
                                 actesLiturgiques={actesLiturgiques}
                                 userData={user}
                                 onClose={closeModal}
                             />
                         </div>
                         <div className="modal-footer">
-                            <button onClick={closeModal} className="btn btn-secondary">Fermer</button>
+                            <button
+                                onClick={closeModal}
+                                className="btn btn-secondary"
+                            >
+                                Fermer
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
 
             {photoPopup.visible && (
-                <div ref={popupRef} className={`photo-popup ${photoPopup.exiting ? "closing" : ""}`} style={getPopupStyle()}>
+                <div
+                    ref={popupRef}
+                    className={`photo-popup ${photoPopup.exiting ? "closing" : ""}`}
+                    style={getPopupStyle()}
+                >
                     <img src={photoPopup.src} alt="Agrandissement" />
-                    <button className="photo-popup-close" onClick={closePhotoPopup}>×</button>
+                    <button
+                        className="photo-popup-close"
+                        onClick={closePhotoPopup}
+                    >
+                        ×
+                    </button>
                 </div>
             )}
 
-            <div className="min-h-screen py-8 px-4 animate-fade-in-up" style={{ background: "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)" }}>
+            <div
+                className="min-h-screen py-8 px-4 animate-fade-in-up"
+                style={{
+                    background:
+                        "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
+                }}
+            >
                 <div className="w-full">
                     <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4 w-full">
                         <div className="w-full md:w-auto flex-shrink-0">
-                            <Link href="/pasteur/dashboard" className="btn btn-secondary gap-2 w-full md:w-auto justify-center">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            <Link
+                                href={withBasePath("", "/pasteur/dashboard")}
+                                className="btn btn-secondary gap-2 w-full md:w-auto justify-center"
+                            >
+                                <svg
+                                    className="w-5 h-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                                    />
                                 </svg>
                                 Retour
                             </Link>
                         </div>
-                        <h1 className="text-xl md:text-2xl font-bold text-white text-center flex-1 order-first md:order-none">Annuaire des membres</h1>
+                        <h1 className="text-xl md:text-2xl font-bold text-white text-center flex-1 order-first md:order-none">
+                            Annuaire des membres
+                        </h1>
                         <div className="w-full md:w-auto flex-shrink-0"></div>
                     </div>
 
                     <div className="glass-panel filters-bar">
                         <div className="filter-group">
                             <div className="input-search-wrapper">
-                                <svg className="input-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                <svg
+                                    className="input-search-icon"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                    />
                                 </svg>
                                 <input
                                     type="text"
                                     placeholder="Rechercher (nom, prénom, téléphone, profession, code membre, code famille)..."
                                     className="input-control input-search"
                                     value={searchTerm}
-                                    onChange={e => setSearchTerm(e.target.value)}
+                                    onChange={(e) =>
+                                        setSearchTerm(e.target.value)
+                                    }
                                 />
                             </div>
 
-                            <select value={classeFilter} onChange={e => setClasseFilter(e.target.value)} className="input-control" style={{ minWidth: "140px" }}>
+                            <select
+                                value={classeFilter}
+                                onChange={(e) =>
+                                    setClasseFilter(e.target.value)
+                                }
+                                className="input-control"
+                                style={{ minWidth: "140px" }}
+                            >
                                 <option value="">Toutes classes</option>
                                 {filterOptions.classes.map((c, idx) => (
-                                    <option key={`classe-${c.id}-${idx}`} value={c.id}>{c.nom}</option>
+                                    <option
+                                        key={`classe-${c.id}-${idx}`}
+                                        value={c.id}
+                                    >
+                                        {c.nom}
+                                    </option>
                                 ))}
                             </select>
 
-                            <select value={familleFilter} onChange={e => setFamilleFilter(e.target.value)} className="input-control" style={{ minWidth: "140px" }}>
+                            <select
+                                value={familleFilter}
+                                onChange={(e) =>
+                                    setFamilleFilter(e.target.value)
+                                }
+                                className="input-control"
+                                style={{ minWidth: "140px" }}
+                            >
                                 <option value="">Toutes familles</option>
                                 {filterOptions.familles.map((f, idx) => (
-                                    <option key={`famille-${f.id}-${idx}`} value={f.id}>{f.nom}</option>
+                                    <option
+                                        key={`famille-${f.id}-${idx}`}
+                                        value={f.id}
+                                    >
+                                        {f.nom}
+                                    </option>
                                 ))}
                             </select>
 
-                            <select value={professionFilter} onChange={e => setProfessionFilter(e.target.value)} className="input-control" style={{ minWidth: "140px" }}>
+                            <select
+                                value={professionFilter}
+                                onChange={(e) =>
+                                    setProfessionFilter(e.target.value)
+                                }
+                                className="input-control"
+                                style={{ minWidth: "140px" }}
+                            >
                                 <option value="">Toutes professions</option>
                                 {filterOptions.professions.map((p, idx) => (
-                                    <option key={`profession-${p.value}-${idx}`} value={p.value}>{p.label}</option>
+                                    <option
+                                        key={`profession-${p.value}-${idx}`}
+                                        value={p.value}
+                                    >
+                                        {p.label}
+                                    </option>
                                 ))}
                             </select>
 
-                            <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="input-control" style={{ minWidth: "140px" }}>
+                            <select
+                                value={roleFilter}
+                                onChange={(e) => setRoleFilter(e.target.value)}
+                                className="input-control"
+                                style={{ minWidth: "140px" }}
+                            >
                                 <option value="">Tous rôles</option>
                                 {filterOptions.roles.map((r, idx) => (
-                                    <option key={`role-${r.value}-${idx}`} value={r.value}>{r.label}</option>
+                                    <option
+                                        key={`role-${r.value}-${idx}`}
+                                        value={r.value}
+                                    >
+                                        {r.label}
+                                    </option>
                                 ))}
                             </select>
 
-                            <button onClick={resetFilters} className="btn btn-success">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            <button
+                                onClick={resetFilters}
+                                className="btn btn-success"
+                            >
+                                <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
                                 </svg>
                                 Réinitialiser
                             </button>
@@ -1471,24 +2116,51 @@ const Annuaire = ({
 
                         <div className="filter-second-row">
                             <div className="filter-nav">
-                                {["all", "families", "classes"].map(viewKey => (
-                                    <button
-                                        key={viewKey}
-                                        className={`filter-nav-btn ${currentView === viewKey ? "active" : ""}`}
-                                        onClick={() => switchView(viewKey)}
-                                    >
-                                        {viewKey === "all" ? "Tous" : viewKey === "families" ? "Familles" : "Classes"}
-                                    </button>
-                                ))}
+                                {["all", "families", "classes"].map(
+                                    (viewKey) => (
+                                        <button
+                                            key={viewKey}
+                                            className={`filter-nav-btn ${currentView === viewKey ? "active" : ""}`}
+                                            onClick={() => switchView(viewKey)}
+                                        >
+                                            {viewKey === "all"
+                                                ? "Tous"
+                                                : viewKey === "families"
+                                                  ? "Familles"
+                                                  : "Classes"}
+                                        </button>
+                                    ),
+                                )}
                             </div>
 
                             {currentView === "all" && (
                                 <div className="filter-actions">
-                                    <button onClick={() => setViewMode(viewMode === "table" ? "grid" : "table")} className="btn btn-secondary">
-                                        {viewMode === "table" ? "Vue grille" : "Vue liste"}
+                                    <button
+                                        onClick={() =>
+                                            setViewMode(
+                                                viewMode === "table"
+                                                    ? "grid"
+                                                    : "table",
+                                            )
+                                        }
+                                        className="btn btn-secondary"
+                                    >
+                                        {viewMode === "table"
+                                            ? "Vue grille"
+                                            : "Vue liste"}
                                     </button>
-                                    <button onClick={exportToExcel} className="btn btn-excel">Excel</button>
-                                    <button onClick={exportToPDF} className="btn btn-pdf">PDF</button>
+                                    <button
+                                        onClick={exportToExcel}
+                                        className="btn btn-excel"
+                                    >
+                                        Excel
+                                    </button>
+                                    <button
+                                        onClick={exportToPDF}
+                                        className="btn btn-pdf"
+                                    >
+                                        PDF
+                                    </button>
                                 </div>
                             )}
                         </div>

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import Select2Fonction from "../../../Components/Select2Fonction";
 import Select2Relation from "../../../Components/Select2Relation";
+import { withBasePath } from "../../../Utils/urlHelper";
 import ProfilePhoto from "../../../Components/ProfilePhoto";
 import { resolveMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
 import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
@@ -865,7 +866,9 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const fonctionsRes = await axios.get("/api/fonctions");
+                const fonctionsRes = await axios.get(
+                    withBasePath("", "/api/fonctions"),
+                );
                 setFonctions(fonctionsRes.data);
             } catch (error) {
                 console.error("Erreur:", error);
@@ -2792,7 +2795,7 @@ const TabUtilisateurs = ({
                                 }}
                             >
                                 <tr>
-{[
+                                    {[
                                         "N°",
                                         "Photo",
                                         "Nom",
@@ -2965,7 +2968,7 @@ const TabUtilisateurs = ({
                                             <td className="px-3 py-3 text-sm text-gray-700 text-center whitespace-nowrap">
                                                 {m.famille || "-"}
                                             </td>
-                                                <td className="px-3 py-3 text-sm text-gray-700 text-center whitespace-nowrap font-semibold">
+                                            <td className="px-3 py-3 text-sm text-gray-700 text-center whitespace-nowrap font-semibold">
                                                 {m.code_famille || "-"}
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-700 text-center whitespace-nowrap font-semibold">

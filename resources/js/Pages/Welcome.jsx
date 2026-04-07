@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link } from "@inertiajs/react";
+import { Link, usePage } from "@inertiajs/react";
 import {
     Menu,
     X,
@@ -18,7 +18,7 @@ import {
     Youtube,
 } from "lucide-react";
 import { clearOldStepData } from "../Hooks/usePersistentState";
-
+import { withBasePath } from "../Utils/urlHelper";
 const CHURCH_DATA = {
     name: "Église Methodiste du Jubile",
     tagline: "Une communauté de foi, d'amour et de partage",
@@ -48,8 +48,9 @@ const CHURCH_DATA = {
     ],
 };
 
-const Navbar = ({ activeSection, isScrolled }) => {
+const Navbar = ({ activeSection, isScrolled, basePath }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const withBase = (path) => withBasePath(basePath, path);
 
     const navLinks = [
         { name: "Accueil", href: "#home" },
@@ -70,7 +71,7 @@ const Navbar = ({ activeSection, isScrolled }) => {
                     <div className="flex items-center gap-3">
                         <div className="bg-white p-1.5 rounded-lg shadow-md">
                             <img
-                                src="/images/image.png"
+                                src={withBase("/images/image.png")}
                                 alt="Logo Église ClasseMethodo Jubile"
                                 className="h-10 w-10 object-contain"
                             />
@@ -93,15 +94,15 @@ const Navbar = ({ activeSection, isScrolled }) => {
                                     activeSection === link.href.replace("#", "")
                                         ? "text-amber-500 font-semibold"
                                         : isScrolled
-                                        ? "text-slate-600"
-                                        : "text-white/90"
+                                          ? "text-slate-600"
+                                          : "text-white/90"
                                 }`}
                             >
                                 {link.name}
                             </a>
                         ))}
                         <Link
-                            href="/login"
+                            href={withBase("/login")}
                             className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 ${
                                 isScrolled
                                     ? "bg-slate-900 text-white hover:bg-slate-800"
@@ -141,7 +142,7 @@ const Navbar = ({ activeSection, isScrolled }) => {
                             </a>
                         ))}
                         <Link
-                            href="/login"
+                            href={withBase("/login")}
                             className="w-full bg-amber-500 text-white text-center py-3 rounded-lg font-bold"
                         >
                             Connexion Membre
@@ -154,6 +155,10 @@ const Navbar = ({ activeSection, isScrolled }) => {
 };
 
 export default function Welcome() {
+    const { app } = usePage().props;
+    const basePath = app?.basePath || "";
+    const withBase = (path) => withBasePath(basePath, path);
+
     const [isScrolled, setIsScrolled] = useState(false);
     const [activeSection, setActiveSection] = useState("home");
 
@@ -186,131 +191,134 @@ export default function Welcome() {
 
     return (
         <div className="bg-slate-50 min-h-screen overflow-x-hidden">
-            <Navbar activeSection={activeSection} isScrolled={isScrolled} />
+            <Navbar
+                activeSection={activeSection}
+                isScrolled={isScrolled}
+                basePath={basePath}
+            />
 
             <section
                 id="home"
                 className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden"
-                style={{ background: "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)" }}
+                style={{
+                    background:
+                        "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
+                }}
             >
-                    <div className="absolute inset-0 z-0">
-                        <img
-                            src="https://images.unsplash.com/photo-1438232992991-995b7058bbb3?q=80&w=2073&auto=format&fit=crop"
-                            alt="Church Background"
-                            className="w-full h-full object-cover opacity-30"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/50 to-slate-900/30"></div>
-                    </div>
+                <div className="absolute inset-0 z-0">
+                    <img
+                        src="https://images.unsplash.com/photo-1438232992991-995b7058bbb3?q=80&w=2073&auto=format&fit=crop"
+                        alt="Church Background"
+                        className="w-full h-full object-cover opacity-30"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/50 to-slate-900/30"></div>
+                </div>
 
-                    <div className="relative z-10 max-w-5xl mx-auto px-4 text-center text-white">
-                        <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-6 leading-tight">
-                            Votre lieu de <br className="hidden md:block" />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">
-                                Connexion Spirituelle
+                <div className="relative z-10 max-w-5xl mx-auto px-4 text-center text-white">
+                    <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-6 leading-tight">
+                        Votre lieu de <br className="hidden md:block" />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">
+                            Connexion Spirituelle
+                        </span>
+                    </h1>
+
+                    <p className="text-xl md:text-2xl text-slate-300 mb-10 max-w-2xl mx-auto font-light">
+                        {CHURCH_DATA.tagline}. Rejoignez une communauté
+                        dynamique qui change des vies.
+                    </p>
+
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                        <button
+                            onClick={() => {
+                                const el = document.getElementById("services");
+                                if (el) {
+                                    el.scrollIntoView({
+                                        behavior: "smooth",
+                                        block: "center",
+                                    });
+                                }
+                            }}
+                            className="group relative px-8 py-4 bg-amber-500 text-white rounded-full font-bold text-lg overflow-hidden transition-all hover:scale-105 shadow-2xl shadow-amber-500/30"
+                        >
+                            <span className="relative z-10 flex items-center gap-2">
+                                Rejoindre la communauté{" "}
+                                <ArrowRight
+                                    size={20}
+                                    className="group-hover:translate-x-1 transition-transform"
+                                />
                             </span>
-                        </h1>
+                        </button>
+                    </div>
+                </div>
 
-                        <p className="text-xl md:text-2xl text-slate-300 mb-10 max-w-2xl mx-auto font-light">
-                            {CHURCH_DATA.tagline}. Rejoignez une communauté
-                            dynamique qui change des vies.
+                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce">
+                    <ArrowRight className="rotate-90 text-white/50 w-8 h-8" />
+                </div>
+            </section>
+
+            <section id="services" className="py-24 bg-slate-50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center max-w-3xl mx-auto mb-16">
+                        <span className="text-amber-600 font-bold tracking-wider text-sm uppercase">
+                            Nos Services
+                        </span>
+                        <h2 className="text-4xl md:text-5xl font-black text-slate-900 mt-2 mb-6">
+                            Comment souhaitez-vous vous inscrire ?
+                        </h2>
+                        <p className="text-xl text-slate-600">
+                            Choisissez le type de profil qui correspond à votre
+                            situation pour rejoindre la base de données de
+                            l'église.
                         </p>
-
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                            <button
-                                onClick={() => {
-                                    const el = document.getElementById("services");
-                                    if (el) {
-                                        el.scrollIntoView({
-                                            behavior: "smooth",
-                                            block: "center",
-                                        });
-                                    }
-                                }}
-                                className="group relative px-8 py-4 bg-amber-500 text-white rounded-full font-bold text-lg overflow-hidden transition-all hover:scale-105 shadow-2xl shadow-amber-500/30"
-                            >
-                                <span className="relative z-10 flex items-center gap-2">
-                                    Rejoindre la communauté{" "}
-                                    <ArrowRight
-                                        size={20}
-                                        className="group-hover:translate-x-1 transition-transform"
-                                    />
-                                </span>
-                            </button>
-                        </div>
                     </div>
 
-                    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce">
-                        <ArrowRight className="rotate-90 text-white/50 w-8 h-8" />
-                    </div>
-                </section>
+                    <div className="flex justify-center">
+                        <div className="grid md:grid-cols-2 gap-6 justify-center max-w-2xl mx-auto">
+                            {CHURCH_DATA.services.map((service) => {
+                                const Icon = service.icon;
 
-                <section id="services" className="py-24 bg-slate-50">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="text-center max-w-3xl mx-auto mb-16">
-                            <span className="text-amber-600 font-bold tracking-wider text-sm uppercase">
-                                Nos Services
-                            </span>
-                            <h2 className="text-4xl md:text-5xl font-black text-slate-900 mt-2 mb-6">
-                                Comment souhaitez-vous vous inscrire ?
-                            </h2>
-                            <p className="text-xl text-slate-600">
-                                Choisissez le type de profil qui correspond à
-                                votre situation pour rejoindre la base de
-                                données de l'église.
-                            </p>
-                        </div>
+                                // Mapping des services vers les routes
+                                const routeMap = {
+                                    family: withBase("/register/famille"),
 
-                        <div className="flex justify-center">
-                            <div className="grid md:grid-cols-2 gap-6 justify-center max-w-2xl mx-auto">
-                                {CHURCH_DATA.services.map((service) => {
-                                    const Icon = service.icon;
+                                    driver: withBase("/register/conducteur"),
+                                };
 
-                                    // Mapping des services vers les routes
-                                    const routeMap = {
-                                        family: '/register/famille',
-
-                                        driver: '/register/conducteur',
-                                    };
-
-                                    return (
-                                        <Link
-                                            key={service.id}
-                                            href={routeMap[service.id] || '#'}
-                                            className="group bg-white p-8 rounded-3xl shadow-sm hover:shadow-2xl border border-slate-100 hover:border-amber-200 transition-all duration-300 hover:-translate-y-2 flex flex-col items-center text-center relative overflow-hidden"
+                                return (
+                                    <Link
+                                        key={service.id}
+                                        href={routeMap[service.id] || "#"}
+                                        className="group bg-white p-8 rounded-3xl shadow-sm hover:shadow-2xl border border-slate-100 hover:border-amber-200 transition-all duration-300 hover:-translate-y-2 flex flex-col items-center text-center relative overflow-hidden"
+                                    >
+                                        <div
+                                            className={`w-16 h-16 rounded-2xl ${service.bg} ${service.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}
                                         >
-                                            <div
-                                                className={`w-16 h-16 rounded-2xl ${service.bg} ${service.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}
-                                            >
-                                                <Icon
-                                                    size={32}
-                                                    strokeWidth={2}
-                                                />
-                                            </div>
-                                            <h3 className="text-xl font-bold text-slate-900 mb-3">
-                                                {service.title}
-                                            </h3>
-                                            <p className="text-sm text-slate-500 leading-relaxed mb-6 flex-grow">
-                                                {service.description}
-                                            </p>
-                                            <span className="text-amber-600 font-bold text-sm uppercase tracking-wide flex items-center gap-1 group-hover:gap-2 transition-all">
-                                                S'inscrire{" "}
-                                                <ArrowRight size={14} />
-                                            </span>
-                                        </Link>
-                                    );
-                                })}
-                            </div>
+                                            <Icon size={32} strokeWidth={2} />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-slate-900 mb-3">
+                                            {service.title}
+                                        </h3>
+                                        <p className="text-sm text-slate-500 leading-relaxed mb-6 flex-grow">
+                                            {service.description}
+                                        </p>
+                                        <span className="text-amber-600 font-bold text-sm uppercase tracking-wide flex items-center gap-1 group-hover:gap-2 transition-all">
+                                            S'inscrire <ArrowRight size={14} />
+                                        </span>
+                                    </Link>
+                                );
+                            })}
                         </div>
                     </div>
-                </section>
+                </div>
+            </section>
 
-                <section id="contact" className="py-24 bg-white relative">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="grid lg:grid-cols-2 gap-16">
-                            <div></div>
-                        </div>
+            <section id="contact" className="py-24 bg-white relative">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid lg:grid-cols-2 gap-16">
+                        <div></div>
                     </div>
-                </section>
+                </div>
+            </section>
 
             <section className="bg-gradient-to-br from-slate-900 to-slate-800 py-20 px-4">
                 <div
@@ -326,7 +334,7 @@ export default function Welcome() {
                         aujourd'hui.
                     </p>
                     <Link
-                        href="/register/famille"
+                        href={withBase("/register/famille")}
                         className="inline-block px-10 py-4 bg-amber-500 rounded-full font-bold text-lg hover:bg-amber-600 transition-colors shadow-lg hover:shadow-amber-500/30 text-white"
                     >
                         Devenir Membre

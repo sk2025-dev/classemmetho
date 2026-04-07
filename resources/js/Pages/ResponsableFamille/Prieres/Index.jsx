@@ -11,6 +11,7 @@ import {
     Send,
     UserRound,
 } from "lucide-react";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 function badgeClasses(status) {
     if (status === "Exaucement partage") {
@@ -73,21 +74,24 @@ export default function ResponsableFamillePrieresIndex({
             {
                 title: "Demandes",
                 value: total,
-                subtitle: "Demandes de priere deja formulees dans votre espace.",
+                subtitle:
+                    "Demandes de priere deja formulees dans votre espace.",
                 icon: FileHeart,
                 iconWrapClass: "bg-sky-100 text-sky-700",
             },
             {
                 title: "Exaucements",
                 value: withComments,
-                subtitle: "Demandes ayant deja recu un retour ou un temoignage.",
+                subtitle:
+                    "Demandes ayant deja recu un retour ou un temoignage.",
                 icon: CheckCircle2,
                 iconWrapClass: "bg-emerald-100 text-emerald-700",
             },
             {
                 title: "Mode anonyme",
                 value: anonymousCount,
-                subtitle: "Demandes preservees sans affichage du nom et prenom.",
+                subtitle:
+                    "Demandes preservees sans affichage du nom et prenom.",
                 icon: EyeOff,
                 iconWrapClass: "bg-violet-100 text-violet-700",
             },
@@ -139,20 +143,23 @@ export default function ResponsableFamillePrieresIndex({
         if (activeTab === "in_prayer") {
             return {
                 title: "Demandes en priere",
-                description: "Retrouvez ici les demandes deja prises en charge et actuellement suivies dans la priere.",
+                description:
+                    "Retrouvez ici les demandes deja prises en charge et actuellement suivies dans la priere.",
             };
         }
 
         if (activeTab === "fulfilled") {
             return {
                 title: "Demandes exaucees",
-                description: "Retrouvez ici les demandes ayant deja recu un retour, un temoignage ou un commentaire.",
+                description:
+                    "Retrouvez ici les demandes ayant deja recu un retour, un temoignage ou un commentaire.",
             };
         }
 
         return {
             title: "Total des demandes",
-            description: "Retrouvez vos demandes, leur statut et ajoutez un commentaire en cas d'exaucement.",
+            description:
+                "Retrouvez vos demandes, leur statut et ajoutez un commentaire en cas d'exaucement.",
         };
     }, [activeTab]);
 
@@ -160,7 +167,9 @@ export default function ResponsableFamillePrieresIndex({
         setSubject("");
         setMessage("");
         setIdentityMode("anonymous");
-        setVisibleName([authUser?.prenom, authUser?.nom].filter(Boolean).join(" ").trim());
+        setVisibleName(
+            [authUser?.prenom, authUser?.nom].filter(Boolean).join(" ").trim(),
+        );
     };
 
     const closeModal = () => {
@@ -252,7 +261,10 @@ export default function ResponsableFamillePrieresIndex({
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div className="flex items-center gap-3 text-white">
                             <Link
-                                href="/responsable-famille/dashboard"
+                                href={withBasePath(
+                                    "",
+                                    "/responsable-famille/dashboard",
+                                )}
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
                             >
                                 <ArrowLeft className="h-5 w-5" />
@@ -262,7 +274,8 @@ export default function ResponsableFamillePrieresIndex({
                                     Demandes de priere
                                 </h1>
                                 <p className="text-sm text-blue-100">
-                                    Responsable de famille - formulez une demande de priere et suivez vos retours.
+                                    Responsable de famille - formulez une
+                                    demande de priere et suivez vos retours.
                                 </p>
                             </div>
                         </div>
@@ -319,44 +332,47 @@ export default function ResponsableFamillePrieresIndex({
                             </div>
 
                             <div className="mt-4 flex flex-wrap gap-2">
-                            {tabs.map((tab) => {
-                                const isActive = activeTab === tab.id;
+                                {tabs.map((tab) => {
+                                    const isActive = activeTab === tab.id;
 
-                                return (
-                                    <button
-                                        key={tab.id}
-                                        type="button"
-                                        onClick={() => setActiveTab(tab.id)}
-                                        className={`inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-[13px] font-semibold transition ${
-                                            isActive
-                                                ? "border-blue-500 bg-blue-600 text-white shadow-[0_12px_28px_rgba(37,99,235,0.30)]"
-                                                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                                        }`}
-                                    >
-                                        <span>{tab.label}</span>
-                                        <span
-                                            className={`rounded-full px-2 py-0.5 text-xs ${
+                                    return (
+                                        <button
+                                            key={tab.id}
+                                            type="button"
+                                            onClick={() => setActiveTab(tab.id)}
+                                            className={`inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-[13px] font-semibold transition ${
                                                 isActive
-                                                    ? "bg-white/20 text-white"
-                                                    : "bg-slate-100 text-slate-600"
+                                                    ? "border-blue-500 bg-blue-600 text-white shadow-[0_12px_28px_rgba(37,99,235,0.30)]"
+                                                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                                             }`}
                                         >
-                                            {tab.count}
-                                        </span>
-                                    </button>
-                                );
-                            })}
-                        </div>
+                                            <span>{tab.label}</span>
+                                            <span
+                                                className={`rounded-full px-2 py-0.5 text-xs ${
+                                                    isActive
+                                                        ? "bg-white/20 text-white"
+                                                        : "bg-slate-100 text-slate-600"
+                                                }`}
+                                            >
+                                                {tab.count}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
 
                         <div className="px-4 py-4">
                             {filteredRequests.length === 0 ? (
                                 <div className="rounded-[30px] border border-dashed border-slate-300 bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5f9_100%)] px-6 py-14 text-center">
                                     <p className="text-base font-semibold text-slate-900">
-                                        Aucune demande de priere dans cet onglet.
+                                        Aucune demande de priere dans cet
+                                        onglet.
                                     </p>
                                     <p className="mt-2 text-sm leading-6 text-slate-600">
-                                        Ajustez le filtre ou utilisez le bouton en haut a droite pour creer une nouvelle demande.
+                                        Ajustez le filtre ou utilisez le bouton
+                                        en haut a droite pour creer une nouvelle
+                                        demande.
                                     </p>
                                 </div>
                             ) : (
@@ -382,7 +398,9 @@ export default function ResponsableFamillePrieresIndex({
                                                             ) : (
                                                                 <Eye className="h-3.5 w-3.5" />
                                                             )}
-                                                            {request.authorLabel}
+                                                            {
+                                                                request.authorLabel
+                                                            }
                                                         </span>
                                                         <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200">
                                                             {request.createdAt}
@@ -399,35 +417,64 @@ export default function ResponsableFamillePrieresIndex({
                                                     <div className="mt-3.5 rounded-[20px] border border-slate-200 bg-slate-50/80 p-3">
                                                         <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-900">
                                                             <MessageSquare className="h-4 w-4 text-sky-700" />
-                                                            Commentaires d'exaucement
+                                                            Commentaires
+                                                            d'exaucement
                                                         </div>
 
                                                         <div className="mt-2.5 space-y-2.5">
-                                                            {request.comments.length > 0 ? (
-                                                                request.comments.map((comment, index) => (
-                                                                    <div
-                                                                        key={`${request.id}-${index}`}
-                                                                        className="rounded-2xl border border-emerald-200 bg-white px-3.5 py-2.5 text-sm leading-6 text-emerald-900 shadow-sm"
-                                                                    >
-                                                                        <div>{comment.message}</div>
-                                                                        {comment.reactions?.length > 0 ? (
-                                                                            <div className="mt-2 flex flex-wrap gap-2">
-                                                                                {comment.reactions.map((reaction) => (
-                                                                                    <span
-                                                                                        key={`${request.id}-${index}-${reaction.emoji}`}
-                                                                                        className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
-                                                                                    >
-                                                                                        <span>{reaction.emoji}</span>
-                                                                                        <span>{reaction.count}</span>
-                                                                                    </span>
-                                                                                ))}
+                                                            {request.comments
+                                                                .length > 0 ? (
+                                                                request.comments.map(
+                                                                    (
+                                                                        comment,
+                                                                        index,
+                                                                    ) => (
+                                                                        <div
+                                                                            key={`${request.id}-${index}`}
+                                                                            className="rounded-2xl border border-emerald-200 bg-white px-3.5 py-2.5 text-sm leading-6 text-emerald-900 shadow-sm"
+                                                                        >
+                                                                            <div>
+                                                                                {
+                                                                                    comment.message
+                                                                                }
                                                                             </div>
-                                                                        ) : null}
-                                                                    </div>
-                                                                ))
+                                                                            {comment
+                                                                                .reactions
+                                                                                ?.length >
+                                                                            0 ? (
+                                                                                <div className="mt-2 flex flex-wrap gap-2">
+                                                                                    {comment.reactions.map(
+                                                                                        (
+                                                                                            reaction,
+                                                                                        ) => (
+                                                                                            <span
+                                                                                                key={`${request.id}-${index}-${reaction.emoji}`}
+                                                                                                className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
+                                                                                            >
+                                                                                                <span>
+                                                                                                    {
+                                                                                                        reaction.emoji
+                                                                                                    }
+                                                                                                </span>
+                                                                                                <span>
+                                                                                                    {
+                                                                                                        reaction.count
+                                                                                                    }
+                                                                                                </span>
+                                                                                            </span>
+                                                                                        ),
+                                                                                    )}
+                                                                                </div>
+                                                                            ) : null}
+                                                                        </div>
+                                                                    ),
+                                                                )
                                                             ) : (
                                                                 <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-500">
-                                                                    Aucun commentaire ajoute pour le moment.
+                                                                    Aucun
+                                                                    commentaire
+                                                                    ajoute pour
+                                                                    le moment.
                                                                 </div>
                                                             )}
                                                         </div>
@@ -435,27 +482,45 @@ export default function ResponsableFamillePrieresIndex({
                                                 </div>
 
                                                 <div className="flex h-full w-full flex-col rounded-[22px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-3.5 shadow-sm">
-                                                    {request.comments.length > 0 ? (
+                                                    {request.comments.length >
+                                                    0 ? (
                                                         <>
                                                             <p className="text-[13px] font-semibold text-slate-900">
                                                                 Priere exaucee
                                                             </p>
                                                             <p className="mt-1 text-sm leading-5 text-slate-600">
-                                                                Votre commentaire a deja ete enregistre. Vous pouvez maintenant confirmer que cette priere est exaucee.
+                                                                Votre
+                                                                commentaire a
+                                                                deja ete
+                                                                enregistre. Vous
+                                                                pouvez
+                                                                maintenant
+                                                                confirmer que
+                                                                cette priere est
+                                                                exaucee.
                                                             </p>
 
                                                             <button
                                                                 type="button"
-                                                                disabled={request.status === "Exaucement partage"}
-                                                                onClick={() => setRequestToFulfill(request)}
+                                                                disabled={
+                                                                    request.status ===
+                                                                    "Exaucement partage"
+                                                                }
+                                                                onClick={() =>
+                                                                    setRequestToFulfill(
+                                                                        request,
+                                                                    )
+                                                                }
                                                                 className={`mt-auto inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(5,150,105,0.24)] transition ${
-                                                                    request.status === "Exaucement partage"
+                                                                    request.status ===
+                                                                    "Exaucement partage"
                                                                         ? "cursor-not-allowed bg-slate-400 shadow-none"
                                                                         : "bg-emerald-600 hover:bg-emerald-700"
                                                                 }`}
                                                             >
                                                                 <CheckCircle2 className="h-4 w-4" />
-                                                                {request.status === "Exaucement partage"
+                                                                {request.status ===
+                                                                "Exaucement partage"
                                                                     ? "Priere deja exaucee"
                                                                     : "Marquer comme priere exaucee"}
                                                             </button>
@@ -463,20 +528,39 @@ export default function ResponsableFamillePrieresIndex({
                                                     ) : (
                                                         <>
                                                             <p className="text-[13px] font-semibold text-slate-900">
-                                                                Ajouter un retour
+                                                                Ajouter un
+                                                                retour
                                                             </p>
                                                             <p className="mt-1 text-sm leading-5 text-slate-600">
-                                                                Partagez un exaucement, une evolution ou un mot de gratitude.
+                                                                Partagez un
+                                                                exaucement, une
+                                                                evolution ou un
+                                                                mot de
+                                                                gratitude.
                                                             </p>
 
                                                             <textarea
                                                                 rows={5}
-                                                                value={commentDrafts[request.id] || ""}
-                                                                onChange={(event) =>
-                                                                    setCommentDrafts((current) => ({
-                                                                        ...current,
-                                                                        [request.id]: event.target.value,
-                                                                    }))
+                                                                value={
+                                                                    commentDrafts[
+                                                                        request
+                                                                            .id
+                                                                    ] || ""
+                                                                }
+                                                                onChange={(
+                                                                    event,
+                                                                ) =>
+                                                                    setCommentDrafts(
+                                                                        (
+                                                                            current,
+                                                                        ) => ({
+                                                                            ...current,
+                                                                            [request.id]:
+                                                                                event
+                                                                                    .target
+                                                                                    .value,
+                                                                        }),
+                                                                    )
                                                                 }
                                                                 placeholder="Ex: Merci, la situation a evolue favorablement..."
                                                                 className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
@@ -484,11 +568,16 @@ export default function ResponsableFamillePrieresIndex({
 
                                                             <button
                                                                 type="button"
-                                                                onClick={() => handleCommentSubmit(request.id)}
+                                                                onClick={() =>
+                                                                    handleCommentSubmit(
+                                                                        request.id,
+                                                                    )
+                                                                }
                                                                 className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(5,150,105,0.24)] transition hover:bg-emerald-700"
                                                             >
                                                                 <CheckCircle2 className="h-4 w-4" />
-                                                                Enregistrer le commentaire
+                                                                Enregistrer le
+                                                                commentaire
                                                             </button>
                                                         </>
                                                     )}
@@ -515,7 +604,8 @@ export default function ResponsableFamillePrieresIndex({
                                     Envoyer une demande de priere
                                 </h2>
                                 <p className="mt-2 text-sm text-slate-600">
-                                    Choisissez si votre nom est visible ou non avant l'envoi.
+                                    Choisissez si votre nom est visible ou non
+                                    avant l'envoi.
                                 </p>
                             </div>
 
@@ -528,7 +618,10 @@ export default function ResponsableFamillePrieresIndex({
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+                        <form
+                            onSubmit={handleSubmit}
+                            className="mt-6 space-y-5"
+                        >
                             <div>
                                 <p className="text-sm font-semibold text-slate-800">
                                     Visibilite de votre identite
@@ -536,7 +629,9 @@ export default function ResponsableFamillePrieresIndex({
                                 <div className="mt-3 grid gap-3 md:grid-cols-2">
                                     <button
                                         type="button"
-                                        onClick={() => setIdentityMode("anonymous")}
+                                        onClick={() =>
+                                            setIdentityMode("anonymous")
+                                        }
                                         className={`rounded-[22px] border p-4 text-left transition ${
                                             isAnonymous
                                                 ? "border-violet-600 bg-violet-600 text-white"
@@ -548,13 +643,16 @@ export default function ResponsableFamillePrieresIndex({
                                             Rester anonyme
                                         </div>
                                         <p className="mt-2 text-sm leading-6 opacity-90">
-                                            Votre demande est transmise sans afficher votre nom et prenom.
+                                            Votre demande est transmise sans
+                                            afficher votre nom et prenom.
                                         </p>
                                     </button>
 
                                     <button
                                         type="button"
-                                        onClick={() => setIdentityMode("visible")}
+                                        onClick={() =>
+                                            setIdentityMode("visible")
+                                        }
                                         className={`rounded-[22px] border p-4 text-left transition ${
                                             !isAnonymous
                                                 ? "border-teal-600 bg-teal-600 text-white"
@@ -566,7 +664,8 @@ export default function ResponsableFamillePrieresIndex({
                                             Afficher mon nom
                                         </div>
                                         <p className="mt-2 text-sm leading-6 opacity-90">
-                                            La demande est envoyee avec votre identite visible pour les pasteurs.
+                                            La demande est envoyee avec votre
+                                            identite visible pour les pasteurs.
                                         </p>
                                     </button>
                                 </div>
@@ -582,7 +681,11 @@ export default function ResponsableFamillePrieresIndex({
                                         <input
                                             type="text"
                                             value={visibleName}
-                                            onChange={(event) => setVisibleName(event.target.value)}
+                                            onChange={(event) =>
+                                                setVisibleName(
+                                                    event.target.value,
+                                                )
+                                            }
                                             placeholder="Saisissez le nom a afficher"
                                             className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-teal-400 focus:ring-4 focus:ring-teal-100"
                                         />
@@ -597,7 +700,9 @@ export default function ResponsableFamillePrieresIndex({
                                 <input
                                     type="text"
                                     value={subject}
-                                    onChange={(event) => setSubject(event.target.value)}
+                                    onChange={(event) =>
+                                        setSubject(event.target.value)
+                                    }
                                     placeholder="Ex: Sante, famille, travail, etudes..."
                                     className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                                 />
@@ -610,7 +715,9 @@ export default function ResponsableFamillePrieresIndex({
                                 <textarea
                                     rows={4}
                                     value={message}
-                                    onChange={(event) => setMessage(event.target.value)}
+                                    onChange={(event) =>
+                                        setMessage(event.target.value)
+                                    }
                                     placeholder="Decrivez votre besoin de priere avec les details que vous souhaitez partager."
                                     className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                                 />
@@ -626,7 +733,8 @@ export default function ResponsableFamillePrieresIndex({
                                         <span className="font-semibold text-slate-900">
                                             {isAnonymous
                                                 ? "Anonyme"
-                                                : visibleName.trim() || visibleIdentity}
+                                                : visibleName.trim() ||
+                                                  visibleIdentity}
                                         </span>
                                     </p>
                                 </div>
@@ -651,15 +759,34 @@ export default function ResponsableFamillePrieresIndex({
                             Confirmer la priere exaucee
                         </h3>
                         <p className="mt-2 text-sm leading-6 text-slate-600">
-                            Cette action marquera definitivement la priere comme exaucee et evitera tout doublon de confirmation.
+                            Cette action marquera definitivement la priere comme
+                            exaucee et evitera tout doublon de confirmation.
                         </p>
                         <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                            <div className="text-sm font-semibold text-slate-900">{requestToFulfill.subject}</div>
-                            <div className="mt-1 text-sm text-slate-600">{requestToFulfill.createdAt}</div>
+                            <div className="text-sm font-semibold text-slate-900">
+                                {requestToFulfill.subject}
+                            </div>
+                            <div className="mt-1 text-sm text-slate-600">
+                                {requestToFulfill.createdAt}
+                            </div>
                         </div>
                         <div className="mt-5 flex gap-3">
-                            <button type="button" onClick={() => setRequestToFulfill(null)} className="flex-1 rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Annuler</button>
-                            <button type="button" onClick={() => handleMarkFulfilled(requestToFulfill.id)} className="flex-1 rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700">Confirmer</button>
+                            <button
+                                type="button"
+                                onClick={() => setRequestToFulfill(null)}
+                                className="flex-1 rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    handleMarkFulfilled(requestToFulfill.id)
+                                }
+                                className="flex-1 rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
+                            >
+                                Confirmer
+                            </button>
                         </div>
                     </div>
                 </div>

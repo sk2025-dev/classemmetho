@@ -1,5 +1,6 @@
 import { Head, Link } from "@inertiajs/react";
 import { useMemo, useState } from "react";
+import { withBasePath } from "../../../Utils/urlHelper";
 import {
     ArrowLeft,
     CalendarDays,
@@ -204,7 +205,9 @@ function ChartCard({ title, subtitle, children, tone = "white" }) {
                 </div>
             </div>
             {subtitle ? (
-                <p className="relative mt-1 text-sm leading-6 text-slate-500">{subtitle}</p>
+                <p className="relative mt-1 text-sm leading-6 text-slate-500">
+                    {subtitle}
+                </p>
             ) : null}
             <div className="relative mt-5">{children}</div>
         </div>
@@ -287,14 +290,7 @@ function PieSlicePercentageLabel({
 }
 
 function BarPercentageLabel(props) {
-    const {
-        x,
-        y,
-        width,
-        height,
-        value,
-        payload,
-    } = props;
+    const { x, y, width, height, value, payload } = props;
 
     if (!width || !height) {
         return null;
@@ -397,13 +393,22 @@ function buildQuestionStats(questions = [], responses = []) {
 
         const answerValues = (responses || [])
             .map((response) => response?.answers?.[questionId] ?? null)
-            .filter((value) => !(value === null || value === "" || (Array.isArray(value) && value.length === 0)));
+            .filter(
+                (value) =>
+                    !(
+                        value === null ||
+                        value === "" ||
+                        (Array.isArray(value) && value.length === 0)
+                    ),
+            );
 
         let optionStats = [];
 
         if (["checkbox", "yes_no", "rating"].includes(questionType)) {
             optionStats = options.map((option) => {
-                const count = answerValues.filter((value) => value === option).length;
+                const count = answerValues.filter(
+                    (value) => value === option,
+                ).length;
                 const total = answerValues.length;
 
                 return {
@@ -412,7 +417,8 @@ function buildQuestionStats(questions = [], responses = []) {
                             ? getRatingOptionLabel(question, option)
                             : option,
                     count,
-                    percentage: total > 0 ? Math.round((count / total) * 100) : 0,
+                    percentage:
+                        total > 0 ? Math.round((count / total) * 100) : 0,
                 };
             });
         }
@@ -427,13 +433,16 @@ function buildQuestionStats(questions = [], responses = []) {
                 return {
                     label: option,
                     count,
-                    percentage: total > 0 ? Math.round((count / total) * 100) : 0,
+                    percentage:
+                        total > 0 ? Math.round((count / total) * 100) : 0,
                 };
             });
         }
 
         const textAnswers = answerValues
-            .map((value) => (Array.isArray(value) ? value.join(", ") : String(value)))
+            .map((value) =>
+                Array.isArray(value) ? value.join(", ") : String(value),
+            )
             .filter((value) => value.trim() !== "");
 
         return {
@@ -454,21 +463,31 @@ function buildProfileSections(responses = []) {
         {
             key: "genre",
             title: "Repartition par genre",
-            subtitle: "Vue anonyme des repondants selon le genre renseigne sur leur compte.",
+            subtitle:
+                "Vue anonyme des repondants selon le genre renseigne sur leur compte.",
         },
         {
             key: "employment_status",
             title: "Repartition socio-pro",
-            subtitle: "Situation socio-professionnelle des repondants, sans information nominative.",
+            subtitle:
+                "Situation socio-professionnelle des repondants, sans information nominative.",
         },
         {
             key: "tranche_age",
             title: "Repartition par tranche d'age",
-            subtitle: "Lecture anonyme des participations selon la tranche d'age des repondants.",
+            subtitle:
+                "Lecture anonyme des participations selon la tranche d'age des repondants.",
         },
     ];
 
-    const palette = ["#2563eb", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#0f766e"];
+    const palette = [
+        "#2563eb",
+        "#10b981",
+        "#f59e0b",
+        "#8b5cf6",
+        "#ef4444",
+        "#0f766e",
+    ];
 
     return sections.map((section) => {
         const counts = new Map();
@@ -478,7 +497,10 @@ function buildProfileSections(responses = []) {
             counts.set(label, (counts.get(label) || 0) + 1);
         });
 
-        const total = Array.from(counts.values()).reduce((sum, count) => sum + count, 0);
+        const total = Array.from(counts.values()).reduce(
+            (sum, count) => sum + count,
+            0,
+        );
         const items = Array.from(counts.entries())
             .sort((left, right) => right[1] - left[1])
             .map(([label, count], index) => ({
@@ -534,7 +556,9 @@ export default function ConducteurSondageShow({
             await navigator.clipboard.writeText(survey.publicUrl);
             showSuccess("Lien public copie.");
         } catch {
-            showSuccess("Copie impossible automatiquement. Vous pouvez copier le lien manuellement.");
+            showSuccess(
+                "Copie impossible automatiquement. Vous pouvez copier le lien manuellement.",
+            );
         }
     };
 
@@ -552,9 +576,10 @@ export default function ConducteurSondageShow({
 
     const filteredResponses = useMemo(() => {
         return (responses || []).filter((response) => {
-            const hasMatchingAnswer = questionFilter === "all"
-                ? getResponseAnswerCount(response) > 0
-                : hasAnswerForQuestion(response, questionFilter);
+            const hasMatchingAnswer =
+                questionFilter === "all"
+                    ? getResponseAnswerCount(response) > 0
+                    : hasAnswerForQuestion(response, questionFilter);
 
             if (questionFilter !== "all" && !hasMatchingAnswer) {
                 return false;
@@ -583,11 +608,17 @@ export default function ConducteurSondageShow({
                 return false;
             }
 
-            if (responseFilter === "with_answers" && question.answersCount === 0) {
+            if (
+                responseFilter === "with_answers" &&
+                question.answersCount === 0
+            ) {
                 return false;
             }
 
-            if (responseFilter === "without_answers" && question.answersCount > 0) {
+            if (
+                responseFilter === "without_answers" &&
+                question.answersCount > 0
+            ) {
                 return false;
             }
 
@@ -617,7 +648,13 @@ export default function ConducteurSondageShow({
 
         return result.map((item) => ({
             ...item,
-            width: maxAnswers > 0 ? Math.max(12, Math.round((item.answers / maxAnswers) * 100)) : 0,
+            width:
+                maxAnswers > 0
+                    ? Math.max(
+                          12,
+                          Math.round((item.answers / maxAnswers) * 100),
+                      )
+                    : 0,
         }));
     }, [filteredResponseStats]);
 
@@ -661,14 +698,18 @@ export default function ConducteurSondageShow({
         const othersCount = sorted
             .slice(6)
             .reduce((sum, item) => sum + Number(item.count || 0), 0);
-        const result = othersCount > 0
-            ? [...primary, { label: "Autres", count: othersCount }]
-            : primary;
+        const result =
+            othersCount > 0
+                ? [...primary, { label: "Autres", count: othersCount }]
+                : primary;
         const maxCount = Math.max(...result.map((item) => item.count), 0);
 
         return result.map((item) => ({
             ...item,
-            width: maxCount > 0 ? Math.max(12, Math.round((item.count / maxCount) * 100)) : 0,
+            width:
+                maxCount > 0
+                    ? Math.max(12, Math.round((item.count / maxCount) * 100))
+                    : 0,
         }));
     }, [filteredResponseStats]);
 
@@ -702,7 +743,10 @@ export default function ConducteurSondageShow({
 
         return result.map((item) => ({
             ...item,
-            height: maxCount > 0 ? Math.max(16, Math.round((item.count / maxCount) * 100)) : 0,
+            height:
+                maxCount > 0
+                    ? Math.max(16, Math.round((item.count / maxCount) * 100))
+                    : 0,
             mode: useWeeklyAggregation ? "week" : "day",
         }));
     }, [filteredResponses]);
@@ -717,25 +761,22 @@ export default function ConducteurSondageShow({
         [filteredCategoryStats],
     );
 
-    const trendChartData = useMemo(
-        () => {
-            let cumulative = 0;
+    const trendChartData = useMemo(() => {
+        let cumulative = 0;
 
-            return submissionTrend.map((item) => {
-                cumulative += item.count;
+        return submissionTrend.map((item) => {
+            cumulative += item.count;
 
-                return {
-                    day:
-                        item.mode === "week"
-                            ? formatWeekLabel(item.day)
-                            : formatDayLabel(item.day),
-                    soumissions: item.count,
-                    cumul: cumulative,
-                };
-            });
-        },
-        [submissionTrend],
-    );
+            return {
+                day:
+                    item.mode === "week"
+                        ? formatWeekLabel(item.day)
+                        : formatDayLabel(item.day),
+                soumissions: item.count,
+                cumul: cumulative,
+            };
+        });
+    }, [submissionTrend]);
 
     const profileDistributionCards = useMemo(
         () =>
@@ -756,14 +797,17 @@ export default function ConducteurSondageShow({
         const totalResponses = Number(survey?.reponses || 0);
         const totalParticipants = Number(survey?.participants || 0);
         const participationRate = Number(survey?.tauxParticipation || 0);
-        const totalQuestions = Array.isArray(survey?.questions) ? survey.questions.length : 0;
+        const totalQuestions = Array.isArray(survey?.questions)
+            ? survey.questions.length
+            : 0;
         const totalAnswers = (computedResponseStats || []).reduce(
             (sum, item) => sum + Number(item.answersCount || 0),
             0,
         );
-        const averageAnswersPerQuestion = totalQuestions > 0
-            ? (totalAnswers / totalQuestions).toFixed(1)
-            : "0";
+        const averageAnswersPerQuestion =
+            totalQuestions > 0
+                ? (totalAnswers / totalQuestions).toFixed(1)
+                : "0";
 
         return {
             totalResponses,
@@ -791,7 +835,7 @@ export default function ConducteurSondageShow({
                     <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-3 text-white">
                             <Link
-                                href="/conducteur/sondages"
+                                href={withBasePath("", "/conducteur/sondages")}
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
                             >
                                 <ArrowLeft className="h-5 w-5" />
@@ -801,7 +845,8 @@ export default function ConducteurSondageShow({
                                     Reponses du sondage
                                 </h1>
                                 <p className="text-sm text-blue-100">
-                                    Consultez les resultats anonymes de votre classe.
+                                    Consultez les resultats anonymes de votre
+                                    classe.
                                 </p>
                             </div>
                         </div>
@@ -823,17 +868,21 @@ export default function ConducteurSondageShow({
                                     </span>
                                     <span className="inline-flex items-center gap-2 text-sm text-slate-500">
                                         <CalendarDays className="h-4 w-4" />
-                                        Cree le {formatShortDate(survey?.dateCreation)}
+                                        Cree le{" "}
+                                        {formatShortDate(survey?.dateCreation)}
                                     </span>
                                     <span className="inline-flex items-center gap-2 text-sm text-slate-500">
                                         <Clock3 className="h-4 w-4" />
-                                        Date de cloture: {formatShortDate(survey?.dateEcheance)}
+                                        Date de cloture:{" "}
+                                        {formatShortDate(survey?.dateEcheance)}
                                     </span>
                                 </div>
 
                                 {survey?.statut === "Cloture" ? (
                                     <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                                        Le sondage est cloture, mais l'historique des reponses reste disponible pour consultation.
+                                        Le sondage est cloture, mais
+                                        l'historique des reponses reste
+                                        disponible pour consultation.
                                     </div>
                                 ) : null}
 
@@ -848,18 +897,25 @@ export default function ConducteurSondageShow({
                                 <div className="mt-5 flex flex-wrap gap-3 text-sm text-slate-600">
                                     <span className="rounded-full bg-slate-100 px-3 py-1.5">
                                         Audience:{" "}
-                                        <strong>{survey?.audience || "Non renseignee"}</strong>
+                                        <strong>
+                                            {survey?.audience ||
+                                                "Non renseignee"}
+                                        </strong>
                                     </span>
                                     <span className="rounded-full bg-slate-100 px-3 py-1.5">
                                         Classe:{" "}
-                                        <strong>{survey?.classe || "Non renseignee"}</strong>
+                                        <strong>
+                                            {survey?.classe || "Non renseignee"}
+                                        </strong>
                                     </span>
                                     <span className="rounded-full bg-slate-100 px-3 py-1.5">
                                         Createur:{" "}
-                                        <strong>{survey?.createur || "Non renseigne"}</strong>
+                                        <strong>
+                                            {survey?.createur ||
+                                                "Non renseigne"}
+                                        </strong>
                                     </span>
                                 </div>
-
                             </div>
 
                             <div className="flex w-full flex-wrap justify-start gap-3 lg:w-auto lg:justify-end">
@@ -872,8 +928,7 @@ export default function ConducteurSondageShow({
                                     </a>
                                 ) : null}
 
-                            {survey?.publicUrl ? (
-                                
+                                {survey?.publicUrl ? (
                                     <button
                                         type="button"
                                         onClick={copyPublicLink}
@@ -882,8 +937,7 @@ export default function ConducteurSondageShow({
                                         <Share2 className="h-4 w-4" />
                                         Copier le lien
                                     </button>
-                                
-                            ) : null}
+                                ) : null}
                             </div>
                         </div>
                     </section>
@@ -896,10 +950,12 @@ export default function ConducteurSondageShow({
                                         Participation
                                     </p>
                                     <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-[2rem]">
-                                        {surveySummary.totalResponses} / {surveySummary.totalParticipants}
+                                        {surveySummary.totalResponses} /{" "}
+                                        {surveySummary.totalParticipants}
                                     </p>
                                     <p className="mt-2 text-sm text-slate-600">
-                                        Membres ayant repondu sur l'ensemble de la classe.
+                                        Membres ayant repondu sur l'ensemble de
+                                        la classe.
                                     </p>
                                 </div>
                                 <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-blue-50 text-blue-700 shadow-lg ring-1 ring-black/5">
@@ -917,7 +973,8 @@ export default function ConducteurSondageShow({
                                         </p>
                                     </div>
                                     <div className="text-right text-sm text-slate-300">
-                                        {surveySummary.totalResponses} reponse(s)
+                                        {surveySummary.totalResponses}{" "}
+                                        reponse(s)
                                     </div>
                                 </div>
                             </div>
@@ -933,7 +990,8 @@ export default function ConducteurSondageShow({
                                         {surveySummary.totalAnswers}
                                     </p>
                                     <p className="mt-2 text-sm text-slate-600">
-                                        Total des reponses enregistrees sur l'ensemble des questions.
+                                        Total des reponses enregistrees sur
+                                        l'ensemble des questions.
                                     </p>
                                 </div>
                                 <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-emerald-50 text-emerald-700 shadow-lg ring-1 ring-black/5">
@@ -948,7 +1006,9 @@ export default function ConducteurSondageShow({
                                 />
                                 <SummaryPill
                                     label="Moyenne / question"
-                                    value={surveySummary.averageAnswersPerQuestion}
+                                    value={
+                                        surveySummary.averageAnswersPerQuestion
+                                    }
                                     tone="bg-slate-50"
                                 />
                             </div>
@@ -965,18 +1025,47 @@ export default function ConducteurSondageShow({
                                 <div className="rounded-[26px] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(248,250,252,0.94)_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_16px_35px_rgba(15,23,42,0.08)]">
                                     <div className="rounded-[24px] bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_55%)] p-2">
                                         <div className="h-[320px] max-w-3xl">
-                                            <ResponsiveContainer width="100%" height="100%">
+                                            <ResponsiveContainer
+                                                width="100%"
+                                                height="100%"
+                                            >
                                                 <AreaChart
                                                     data={trendChartData}
-                                                    margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
+                                                    margin={{
+                                                        top: 8,
+                                                        right: 16,
+                                                        left: 0,
+                                                        bottom: 0,
+                                                    }}
                                                 >
                                                     <defs>
-                                                        <linearGradient id="submissionFill" x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="0%" stopColor="#2a9d8f" stopOpacity={0.22} />
-                                                            <stop offset="100%" stopColor="#2a9d8f" stopOpacity={0.04} />
+                                                        <linearGradient
+                                                            id="submissionFill"
+                                                            x1="0"
+                                                            y1="0"
+                                                            x2="0"
+                                                            y2="1"
+                                                        >
+                                                            <stop
+                                                                offset="0%"
+                                                                stopColor="#2a9d8f"
+                                                                stopOpacity={
+                                                                    0.22
+                                                                }
+                                                            />
+                                                            <stop
+                                                                offset="100%"
+                                                                stopColor="#2a9d8f"
+                                                                stopOpacity={
+                                                                    0.04
+                                                                }
+                                                            />
                                                         </linearGradient>
                                                     </defs>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
+                                                    <CartesianGrid
+                                                        strokeDasharray="3 3"
+                                                        stroke="#e7e5e4"
+                                                    />
                                                     <XAxis
                                                         dataKey="day"
                                                         tick={{ fontSize: 11 }}
@@ -987,7 +1076,11 @@ export default function ConducteurSondageShow({
                                                         tick={{ fontSize: 11 }}
                                                         stroke="#a8a29e"
                                                     />
-                                                    <Tooltip content={<CustomTooltip />} />
+                                                    <Tooltip
+                                                        content={
+                                                            <CustomTooltip />
+                                                        }
+                                                    />
                                                     <Area
                                                         type="monotone"
                                                         dataKey="soumissions"
@@ -1029,7 +1122,8 @@ export default function ConducteurSondageShow({
                                     Statistiques visuelles
                                 </h2>
                                 <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
-                                    Vue synthese des reponses enregistrees pour ce sondage.
+                                    Vue synthese des reponses enregistrees pour
+                                    ce sondage.
                                 </p>
                             </div>
 
@@ -1052,12 +1146,19 @@ export default function ConducteurSondageShow({
                                 <select
                                     id="question-filter"
                                     value={questionFilter}
-                                    onChange={(event) => setQuestionFilter(event.target.value)}
+                                    onChange={(event) =>
+                                        setQuestionFilter(event.target.value)
+                                    }
                                     className="mt-3 w-full rounded-2xl border border-white/80 bg-white/95 px-4 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none ring-1 ring-white/80 transition focus:border-emerald-200 focus:ring-emerald-200"
                                 >
-                                    <option value="all">Toutes les questions</option>
+                                    <option value="all">
+                                        Toutes les questions
+                                    </option>
                                     {questionOptions.map((question) => (
-                                        <option key={question.value} value={question.value}>
+                                        <option
+                                            key={question.value}
+                                            value={question.value}
+                                        >
                                             {question.label}
                                         </option>
                                     ))}
@@ -1069,11 +1170,17 @@ export default function ConducteurSondageShow({
                                     Filtre par reponse
                                 </p>
                                 <div className="mt-3 flex flex-wrap gap-2">
-                                    {["all", "with_answers", "without_answers"].map((value) => (
+                                    {[
+                                        "all",
+                                        "with_answers",
+                                        "without_answers",
+                                    ].map((value) => (
                                         <button
                                             key={value}
                                             type="button"
-                                            onClick={() => setResponseFilter(value)}
+                                            onClick={() =>
+                                                setResponseFilter(value)
+                                            }
                                             className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                                                 responseFilter === value
                                                     ? "bg-[#14532d] text-white shadow-lg"
@@ -1096,30 +1203,45 @@ export default function ConducteurSondageShow({
                                 {donutTypeStats.length > 0 ? (
                                     <div className="rounded-[26px] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(248,250,252,0.94)_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_16px_35px_rgba(15,23,42,0.08)]">
                                         <div className="rounded-[24px] bg-[radial-gradient(circle_at_top,rgba(45,212,191,0.10),transparent_55%)] p-2">
-                                        <div className="h-[250px]">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <PieChart>
-                                                    <Pie
-                                                        data={donutTypeStats}
-                                                        dataKey="value"
-                                                        nameKey="label"
-                                                        innerRadius={62}
-                                                        outerRadius={96}
-                                                        paddingAngle={3}
-                                                        stroke="#ffffff"
-                                                        strokeWidth={4}
-                                                    >
-                                                        {donutTypeStats.map((entry) => (
-                                                            <Cell
-                                                                key={entry.label}
-                                                                fill={entry.color}
-                                                            />
-                                                        ))}
-                                                    </Pie>
-                                                    <Tooltip content={<CustomTooltip />} />
-                                                </PieChart>
-                                            </ResponsiveContainer>
-                                        </div>
+                                            <div className="h-[250px]">
+                                                <ResponsiveContainer
+                                                    width="100%"
+                                                    height="100%"
+                                                >
+                                                    <PieChart>
+                                                        <Pie
+                                                            data={
+                                                                donutTypeStats
+                                                            }
+                                                            dataKey="value"
+                                                            nameKey="label"
+                                                            innerRadius={62}
+                                                            outerRadius={96}
+                                                            paddingAngle={3}
+                                                            stroke="#ffffff"
+                                                            strokeWidth={4}
+                                                        >
+                                                            {donutTypeStats.map(
+                                                                (entry) => (
+                                                                    <Cell
+                                                                        key={
+                                                                            entry.label
+                                                                        }
+                                                                        fill={
+                                                                            entry.color
+                                                                        }
+                                                                    />
+                                                                ),
+                                                            )}
+                                                        </Pie>
+                                                        <Tooltip
+                                                            content={
+                                                                <CustomTooltip />
+                                                            }
+                                                        />
+                                                    </PieChart>
+                                                </ResponsiveContainer>
+                                            </div>
                                         </div>
                                         <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2">
                                             {donutTypeStats.map((item) => (
@@ -1129,10 +1251,14 @@ export default function ConducteurSondageShow({
                                                 >
                                                     <span
                                                         className="h-2.5 w-2.5 rounded-full"
-                                                        style={{ backgroundColor: item.color }}
+                                                        style={{
+                                                            backgroundColor:
+                                                                item.color,
+                                                        }}
                                                     />
                                                     <span>
-                                                        {item.label} ({item.value})
+                                                        {item.label} (
+                                                        {item.value})
                                                     </span>
                                                 </div>
                                             ))}
@@ -1156,7 +1282,8 @@ export default function ConducteurSondageShow({
                                                     Catégorie leader
                                                 </p>
                                                 <p className="text-lg font-semibold text-slate-900">
-                                                    {categoryChartData[0]?.label || "Aucune"}
+                                                    {categoryChartData[0]
+                                                        ?.label || "Aucune"}
                                                 </p>
                                             </div>
                                             <div className="rounded-2xl border border-white/20 bg-[linear-gradient(180deg,#065f46_0%,#0f766e_100%)] px-4 py-3 text-right shadow-[0_12px_24px_rgba(6,95,70,0.22)]">
@@ -1164,48 +1291,70 @@ export default function ConducteurSondageShow({
                                                     Votes leader
                                                 </p>
                                                 <p className="text-lg font-semibold text-white">
-                                                    {categoryChartData[0] ? `${categoryChartData[0].votes}` : "0"}
+                                                    {categoryChartData[0]
+                                                        ? `${categoryChartData[0].votes}`
+                                                        : "0"}
                                                 </p>
                                             </div>
                                         </div>
                                         <div className="rounded-[24px] bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.08),transparent_55%)] p-2">
-                                        <div className="h-[300px]">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart
-                                                    data={categoryChartData}
-                                                    layout="vertical"
-                                                    margin={{ top: 6, right: 12, left: 6, bottom: 6 }}
-                                                    barCategoryGap={16}
+                                            <div className="h-[300px]">
+                                                <ResponsiveContainer
+                                                    width="100%"
+                                                    height="100%"
                                                 >
-                                                    <CartesianGrid
-                                                        strokeDasharray="3 3"
-                                                        horizontal={false}
-                                                        stroke="#e7e5e4"
-                                                    />
-                                                    <XAxis
-                                                        type="number"
-                                                        allowDecimals={false}
-                                                        tick={{ fontSize: 11 }}
-                                                        stroke="#a8a29e"
-                                                    />
-                                                    <YAxis
-                                                        type="category"
-                                                        dataKey="shortLabel"
-                                                        tick={{ fontSize: 12 }}
-                                                        width={120}
-                                                        stroke="#78716c"
-                                                    />
-                                                    <Tooltip content={<CustomTooltip />} />
-                                                    <Bar
-                                                        dataKey="votes"
-                                                        name="Votes"
-                                                        fill="#2a9d8f"
-                                                        radius={[0, 12, 12, 0]}
-                                                        barSize={22}
-                                                    />
-                                                </BarChart>
-                                            </ResponsiveContainer>
-                                        </div>
+                                                    <BarChart
+                                                        data={categoryChartData}
+                                                        layout="vertical"
+                                                        margin={{
+                                                            top: 6,
+                                                            right: 12,
+                                                            left: 6,
+                                                            bottom: 6,
+                                                        }}
+                                                        barCategoryGap={16}
+                                                    >
+                                                        <CartesianGrid
+                                                            strokeDasharray="3 3"
+                                                            horizontal={false}
+                                                            stroke="#e7e5e4"
+                                                        />
+                                                        <XAxis
+                                                            type="number"
+                                                            allowDecimals={
+                                                                false
+                                                            }
+                                                            tick={{
+                                                                fontSize: 11,
+                                                            }}
+                                                            stroke="#a8a29e"
+                                                        />
+                                                        <YAxis
+                                                            type="category"
+                                                            dataKey="shortLabel"
+                                                            tick={{
+                                                                fontSize: 12,
+                                                            }}
+                                                            width={120}
+                                                            stroke="#78716c"
+                                                        />
+                                                        <Tooltip
+                                                            content={
+                                                                <CustomTooltip />
+                                                            }
+                                                        />
+                                                        <Bar
+                                                            dataKey="votes"
+                                                            name="Votes"
+                                                            fill="#2a9d8f"
+                                                            radius={[
+                                                                0, 12, 12, 0,
+                                                            ]}
+                                                            barSize={22}
+                                                        />
+                                                    </BarChart>
+                                                </ResponsiveContainer>
+                                            </div>
                                         </div>
                                     </div>
                                 ) : (
@@ -1219,61 +1368,104 @@ export default function ConducteurSondageShow({
                                     subtitle={`Volume de réponses reçues sur la période`}
                                     tone="bg-[linear-gradient(155deg,#f7fbff_0%,#ecfeff_42%,#ffffff_100%)]"
                                 >
-                                {trendChartData.length > 0 ? (
-                                    <div className="rounded-[26px] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(248,250,252,0.94)_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_16px_35px_rgba(15,23,42,0.08)]">
-                                        <div className="rounded-[24px] bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_55%)] p-2">
-                                        <div className="h-[320px] max-w-3xl">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <AreaChart
-                                                    data={trendChartData}
-                                                    margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
-                                                >
-                                                    <defs>
-                                                        <linearGradient id="submissionFill" x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="0%" stopColor="#2a9d8f" stopOpacity={0.22} />
-                                                            <stop offset="100%" stopColor="#2a9d8f" stopOpacity={0.04} />
-                                                        </linearGradient>
-                                                    </defs>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
-                                                    <XAxis
-                                                        dataKey="day"
-                                                        tick={{ fontSize: 11 }}
-                                                        stroke="#a8a29e"
-                                                    />
-                                                    <YAxis
-                                                        allowDecimals={false}
-                                                        tick={{ fontSize: 11 }}
-                                                        stroke="#a8a29e"
-                                                    />
-                                                    <Tooltip content={<CustomTooltip />} />
-                                                    <Area
-                                                        type="monotone"
-                                                        dataKey="soumissions"
-                                                        name="Soumissions"
-                                                        stroke="#2a9d8f"
-                                                        strokeWidth={2.5}
-                                                        fill="url(#submissionFill)"
-                                                        dot={{
-                                                            r: 4,
-                                                            fill: "#ffffff",
-                                                            stroke: "#2a9d8f",
-                                                            strokeWidth: 2,
-                                                        }}
-                                                        activeDot={{
-                                                            r: 6,
-                                                            fill: "#2a9d8f",
-                                                            stroke: "#ffffff",
-                                                            strokeWidth: 2,
-                                                        }}
-                                                    />
-                                                </AreaChart>
-                                            </ResponsiveContainer>
+                                    {trendChartData.length > 0 ? (
+                                        <div className="rounded-[26px] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(248,250,252,0.94)_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_16px_35px_rgba(15,23,42,0.08)]">
+                                            <div className="rounded-[24px] bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_55%)] p-2">
+                                                <div className="h-[320px] max-w-3xl">
+                                                    <ResponsiveContainer
+                                                        width="100%"
+                                                        height="100%"
+                                                    >
+                                                        <AreaChart
+                                                            data={
+                                                                trendChartData
+                                                            }
+                                                            margin={{
+                                                                top: 8,
+                                                                right: 16,
+                                                                left: 0,
+                                                                bottom: 0,
+                                                            }}
+                                                        >
+                                                            <defs>
+                                                                <linearGradient
+                                                                    id="submissionFill"
+                                                                    x1="0"
+                                                                    y1="0"
+                                                                    x2="0"
+                                                                    y2="1"
+                                                                >
+                                                                    <stop
+                                                                        offset="0%"
+                                                                        stopColor="#2a9d8f"
+                                                                        stopOpacity={
+                                                                            0.22
+                                                                        }
+                                                                    />
+                                                                    <stop
+                                                                        offset="100%"
+                                                                        stopColor="#2a9d8f"
+                                                                        stopOpacity={
+                                                                            0.04
+                                                                        }
+                                                                    />
+                                                                </linearGradient>
+                                                            </defs>
+                                                            <CartesianGrid
+                                                                strokeDasharray="3 3"
+                                                                stroke="#e7e5e4"
+                                                            />
+                                                            <XAxis
+                                                                dataKey="day"
+                                                                tick={{
+                                                                    fontSize: 11,
+                                                                }}
+                                                                stroke="#a8a29e"
+                                                            />
+                                                            <YAxis
+                                                                allowDecimals={
+                                                                    false
+                                                                }
+                                                                tick={{
+                                                                    fontSize: 11,
+                                                                }}
+                                                                stroke="#a8a29e"
+                                                            />
+                                                            <Tooltip
+                                                                content={
+                                                                    <CustomTooltip />
+                                                                }
+                                                            />
+                                                            <Area
+                                                                type="monotone"
+                                                                dataKey="soumissions"
+                                                                name="Soumissions"
+                                                                stroke="#2a9d8f"
+                                                                strokeWidth={
+                                                                    2.5
+                                                                }
+                                                                fill="url(#submissionFill)"
+                                                                dot={{
+                                                                    r: 4,
+                                                                    fill: "#ffffff",
+                                                                    stroke: "#2a9d8f",
+                                                                    strokeWidth: 2,
+                                                                }}
+                                                                activeDot={{
+                                                                    r: 6,
+                                                                    fill: "#2a9d8f",
+                                                                    stroke: "#ffffff",
+                                                                    strokeWidth: 2,
+                                                                }}
+                                                            />
+                                                        </AreaChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            </div>
                                         </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <EmptyChartState message="Pas assez de soumissions datees pour dessiner une courbe." />
-                                )}
+                                    ) : (
+                                        <EmptyChartState message="Pas assez de soumissions datees pour dessiner une courbe." />
+                                    )}
                                 </ChartCard>
                             </div>
                         </div>
@@ -1287,7 +1479,9 @@ export default function ConducteurSondageShow({
                                     <button
                                         key={option.value}
                                         type="button"
-                                        onClick={() => setProfileChartMode(option.value)}
+                                        onClick={() =>
+                                            setProfileChartMode(option.value)
+                                        }
                                         className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                                             profileChartMode === option.value
                                                 ? "bg-slate-900 text-white"
@@ -1312,71 +1506,131 @@ export default function ConducteurSondageShow({
                                         <div className="rounded-[26px] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(248,250,252,0.94)_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_16px_35px_rgba(15,23,42,0.08)]">
                                             <div className="rounded-[24px] bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.08),transparent_55%)] p-2">
                                                 <div className="h-[260px]">
-                                                    <ResponsiveContainer width="100%" height="100%">
-                                                        {profileChartMode === "pie" ? (
+                                                    <ResponsiveContainer
+                                                        width="100%"
+                                                        height="100%"
+                                                    >
+                                                        {profileChartMode ===
+                                                        "pie" ? (
                                                             <PieChart>
                                                                 <Pie
-                                                                    data={section.chartData}
+                                                                    data={
+                                                                        section.chartData
+                                                                    }
                                                                     dataKey="count"
                                                                     nameKey="label"
-                                                                    innerRadius={52}
-                                                                    outerRadius={92}
-                                                                    paddingAngle={3}
+                                                                    innerRadius={
+                                                                        52
+                                                                    }
+                                                                    outerRadius={
+                                                                        92
+                                                                    }
+                                                                    paddingAngle={
+                                                                        3
+                                                                    }
                                                                     stroke="#ffffff"
-                                                                    strokeWidth={4}
-                                                                    labelLine={false}
-                                                                    label={<PieSlicePercentageLabel />}
+                                                                    strokeWidth={
+                                                                        4
+                                                                    }
+                                                                    labelLine={
+                                                                        false
+                                                                    }
+                                                                    label={
+                                                                        <PieSlicePercentageLabel />
+                                                                    }
                                                                 >
-                                                                    {section.chartData.map((item) => (
-                                                                        <Cell
-                                                                            key={`${section.key}-${item.label}`}
-                                                                            fill={item.color}
-                                                                        />
-                                                                    ))}
+                                                                    {section.chartData.map(
+                                                                        (
+                                                                            item,
+                                                                        ) => (
+                                                                            <Cell
+                                                                                key={`${section.key}-${item.label}`}
+                                                                                fill={
+                                                                                    item.color
+                                                                                }
+                                                                            />
+                                                                        ),
+                                                                    )}
                                                                 </Pie>
-                                                                <Tooltip content={<CustomTooltip />} />
+                                                                <Tooltip
+                                                                    content={
+                                                                        <CustomTooltip />
+                                                                    }
+                                                                />
                                                             </PieChart>
                                                         ) : (
                                                             <BarChart
-                                                                data={section.chartData}
+                                                                data={
+                                                                    section.chartData
+                                                                }
                                                                 layout="vertical"
-                                                                margin={{ top: 6, right: 12, left: 6, bottom: 6 }}
-                                                                barCategoryGap={14}
+                                                                margin={{
+                                                                    top: 6,
+                                                                    right: 12,
+                                                                    left: 6,
+                                                                    bottom: 6,
+                                                                }}
+                                                                barCategoryGap={
+                                                                    14
+                                                                }
                                                             >
                                                                 <CartesianGrid
                                                                     strokeDasharray="3 3"
-                                                                    horizontal={false}
+                                                                    horizontal={
+                                                                        false
+                                                                    }
                                                                     stroke="#e7e5e4"
                                                                 />
                                                                 <XAxis
                                                                     type="number"
-                                                                    allowDecimals={false}
-                                                                    tick={{ fontSize: 11 }}
+                                                                    allowDecimals={
+                                                                        false
+                                                                    }
+                                                                    tick={{
+                                                                        fontSize: 11,
+                                                                    }}
                                                                     stroke="#a8a29e"
                                                                 />
                                                                 <YAxis
                                                                     type="category"
                                                                     dataKey="shortLabel"
-                                                                    tick={{ fontSize: 12 }}
+                                                                    tick={{
+                                                                        fontSize: 12,
+                                                                    }}
                                                                     width={120}
                                                                     stroke="#78716c"
                                                                 />
-                                                                <Tooltip content={<CustomTooltip />} />
+                                                                <Tooltip
+                                                                    content={
+                                                                        <CustomTooltip />
+                                                                    }
+                                                                />
                                                                 <Bar
                                                                     dataKey="count"
                                                                     name="Repondants"
-                                                                    radius={[0, 12, 12, 0]}
+                                                                    radius={[
+                                                                        0, 12,
+                                                                        12, 0,
+                                                                    ]}
                                                                     barSize={22}
                                                                 >
-                                                                    {section.chartData.map((item) => (
-                                                                        <Cell
-                                                                            key={`${section.key}-${item.label}`}
-                                                                            fill={item.color}
-                                                                        />
-                                                                    ))}
+                                                                    {section.chartData.map(
+                                                                        (
+                                                                            item,
+                                                                        ) => (
+                                                                            <Cell
+                                                                                key={`${section.key}-${item.label}`}
+                                                                                fill={
+                                                                                    item.color
+                                                                                }
+                                                                            />
+                                                                        ),
+                                                                    )}
                                                                     <LabelList
                                                                         dataKey="percentage"
-                                                                        content={<BarPercentageLabel />}
+                                                                        content={
+                                                                            <BarPercentageLabel />
+                                                                        }
                                                                     />
                                                                 </Bar>
                                                             </BarChart>
@@ -1386,12 +1640,14 @@ export default function ConducteurSondageShow({
                                             </div>
                                             <div className="mt-4">
                                                 <ChartLegendList
-                                                    items={section.chartData.map((item) => ({
-                                                        label: item.label,
-                                                        value: item.count,
-                                                        meta: `${item.percentage}%`,
-                                                        color: item.color,
-                                                    }))}
+                                                    items={section.chartData.map(
+                                                        (item) => ({
+                                                            label: item.label,
+                                                            value: item.count,
+                                                            meta: `${item.percentage}%`,
+                                                            color: item.color,
+                                                        }),
+                                                    )}
                                                 />
                                             </div>
                                         </div>
@@ -1401,7 +1657,6 @@ export default function ConducteurSondageShow({
                                 </ChartCard>
                             ))}
                         </div>
-
                     </section>
 
                     <div className="mt-8">
@@ -1423,7 +1678,9 @@ export default function ConducteurSondageShow({
                                                     </h3>
                                                     <div className="mt-3 flex flex-wrap items-center gap-2">
                                                         <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">
-                                                            {questionTypeLabel(question.type)}
+                                                            {questionTypeLabel(
+                                                                question.type,
+                                                            )}
                                                         </span>
                                                         {question.required ? (
                                                             <span className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
@@ -1443,48 +1700,63 @@ export default function ConducteurSondageShow({
                                     {question.optionStats?.length > 0 ? (
                                         <div className="border-t border-[#ece8e1] px-6 py-6">
                                             <div className="space-y-5">
-                                            {question.optionStats.map((option) => (
-                                                <div key={option.label}>
-                                                    <div className="flex items-center justify-between gap-3 text-sm">
-                                                        <span className="text-[15px] font-medium text-slate-900">
-                                                            {option.label}
-                                                        </span>
-                                                        <span className="text-sm text-slate-500">
-                                                            {option.count} · {option.percentage}%
-                                                        </span>
-                                                    </div>
-                                                    <div className="mt-3 h-3 overflow-hidden rounded-full bg-[#f2f1ee]">
-                                                        <div
-                                                            className="h-full rounded-full bg-[#2a9d8f] shadow-[0_2px_10px_rgba(42,157,143,0.28)]"
-                                                            style={{
-                                                                width: `${option.percentage}%`,
-                                                            }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                {question.optionStats.map(
+                                                    (option) => (
+                                                        <div key={option.label}>
+                                                            <div className="flex items-center justify-between gap-3 text-sm">
+                                                                <span className="text-[15px] font-medium text-slate-900">
+                                                                    {
+                                                                        option.label
+                                                                    }
+                                                                </span>
+                                                                <span className="text-sm text-slate-500">
+                                                                    {
+                                                                        option.count
+                                                                    }{" "}
+                                                                    ·{" "}
+                                                                    {
+                                                                        option.percentage
+                                                                    }
+                                                                    %
+                                                                </span>
+                                                            </div>
+                                                            <div className="mt-3 h-3 overflow-hidden rounded-full bg-[#f2f1ee]">
+                                                                <div
+                                                                    className="h-full rounded-full bg-[#2a9d8f] shadow-[0_2px_10px_rgba(42,157,143,0.28)]"
+                                                                    style={{
+                                                                        width: `${option.percentage}%`,
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    ),
+                                                )}
                                             </div>
                                         </div>
                                     ) : null}
 
-                                    {question.type === "text" && question.textAnswers?.length > 0 ? (
+                                    {question.type === "text" &&
+                                    question.textAnswers?.length > 0 ? (
                                         <div className="border-t border-[#ece8e1] px-6 py-6">
                                             <div className="grid gap-3">
-                                            {question.textAnswers.map((answer, answerIndex) => (
-                                                <div
-                                                    key={`${question.id}-${answerIndex}`}
-                                                    className="rounded-2xl border border-slate-200 bg-[#fcfcfb] px-4 py-3 text-sm leading-6 text-slate-700"
-                                                >
-                                                    {answer}
-                                                </div>
-                                            ))}
+                                                {question.textAnswers.map(
+                                                    (answer, answerIndex) => (
+                                                        <div
+                                                            key={`${question.id}-${answerIndex}`}
+                                                            className="rounded-2xl border border-slate-200 bg-[#fcfcfb] px-4 py-3 text-sm leading-6 text-slate-700"
+                                                        >
+                                                            {answer}
+                                                        </div>
+                                                    ),
+                                                )}
                                             </div>
                                         </div>
                                     ) : null}
 
                                     {question.answersCount === 0 ? (
                                         <div className="border-t border-[#ece8e1] px-6 py-6 text-sm text-slate-500">
-                                            Aucune reponse enregistree pour cette question.
+                                            Aucune reponse enregistree pour
+                                            cette question.
                                         </div>
                                     ) : null}
                                 </section>
@@ -1492,8 +1764,8 @@ export default function ConducteurSondageShow({
 
                             {filteredResponseStats.length === 0 ? (
                                 <div className="rounded-[28px] border border-dashed border-slate-300 bg-white px-6 py-12 text-center text-sm text-slate-500">
-                                    Aucun bloc de statistiques ne correspond aux filtres
-                                    selectionnes.
+                                    Aucun bloc de statistiques ne correspond aux
+                                    filtres selectionnes.
                                 </div>
                             ) : null}
                         </div>

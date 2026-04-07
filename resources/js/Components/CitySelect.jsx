@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Select from "react-select";
 import axios from "axios";
+import { withBasePath } from "../Utils/urlHelper";
 
 /**
  * CitySelect — Composant React-Select pour sélectionner une ville
@@ -24,9 +25,14 @@ const CitySelect = ({
     const loadCities = async (searchTerm = "") => {
         try {
             setLoading(true);
-            const response = await axios.get(`/api/villes?nom=${encodeURIComponent(searchTerm)}`);
+            const response = await axios.get(
+                withBasePath(
+                    "",
+                    `/api/villes?nom=${encodeURIComponent(searchTerm)}`,
+                ),
+            );
             const cities = response.data || [];
-            const formattedOptions = cities.map(city => ({
+            const formattedOptions = cities.map((city) => ({
                 value: city.id,
                 label: city.nom,
             }));
@@ -40,8 +46,9 @@ const CitySelect = ({
     };
 
     // Normaliser la valeur pour gérer les types string/number
-    const normalizedValue = typeof value === 'string' ? parseInt(value) : value;
-    const selectedValue = options.find((option) => option.value === normalizedValue) || null;
+    const normalizedValue = typeof value === "string" ? parseInt(value) : value;
+    const selectedValue =
+        options.find((option) => option.value === normalizedValue) || null;
 
     // Styles personnalisés pour ressembler à Select2 avec Tailwind
     const customStyles = {
@@ -120,8 +127,8 @@ const CitySelect = ({
             backgroundColor: state.isSelected
                 ? "#dbeafe"
                 : state.isFocused
-                ? "#eff6ff"
-                : "#fff",
+                  ? "#eff6ff"
+                  : "#fff",
             cursor: "pointer",
             "&:hover": {
                 backgroundColor: state.isSelected ? "#dbeafe" : "#f3f4f6",

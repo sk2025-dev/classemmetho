@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Head, Link } from "@inertiajs/react";
+import { withBasePath } from "../../../Utils/urlHelper";
 import {
     ArrowLeft,
     BarChart3,
@@ -66,14 +67,12 @@ function getStatusClasses(statut) {
 
 function normalizeSondage(sondage, authUser, index) {
     const titre =
-        sondage.titre ||
-        sondage.title ||
-        sondage.nom ||
-        `Sondage ${index + 1}`;
+        sondage.titre || sondage.title || sondage.nom || `Sondage ${index + 1}`;
 
     const participants =
         Number(sondage.participants ?? sondage.participant_count ?? 0) || 0;
-    const reponses = Number(sondage.reponses ?? sondage.response_count ?? 0) || 0;
+    const reponses =
+        Number(sondage.reponses ?? sondage.response_count ?? 0) || 0;
 
     const dateCreation =
         sondage.dateCreation ||
@@ -108,7 +107,9 @@ function normalizeSondage(sondage, authUser, index) {
         Number(
             sondage.tauxParticipation ??
                 sondage.taux_participation ??
-                (participants > 0 ? Math.round((reponses / participants) * 100) : 0),
+                (participants > 0
+                    ? Math.round((reponses / participants) * 100)
+                    : 0),
         ) || 0;
 
     return {
@@ -151,15 +152,21 @@ export default function AdminSondageIndex({
           )
         : [];
 
-    const statusOptions = [...new Set(sondagesNormalises.map((sondage) => sondage.statut))]
+    const statusOptions = [
+        ...new Set(sondagesNormalises.map((sondage) => sondage.statut)),
+    ]
         .filter(Boolean)
         .sort((a, b) => a.localeCompare(b, "fr"));
 
-    const classeOptions = [...new Set(sondagesNormalises.map((sondage) => sondage.classe))]
+    const classeOptions = [
+        ...new Set(sondagesNormalises.map((sondage) => sondage.classe)),
+    ]
         .filter(Boolean)
         .sort((a, b) => a.localeCompare(b, "fr"));
 
-    const cibleOptions = [...new Set(sondagesNormalises.map((sondage) => sondage.cible))]
+    const cibleOptions = [
+        ...new Set(sondagesNormalises.map((sondage) => sondage.cible)),
+    ]
         .filter(Boolean)
         .sort((a, b) => a.localeCompare(b, "fr"));
 
@@ -219,7 +226,7 @@ export default function AdminSondageIndex({
                     <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-3 text-white">
                             <Link
-                                href="/admin/dashboard"
+                                href={withBasePath("", "/admin/dashboard")}
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
                             >
                                 <ArrowLeft className="h-5 w-5" />
@@ -229,7 +236,8 @@ export default function AdminSondageIndex({
                                     Gestion des sondages
                                 </h1>
                                 <p className="text-sm text-blue-100">
-                                    Vue globale des sondages sur toutes les classes.
+                                    Vue globale des sondages sur toutes les
+                                    classes.
                                 </p>
                             </div>
                         </div>
@@ -273,7 +281,8 @@ export default function AdminSondageIndex({
                                     Liste des sondages
                                 </h2>
                                 <p className="mt-1 text-sm text-slate-600">
-                                    Recherche et filtres par titre, createur, classe, cible ou statut.
+                                    Recherche et filtres par titre, createur,
+                                    classe, cible ou statut.
                                 </p>
                             </div>
 
@@ -298,7 +307,9 @@ export default function AdminSondageIndex({
                                     }
                                     className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                                 >
-                                    <option value="all">Tous les statuts</option>
+                                    <option value="all">
+                                        Tous les statuts
+                                    </option>
                                     {statusOptions.map((statut) => (
                                         <option key={statut} value={statut}>
                                             {statut}
@@ -313,7 +324,9 @@ export default function AdminSondageIndex({
                                     }
                                     className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                                 >
-                                    <option value="all">Toutes les classes</option>
+                                    <option value="all">
+                                        Toutes les classes
+                                    </option>
                                     {classeOptions.map((classe) => (
                                         <option key={classe} value={classe}>
                                             {classe}
@@ -328,7 +341,9 @@ export default function AdminSondageIndex({
                                     }
                                     className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                                 >
-                                    <option value="all">Toutes les cibles</option>
+                                    <option value="all">
+                                        Toutes les cibles
+                                    </option>
                                     {cibleOptions.map((cible) => (
                                         <option key={cible} value={cible}>
                                             {cible}
@@ -353,7 +368,9 @@ export default function AdminSondageIndex({
                                             <th className="px-5 py-4">
                                                 Createur
                                             </th>
-                                            <th className="px-5 py-4">Classe</th>
+                                            <th className="px-5 py-4">
+                                                Classe
+                                            </th>
                                             <th className="px-5 py-4">Cible</th>
                                             <th className="px-5 py-4">
                                                 Statut
@@ -378,100 +395,115 @@ export default function AdminSondageIndex({
 
                                     <tbody className="divide-y divide-slate-100 bg-white">
                                         {sondagesFiltres.length > 0 ? (
-                                            sondagesFiltres.map((sondage, index) => (
-                                                <tr
-                                                    key={sondage.id}
-                                                    className="transition hover:bg-slate-50"
-                                                >
-                                                    <td className="px-5 py-4 font-mono text-xs text-slate-400">
-                                                        #{index + 1}
-                                                    </td>
-                                                    <td className="px-5 py-4">
-                                                        <span className="font-mono text-xs font-semibold tracking-[0.16em] text-slate-700">
-                                                            {sondage.code || "Non genere"}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-5 py-4">
-                                                        <div className="flex flex-col gap-2">
-                                                            <div className="font-semibold text-slate-900">
-                                                                {sondage.titre}
-                                                            </div>
-                                                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                                                                {sondage.isNew ? (
-                                                                    <span className="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-1 font-semibold text-rose-700 ring-1 ring-rose-200">
-                                                                        Nouveau
+                                            sondagesFiltres.map(
+                                                (sondage, index) => (
+                                                    <tr
+                                                        key={sondage.id}
+                                                        className="transition hover:bg-slate-50"
+                                                    >
+                                                        <td className="px-5 py-4 font-mono text-xs text-slate-400">
+                                                            #{index + 1}
+                                                        </td>
+                                                        <td className="px-5 py-4">
+                                                            <span className="font-mono text-xs font-semibold tracking-[0.16em] text-slate-700">
+                                                                {sondage.code ||
+                                                                    "Non genere"}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-5 py-4">
+                                                            <div className="flex flex-col gap-2">
+                                                                <div className="font-semibold text-slate-900">
+                                                                    {
+                                                                        sondage.titre
+                                                                    }
+                                                                </div>
+                                                                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                                                    {sondage.isNew ? (
+                                                                        <span className="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-1 font-semibold text-rose-700 ring-1 ring-rose-200">
+                                                                            Nouveau
+                                                                        </span>
+                                                                    ) : null}
+                                                                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700 ring-1 ring-slate-200">
+                                                                        <Users className="h-3.5 w-3.5" />
+                                                                        {
+                                                                            sondage.participants
+                                                                        }{" "}
+                                                                        participants
                                                                     </span>
-                                                                ) : null}
-                                                                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700 ring-1 ring-slate-200">
-                                                                    <Users className="h-3.5 w-3.5" />
-                                                                    {sondage.participants} participants
-                                                                </span>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-5 py-4 text-slate-700">
-                                                        {sondage.createur}
-                                                    </td>
-                                                    <td className="px-5 py-4 text-slate-700">
-                                                        {sondage.classe}
-                                                    </td>
-                                                    <td className="px-5 py-4 text-slate-700">
-                                                        {sondage.cible}
-                                                    </td>
-                                                    <td className="px-5 py-4">
-                                                        <span
-                                                            className={`inline-flex items-center rounded-full px-2.5 py-1 font-semibold ${getStatusClasses(sondage.statut)}`}
-                                                        >
-                                                            {sondage.statut}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-5 py-4 text-slate-600">
-                                                        <span className="inline-flex items-center gap-2">
-                                                            <CalendarDays className="h-4 w-4 text-slate-400" />
-                                                            {formatDate(
-                                                                sondage.dateCreation,
-                                                            )}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-5 py-4 text-slate-600">
-                                                        <span className="inline-flex items-center gap-2">
-                                                            <Clock3 className="h-4 w-4 text-slate-400" />
-                                                            {formatDate(
-                                                                sondage.dateEcheance,
-                                                            )}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-5 py-4">
-                                                        <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 font-medium text-blue-700 ring-1 ring-blue-200">
-                                                            {sondage.reponses}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-5 py-4">
-                                                        <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-700 ring-1 ring-amber-200">
-                                                            {sondage.tauxParticipation}%
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-5 py-4">
-                                                        <div className="flex flex-wrap gap-2">
-                                                            <Link
-                                                                href={`/admin/sondages/${sondage.id}`}
-                                                                className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                                                        </td>
+                                                        <td className="px-5 py-4 text-slate-700">
+                                                            {sondage.createur}
+                                                        </td>
+                                                        <td className="px-5 py-4 text-slate-700">
+                                                            {sondage.classe}
+                                                        </td>
+                                                        <td className="px-5 py-4 text-slate-700">
+                                                            {sondage.cible}
+                                                        </td>
+                                                        <td className="px-5 py-4">
+                                                            <span
+                                                                className={`inline-flex items-center rounded-full px-2.5 py-1 font-semibold ${getStatusClasses(sondage.statut)}`}
                                                             >
-                                                                {sondage.statut === "Cloture"
-                                                                    ? "Voir l'historique"
-                                                                    : "Voir"}
-                                                            </Link>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
+                                                                {sondage.statut}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-5 py-4 text-slate-600">
+                                                            <span className="inline-flex items-center gap-2">
+                                                                <CalendarDays className="h-4 w-4 text-slate-400" />
+                                                                {formatDate(
+                                                                    sondage.dateCreation,
+                                                                )}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-5 py-4 text-slate-600">
+                                                            <span className="inline-flex items-center gap-2">
+                                                                <Clock3 className="h-4 w-4 text-slate-400" />
+                                                                {formatDate(
+                                                                    sondage.dateEcheance,
+                                                                )}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-5 py-4">
+                                                            <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 font-medium text-blue-700 ring-1 ring-blue-200">
+                                                                {
+                                                                    sondage.reponses
+                                                                }
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-5 py-4">
+                                                            <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-700 ring-1 ring-amber-200">
+                                                                {
+                                                                    sondage.tauxParticipation
+                                                                }
+                                                                %
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-5 py-4">
+                                                            <div className="flex flex-wrap gap-2">
+                                                                <Link
+                                                                    href={`/admin/sondages/${sondage.id}`}
+                                                                    className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                                                                >
+                                                                    {sondage.statut ===
+                                                                    "Cloture"
+                                                                        ? "Voir l'historique"
+                                                                        : "Voir"}
+                                                                </Link>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ),
+                                            )
                                         ) : (
                                             <tr>
                                                 <td
                                                     colSpan="12"
                                                     className="px-5 py-12 text-center text-sm text-slate-500"
                                                 >
-                                                    Aucun sondage disponible pour le moment.
+                                                    Aucun sondage disponible
+                                                    pour le moment.
                                                 </td>
                                             </tr>
                                         )}

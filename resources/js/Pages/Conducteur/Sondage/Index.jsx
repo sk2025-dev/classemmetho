@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Head, Link, router, usePage } from "@inertiajs/react";
+import { withBasePath } from "../../../Utils/urlHelper";
 import {
     ArrowLeft,
     BarChart3,
@@ -85,14 +86,12 @@ function canConducteurRespondToSurvey(cible) {
 
 function normalizeSondage(sondage, authUser, index) {
     const titre =
-        sondage.titre ||
-        sondage.title ||
-        sondage.nom ||
-        `Sondage ${index + 1}`;
+        sondage.titre || sondage.title || sondage.nom || `Sondage ${index + 1}`;
 
     const participants =
         Number(sondage.participants ?? sondage.participant_count ?? 0) || 0;
-    const reponses = Number(sondage.reponses ?? sondage.response_count ?? 0) || 0;
+    const reponses =
+        Number(sondage.reponses ?? sondage.response_count ?? 0) || 0;
 
     const dateCreation =
         sondage.dateCreation ||
@@ -127,7 +126,9 @@ function normalizeSondage(sondage, authUser, index) {
         Number(
             sondage.tauxParticipation ??
                 sondage.taux_participation ??
-                (participants > 0 ? Math.round((reponses / participants) * 100) : 0),
+                (participants > 0
+                    ? Math.round((reponses / participants) * 100)
+                    : 0),
         ) || 0;
 
     return {
@@ -186,7 +187,9 @@ export default function ConducteurSondageIndex({
           )
         : [];
 
-    const cibleOptions = [...new Set(sondagesNormalises.map((sondage) => sondage.cible))]
+    const cibleOptions = [
+        ...new Set(sondagesNormalises.map((sondage) => sondage.cible)),
+    ]
         .filter(Boolean)
         .sort((a, b) => a.localeCompare(b, "fr"));
 
@@ -237,7 +240,10 @@ export default function ConducteurSondageIndex({
             : 0;
 
     const itemsPerPage = 8;
-    const totalPages = Math.max(1, Math.ceil(sondagesFiltres.length / itemsPerPage));
+    const totalPages = Math.max(
+        1,
+        Math.ceil(sondagesFiltres.length / itemsPerPage),
+    );
     const currentPageSafe = Math.min(currentPage, totalPages);
     const paginatedSondages = sondagesFiltres.slice(
         (currentPageSafe - 1) * itemsPerPage,
@@ -249,10 +255,17 @@ export default function ConducteurSondageIndex({
             return;
         }
 
-        router.post(`/conducteur/sondages/${publishTarget.id}/publish`, {}, {
-            preserveScroll: true,
-            onSuccess: () => setPublishTarget(null),
-        });
+        router.post(
+            withBasePath(
+                "",
+                `/conducteur/sondages/${publishTarget.id}/publish`,
+            ),
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => setPublishTarget(null),
+            },
+        );
     };
 
     return (
@@ -271,7 +284,7 @@ export default function ConducteurSondageIndex({
                     <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-3 text-white">
                             <Link
-                                href="/conducteur/dashboard"
+                                href={withBasePath("", "/conducteur/dashboard")}
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
                             >
                                 <ArrowLeft className="h-5 w-5" />
@@ -288,7 +301,10 @@ export default function ConducteurSondageIndex({
 
                         <div className="flex gap-2">
                             <Link
-                                href="/conducteur/sondages/create"
+                                href={withBasePath(
+                                    "",
+                                    "/conducteur/sondages/create",
+                                )}
                                 className="inline-flex items-center gap-2 rounded-lg bg-[#B6C01A] px-5 py-2.5 font-medium text-white shadow-lg transition hover:bg-[#a4ae17]"
                             >
                                 <Plus className="h-4 w-4" />
@@ -335,7 +351,8 @@ export default function ConducteurSondageIndex({
                                     Liste des sondages
                                 </h2>
                                 <p className="mt-1 text-sm text-slate-600">
-                                    Recherche par titre, createur, cible ou statut.
+                                    Recherche par titre, createur, cible ou
+                                    statut.
                                 </p>
                             </div>
 
@@ -361,9 +378,13 @@ export default function ConducteurSondageIndex({
                                         }
                                         className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-3 pl-4 pr-10 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                                     >
-                                        <option value="all">Tous les statuts</option>
+                                        <option value="all">
+                                            Tous les statuts
+                                        </option>
                                         <option value="Actif">Actif</option>
-                                        <option value="Brouillon">Brouillon</option>
+                                        <option value="Brouillon">
+                                            Brouillon
+                                        </option>
                                         <option value="Cloture">Cloture</option>
                                     </select>
                                     <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -377,7 +398,9 @@ export default function ConducteurSondageIndex({
                                         }
                                         className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-3 pl-4 pr-10 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                                     >
-                                        <option value="all">Toutes les cibles</option>
+                                        <option value="all">
+                                            Toutes les cibles
+                                        </option>
                                         {cibleOptions.map((cible) => (
                                             <option key={cible} value={cible}>
                                                 {cible}
@@ -404,9 +427,7 @@ export default function ConducteurSondageIndex({
                                             <th className="px-5 py-4">
                                                 Createur
                                             </th>
-                                            <th className="px-5 py-4">
-                                                Cible
-                                            </th>
+                                            <th className="px-5 py-4">Cible</th>
                                             <th className="px-5 py-4">
                                                 Statut
                                             </th>
@@ -430,123 +451,149 @@ export default function ConducteurSondageIndex({
 
                                     <tbody className="divide-y divide-slate-100 bg-white">
                                         {paginatedSondages.length > 0 ? (
-                                            paginatedSondages.map((sondage, index) => (
-                                                <tr
-                                                    key={sondage.id}
-                                                    className="transition hover:bg-slate-50"
-                                                >
-                                                    <td className="px-5 py-4 font-mono text-xs text-slate-400">
-                                                        #{(currentPageSafe - 1) * itemsPerPage + index + 1}
-                                                    </td>
-                                                    <td className="px-5 py-4">
-                                                        <span className="font-mono text-xs font-semibold tracking-[0.16em] text-slate-700">
-                                                            {sondage.code || "Non genere"}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-5 py-4">
-                                                        <div className="flex flex-col gap-2">
-                                                            <div className="font-semibold text-slate-900">
-                                                                {sondage.titre}
+                                            paginatedSondages.map(
+                                                (sondage, index) => (
+                                                    <tr
+                                                        key={sondage.id}
+                                                        className="transition hover:bg-slate-50"
+                                                    >
+                                                        <td className="px-5 py-4 font-mono text-xs text-slate-400">
+                                                            #
+                                                            {(currentPageSafe -
+                                                                1) *
+                                                                itemsPerPage +
+                                                                index +
+                                                                1}
+                                                        </td>
+                                                        <td className="px-5 py-4">
+                                                            <span className="font-mono text-xs font-semibold tracking-[0.16em] text-slate-700">
+                                                                {sondage.code ||
+                                                                    "Non genere"}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-5 py-4">
+                                                            <div className="flex flex-col gap-2">
+                                                                <div className="font-semibold text-slate-900">
+                                                                    {
+                                                                        sondage.titre
+                                                                    }
+                                                                </div>
+                                                                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                                                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700 ring-1 ring-slate-200">
+                                                                        <Users className="h-3.5 w-3.5" />
+                                                                        {
+                                                                            sondage.participants
+                                                                        }{" "}
+                                                                        participants
+                                                                    </span>
+                                                                </div>
                                                             </div>
-                                                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                                                                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700 ring-1 ring-slate-200">
-                                                                    <Users className="h-3.5 w-3.5" />
-                                                                    {sondage.participants} participants
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-5 py-4 text-slate-700">
-                                                        {sondage.createur}
-                                                    </td>
-                                                    <td className="px-5 py-4 text-slate-700">
-                                                        {sondage.cible}
-                                                    </td>
-                                                    <td className="px-5 py-4">
-                                                        <span
-                                                            className={`inline-flex items-center rounded-full px-2.5 py-1 font-semibold ${getStatusClasses(sondage.statut)}`}
-                                                        >
-                                                            {sondage.statut}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-5 py-4 text-slate-600">
-                                                        <span className="inline-flex items-center gap-2">
-                                                            <CalendarDays className="h-4 w-4 text-slate-400" />
-                                                            {formatDate(
-                                                                sondage.dateCreation,
-                                                            )}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-5 py-4 text-slate-600">
-                                                        <span className="inline-flex items-center gap-2">
-                                                            <Clock3 className="h-4 w-4 text-slate-400" />
-                                                            {formatDate(
-                                                                sondage.dateEcheance,
-                                                            )}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-5 py-4">
-                                                        <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 font-medium text-blue-700 ring-1 ring-blue-200">
-                                                            {sondage.reponses}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-5 py-4">
-                                                        <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-700 ring-1 ring-amber-200">
-                                                            {sondage.tauxParticipation}%
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-5 py-4">
-                                                        <div className="flex flex-wrap gap-2">
-                                                            <Link
-                                                                href={`/conducteur/sondages/${sondage.id}`}
-                                                                className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                                                        </td>
+                                                        <td className="px-5 py-4 text-slate-700">
+                                                            {sondage.createur}
+                                                        </td>
+                                                        <td className="px-5 py-4 text-slate-700">
+                                                            {sondage.cible}
+                                                        </td>
+                                                        <td className="px-5 py-4">
+                                                            <span
+                                                                className={`inline-flex items-center rounded-full px-2.5 py-1 font-semibold ${getStatusClasses(sondage.statut)}`}
                                                             >
-                                                                {sondage.statut === "Cloture"
-                                                                    ? "Voir l'historique"
-                                                                    : "Voir"}
-                                                            </Link>
-                                                            {sondage.statut !== "Cloture" &&
-                                                            sondage.statut !== "Brouillon" &&
-                                                            canConducteurRespondToSurvey(
-                                                                sondage.cible,
-                                                            ) ? (
+                                                                {sondage.statut}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-5 py-4 text-slate-600">
+                                                            <span className="inline-flex items-center gap-2">
+                                                                <CalendarDays className="h-4 w-4 text-slate-400" />
+                                                                {formatDate(
+                                                                    sondage.dateCreation,
+                                                                )}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-5 py-4 text-slate-600">
+                                                            <span className="inline-flex items-center gap-2">
+                                                                <Clock3 className="h-4 w-4 text-slate-400" />
+                                                                {formatDate(
+                                                                    sondage.dateEcheance,
+                                                                )}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-5 py-4">
+                                                            <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 font-medium text-blue-700 ring-1 ring-blue-200">
+                                                                {
+                                                                    sondage.reponses
+                                                                }
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-5 py-4">
+                                                            <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-700 ring-1 ring-amber-200">
+                                                                {
+                                                                    sondage.tauxParticipation
+                                                                }
+                                                                %
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-5 py-4">
+                                                            <div className="flex flex-wrap gap-2">
                                                                 <Link
-                                                                    href={`/conducteur/sondages/${sondage.id}/repondre`}
-                                                                    className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
+                                                                    href={`/conducteur/sondages/${sondage.id}`}
+                                                                    className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                                                                 >
-                                                                    Repondre
+                                                                    {sondage.statut ===
+                                                                    "Cloture"
+                                                                        ? "Voir l'historique"
+                                                                        : "Voir"}
                                                                 </Link>
-                                                            ) : null}
-                                                            {sondage.canEdit ? (
-                                                                <Link
-                                                                    href={`/conducteur/sondages/${sondage.id}/edit`}
-                                                                    className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
-                                                                >
-                                                                    Modifier
-                                                                </Link>
-                                                            ) : null}
-                                                            {sondage.canPublish ? (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setPublishTarget(sondage)}
-                                                                    className="rounded-xl bg-amber-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-amber-600"
-                                                                >
-                                                                    Publier
-                                                                </button>
-                                                            ) : null}
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
+                                                                {sondage.statut !==
+                                                                    "Cloture" &&
+                                                                sondage.statut !==
+                                                                    "Brouillon" &&
+                                                                canConducteurRespondToSurvey(
+                                                                    sondage.cible,
+                                                                ) ? (
+                                                                    <Link
+                                                                        href={`/conducteur/sondages/${sondage.id}/repondre`}
+                                                                        className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
+                                                                    >
+                                                                        Repondre
+                                                                    </Link>
+                                                                ) : null}
+                                                                {sondage.canEdit ? (
+                                                                    <Link
+                                                                        href={`/conducteur/sondages/${sondage.id}/edit`}
+                                                                        className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
+                                                                    >
+                                                                        Modifier
+                                                                    </Link>
+                                                                ) : null}
+                                                                {sondage.canPublish ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            setPublishTarget(
+                                                                                sondage,
+                                                                            )
+                                                                        }
+                                                                        className="rounded-xl bg-amber-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-amber-600"
+                                                                    >
+                                                                        Publier
+                                                                    </button>
+                                                                ) : null}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ),
+                                            )
                                         ) : (
                                             <tr>
                                                 <td
                                                     colSpan="11"
                                                     className="px-5 py-12 text-center text-sm text-slate-500"
                                                 >
-                                                    Aucun sondage disponible pour le
-                                                    moment. La page utilise les donnees
-                                                    reelles envoyees par Inertia.
+                                                    Aucun sondage disponible
+                                                    pour le moment. La page
+                                                    utilise les donnees reelles
+                                                    envoyees par Inertia.
                                                 </td>
                                             </tr>
                                         )}
@@ -560,24 +607,30 @@ export default function ConducteurSondageIndex({
                                 <p className="text-sm text-slate-600">
                                     Affichage de{" "}
                                     <span className="font-semibold text-slate-900">
-                                        {(currentPageSafe - 1) * itemsPerPage + 1}
-                                    </span>
-                                    {" "}a{" "}
+                                        {(currentPageSafe - 1) * itemsPerPage +
+                                            1}
+                                    </span>{" "}
+                                    a{" "}
                                     <span className="font-semibold text-slate-900">
-                                        {Math.min(currentPageSafe * itemsPerPage, sondagesFiltres.length)}
-                                    </span>
-                                    {" "}sur{" "}
+                                        {Math.min(
+                                            currentPageSafe * itemsPerPage,
+                                            sondagesFiltres.length,
+                                        )}
+                                    </span>{" "}
+                                    sur{" "}
                                     <span className="font-semibold text-slate-900">
                                         {sondagesFiltres.length}
-                                    </span>
-                                    {" "}sondage(s)
+                                    </span>{" "}
+                                    sondage(s)
                                 </p>
 
                                 <div className="flex items-center gap-2">
                                     <button
                                         type="button"
                                         onClick={() =>
-                                            setCurrentPage((page) => Math.max(1, page - 1))
+                                            setCurrentPage((page) =>
+                                                Math.max(1, page - 1),
+                                            )
                                         }
                                         disabled={currentPageSafe === 1}
                                         className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
@@ -593,9 +646,13 @@ export default function ConducteurSondageIndex({
                                     <button
                                         type="button"
                                         onClick={() =>
-                                            setCurrentPage((page) => Math.min(totalPages, page + 1))
+                                            setCurrentPage((page) =>
+                                                Math.min(totalPages, page + 1),
+                                            )
                                         }
-                                        disabled={currentPageSafe === totalPages}
+                                        disabled={
+                                            currentPageSafe === totalPages
+                                        }
                                         className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         Suivant
@@ -620,8 +677,8 @@ export default function ConducteurSondageIndex({
                                     Voulez-vous publier le sondage{" "}
                                     <span className="font-semibold text-slate-900">
                                         {publishTarget.titre}
-                                    </span>
-                                    {" "}?
+                                    </span>{" "}
+                                    ?
                                 </p>
                                 {publishTarget.code ? (
                                     <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">

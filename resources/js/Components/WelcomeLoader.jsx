@@ -1,28 +1,34 @@
-import React, { useEffect } from 'react';
+import React, { useEffect } from "react";
+import { usePage } from "@inertiajs/react";
+import { withBasePath } from "../Utils/urlHelper";
 
 export default function WelcomeLoader({ userName, redirectUrl }) {
+    const { app } = usePage().props;
+    const basePath = app?.basePath || "";
+    const withBase = (path) => withBasePath(basePath, path);
+
     useEffect(() => {
         // Notifier app.jsx que le welcome loader est actif
         window.setWelcomeLoaderActive(true);
 
         // Masquer le body et empêcher toute interaction
-        document.body.style.overflow = 'hidden';
-        document.body.style.pointerEvents = 'none';
+        document.body.style.overflow = "hidden";
+        document.body.style.pointerEvents = "none";
 
         // Rediriger après 1.5 secondes
         const timer = setTimeout(() => {
             // Marquer qu'on vient du welcome loader pour éviter l'initial loader
-            sessionStorage.setItem('comingFromWelcomeLoader', 'true');
+            sessionStorage.setItem("comingFromWelcomeLoader", "true");
 
             // Redirection simple
-            window.location.href = redirectUrl || '/dashboard';
+            window.location.href = redirectUrl || withBase("/dashboard");
         }, 1500);
 
         return () => {
             clearTimeout(timer);
             window.setWelcomeLoaderActive(false);
-            document.body.style.overflow = 'auto';
-            document.body.style.pointerEvents = 'auto';
+            document.body.style.overflow = "auto";
+            document.body.style.pointerEvents = "auto";
         };
     }, [redirectUrl]);
 
@@ -36,10 +42,16 @@ export default function WelcomeLoader({ userName, redirectUrl }) {
                 <div className="welcome-particle"></div>
             </div>
             <div className="welcome-content">
-                <img src="/images/image.png" alt="Logo" className="welcome-logo" />
+                <img
+                    src={withBase("/images/image.png")}
+                    alt="Logo"
+                    className="welcome-logo"
+                />
                 <div className="welcome-text-container">
                     <h1 className="welcome-title">{`Bienvenue, ${userName} !`}</h1>
-                    <p className="welcome-subtitle">Chargement de votre espace...</p>
+                    <p className="welcome-subtitle">
+                        Chargement de votre espace...
+                    </p>
                 </div>
                 <div className="welcome-spinner-container">
                     <div className="welcome-spinner">

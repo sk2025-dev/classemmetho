@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Head, Link, router } from "@inertiajs/react";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 // ==================== STYLES GLOBAUX ====================
 const GLOBAL_STYLES = `
@@ -837,7 +838,9 @@ const Annuaire = ({
     const [searchTerm, setSearchTerm] = useState(filters.search || "");
     const [classeFilter, setClasseFilter] = useState(filters.classe || "");
     const [familleFilter, setFamilleFilter] = useState(filters.famille || "");
-    const [professionFilter, setProfessionFilter] = useState(filters.profession || ""); // <-- remplace statut
+    const [professionFilter, setProfessionFilter] = useState(
+        filters.profession || "",
+    ); // <-- remplace statut
     const [roleFilter, setRoleFilter] = useState(filters.role || "");
     const [itemsPerPage, setItemsPerPage] = useState(filters.perPage || 10);
 
@@ -1038,7 +1041,8 @@ const Annuaire = ({
                 member?.famille || member?.family || member?.family_code,
                 "-",
             ),
-            codeFamille: member?.code_famille || member?.family?.code_famille || null,
+            codeFamille:
+                member?.code_famille || member?.family?.code_famille || null,
             codeMembre: member?.numMembre || member?.code_membre || null,
             photo: member?.photo || member?.profile_photo_url || "",
             sexe: toText(member?.sexe || member?.genre, ""),
@@ -1130,7 +1134,8 @@ const Annuaire = ({
 
         const rows = paginatedMembers.map((member, idx) => {
             const normalized = normalizeMember(member);
-            const rowNumber = (membersCurrentPage - 1) * membersPerPage + idx + 1;
+            const rowNumber =
+                (membersCurrentPage - 1) * membersPerPage + idx + 1;
             return [
                 rowNumber,
                 normalized.nom || "",
@@ -1242,7 +1247,8 @@ const Annuaire = ({
 
             const data = paginatedMembers.map((member, idx) => {
                 const normalized = normalizeMember(member);
-                const rowNumber = (membersCurrentPage - 1) * membersPerPage + idx + 1;
+                const rowNumber =
+                    (membersCurrentPage - 1) * membersPerPage + idx + 1;
                 return {
                     index: rowNumber,
                     nom: normalized.nom || "",
@@ -1256,9 +1262,13 @@ const Annuaire = ({
                     email: normalized.email || "",
                     baptise: normalized.baptise ? "Oui" : "Non",
                     relation: normalized.relation || "",
-                    premiereCommunion: normalized.premiereCommunion ? "Oui" : "Non",
+                    premiereCommunion: normalized.premiereCommunion
+                        ? "Oui"
+                        : "Non",
                     mariageCivil: normalized.mariageCivil ? "Oui" : "Non",
-                    marieReligieusement: normalized.marieReligieusement ? "Oui" : "Non",
+                    marieReligieusement: normalized.marieReligieusement
+                        ? "Oui"
+                        : "Non",
                     dote: normalized.dote ? "Oui" : "Non",
                     veuf: normalized.veuf ? "Oui" : "Non",
                     dateNaissance: normalized.dateNaissance || "",
@@ -1371,7 +1381,9 @@ const Annuaire = ({
                                 <th className="text-center">Relation</th>
                                 <th className="text-center">1ère communion</th>
                                 <th className="text-center">Mariage civil</th>
-                                <th className="text-center">Mariage religieux</th>
+                                <th className="text-center">
+                                    Mariage religieux
+                                </th>
                                 <th className="text-center">Doté</th>
                                 <th className="text-center">Veuf</th>
                                 <th className="text-center">Date naiss.</th>
@@ -1384,7 +1396,11 @@ const Annuaire = ({
                             {paginatedMembers.length > 0 ? (
                                 paginatedMembers.map((rawMember, idx) => {
                                     const member = normalizeMember(rawMember);
-                                    const rowNumber = (membersCurrentPage - 1) * membersPerPage + idx + 1;
+                                    const rowNumber =
+                                        (membersCurrentPage - 1) *
+                                            membersPerPage +
+                                        idx +
+                                        1;
                                     return (
                                         <tr
                                             key={member.id}
@@ -1976,7 +1992,7 @@ const Annuaire = ({
                     <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4 w-full">
                         <div className="w-full md:w-auto flex-shrink-0">
                             <Link
-                                href="/conducteur/dashboard"
+                                href={withBasePath("", "/conducteur/dashboard")}
                                 className="btn btn-secondary gap-2 w-full md:w-auto justify-center"
                             >
                                 <svg

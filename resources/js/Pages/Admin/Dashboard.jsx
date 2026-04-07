@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, router } from "@inertiajs/react";
 import DashboardIntro from "@/Components/DashboardIntro";
+import { withBasePath } from "../../Utils/urlHelper";
 
 // --- COMPOSANT ICÔNE ---
 const Icon = ({ name, className }) => {
@@ -207,7 +208,7 @@ export default function Dashboard({
 
     const handleLogout = (e) => {
         e.preventDefault();
-        router.post("/logout");
+        router.post(withBasePath("", "/logout"));
     };
 
     // Utilise uniquement le layout MainLayout qui fournit déjà le header
@@ -235,7 +236,7 @@ export default function Dashboard({
                     {menuItems.map((item, index) => (
                         <Link
                             key={index}
-                            href={item.href}
+                            href={withBasePath("", item.href)}
                             className="group block relative"
                         >
                             {/* Filigrane logo supprimé */}
@@ -271,11 +272,15 @@ export default function Dashboard({
                                     )}
                                 {item.icon === "sondage" &&
                                     surveyBadgeCount > 0 && (
-                                        <NotificationBadge count={surveyBadgeCount} />
+                                        <NotificationBadge
+                                            count={surveyBadgeCount}
+                                        />
                                     )}
                                 {item.icon === "priere" &&
                                     prayerBadgeCount > 0 && (
-                                        <NotificationBadge count={prayerBadgeCount} />
+                                        <NotificationBadge
+                                            count={prayerBadgeCount}
+                                        />
                                     )}
                             </div>
                         </Link>

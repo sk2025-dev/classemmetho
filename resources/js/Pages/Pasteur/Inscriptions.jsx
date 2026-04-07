@@ -17,6 +17,7 @@ import {
     Move,
 } from "lucide-react";
 import ProfilePhoto from "@/Components/ProfilePhoto";
+import { withBasePath } from "../../Utils/urlHelper";
 
 // Composant Badge pour le Rôle avec style moderne (adapté pour Pasteur)
 const StatusBadge = ({ role }) => {
@@ -118,7 +119,7 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                 {/* Header Section */}
                 <div className="mb-8">
                     <Link
-                        href="/pasteur/dashboard"
+                        href={withBasePath("", "/pasteur/dashboard")}
                         className="inline-flex items-center gap-2 text-white/90 hover:text-white hover:bg-white/10 px-4 py-2 rounded-full transition-all mb-4 text-sm font-medium backdrop-blur-sm"
                     >
                         <ArrowLeft className="w-4 h-4" />
@@ -213,7 +214,11 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
 
                     <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
                         <button
-                            onClick={() => router.get("/pasteur/transferts")}
+                            onClick={() =>
+                                router.get(
+                                    withBasePath("", "/pasteur/transferts"),
+                                )
+                            }
                             className="flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg transition-all text-sm shadow-sm"
                             title="Transférer"
                         >
@@ -222,7 +227,11 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                         </button>
 
                         <button
-                            onClick={() => router.get("/pasteur/family/edit")}
+                            onClick={() =>
+                                router.get(
+                                    withBasePath("", "/pasteur/family/edit"),
+                                )
+                            }
                             className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-200 hover:border-gray-400 transition-all text-sm shadow-sm"
                         >
                             <Eye className="w-4 h-4" />
@@ -233,7 +242,10 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
 
                         <button
                             onClick={() =>
-                                family && router.get(`/pasteur/members/create`)
+                                family &&
+                                router.get(
+                                    withBasePath("", "/pasteur/members/create"),
+                                )
                             }
                             disabled={!family}
                             className="flex items-center justify-center gap-2 px-4 py-2.5 text-white font-medium rounded-lg transition-all text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
@@ -363,12 +375,14 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                                             </td>
                                             <td className="px-6 py-4 text-left text-sm">
                                                 <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
-                                                    {family?.code_famille || "N/A"}
+                                                    {family?.code_famille ||
+                                                        "N/A"}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-left text-sm">
                                                 <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-xs font-semibold text-blue-700">
-                                                    {member.code_membre || "N/A"}
+                                                    {member.code_membre ||
+                                                        "N/A"}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-center">
@@ -432,7 +446,10 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                                 enregistrés.
                             </p>
                             <Link
-                                href="/responsable-famille/members/store?family_id=${family.id}`, formData,"
+                                href={withBasePath(
+                                    "",
+                                    `/pasteur/members/create?family_id=${family?.id || ""}`,
+                                )}
                                 className="inline-block px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                             >
                                 Inscrire un Membre

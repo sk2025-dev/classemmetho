@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { Inertia } from "@inertiajs/inertia";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 // --- Form Field Component ---
 const FormField = ({ label, children, icon: Icon, required }) => (
@@ -150,7 +151,9 @@ export default function CreateMember({ family, errors }) {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const fonctionsRes = await axios.get("/api/fonctions");
+                const fonctionsRes = await axios.get(
+                    withBasePath("", "/api/fonctions"),
+                );
                 setFonctions(fonctionsRes.data);
             } catch (error) {
                 console.error("Erreur:", error);
@@ -530,7 +533,9 @@ export default function CreateMember({ family, errors }) {
                                             onChange={(e) =>
                                                 handleFieldChange(
                                                     "nom",
-                                                    formatPrenom(e.target.value),
+                                                    formatPrenom(
+                                                        e.target.value,
+                                                    ),
                                                 )
                                             }
                                             onBlur={() =>
@@ -560,7 +565,9 @@ export default function CreateMember({ family, errors }) {
                                             onChange={(e) =>
                                                 handleFieldChange(
                                                     "prenom",
-                                                    formatPrenom(e.target.value),
+                                                    formatPrenom(
+                                                        e.target.value,
+                                                    ),
                                                 )
                                             }
                                             onBlur={() =>

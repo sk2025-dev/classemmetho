@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { normalizePhotoUrl } from "@/Helpers/PhotoUrlHelper";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 // Composant pour visualiser les fiches PDF par date
 function FichesMariageModal({ open, onClose, acte, ids, onEdit }) {
@@ -675,7 +676,10 @@ export default function Index({
                     ...normalizedDetails,
                 },
             };
-            const res = await axios.post("/conducteur/liturgie", payload);
+            const res = await axios.post(
+                withBasePath("", "/conducteur/liturgie"),
+                payload,
+            );
             const acte = res.data?.acte;
             if (acte) {
                 setLocalActes((prev) => [acte, ...prev]);
@@ -736,10 +740,13 @@ export default function Index({
         try {
             setProcessing(true);
             for (const id of ids)
-                await axios.post(`/conducteur/liturgie/${id}/transition`, {
-                    statut: "TRANSMISE_AU_PASTEUR",
-                    commentaire: "",
-                });
+                await axios.post(
+                    withBasePath("", `/conducteur/liturgie/${id}/transition`),
+                    {
+                        statut: "TRANSMISE_AU_PASTEUR",
+                        commentaire: "",
+                    },
+                );
             setLocalActes((prev) =>
                 prev.map((a) =>
                     ids.includes(a.id)
@@ -770,10 +777,13 @@ export default function Index({
         try {
             setProcessing(true);
             for (const id of ids)
-                await axios.post(`/conducteur/liturgie/${id}/transition`, {
-                    statut: "REFUSEE_PAR_CONDUCTEUR",
-                    commentaire: reason,
-                });
+                await axios.post(
+                    withBasePath("", `/conducteur/liturgie/${id}/transition`),
+                    {
+                        statut: "REFUSEE_PAR_CONDUCTEUR",
+                        commentaire: reason,
+                    },
+                );
             setLocalActes((prev) =>
                 prev.map((a) =>
                     ids.includes(a.id)
@@ -803,10 +813,16 @@ export default function Index({
         }
         try {
             setProcessing(true);
-            await axios.post(`/conducteur/liturgie/${selected.id}/transition`, {
-                statut,
-                commentaire,
-            });
+            await axios.post(
+                withBasePath(
+                    "",
+                    `/conducteur/liturgie/${selected.id}/transition`,
+                ),
+                {
+                    statut,
+                    commentaire,
+                },
+            );
             setLocalActes((prev) =>
                 prev.map((a) =>
                     a.id === selected.id
@@ -932,19 +948,28 @@ export default function Index({
 
     const getAnnonceAction = (statut, id, commentaire = "") => {
         if (statut === "TRANSMISE_AU_PASTEUR") {
-            return axios.post(`/conducteur/annonces/${id}/valider`, {
-                note: commentaire,
-            });
+            return axios.post(
+                withBasePath("", `/conducteur/annonces/${id}/valider`),
+                {
+                    note: commentaire,
+                },
+            );
         }
         if (statut === "REFUSEE_PAR_CONDUCTEUR") {
-            return axios.post(`/conducteur/annonces/${id}/rejeter`, {
-                motif_rejet: commentaire,
-            });
+            return axios.post(
+                withBasePath("", `/conducteur/annonces/${id}/rejeter`),
+                {
+                    motif_rejet: commentaire,
+                },
+            );
         }
         // fallback : valider
-        return axios.post(`/conducteur/annonces/${id}/valider`, {
-            note: commentaire,
-        });
+        return axios.post(
+            withBasePath("", `/conducteur/annonces/${id}/valider`),
+            {
+                note: commentaire,
+            },
+        );
     };
 
     const submitAnnonceTransition = async (statut) => {
@@ -1088,7 +1113,10 @@ export default function Index({
         }
         try {
             setAnnonceProcessing(true);
-            const res = await axios.post("/conducteur/annonces", annonceForm);
+            const res = await axios.post(
+                withBasePath("", "/conducteur/annonces"),
+                annonceForm,
+            );
             const newA = res.data?.annonce || {
                 ...annonceForm,
                 id: Date.now(),
@@ -1132,7 +1160,10 @@ export default function Index({
                 <div className="page-content">
                     {/* TOP ACTIONS */}
                     <div className="top-actions">
-                        <Link href="/conducteur/dashboard" className="btn-back">
+                        <Link
+                            href={withBasePath("", "/conducteur/dashboard")}
+                            className="btn-back"
+                        >
                             <svg
                                 width="14"
                                 height="14"
@@ -2073,8 +2104,7 @@ export default function Index({
                                         <div
                                             className={`demande-acte-icon ${tone(acte.type_acte)}`}
                                         >
-                                            {acte.membre
-                                                ?.profile_photo_url ? (
+                                            {acte.membre?.profile_photo_url ? (
                                                 <img
                                                     src={
                                                         acte.membre
@@ -3530,7 +3560,9 @@ export default function Index({
                                         <button
                                             type="button"
                                             className={`modal-detail-tab ${detailTab === "infos" ? "active" : ""}`}
-                                            onClick={() => setDetailTab("infos")}
+                                            onClick={() =>
+                                                setDetailTab("infos")
+                                            }
                                         >
                                             Informations
                                         </button>
@@ -3539,14 +3571,18 @@ export default function Index({
                                                 <button
                                                     type="button"
                                                     className={`modal-detail-tab ${detailTab === "ceremony" ? "active" : ""}`}
-                                                    onClick={() => setDetailTab("ceremony")}
+                                                    onClick={() =>
+                                                        setDetailTab("ceremony")
+                                                    }
                                                 >
                                                     Date choisie
                                                 </button>
                                                 <button
                                                     type="button"
                                                     className={`modal-detail-tab ${detailTab === "calendar" ? "active" : ""}`}
-                                                    onClick={() => setDetailTab("calendar")}
+                                                    onClick={() =>
+                                                        setDetailTab("calendar")
+                                                    }
                                                 >
                                                     Calendrier
                                                 </button>
@@ -3568,7 +3604,9 @@ export default function Index({
                                                     Type d'acte
                                                 </span>
                                                 <span className="modal-info-val">
-                                                    {prettyType(selected?.type_acte)}
+                                                    {prettyType(
+                                                        selected?.type_acte,
+                                                    )}
                                                 </span>
                                             </div>
                                             <div className="modal-info-row">
@@ -3587,10 +3625,14 @@ export default function Index({
                                                 <span className="modal-info-val">
                                                     {formatDate(
                                                         selected?.date_souhaitee ||
-                                                            selected?.details?.date_souhaitee ||
-                                                            selected?.details?.date_presentation ||
-                                                            selected?.details?.date_deces ||
-                                                            selected?.details?.date_naissance ||
+                                                            selected?.details
+                                                                ?.date_souhaitee ||
+                                                            selected?.details
+                                                                ?.date_presentation ||
+                                                            selected?.details
+                                                                ?.date_deces ||
+                                                            selected?.details
+                                                                ?.date_naissance ||
                                                             selected?.date_annonce,
                                                     )}
                                                 </span>
@@ -3604,134 +3646,208 @@ export default function Index({
                                                         className={`badge ${getActeBadgeClass(getActeStatus(selected))}`}
                                                     >
                                                         <span className="badge-dot" />
-                                                        {prettyStatut(getActeStatus(selected))}
+                                                        {prettyStatut(
+                                                            getActeStatus(
+                                                                selected,
+                                                            ),
+                                                        )}
                                                     </span>
                                                 </span>
                                             </div>
                                         </>
                                     )}
-                                    {selectedIsMariage && detailTab === "ceremony" && (
-                                        <div className="ceremony-tab">
-                                            <div className="ceremony-summary">
-                                                <div>
-                                                    <strong>Date choisie</strong>
+                                    {selectedIsMariage &&
+                                        detailTab === "ceremony" && (
+                                            <div className="ceremony-tab">
+                                                <div className="ceremony-summary">
+                                                    <div>
+                                                        <strong>
+                                                            Date choisie
+                                                        </strong>
+                                                        <span className="modal-detail-val">
+                                                            {formatDate(
+                                                                selected
+                                                                    ?.details
+                                                                    ?.date_souhaitee ||
+                                                                    selected?.date_souhaitee,
+                                                            ) || "?"}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <strong>Cr?neau</strong>
+                                                        <span className="modal-detail-val">
+                                                            {selected?.details
+                                                                ?.ceremonie_creneau ===
+                                                            "matin"
+                                                                ? "Matin 09h-10h"
+                                                                : selected
+                                                                        ?.details
+                                                                        ?.ceremonie_creneau ===
+                                                                    "apres_midi"
+                                                                  ? "Apr?s-midi 15h-16h"
+                                                                  : "?"}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <strong>Statut</strong>
+                                                        <span className="modal-detail-val">
+                                                            {ceremonyStatusLabel(
+                                                                selected
+                                                                    ?.details
+                                                                    ?.ceremonie_statut,
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="modal-detail-row">
+                                                    <span className="modal-detail-key">
+                                                        Lieu
+                                                    </span>
                                                     <span className="modal-detail-val">
-                                                        {formatDate(
-                                                            selected?.details?.date_souhaitee ||
-                                                                selected?.date_souhaitee,
-                                                        ) || "?"}
+                                                        {selected?.details
+                                                            ?.lieu_ceremonie ||
+                                                            "?"}
                                                     </span>
                                                 </div>
-                                                <div>
-                                                    <strong>Cr?neau</strong>
+                                                <div className="modal-detail-row">
+                                                    <span className="modal-detail-key">
+                                                        T?moins
+                                                    </span>
                                                     <span className="modal-detail-val">
-                                                        {selected?.details?.ceremonie_creneau === "matin"
-                                                            ? "Matin 09h-10h"
-                                                            : selected?.details?.ceremonie_creneau ===
-                                                                "apres_midi"
-                                                              ? "Apr?s-midi 15h-16h"
-                                                              : "?"}
+                                                        {selected?.details
+                                                            ?.temoins || "?"}
                                                     </span>
                                                 </div>
-                                                <div>
-                                                    <strong>Statut</strong>
-                                                    <span className="modal-detail-val">
-                                                        {ceremonyStatusLabel(selected?.details?.ceremonie_statut)}
-                                                    </span>
-                                                </div>
+                                                {selected?.details
+                                                    ?.ceremonie_commentaire_conducteur && (
+                                                    <div className="modal-detail-row">
+                                                        <span className="modal-detail-key">
+                                                            Commentaire
+                                                            conducteur
+                                                        </span>
+                                                        <span className="modal-detail-val">
+                                                            {
+                                                                selected
+                                                                    ?.details
+                                                                    ?.ceremonie_commentaire_conducteur
+                                                            }
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {selected?.details
+                                                    ?.ceremonie_commentaire_pasteur && (
+                                                    <div className="modal-detail-row">
+                                                        <span className="modal-detail-key">
+                                                            Commentaire pasteur
+                                                        </span>
+                                                        <span className="modal-detail-val">
+                                                            {
+                                                                selected
+                                                                    ?.details
+                                                                    ?.ceremonie_commentaire_pasteur
+                                                            }
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {selected?.details
+                                                    ?.ceremonie_soumise_at && (
+                                                    <div className="modal-detail-row">
+                                                        <span className="modal-detail-key">
+                                                            Soumise le
+                                                        </span>
+                                                        <span className="modal-detail-val">
+                                                            {formatDateTime(
+                                                                selected
+                                                                    ?.details
+                                                                    ?.ceremonie_soumise_at,
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {selected?.details
+                                                    ?.ceremonie_transmise_pasteur_at && (
+                                                    <div className="modal-detail-row">
+                                                        <span className="modal-detail-key">
+                                                            Transmise au pasteur
+                                                        </span>
+                                                        <span className="modal-detail-val">
+                                                            {formatDateTime(
+                                                                selected
+                                                                    ?.details
+                                                                    ?.ceremonie_transmise_pasteur_at,
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {selected?.details
+                                                    ?.ceremonie_validee_pasteur_at && (
+                                                    <div className="modal-detail-row">
+                                                        <span className="modal-detail-key">
+                                                            Valid?e par le
+                                                            pasteur
+                                                        </span>
+                                                        <span className="modal-detail-val">
+                                                            {formatDateTime(
+                                                                selected
+                                                                    ?.details
+                                                                    ?.ceremonie_validee_pasteur_at,
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div className="modal-detail-row">
-                                                <span className="modal-detail-key">
-                                                    Lieu
-                                                </span>
-                                                <span className="modal-detail-val">
-                                                    {selected?.details?.lieu_ceremonie || "?"}
-                                                </span>
-                                            </div>
-                                            <div className="modal-detail-row">
-                                                <span className="modal-detail-key">
-                                                    T?moins
-                                                </span>
-                                                <span className="modal-detail-val">
-                                                    {selected?.details?.temoins || "?"}
-                                                </span>
-                                            </div>
-                                            {selected?.details?.ceremonie_commentaire_conducteur && (
-                                                <div className="modal-detail-row">
-                                                    <span className="modal-detail-key">
-                                                        Commentaire conducteur
-                                                    </span>
-                                                    <span className="modal-detail-val">
-                                                        {selected?.details?.ceremonie_commentaire_conducteur}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            {selected?.details?.ceremonie_commentaire_pasteur && (
-                                                <div className="modal-detail-row">
-                                                    <span className="modal-detail-key">
-                                                        Commentaire pasteur
-                                                    </span>
-                                                    <span className="modal-detail-val">
-                                                        {selected?.details?.ceremonie_commentaire_pasteur}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            {selected?.details?.ceremonie_soumise_at && (
-                                                <div className="modal-detail-row">
-                                                    <span className="modal-detail-key">
-                                                        Soumise le
-                                                    </span>
-                                                    <span className="modal-detail-val">
-                                                        {formatDateTime(selected?.details?.ceremonie_soumise_at)}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            {selected?.details?.ceremonie_transmise_pasteur_at && (
-                                                <div className="modal-detail-row">
-                                                    <span className="modal-detail-key">
-                                                        Transmise au pasteur
-                                                    </span>
-                                                    <span className="modal-detail-val">
-                                                        {formatDateTime(selected?.details?.ceremonie_transmise_pasteur_at)}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            {selected?.details?.ceremonie_validee_pasteur_at && (
-                                                <div className="modal-detail-row">
-                                                    <span className="modal-detail-key">
-                                                        Valid?e par le pasteur
-                                                    </span>
-                                                    <span className="modal-detail-val">
-                                                        {formatDateTime(selected?.details?.ceremonie_validee_pasteur_at)}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                    {selectedIsMariage && detailTab === "calendar" && (
-                                        <MiniCalendar
-                                            events={calendarEvents}
-                                            highlightId={selected?.id}
-                                            title="Calendrier des dates choisies"
-                                        />
-                                    )}
+                                        )}
+                                    {selectedIsMariage &&
+                                        detailTab === "calendar" && (
+                                            <MiniCalendar
+                                                events={calendarEvents}
+                                                highlightId={selected?.id}
+                                                title="Calendrier des dates choisies"
+                                            />
+                                        )}
                                     {selected?.statut === "SOUMISE" && (
                                         <div className="modal-actions-inline">
                                             <button
                                                 className="btn-modal btn-modal-gold"
-                                                onClick={() => setModal("approve")}
+                                                onClick={() =>
+                                                    setModal("approve")
+                                                }
                                             >
-                                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                <svg
+                                                    width="13"
+                                                    height="13"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                    strokeWidth="2.5"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        d="M5 13l4 4L19 7"
+                                                    />
                                                 </svg>
                                                 Valider & transmettre
                                             </button>
                                             <button
                                                 className="btn-modal btn-modal-red"
-                                                onClick={() => setModal("refuse")}
+                                                onClick={() =>
+                                                    setModal("refuse")
+                                                }
                                             >
-                                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                <svg
+                                                    width="13"
+                                                    height="13"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                    strokeWidth="2.5"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        d="M6 18L18 6M6 6l12 12"
+                                                    />
                                                 </svg>
                                                 Refuser
                                             </button>
@@ -3749,7 +3865,9 @@ export default function Index({
                                                 }
                                                 disabled={processing}
                                             >
-                                                {processing ? "Traitement..." : "Transmettre au pasteur"}
+                                                {processing
+                                                    ? "Traitement..."
+                                                    : "Transmettre au pasteur"}
                                             </button>
                                             <button
                                                 className="btn-modal btn-modal-red"
@@ -3760,11 +3878,18 @@ export default function Index({
                                                 }
                                                 disabled={processing}
                                             >
-                                                {processing ? "Traitement..." : "Refuser la date"}
+                                                {processing
+                                                    ? "Traitement..."
+                                                    : "Refuser la date"}
                                             </button>
                                         </div>
                                     )}
-                                    {["TRANSMISE_AU_PASTEUR", "VALIDEE", "PUBLIEE", "ARCHIVEE"].includes(selected?.statut) && (
+                                    {[
+                                        "TRANSMISE_AU_PASTEUR",
+                                        "VALIDEE",
+                                        "PUBLIEE",
+                                        "ARCHIVEE",
+                                    ].includes(selected?.statut) && (
                                         <div style={{ marginTop: 16 }}>
                                             <button
                                                 style={{
@@ -3781,20 +3906,37 @@ export default function Index({
                                                     alignItems: "center",
                                                     justifyContent: "center",
                                                     gap: 8,
-                                                    transition: "background 0.2s",
+                                                    transition:
+                                                        "background 0.2s",
                                                 }}
                                                 onMouseEnter={(e) =>
-                                                    (e.target.style.backgroundColor = "#2563eb")
+                                                    (e.target.style.backgroundColor =
+                                                        "#2563eb")
                                                 }
                                                 onMouseLeave={(e) =>
-                                                    (e.target.style.backgroundColor = "#3b82f6")
+                                                    (e.target.style.backgroundColor =
+                                                        "#3b82f6")
                                                 }
                                                 onClick={() => {
-                                                    window.open(`/conducteur/liturgie/${selected.id}/fiche?preview=1`, "_blank");
+                                                    window.open(
+                                                        `/conducteur/liturgie/${selected.id}/fiche?preview=1`,
+                                                        "_blank",
+                                                    );
                                                 }}
                                             >
-                                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                <svg
+                                                    width="13"
+                                                    height="13"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                    strokeWidth="2"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                                    />
                                                 </svg>
                                                 Voir la fiche
                                             </button>
@@ -3802,182 +3944,222 @@ export default function Index({
                                     )}
                                 </>
                             )}
-            {modal === "ceremony" && selected && (
-                <div className="ceremony-tab">
-                    <div className="ceremony-summary">
-                        <div>
-                            <strong>Date choisie</strong>
-                            <span className="modal-detail-val">
-                                {formatDate(
-                                    selected?.date_souhaitee ||
-                                        selected?.details?.date_souhaitee,
-                                ) || "—"}
-                            </span>
-                        </div>
-                        <div>
-                            <strong>Créneau</strong>
-                            <span className="modal-detail-val">
-                                {selected?.details?.ceremonie_creneau ===
-                                "matin"
-                                    ? "Matin 09h-10h"
-                                    : selected?.details?.ceremonie_creneau ===
-                                      "apres_midi"
-                                    ? "Après-midi 15h-16h"
-                                    : "—"}
-                            </span>
-                        </div>
-                        <div>
-                            <strong>Statut</strong>
-                            <span className="modal-detail-val">
-                                {ceremonyStatusLabel(
-                                    selected?.details?.ceremonie_statut,
+                            {modal === "ceremony" && selected && (
+                                <div className="ceremony-tab">
+                                    <div className="ceremony-summary">
+                                        <div>
+                                            <strong>Date choisie</strong>
+                                            <span className="modal-detail-val">
+                                                {formatDate(
+                                                    selected?.date_souhaitee ||
+                                                        selected?.details
+                                                            ?.date_souhaitee,
+                                                ) || "—"}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <strong>Créneau</strong>
+                                            <span className="modal-detail-val">
+                                                {selected?.details
+                                                    ?.ceremonie_creneau ===
+                                                "matin"
+                                                    ? "Matin 09h-10h"
+                                                    : selected?.details
+                                                            ?.ceremonie_creneau ===
+                                                        "apres_midi"
+                                                      ? "Après-midi 15h-16h"
+                                                      : "—"}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <strong>Statut</strong>
+                                            <span className="modal-detail-val">
+                                                {ceremonyStatusLabel(
+                                                    selected?.details
+                                                        ?.ceremonie_statut,
+                                                )}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="modal-detail-row">
+                                        <span className="modal-detail-key">
+                                            Lieu
+                                        </span>
+                                        <span className="modal-detail-val">
+                                            {selected?.details
+                                                ?.lieu_ceremonie || "—"}
+                                        </span>
+                                    </div>
+                                    <div className="modal-detail-row">
+                                        <span className="modal-detail-key">
+                                            Témoins
+                                        </span>
+                                        <span className="modal-detail-val">
+                                            {selected?.details?.temoins || "—"}
+                                        </span>
+                                    </div>
+                                    {selected?.details
+                                        ?.ceremonie_commentaire_conducteur && (
+                                        <div className="modal-detail-row">
+                                            <span className="modal-detail-key">
+                                                Commentaire conducteur
+                                            </span>
+                                            <span className="modal-detail-val">
+                                                {
+                                                    selected?.details
+                                                        ?.ceremonie_commentaire_conducteur
+                                                }
+                                            </span>
+                                        </div>
+                                    )}
+                                    {selected?.details
+                                        ?.ceremonie_commentaire_pasteur && (
+                                        <div className="modal-detail-row">
+                                            <span className="modal-detail-key">
+                                                Commentaire pasteur
+                                            </span>
+                                            <span className="modal-detail-val">
+                                                {
+                                                    selected?.details
+                                                        ?.ceremonie_commentaire_pasteur
+                                                }
+                                            </span>
+                                        </div>
+                                    )}
+                                    {selected?.details
+                                        ?.ceremonie_soumise_at && (
+                                        <div className="modal-detail-row">
+                                            <span className="modal-detail-key">
+                                                Soumise le
+                                            </span>
+                                            <span className="modal-detail-val">
+                                                {formatDateTime(
+                                                    selected?.details
+                                                        ?.ceremonie_soumise_at,
+                                                )}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {selected?.details
+                                        ?.ceremonie_transmise_pasteur_at && (
+                                        <div className="modal-detail-row">
+                                            <span className="modal-detail-key">
+                                                Transmise au pasteur
+                                            </span>
+                                            <span className="modal-detail-val">
+                                                {formatDateTime(
+                                                    selected?.details
+                                                        ?.ceremonie_transmise_pasteur_at,
+                                                )}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {selected?.details
+                                        ?.ceremonie_validee_pasteur_at && (
+                                        <div className="modal-detail-row">
+                                            <span className="modal-detail-key">
+                                                Validée par le pasteur
+                                            </span>
+                                            <span className="modal-detail-val">
+                                                {formatDateTime(
+                                                    selected?.details
+                                                        ?.ceremonie_validee_pasteur_at,
+                                                )}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            {modal === "ceremony" &&
+                                ["VALIDEE", "PUBLIEE"].includes(
+                                    selected?.statut,
+                                ) && (
+                                    <div style={{ marginTop: 16 }}>
+                                        <button
+                                            style={{
+                                                width: "100%",
+                                                padding: "10px 14px",
+                                                backgroundColor: "#3b82f6",
+                                                color: "#fff",
+                                                border: "none",
+                                                borderRadius: 6,
+                                                fontSize: 13,
+                                                fontWeight: 600,
+                                                cursor: "pointer",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                gap: 8,
+                                                transition: "background 0.2s",
+                                            }}
+                                            onMouseEnter={(e) =>
+                                                (e.target.style.backgroundColor =
+                                                    "#2563eb")
+                                            }
+                                            onMouseLeave={(e) =>
+                                                (e.target.style.backgroundColor =
+                                                    "#3b82f6")
+                                            }
+                                            onClick={() => {
+                                                window.open(
+                                                    `/conducteur/liturgie/${selected.id}/fiche?preview=1`,
+                                                    "_blank",
+                                                );
+                                            }}
+                                        >
+                                            <svg
+                                                width="13"
+                                                height="13"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                                />
+                                            </svg>
+                                            Voir la fiche
+                                        </button>
+                                    </div>
                                 )}
-                            </span>
-                        </div>
-                    </div>
-                    <div className="modal-detail-row">
-                        <span className="modal-detail-key">Lieu</span>
-                        <span className="modal-detail-val">
-                            {selected?.details?.lieu_ceremonie || "—"}
-                        </span>
-                    </div>
-                    <div className="modal-detail-row">
-                        <span className="modal-detail-key">Témoins</span>
-                        <span className="modal-detail-val">
-                            {selected?.details?.temoins || "—"}
-                        </span>
-                    </div>
-                    {selected?.details?.ceremonie_commentaire_conducteur && (
-                        <div className="modal-detail-row">
-                            <span className="modal-detail-key">
-                                Commentaire conducteur
-                            </span>
-                            <span className="modal-detail-val">
-                                {selected?.details?.ceremonie_commentaire_conducteur}
-                            </span>
-                        </div>
-                    )}
-                    {selected?.details?.ceremonie_commentaire_pasteur && (
-                        <div className="modal-detail-row">
-                            <span className="modal-detail-key">
-                                Commentaire pasteur
-                            </span>
-                            <span className="modal-detail-val">
-                                {selected?.details?.ceremonie_commentaire_pasteur}
-                            </span>
-                        </div>
-                    )}
-                    {selected?.details?.ceremonie_soumise_at && (
-                        <div className="modal-detail-row">
-                            <span className="modal-detail-key">Soumise le</span>
-                            <span className="modal-detail-val">
-                                {formatDateTime(
-                                    selected?.details?.ceremonie_soumise_at,
+                            {modal === "ceremony" &&
+                                selected?.details?.ceremonie_statut ===
+                                    "CEREMONIE_SOUMISE_AU_CONDUCTEUR" && (
+                                    <div
+                                        className="modal-actions-inline"
+                                        style={{ marginTop: 16 }}
+                                    >
+                                        <button
+                                            className="btn-modal btn-modal-gold"
+                                            onClick={() =>
+                                                submitCeremonyDecision(
+                                                    "CEREMONIE_TRANSMISE_AU_PASTEUR",
+                                                )
+                                            }
+                                            disabled={processing}
+                                        >
+                                            {processing
+                                                ? "Traitement..."
+                                                : "Valider la date"}
+                                        </button>
+                                        <button
+                                            className="btn-modal btn-modal-red"
+                                            onClick={() =>
+                                                submitCeremonyDecision(
+                                                    "CEREMONIE_REFUSEE_PAR_CONDUCTEUR",
+                                                )
+                                            }
+                                            disabled={processing}
+                                        >
+                                            {processing
+                                                ? "Traitement..."
+                                                : "Refuser la date"}
+                                        </button>
+                                    </div>
                                 )}
-                            </span>
-                        </div>
-                    )}
-                    {selected?.details?.ceremonie_transmise_pasteur_at && (
-                        <div className="modal-detail-row">
-                            <span className="modal-detail-key">
-                                Transmise au pasteur
-                            </span>
-                            <span className="modal-detail-val">
-                                {formatDateTime(
-                                    selected?.details?.ceremonie_transmise_pasteur_at,
-                                )}
-                            </span>
-                        </div>
-                    )}
-                    {selected?.details?.ceremonie_validee_pasteur_at && (
-                        <div className="modal-detail-row">
-                            <span className="modal-detail-key">
-                                Validée par le pasteur
-                            </span>
-                            <span className="modal-detail-val">
-                                {formatDateTime(
-                                    selected?.details?.ceremonie_validee_pasteur_at,
-                                )}
-                            </span>
-                        </div>
-                    )}
-                </div>
-            )}
-            {modal === "ceremony" && ['VALIDEE', 'PUBLIEE'].includes(selected?.statut) && (
-                <div style={{ marginTop: 16 }}>
-                    <button
-                        style={{
-                            width: '100%',
-                            padding: '10px 14px',
-                            backgroundColor: '#3b82f6',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: 6,
-                            fontSize: 13,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 8,
-                            transition: 'background 0.2s',
-                        }}
-                        onMouseEnter={(e) =>
-                            (e.target.style.backgroundColor =
-                                '#2563eb')
-                        }
-                        onMouseLeave={(e) =>
-                            (e.target.style.backgroundColor =
-                                '#3b82f6')
-                        }
-                        onClick={() => {
-                            window.open(`/conducteur/liturgie/${selected.id}/fiche?preview=1`, "_blank");
-                        }}
-                    >
-                        <svg
-                            width="13"
-                            height="13"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                            />
-                        </svg>
-                        Voir la fiche
-                    </button>
-                </div>
-            )}
-            {modal === "ceremony" && selected?.details?.ceremonie_statut === "CEREMONIE_SOUMISE_AU_CONDUCTEUR" && (
-                <div className="modal-actions-inline" style={{ marginTop: 16 }}>
-                    <button
-                        className="btn-modal btn-modal-gold"
-                        onClick={() =>
-                            submitCeremonyDecision(
-                                "CEREMONIE_TRANSMISE_AU_PASTEUR",
-                            )
-                        }
-                        disabled={processing}
-                    >
-                        {processing ? "Traitement..." : "Valider la date"}
-                    </button>
-                    <button
-                        className="btn-modal btn-modal-red"
-                        onClick={() =>
-                            submitCeremonyDecision(
-                                "CEREMONIE_REFUSEE_PAR_CONDUCTEUR",
-                            )
-                        }
-                        disabled={processing}
-                    >
-                        {processing ? "Traitement..." : "Refuser la date"}
-                    </button>
-                </div>
-            )}
                             {modal === "approve" && (
                                 <div className="modal-field">
                                     <label className="modal-label">

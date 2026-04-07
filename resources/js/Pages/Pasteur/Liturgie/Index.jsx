@@ -2,6 +2,7 @@
 import axios from "axios";
 import { Link, usePage, router } from "@inertiajs/react";
 import MiniCalendar from "@/Components/MiniCalendar";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 function Pagination({ paginator }) {
     if (!paginator || !paginator.links) return null;
@@ -265,9 +266,7 @@ export default function Index({
         }
 
         if (selectedFamily && selectedFamily !== "all") {
-            result = result.filter(
-                (a) => getFamilyId(a) === selectedFamily,
-            );
+            result = result.filter((a) => getFamilyId(a) === selectedFamily);
         }
 
         if (selectedClasse && selectedClasse !== "all") {
@@ -323,14 +322,10 @@ export default function Index({
             })
             .sort((a, b) => {
                 const dateA = new Date(
-                    a.date_souhaitee ||
-                        a.details?.date_souhaitee ||
-                        0,
+                    a.date_souhaitee || a.details?.date_souhaitee || 0,
                 ).valueOf();
                 const dateB = new Date(
-                    b.date_souhaitee ||
-                        b.details?.date_souhaitee ||
-                        0,
+                    b.date_souhaitee || b.details?.date_souhaitee || 0,
                 ).valueOf();
                 return dateA - dateB;
             });
@@ -371,12 +366,11 @@ export default function Index({
                 const type = String(acte?.type_acte || "")
                     .trim()
                     .toLowerCase();
-                const statut = String(
-                    acte?.details?.ceremonie_statut || "",
-                )
+                const statut = String(acte?.details?.ceremonie_statut || "")
                     .trim()
                     .toUpperCase();
-                const date = acte?.details?.date_souhaitee || acte?.date_souhaitee;
+                const date =
+                    acte?.details?.date_souhaitee || acte?.date_souhaitee;
                 return (
                     type === "mariage" &&
                     statut === "CEREMONIE_TRANSMISE_AU_PASTEUR" &&
@@ -406,9 +400,7 @@ export default function Index({
         }
 
         if (selectedFamily && selectedFamily !== "all") {
-            result = result.filter(
-                (a) => getFamilyId(a) === selectedFamily,
-            );
+            result = result.filter((a) => getFamilyId(a) === selectedFamily);
         }
 
         if (selectedClasse && selectedClasse !== "all") {
@@ -461,9 +453,7 @@ export default function Index({
         }
 
         if (selectedFamily && selectedFamily !== "all") {
-            result = result.filter(
-                (a) => getFamilyId(a) === selectedFamily,
-            );
+            result = result.filter((a) => getFamilyId(a) === selectedFamily);
         }
 
         if (selectedClasse && selectedClasse !== "all") {
@@ -527,9 +517,7 @@ export default function Index({
         }
 
         if (selectedFamily && selectedFamily !== "all") {
-            result = result.filter(
-                (a) => getFamilyId(a) === selectedFamily,
-            );
+            result = result.filter((a) => getFamilyId(a) === selectedFamily);
         }
 
         if (selectedClasse && selectedClasse !== "all") {
@@ -729,9 +717,12 @@ export default function Index({
 
         try {
             setSendingFiche(true);
-            const res = await axios.post("/pasteur/liturgie/fiche/envoyer", {
-                ids: unsentCeremonyActes.map((acte) => acte.id),
-            });
+            const res = await axios.post(
+                withBasePath("", "/pasteur/liturgie/fiche/envoyer"),
+                {
+                    ids: unsentCeremonyActes.map((acte) => acte.id),
+                },
+            );
             const updatedActes = Array.isArray(res.data?.actes)
                 ? res.data.actes
                 : [];
@@ -773,10 +764,16 @@ export default function Index({
         }
         try {
             setProcessing(true);
-            await axios.post(`/pasteur/liturgie/${activeActe.id}/transition`, {
-                statut,
-                commentaire,
-            });
+            await axios.post(
+                withBasePath(
+                    "",
+                    `/pasteur/liturgie/${activeActe.id}/transition`,
+                ),
+                {
+                    statut,
+                    commentaire,
+                },
+            );
             setLocalActes((prev) =>
                 prev.filter((item) => item.id !== activeActe.id),
             );
@@ -871,10 +868,13 @@ export default function Index({
             );
             await Promise.all(
                 selectedIds.map((id) =>
-                    axios.post(`/pasteur/liturgie/${id}/transition`, {
-                        statut: "VALIDEE",
-                        commentaire: "",
-                    }),
+                    axios.post(
+                        withBasePath("", `/pasteur/liturgie/${id}/transition`),
+                        {
+                            statut: "VALIDEE",
+                            commentaire: "",
+                        },
+                    ),
                 ),
             );
             setLocalActes((prev) =>
@@ -912,10 +912,13 @@ export default function Index({
                     const acte = historiqueList.find((h) => h.id === id);
                     const statut = finalStatusForType(acte.type_acte);
                     if (!statut) return Promise.resolve();
-                    return axios.post(`/pasteur/liturgie/${id}/transition`, {
-                        statut,
-                        commentaire: "",
-                    });
+                    return axios.post(
+                        withBasePath("", `/pasteur/liturgie/${id}/transition`),
+                        {
+                            statut,
+                            commentaire: "",
+                        },
+                    );
                 }),
             );
             setHistoriqueList((prev) =>
@@ -967,10 +970,13 @@ export default function Index({
             );
             await Promise.all(
                 selectedIds.map((id) =>
-                    axios.post(`/pasteur/liturgie/${id}/transition`, {
-                        statut: "REFUSEE_PAR_PASTEUR",
-                        commentaire: motif,
-                    }),
+                    axios.post(
+                        withBasePath("", `/pasteur/liturgie/${id}/transition`),
+                        {
+                            statut: "REFUSEE_PAR_PASTEUR",
+                            commentaire: motif,
+                        },
+                    ),
                 ),
             );
             setLocalActes((prev) =>
@@ -1012,7 +1018,10 @@ export default function Index({
                 classe_id: member?.classe_id || null,
                 details: {},
             };
-            const res = await axios.post("/pasteur/liturgie", payload);
+            const res = await axios.post(
+                withBasePath("", "/pasteur/liturgie"),
+                payload,
+            );
             const acte = res?.data?.acte;
             if (acte)
                 setHistoriqueList((prev) => [
@@ -1039,10 +1048,13 @@ export default function Index({
         if (!statut) return;
         try {
             setProcessing(true);
-            await axios.post(`/pasteur/liturgie/${acte.id}/transition`, {
-                statut,
-                commentaire: "",
-            });
+            await axios.post(
+                withBasePath("", `/pasteur/liturgie/${acte.id}/transition`),
+                {
+                    statut,
+                    commentaire: "",
+                },
+            );
             setHistoriqueList((prev) =>
                 prev.map((item) =>
                     item.id === acte.id ? { ...item, statut } : item,
@@ -1085,21 +1097,30 @@ export default function Index({
 
     const getPasteurAnnonceAction = async (statut, id, commentaire = "") => {
         if (statut === "VALIDEE") {
-            return axios.post(`/pasteur/annonces/${id}/valider`, {
-                note: commentaire,
-            });
+            return axios.post(
+                withBasePath("", `/pasteur/annonces/${id}/valider`),
+                {
+                    note: commentaire,
+                },
+            );
         }
         if (statut === "REFUSEE_PAR_PASTEUR") {
-            return axios.post(`/pasteur/annonces/${id}/rejeter`, {
-                motif_rejet: commentaire,
-            });
+            return axios.post(
+                withBasePath("", `/pasteur/annonces/${id}/rejeter`),
+                {
+                    motif_rejet: commentaire,
+                },
+            );
         }
         if (statut === "PUBLIEE") {
-            return axios.post(`/pasteur/annonces/${id}/publier`, {
-                commentaire,
-            });
+            return axios.post(
+                withBasePath("", `/pasteur/annonces/${id}/publier`),
+                {
+                    commentaire,
+                },
+            );
         }
-        return axios.post(`/pasteur/annonces/${id}/valider`, {
+        return axios.post(withBasePath("", `/pasteur/annonces/${id}/valider`), {
             note: commentaire,
         });
     };
@@ -1205,7 +1226,10 @@ export default function Index({
         }
         try {
             setAnnonceProcessing(true);
-            const res = await axios.post("/pasteur/annonces", annonceForm);
+            const res = await axios.post(
+                withBasePath("", "/pasteur/annonces"),
+                annonceForm,
+            );
             const newA = res.data?.annonce || {
                 ...annonceForm,
                 id: Date.now(),
@@ -1338,7 +1362,7 @@ export default function Index({
                         <div className="hero-header-bg" />
                         <div className="hero-header-inner">
                             <Link
-                                href="/pasteur/dashboard"
+                                href={withBasePath("", "/pasteur/dashboard")}
                                 className="btn-back"
                             >
                                 <svg
@@ -1723,8 +1747,21 @@ export default function Index({
                                 className={`ptab ${activeTab === "calendar" ? "active" : ""}`}
                                 onClick={() => setActiveTab("calendar")}
                             >
-                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                    <rect x="3" y="5" width="18" height="16" rx="2" />
+                                <svg
+                                    width="13"
+                                    height="13"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                >
+                                    <rect
+                                        x="3"
+                                        y="5"
+                                        width="18"
+                                        height="16"
+                                        rx="2"
+                                    />
                                     <path d="M3 9h18M7 3v4M17 3v4" />
                                 </svg>
                                 Calendrier
@@ -1742,7 +1779,13 @@ export default function Index({
                                     strokeWidth="2"
                                 >
                                     <path d="M8 7h8M8 11h8M8 15h8" />
-                                    <rect x="3" y="4" width="18" height="16" rx="2" />
+                                    <rect
+                                        x="3"
+                                        y="4"
+                                        width="18"
+                                        height="16"
+                                        rx="2"
+                                    />
                                 </svg>
                                 Dates choisies
                                 {ceremonyActs.length > 0 && (
@@ -1886,7 +1929,7 @@ export default function Index({
                                                 Votre validation est requise
                                             </div>
                                         </div>
-                    <div className="panel-actions">
+                                        <div className="panel-actions">
                                             <button
                                                 type="button"
                                                 className="btn-mini"
@@ -1918,21 +1961,21 @@ export default function Index({
                                             >
                                                 Approuver
                                             </button>
-                        <button
-                            type="button"
-                            className="btn-mini btn-mini-refuse"
-                            onClick={bulkRefuse}
-                            disabled={
-                                selectedIds.length === 0 ||
-                                processing
-                            }
-                        >
-                            Refuser
-                        </button>
-                        <span className="panel-badge">
-                            {filteredActes.length}
-                        </span>
-                    </div>
+                                            <button
+                                                type="button"
+                                                className="btn-mini btn-mini-refuse"
+                                                onClick={bulkRefuse}
+                                                disabled={
+                                                    selectedIds.length === 0 ||
+                                                    processing
+                                                }
+                                            >
+                                                Refuser
+                                            </button>
+                                            <span className="panel-badge">
+                                                {filteredActes.length}
+                                            </span>
+                                        </div>
                                     </div>
                                     {filteredActes.length === 0 && (
                                         <div className="empty-state">
@@ -2182,12 +2225,20 @@ export default function Index({
                                                 <button
                                                     className="btn-pdf"
                                                     onClick={() => {
-                                                        const type = String(acte.type_acte || "").toLowerCase();
+                                                        const type = String(
+                                                            acte.type_acte ||
+                                                                "",
+                                                        ).toLowerCase();
                                                         const url =
-                                                            type === "naissance" || type === "deces"
+                                                            type ===
+                                                                "naissance" ||
+                                                            type === "deces"
                                                                 ? `/pasteur/liturgie/${acte.id}/fiche?preview=1`
                                                                 : `/pasteur/liturgie/${acte.id}/fiche-conducteur?preview=1`;
-                                                        window.open(url, "_blank");
+                                                        window.open(
+                                                            url,
+                                                            "_blank",
+                                                        );
                                                     }}
                                                 >
                                                     Voir la fiche conducteur
@@ -2469,9 +2520,7 @@ export default function Index({
                                                         <path d="M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1z" />
                                                         <path d="M3 6l9 7 9-7" />
                                                     </svg>
-                                                    <>
-                                                        Envoyer fiche PDF
-                                                    </>
+                                                    <>Envoyer fiche PDF</>
                                                 </button>
                                                 {sessionRefuses > 0 && (
                                                     <span className="hs-pill red">
@@ -2599,7 +2648,9 @@ export default function Index({
                                             <div className="hist-date">
                                                 {formatDate(item.validated_at)}
                                             </div>
-                                            {String(item.type_acte || "").toLowerCase() === "mariage" && (
+                                            {String(
+                                                item.type_acte || "",
+                                            ).toLowerCase() === "mariage" && (
                                                 <div
                                                     style={{
                                                         display: "flex",
@@ -2608,7 +2659,8 @@ export default function Index({
                                                         flexWrap: "wrap",
                                                     }}
                                                 >
-                                                    {item.details?.ceremonie_statut ===
+                                                    {item.details
+                                                        ?.ceremonie_statut ===
                                                         "CEREMONIE_TRANSMISE_AU_PASTEUR" && (
                                                         <>
                                                             <button
@@ -2638,10 +2690,14 @@ export default function Index({
                                                 </div>
                                             )}
                                             {item.statut === "VALIDEE" &&
-                                                ((item.type_acte === "mariage" &&
-                                                    item.details?.date_souhaitee &&
-                                                    item.details?.fiche_pasteur_envoyee) ||
-                                                    item.type_acte === "bapteme") && (
+                                                ((item.type_acte ===
+                                                    "mariage" &&
+                                                    item.details
+                                                        ?.date_souhaitee &&
+                                                    item.details
+                                                        ?.fiche_pasteur_envoyee) ||
+                                                    item.type_acte ===
+                                                        "bapteme") && (
                                                     <button
                                                         className="btn-pdf"
                                                         onClick={() =>
@@ -2657,7 +2713,8 @@ export default function Index({
                                             {(DONE_STATUSES.includes(
                                                 item.statut,
                                             ) ||
-                                                item.details?.ceremonie_statut ===
+                                                item.details
+                                                    ?.ceremonie_statut ===
                                                     "CEREMONIE_VALIDEE_PAR_PASTEUR") && (
                                                 <button
                                                     className="btn-pdf"
@@ -2752,7 +2809,8 @@ export default function Index({
                                         Aucune date de mariage choisie
                                     </div>
                                     <div className="empty-sub">
-                                        Les responsables pourront proposer une date une fois leur dossier validé.
+                                        Les responsables pourront proposer une
+                                        date une fois leur dossier validé.
                                     </div>
                                 </div>
                             ) : (
@@ -2760,10 +2818,13 @@ export default function Index({
                                     <div className="date-shell-head">
                                         <div>
                                             <div className="date-shell-title">
-                                                Dates proposées en attente pastorale
+                                                Dates proposées en attente
+                                                pastorale
                                             </div>
                                             <div className="date-shell-sub">
-                                                Chaque fiche conserve ses données actuelles, avec un rendu plus lisible.
+                                                Chaque fiche conserve ses
+                                                données actuelles, avec un rendu
+                                                plus lisible.
                                             </div>
                                         </div>
                                         <div className="date-shell-count">
@@ -2774,17 +2835,19 @@ export default function Index({
                                     <div className="date-grid">
                                         {ceremonyActs.map((acte) => {
                                             const statut = String(
-                                                acte.details?.ceremonie_statut || "",
+                                                acte.details
+                                                    ?.ceremonie_statut || "",
                                             )
                                                 .trim()
                                                 .toUpperCase();
-                                            const badgeClass =
-                                                statut.includes("REFUSEE")
-                                                    ? "badge-refuse"
-                                                    : statut ===
-                                                        "CEREMONIE_VALIDEE_PAR_PASTEUR"
-                                                      ? "badge-valide"
-                                                      : "badge-transmis";
+                                            const badgeClass = statut.includes(
+                                                "REFUSEE",
+                                            )
+                                                ? "badge-refuse"
+                                                : statut ===
+                                                    "CEREMONIE_VALIDEE_PAR_PASTEUR"
+                                                  ? "badge-valide"
+                                                  : "badge-transmis";
 
                                             return (
                                                 <article
@@ -2794,24 +2857,34 @@ export default function Index({
                                                     <div className="date-card-main">
                                                         <div className="date-card-heading">
                                                             <div className="date-card-title">
-                                                                {acte.membre?.prenom}{" "}
-                                                                {acte.membre?.nom}
+                                                                {
+                                                                    acte.membre
+                                                                        ?.prenom
+                                                                }{" "}
+                                                                {
+                                                                    acte.membre
+                                                                        ?.nom
+                                                                }
                                                             </div>
                                                             <div className="date-card-ref">
-                                                                {acte.reference || "Référence indisponible"}
+                                                                {acte.reference ||
+                                                                    "Référence indisponible"}
                                                             </div>
                                                         </div>
                                                         <span
                                                             className={`badge ${badgeClass}`}
                                                         >
                                                             <span className="badge-dot" />
-                                                            {historyStatusLabel(statut)}
+                                                            {historyStatusLabel(
+                                                                statut,
+                                                            )}
                                                         </span>
                                                     </div>
                                                     <div className="date-card-meta">
                                                         <span>
                                                             {formatDate(
-                                                                acte.details?.date_souhaitee ||
+                                                                acte.details
+                                                                    ?.date_souhaitee ||
                                                                     acte.date_souhaitee,
                                                             )}
                                                         </span>
@@ -2819,7 +2892,8 @@ export default function Index({
                                                             •
                                                         </span>
                                                         <span>
-                                                            {acte.details?.ceremonie_creneau ||
+                                                            {acte.details
+                                                                ?.ceremonie_creneau ||
                                                                 "—"}
                                                         </span>
                                                     </div>
@@ -2829,7 +2903,8 @@ export default function Index({
                                                                 Lieu
                                                             </span>
                                                             <span className="date-card-value">
-                                                                {acte.details?.lieu_ceremonie ||
+                                                                {acte.details
+                                                                    ?.lieu_ceremonie ||
                                                                     "—"}
                                                             </span>
                                                         </div>
@@ -2838,7 +2913,9 @@ export default function Index({
                                                                 Témoins
                                                             </span>
                                                             <span className="date-card-value">
-                                                                {acte.details?.temoins || "—"}
+                                                                {acte.details
+                                                                    ?.temoins ||
+                                                                    "—"}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -3512,210 +3589,249 @@ export default function Index({
                         <div className="modal-body">
                             {(() => {
                                 const isMariage =
-                                    String(activeActe?.type_acte || "")
-                                        .toLowerCase() === "mariage";
+                                    String(
+                                        activeActe?.type_acte || "",
+                                    ).toLowerCase() === "mariage";
                                 return (
                                     <>
-                            <div className="detail-tabs">
-                                <button
-                                    type="button"
-                                    className={`detail-tab ${detailTab === "infos" ? "active" : ""}`}
-                                    onClick={() => setDetailTab("infos")}
-                                >
-                                    Informations
-                                </button>
-                                {isMariage && (
-                                    <>
-                                        <button
-                                            type="button"
-                                            className={`detail-tab ${detailTab === "celebration" ? "active" : ""}`}
-                                            onClick={() =>
-                                                setDetailTab("celebration")
-                                            }
-                                        >
-                                            Date choisie
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className={`detail-tab ${detailTab === "calendar" ? "active" : ""}`}
-                                            onClick={() =>
-                                                setDetailTab("calendar")
-                                            }
-                                        >
-                                            Calendrier
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                            {detailTab === "infos" && (
-                                <>
-                                    <DetailRow
-                                        label="Référence"
-                                        value={activeActe.reference}
-                                        mono
-                                    />
-                                    <DetailRow
-                                        label="Type d'acte"
-                                        value={prettyType(activeActe.type_acte)}
-                                    />
-                                    <DetailRow
-                                        label="Membre"
-                                        value={`${activeActe.membre?.prenom || ""} ${activeActe.membre?.nom || ""}`}
-                                    />
-                                    <DetailRow
-                                        label="Classe"
-                                        value={
-                                            activeActe.classe?.nom ||
-                                            activeActe.classe_id ||
-                                            "—"
-                                        }
-                                    />
-                                    <DetailRow
-                                        label="Date souhaitée"
-                                        value={formatDate(
-                                            activeActe.date_souhaitee ||
-                                                activeActe.details?.date_souhaitee ||
-                                                activeActe.details?.date_presentation ||
-                                                activeActe.details?.date_deces ||
-                                                activeActe.details?.date_naissance ||
-                                                activeActe.date_annonce,
-                                        )}
-                                    />
-                                    <div className="modal-sep">
-                                        Détails soumis
-                                    </div>
-                                    <div className="modal-detail-box">
-                                        {Object.keys(activeActe.details || {})
-                                            .length === 0 && (
-                                            <span className="modal-empty">
-                                                Aucun détail.
-                                            </span>
-                                        )}
-                                        {Object.entries(activeActe.details || {}).map(
-                                            ([k, v]) => (
-                                                <div
-                                                    key={k}
-                                                    className="modal-detail-row"
-                                                >
-                                                    <span className="modal-key">
-                                                        {prettyKey(k)}
-                                                    </span>
-                                                    <span className="modal-val">
-                                                        {String(v || "—")}
-                                                    </span>
+                                        <div className="detail-tabs">
+                                            <button
+                                                type="button"
+                                                className={`detail-tab ${detailTab === "infos" ? "active" : ""}`}
+                                                onClick={() =>
+                                                    setDetailTab("infos")
+                                                }
+                                            >
+                                                Informations
+                                            </button>
+                                            {isMariage && (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        className={`detail-tab ${detailTab === "celebration" ? "active" : ""}`}
+                                                        onClick={() =>
+                                                            setDetailTab(
+                                                                "celebration",
+                                                            )
+                                                        }
+                                                    >
+                                                        Date choisie
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className={`detail-tab ${detailTab === "calendar" ? "active" : ""}`}
+                                                        onClick={() =>
+                                                            setDetailTab(
+                                                                "calendar",
+                                                            )
+                                                        }
+                                                    >
+                                                        Calendrier
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                        {detailTab === "infos" && (
+                                            <>
+                                                <DetailRow
+                                                    label="Référence"
+                                                    value={activeActe.reference}
+                                                    mono
+                                                />
+                                                <DetailRow
+                                                    label="Type d'acte"
+                                                    value={prettyType(
+                                                        activeActe.type_acte,
+                                                    )}
+                                                />
+                                                <DetailRow
+                                                    label="Membre"
+                                                    value={`${activeActe.membre?.prenom || ""} ${activeActe.membre?.nom || ""}`}
+                                                />
+                                                <DetailRow
+                                                    label="Classe"
+                                                    value={
+                                                        activeActe.classe
+                                                            ?.nom ||
+                                                        activeActe.classe_id ||
+                                                        "—"
+                                                    }
+                                                />
+                                                <DetailRow
+                                                    label="Date souhaitée"
+                                                    value={formatDate(
+                                                        activeActe.date_souhaitee ||
+                                                            activeActe.details
+                                                                ?.date_souhaitee ||
+                                                            activeActe.details
+                                                                ?.date_presentation ||
+                                                            activeActe.details
+                                                                ?.date_deces ||
+                                                            activeActe.details
+                                                                ?.date_naissance ||
+                                                            activeActe.date_annonce,
+                                                    )}
+                                                />
+                                                <div className="modal-sep">
+                                                    Détails soumis
                                                 </div>
-                                            ),
+                                                <div className="modal-detail-box">
+                                                    {Object.keys(
+                                                        activeActe.details ||
+                                                            {},
+                                                    ).length === 0 && (
+                                                        <span className="modal-empty">
+                                                            Aucun détail.
+                                                        </span>
+                                                    )}
+                                                    {Object.entries(
+                                                        activeActe.details ||
+                                                            {},
+                                                    ).map(([k, v]) => (
+                                                        <div
+                                                            key={k}
+                                                            className="modal-detail-row"
+                                                        >
+                                                            <span className="modal-key">
+                                                                {prettyKey(k)}
+                                                            </span>
+                                                            <span className="modal-val">
+                                                                {String(
+                                                                    v || "—",
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </>
                                         )}
-                                    </div>
-                                </>
-                            )}
-                            {isMariage && detailTab === "celebration" && (
-                                <div className="celebration-tab">
-                                    <div className="celebration-summary">
-                                        <div>
-                                            <strong>Date choisie</strong>
-                                            <span className="celebration-value">
-                                                {formatDate(
-                                                    activeActe.details
-                                                        ?.date_souhaitee,
-                                                ) || "—"}
-                                            </span>
-                                        </div>
-                                        <div>
-                                            <strong>Créneau</strong>
-                                            <span className="celebration-value">
-                                                {activeActe.details
-                                                    ?.ceremonie_creneau ===
-                                                "matin"
-                                                    ? "Matin 09h-10h"
-                                                    : activeActe.details
-                                                          ?.ceremonie_creneau ===
-                                                      "apres_midi"
-                                                        ? "Après-midi 15h-16h"
-                                                        : "—"}
-                                            </span>
-                                        </div>
-                                        <div>
-                                            <strong>Statut</strong>
-                                            <span className="celebration-value">
-                                                {ceremonyDecisionLabel?.(
-                                                    activeActe.details
-                                                        ?.ceremonie_statut,
-                                                )}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <DetailRow
-                                        label="Lieu"
-                                        value={
-                                            activeActe.details?.lieu_ceremonie ||
-                                            "—"
-                                        }
-                                    />
-                                    <DetailRow
-                                        label="Témoins"
-                                        value={
-                                            activeActe.details?.temoins || "—"
-                                        }
-                                    />
-                                    {activeActe.details
-                                        ?.ceremonie_commentaire_conducteur && (
-                                        <DetailRow
-                                            label="Commentaire conducteur"
-                                            value={
-                                                activeActe.details
-                                                    ?.ceremonie_commentaire_conducteur
-                                            }
-                                        />
-                                    )}
-                                    {activeActe.details
-                                        ?.ceremonie_commentaire_pasteur && (
-                                        <DetailRow
-                                            label="Commentaire pasteur"
-                                            value={
-                                                activeActe.details
-                                                    ?.ceremonie_commentaire_pasteur
-                                            }
-                                        />
-                                    )}
-                                    {activeActe.details?.ceremonie_soumise_at && (
-                                        <DetailRow
-                                            label="Soumise le"
-                                            value={formatDateTime(
-                                                activeActe.details
-                                                    ?.ceremonie_soumise_at,
+                                        {isMariage &&
+                                            detailTab === "celebration" && (
+                                                <div className="celebration-tab">
+                                                    <div className="celebration-summary">
+                                                        <div>
+                                                            <strong>
+                                                                Date choisie
+                                                            </strong>
+                                                            <span className="celebration-value">
+                                                                {formatDate(
+                                                                    activeActe
+                                                                        .details
+                                                                        ?.date_souhaitee,
+                                                                ) || "—"}
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <strong>
+                                                                Créneau
+                                                            </strong>
+                                                            <span className="celebration-value">
+                                                                {activeActe
+                                                                    .details
+                                                                    ?.ceremonie_creneau ===
+                                                                "matin"
+                                                                    ? "Matin 09h-10h"
+                                                                    : activeActe
+                                                                            .details
+                                                                            ?.ceremonie_creneau ===
+                                                                        "apres_midi"
+                                                                      ? "Après-midi 15h-16h"
+                                                                      : "—"}
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <strong>
+                                                                Statut
+                                                            </strong>
+                                                            <span className="celebration-value">
+                                                                {ceremonyDecisionLabel?.(
+                                                                    activeActe
+                                                                        .details
+                                                                        ?.ceremonie_statut,
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <DetailRow
+                                                        label="Lieu"
+                                                        value={
+                                                            activeActe.details
+                                                                ?.lieu_ceremonie ||
+                                                            "—"
+                                                        }
+                                                    />
+                                                    <DetailRow
+                                                        label="Témoins"
+                                                        value={
+                                                            activeActe.details
+                                                                ?.temoins || "—"
+                                                        }
+                                                    />
+                                                    {activeActe.details
+                                                        ?.ceremonie_commentaire_conducteur && (
+                                                        <DetailRow
+                                                            label="Commentaire conducteur"
+                                                            value={
+                                                                activeActe
+                                                                    .details
+                                                                    ?.ceremonie_commentaire_conducteur
+                                                            }
+                                                        />
+                                                    )}
+                                                    {activeActe.details
+                                                        ?.ceremonie_commentaire_pasteur && (
+                                                        <DetailRow
+                                                            label="Commentaire pasteur"
+                                                            value={
+                                                                activeActe
+                                                                    .details
+                                                                    ?.ceremonie_commentaire_pasteur
+                                                            }
+                                                        />
+                                                    )}
+                                                    {activeActe.details
+                                                        ?.ceremonie_soumise_at && (
+                                                        <DetailRow
+                                                            label="Soumise le"
+                                                            value={formatDateTime(
+                                                                activeActe
+                                                                    .details
+                                                                    ?.ceremonie_soumise_at,
+                                                            )}
+                                                        />
+                                                    )}
+                                                    {activeActe.details
+                                                        ?.ceremonie_transmise_pasteur_at && (
+                                                        <DetailRow
+                                                            label="Transmise au pasteur"
+                                                            value={formatDateTime(
+                                                                activeActe
+                                                                    .details
+                                                                    ?.ceremonie_transmise_pasteur_at,
+                                                            )}
+                                                        />
+                                                    )}
+                                                    {activeActe.details
+                                                        ?.ceremonie_validee_pasteur_at && (
+                                                        <DetailRow
+                                                            label="Validée par le pasteur"
+                                                            value={formatDateTime(
+                                                                activeActe
+                                                                    .details
+                                                                    ?.ceremonie_validee_pasteur_at,
+                                                            )}
+                                                        />
+                                                    )}
+                                                </div>
                                             )}
-                                        />
-                                    )}
-                                    {activeActe.details
-                                        ?.ceremonie_transmise_pasteur_at && (
-                                        <DetailRow
-                                            label="Transmise au pasteur"
-                                            value={formatDateTime(
-                                                activeActe.details
-                                                    ?.ceremonie_transmise_pasteur_at,
+                                        {isMariage &&
+                                            detailTab === "calendar" && (
+                                                <MiniCalendar
+                                                    events={calendarEvents}
+                                                    highlightId={activeActe?.id}
+                                                    title="Calendrier des dates choisies"
+                                                />
                                             )}
-                                        />
-                                    )}
-                                    {activeActe.details
-                                        ?.ceremonie_validee_pasteur_at && (
-                                        <DetailRow
-                                            label="Validée par le pasteur"
-                                            value={formatDateTime(
-                                                activeActe.details
-                                                    ?.ceremonie_validee_pasteur_at,
-                                            )}
-                                        />
-                                    )}
-                                </div>
-                            )}
-                            {isMariage && detailTab === "calendar" && (
-                                <MiniCalendar
-                                    events={calendarEvents}
-                                    highlightId={activeActe?.id}
-                                    title="Calendrier des dates choisies"
-                                />
-                            )}
                                     </>
                                 );
                             })()}
@@ -3725,9 +3841,12 @@ export default function Index({
                                 <button
                                     className="btn-modal btn-ghost"
                                     onClick={() => {
-                                        const type = String(activeActe.type_acte || "").toLowerCase();
+                                        const type = String(
+                                            activeActe.type_acte || "",
+                                        ).toLowerCase();
                                         const url =
-                                            type === "naissance" || type === "deces"
+                                            type === "naissance" ||
+                                            type === "deces"
                                                 ? `/pasteur/liturgie/${activeActe.id}/fiche?preview=1`
                                                 : `/pasteur/liturgie/${activeActe.id}/fiche-conducteur?preview=1`;
                                         window.open(url, "_blank");
@@ -4384,10 +4503,7 @@ export default function Index({
             )}
 
             {ficheModalOpen && (
-                <div
-                    className="modal-overlay open"
-                    onClick={closeFicheModal}
-                >
+                <div className="modal-overlay open" onClick={closeFicheModal}>
                     <div
                         className="modal"
                         onClick={(e) => e.stopPropagation()}
@@ -4483,7 +4599,9 @@ export default function Index({
                                                     Classes concernées
                                                 </span>
                                                 <span className="modal-val mono">
-                                                    {unsentClassNames.join(" · ")}
+                                                    {unsentClassNames.join(
+                                                        " · ",
+                                                    )}
                                                 </span>
                                             </div>
                                         )}

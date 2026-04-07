@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Head, Link, router } from "@inertiajs/react";
+import { withBasePath } from "../../../Utils/urlHelper";
 import {
     ArrowLeft,
     BarChart3,
@@ -281,16 +282,22 @@ export default function ConducteurSondageCreate({
         };
 
         if (isEditing) {
-            router.put(`/conducteur/sondages/${existingSurvey.id}`, payload, options);
+            router.put(
+                withBasePath("", `/conducteur/sondages/${existingSurvey.id}`),
+                payload,
+                options,
+            );
             return;
         }
 
-        router.post("/conducteur/sondages", payload, options);
+        router.post(withBasePath("", "/conducteur/sondages"), payload, options);
     };
 
     return (
         <>
-            <Head title={`${isEditing ? "Modifier" : "Nouveau"} sondage - Conducteur`} />
+            <Head
+                title={`${isEditing ? "Modifier" : "Nouveau"} sondage - Conducteur`}
+            />
             <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
 
             <div
@@ -304,14 +311,16 @@ export default function ConducteurSondageCreate({
                     <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div className="flex items-center gap-3 text-white">
                             <Link
-                                href="/conducteur/sondages"
+                                href={withBasePath("", "/conducteur/sondages")}
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
                             >
                                 <ArrowLeft className="h-5 w-5" />
                             </Link>
                             <div>
                                 <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                                    {isEditing ? "Modifier le sondage" : "Nouveau sondage"}
+                                    {isEditing
+                                        ? "Modifier le sondage"
+                                        : "Nouveau sondage"}
                                 </h1>
                                 <p className="text-sm text-blue-100">
                                     {isEditing
@@ -370,10 +379,11 @@ export default function ConducteurSondageCreate({
                                         </h2>
                                         <p className="mt-2 max-w-2xl text-sm text-slate-600">
                                             Les meilleurs outils de creation de
-                                            sondage privilegient un objectif net,
-                                            un contexte simple et une promesse de
-                                            reponse courte. Les reponses sont
-                                            anonymes pour tous les participants.
+                                            sondage privilegient un objectif
+                                            net, un contexte simple et une
+                                            promesse de reponse courte. Les
+                                            reponses sont anonymes pour tous les
+                                            participants.
                                         </p>
                                     </div>
                                     <div className="rounded-2xl bg-blue-50 p-3 text-blue-700">
@@ -456,15 +466,22 @@ export default function ConducteurSondageCreate({
                                                 }
                                                 className={`${fieldClasses()} appearance-none pl-11`}
                                             >
-                                                <option>Responsables de famille</option>
-                                                <option>Conducteurs de classe</option>
-                                                <option>Membres de famille</option>
-                                                <option>Tous les membres</option>
+                                                <option>
+                                                    Responsables de famille
+                                                </option>
+                                                <option>
+                                                    Conducteurs de classe
+                                                </option>
+                                                <option>
+                                                    Membres de famille
+                                                </option>
+                                                <option>
+                                                    Tous les membres
+                                                </option>
                                             </select>
                                             <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                                         </div>
                                     </div>
-
                                 </div>
                             </section>
 
@@ -507,7 +524,9 @@ export default function ConducteurSondageCreate({
                                             </p>
                                             <button
                                                 type="button"
-                                                onClick={() => addQuestion("multiple")}
+                                                onClick={() =>
+                                                    addQuestion("multiple")
+                                                }
                                                 className="mt-5 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
                                             >
                                                 <Plus className="h-4 w-4" />
@@ -516,7 +535,8 @@ export default function ConducteurSondageCreate({
                                         </div>
                                     ) : null}
                                     {questions.map((question, index) => {
-                                        const isActive = activeId === question.id;
+                                        const isActive =
+                                            activeId === question.id;
                                         const currentType =
                                             questionTypeOptions.find(
                                                 (option) =>
@@ -528,7 +548,9 @@ export default function ConducteurSondageCreate({
                                         return (
                                             <div
                                                 key={question.id}
-                                                onClick={() => setActiveId(question.id)}
+                                                onClick={() =>
+                                                    setActiveId(question.id)
+                                                }
                                                 className={`overflow-hidden rounded-[26px] border transition-all ${
                                                     isActive
                                                         ? "border-slate-300 bg-white shadow-md"
@@ -537,20 +559,26 @@ export default function ConducteurSondageCreate({
                                             >
                                                 <div
                                                     className={`h-1.5 w-full ${
-                                                        isActive ? "bg-slate-200" : "bg-transparent"
+                                                        isActive
+                                                            ? "bg-slate-200"
+                                                            : "bg-transparent"
                                                     }`}
                                                 />
                                                 <div className="flex items-center justify-between border-b border-slate-200/70 px-5 py-4">
                                                     <div className="flex items-center gap-3">
                                                         <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-950 text-sm font-bold text-white">
-                                                            {String(index + 1).padStart(2, "0")}
+                                                            {String(
+                                                                index + 1,
+                                                            ).padStart(2, "0")}
                                                         </span>
                                                         <div>
                                                             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
                                                                 Bloc de question
                                                             </p>
                                                             <p className="text-sm font-medium text-slate-800">
-                                                                {currentType.label}
+                                                                {
+                                                                    currentType.label
+                                                                }
                                                             </p>
                                                         </div>
                                                     </div>
@@ -566,11 +594,20 @@ export default function ConducteurSondageCreate({
                                                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                                                         <div className="flex-1">
                                                             <input
-                                                                value={question.title}
-                                                                onChange={(event) =>
-                                                                    updateQuestion(question.id, {
-                                                                        title: event.target.value,
-                                                                    })
+                                                                value={
+                                                                    question.title
+                                                                }
+                                                                onChange={(
+                                                                    event,
+                                                                ) =>
+                                                                    updateQuestion(
+                                                                        question.id,
+                                                                        {
+                                                                            title: event
+                                                                                .target
+                                                                                .value,
+                                                                        },
+                                                                    )
                                                                 }
                                                                 placeholder={`Question ${index + 1}`}
                                                                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-amber-300 focus:ring-4 focus:ring-amber-100"
@@ -579,231 +616,280 @@ export default function ConducteurSondageCreate({
 
                                                         <div className="relative md:w-[220px]">
                                                             <select
-                                                                value={question.type}
-                                                                onChange={(event) =>
-                                                                    updateQuestion(question.id, {
-                                                                        type: event.target.value,
-                                                                        options:
-                                                                            event.target.value ===
-                                                                            "rating"
-                                                                                ? [
-                                                                                      "1",
-                                                                                      "2",
-                                                                                      "3",
-                                                                                      "4",
-                                                                                      "5",
-                                                                                  ]
-                                                                                : event.target.value ===
-                                                                                    "text"
-                                                                                ? []
-                                                                                  : event.target.value ===
-                                                                                      "yes_no"
-                                                                                    ? ["Oui", "Non"]
-                                                                                    : ["Option 1"],
-                                                                        scaleLabels:
-                                                                            event.target.value ===
-                                                                            "rating"
-                                                                                ? ratingScaleLabels
-                                                                                : undefined,
-                                                                    })
+                                                                value={
+                                                                    question.type
+                                                                }
+                                                                onChange={(
+                                                                    event,
+                                                                ) =>
+                                                                    updateQuestion(
+                                                                        question.id,
+                                                                        {
+                                                                            type: event
+                                                                                .target
+                                                                                .value,
+                                                                            options:
+                                                                                event
+                                                                                    .target
+                                                                                    .value ===
+                                                                                "rating"
+                                                                                    ? [
+                                                                                          "1",
+                                                                                          "2",
+                                                                                          "3",
+                                                                                          "4",
+                                                                                          "5",
+                                                                                      ]
+                                                                                    : event
+                                                                                            .target
+                                                                                            .value ===
+                                                                                        "text"
+                                                                                      ? []
+                                                                                      : event
+                                                                                              .target
+                                                                                              .value ===
+                                                                                          "yes_no"
+                                                                                        ? [
+                                                                                              "Oui",
+                                                                                              "Non",
+                                                                                          ]
+                                                                                        : [
+                                                                                              "Option 1",
+                                                                                          ],
+                                                                            scaleLabels:
+                                                                                event
+                                                                                    .target
+                                                                                    .value ===
+                                                                                "rating"
+                                                                                    ? ratingScaleLabels
+                                                                                    : undefined,
+                                                                        },
+                                                                    )
                                                                 }
                                                                 className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-10 text-sm font-medium text-slate-700 outline-none transition focus:border-amber-300 focus:ring-4 focus:ring-amber-100"
                                                             >
-                                                                {questionTypeOptions.map((option) => (
-                                                                    <option
-                                                                        key={option.value}
-                                                                        value={option.value}
-                                                                    >
-                                                                        {option.label}
-                                                                    </option>
-                                                                ))}
+                                                                {questionTypeOptions.map(
+                                                                    (
+                                                                        option,
+                                                                    ) => (
+                                                                        <option
+                                                                            key={
+                                                                                option.value
+                                                                            }
+                                                                            value={
+                                                                                option.value
+                                                                            }
+                                                                        >
+                                                                            {
+                                                                                option.label
+                                                                            }
+                                                                        </option>
+                                                                    ),
+                                                                )}
                                                             </select>
                                                             <CurrentIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                                                             <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                                                         </div>
                                                     </div>
 
-                                                        <div className="mt-4 grid gap-4">
-                                                            {question.type === "text" ? (
-                                                                <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-4 text-sm italic text-slate-400">
-                                                                    Champ de reponse libre...
-                                                                </div>
-                                                            ) : question.type === "rating" ? (
-                                                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                                                                    {question.options.map(
-                                                                        (option, optionIndex) => (
-                                                                            <div
-                                                                                key={`${question.id}-${optionIndex}`}
-                                                                                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center transition hover:border-amber-300 hover:bg-amber-50"
-                                                                            >
-                                                                                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-500">
-                                                                                    <Star className="h-4 w-4 fill-current" />
-                                                                                    <span className="ml-1 text-sm font-semibold">
-                                                                                        {option}
-                                                                                    </span>
-                                                                                </div>
-                                                                                <p className="mt-2 text-xs font-medium leading-5 text-slate-600">
-                                                                                    {question.scaleLabels?.[option] ||
-                                                                                        ratingScaleLabels[
-                                                                                            option
-                                                                                        ]}
-                                                                                </p>
-                                                                            </div>
-                                                                        ),
-                                                                    )}
-                                                                </div>
-                                                            ) : (
-                                                                <div className="grid gap-2">
-                                                                    {question.options.map(
-                                                                        (
-                                                                            option,
-                                                                            optionIndex,
-                                                                        ) => (
-                                                                            <div
-                                                                                key={`${question.id}-${optionIndex}`}
-                                                                                className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                                                            >
-                                                                                <div
-                                                                                    className={`h-5 w-5 shrink-0 border-2 border-slate-300 ${
-                                                                                        question.type ===
-                                                                                        "checkbox"
-                                                                                            ? "rounded-md"
-                                                                                            : "rounded-full"
-                                                                                    }`}
-                                                                                />
-                                                                                <input
-                                                                                    value={
+                                                    <div className="mt-4 grid gap-4">
+                                                        {question.type ===
+                                                        "text" ? (
+                                                            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-4 text-sm italic text-slate-400">
+                                                                Champ de reponse
+                                                                libre...
+                                                            </div>
+                                                        ) : question.type ===
+                                                          "rating" ? (
+                                                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                                                                {question.options.map(
+                                                                    (
+                                                                        option,
+                                                                        optionIndex,
+                                                                    ) => (
+                                                                        <div
+                                                                            key={`${question.id}-${optionIndex}`}
+                                                                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center transition hover:border-amber-300 hover:bg-amber-50"
+                                                                        >
+                                                                            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-500">
+                                                                                <Star className="h-4 w-4 fill-current" />
+                                                                                <span className="ml-1 text-sm font-semibold">
+                                                                                    {
                                                                                         option
                                                                                     }
-                                                                                    onChange={(
-                                                                                        event,
-                                                                                    ) =>
-                                                                                        updateOption(
+                                                                                </span>
+                                                                            </div>
+                                                                            <p className="mt-2 text-xs font-medium leading-5 text-slate-600">
+                                                                                {question
+                                                                                    .scaleLabels?.[
+                                                                                    option
+                                                                                ] ||
+                                                                                    ratingScaleLabels[
+                                                                                        option
+                                                                                    ]}
+                                                                            </p>
+                                                                        </div>
+                                                                    ),
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="grid gap-2">
+                                                                {question.options.map(
+                                                                    (
+                                                                        option,
+                                                                        optionIndex,
+                                                                    ) => (
+                                                                        <div
+                                                                            key={`${question.id}-${optionIndex}`}
+                                                                            className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                                                        >
+                                                                            <div
+                                                                                className={`h-5 w-5 shrink-0 border-2 border-slate-300 ${
+                                                                                    question.type ===
+                                                                                    "checkbox"
+                                                                                        ? "rounded-md"
+                                                                                        : "rounded-full"
+                                                                                }`}
+                                                                            />
+                                                                            <input
+                                                                                value={
+                                                                                    option
+                                                                                }
+                                                                                onChange={(
+                                                                                    event,
+                                                                                ) =>
+                                                                                    updateOption(
+                                                                                        question.id,
+                                                                                        optionIndex,
+                                                                                        event
+                                                                                            .target
+                                                                                            .value,
+                                                                                    )
+                                                                                }
+                                                                                className="flex-1 border-0 bg-transparent px-0 text-sm text-slate-700 outline-none"
+                                                                            />
+                                                                            {question
+                                                                                .options
+                                                                                .length >
+                                                                                1 &&
+                                                                            question.type !==
+                                                                                "yes_no" ? (
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() =>
+                                                                                        updateQuestion(
                                                                                             question.id,
-                                                                                            optionIndex,
-                                                                                            event
-                                                                                                .target
-                                                                                                .value,
+                                                                                            {
+                                                                                                options:
+                                                                                                    question.options.filter(
+                                                                                                        (
+                                                                                                            _,
+                                                                                                            currentIndex,
+                                                                                                        ) =>
+                                                                                                            currentIndex !==
+                                                                                                            optionIndex,
+                                                                                                    ),
+                                                                                            },
                                                                                         )
                                                                                     }
-                                                                                    className="flex-1 border-0 bg-transparent px-0 text-sm text-slate-700 outline-none"
-                                                                                />
-                                                                                {question.options
-                                                                                    .length > 1 &&
-                                                                                question.type !==
-                                                                                    "yes_no" ? (
-                                                                                    <button
-                                                                                        type="button"
-                                                                                        onClick={() =>
-                                                                                            updateQuestion(
-                                                                                                question.id,
-                                                                                                {
-                                                                                                    options:
-                                                                                                        question.options.filter(
-                                                                                                            (
-                                                                                                                _,
-                                                                                                                currentIndex,
-                                                                                                            ) =>
-                                                                                                                currentIndex !==
-                                                                                                                optionIndex,
-                                                                                                        ),
-                                                                                                },
-                                                                                            )
-                                                                                        }
-                                                                                        className="rounded-full p-1 text-slate-400 transition hover:bg-slate-100 hover:text-rose-500"
-                                                                                    >
-                                                                                        <Trash2 className="h-4 w-4" />
-                                                                                    </button>
-                                                                                ) : null}
-                                                                            </div>
-                                                                        ),
-                                                                    )}
-                                                                    {question.type !==
-                                                                        "yes_no" && (
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() =>
-                                                                                addOption(
-                                                                                    question.id,
-                                                                                )
-                                                                            }
-                                                                            className="inline-flex items-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
-                                                                        >
-                                                                            <Plus className="h-4 w-4" />
-                                                                            Ajouter une option
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            )}
+                                                                                    className="rounded-full p-1 text-slate-400 transition hover:bg-slate-100 hover:text-rose-500"
+                                                                                >
+                                                                                    <Trash2 className="h-4 w-4" />
+                                                                                </button>
+                                                                            ) : null}
+                                                                        </div>
+                                                                    ),
+                                                                )}
+                                                                {question.type !==
+                                                                    "yes_no" && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            addOption(
+                                                                                question.id,
+                                                                            )
+                                                                        }
+                                                                        className="inline-flex items-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+                                                                    >
+                                                                        <Plus className="h-4 w-4" />
+                                                                        Ajouter
+                                                                        une
+                                                                        option
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )}
 
-                                                            <p className="text-xs text-slate-500">
-                                                                {currentType.hint}
-                                                            </p>
-                                                        </div>
+                                                        <p className="text-xs text-slate-500">
+                                                            {currentType.hint}
+                                                        </p>
+                                                    </div>
 
-                                                        <div className="mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 pt-4">
+                                                    <div className="mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 pt-4">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                duplicateQuestion(
+                                                                    question.id,
+                                                                )
+                                                            }
+                                                            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+                                                            title="Dupliquer"
+                                                        >
+                                                            <Copy className="h-4 w-4" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                removeQuestion(
+                                                                    question.id,
+                                                                )
+                                                            }
+                                                            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100"
+                                                            title="Supprimer"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                        <label className="ml-2 inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+                                                            Obligatoire
                                                             <button
                                                                 type="button"
                                                                 onClick={() =>
-                                                                    duplicateQuestion(
+                                                                    updateQuestion(
                                                                         question.id,
+                                                                        {
+                                                                            required:
+                                                                                !question.required,
+                                                                        },
                                                                     )
                                                                 }
-                                                                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
-                                                                title="Dupliquer"
+                                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                                                    question.required
+                                                                        ? "bg-amber-500"
+                                                                        : "bg-slate-300"
+                                                                }`}
                                                             >
-                                                                <Copy className="h-4 w-4" />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    removeQuestion(
-                                                                        question.id,
-                                                                    )
-                                                                }
-                                                                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100"
-                                                                title="Supprimer"
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </button>
-                                                            <label className="ml-2 inline-flex items-center gap-2 text-xs font-medium text-slate-600">
-                                                                Obligatoire
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        updateQuestion(
-                                                                            question.id,
-                                                                            {
-                                                                                required:
-                                                                                    !question.required,
-                                                                            },
-                                                                        )
-                                                                    }
-                                                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                                                <span
+                                                                    className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
                                                                         question.required
-                                                                            ? "bg-amber-500"
-                                                                            : "bg-slate-300"
+                                                                            ? "translate-x-6"
+                                                                            : "translate-x-1"
                                                                     }`}
-                                                                >
-                                                                    <span
-                                                                        className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                                                                            question.required
-                                                                                ? "translate-x-6"
-                                                                                : "translate-x-1"
-                                                                        }`}
-                                                                    />
-                                                                </button>
-                                                            </label>
-                                                        </div>
+                                                                />
+                                                            </button>
+                                                        </label>
                                                     </div>
                                                 </div>
-                                            );
-                                        })}
+                                            </div>
+                                        );
+                                    })}
                                     {questions.length > 0 ? (
                                         <div className="flex justify-center pt-2">
                                             <button
                                                 type="button"
-                                                onClick={() => addQuestion("multiple")}
+                                                onClick={() =>
+                                                    addQuestion("multiple")
+                                                }
                                                 className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
                                             >
                                                 <Plus className="h-4 w-4" />
@@ -832,7 +918,6 @@ export default function ConducteurSondageCreate({
                                 </button>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>

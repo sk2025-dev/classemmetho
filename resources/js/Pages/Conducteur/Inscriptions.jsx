@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Link, router, useForm, Head, usePage } from "@inertiajs/react";
 import axios from "axios";
+import { withBasePath } from "../../Utils/urlHelper";
 import Select from "react-select";
 import Select2Family from "../../Components/Select2Family";
 import Select2Fonction from "../../Components/Select2Fonction";
@@ -390,7 +391,7 @@ export default function Inscriptions({
     useEffect(() => {
         const fetchFonctions = async () => {
             try {
-                const res = await axios.get("/api/fonctions");
+                const res = await axios.get(withBasePath("", "/api/fonctions"));
                 setFonctions(res.data);
             } catch (error) {
                 console.error(
@@ -987,7 +988,9 @@ export default function Inscriptions({
         // Enrichir ensuite en arrière-plan si les sacrements manquent
         if (!member.sacrements && member.id) {
             try {
-                const res = await axios.get(`/users/${member.id}/sacrements`);
+                const res = await axios.get(
+                    withBasePath("", `/users/${member.id}/sacrements`),
+                );
                 if (res.data && res.data.success) {
                     const enrichedMember = {
                         ...member,
@@ -1316,7 +1319,7 @@ export default function Inscriptions({
                     <div className="flex items-center justify-between mb-8">
                         <div className="flex items-center gap-4 text-white">
                             <Link
-                                href="/conducteur/dashboard"
+                                href={withBasePath("", "/conducteur/dashboard")}
                                 className="hover:text-blue-200 transition p-2 bg-white/10 rounded-full"
                             >
                                 <X className="w-6 h-6" />
@@ -1335,17 +1338,33 @@ export default function Inscriptions({
                         </div>
                         <div className="flex gap-3">
                             <Link
-                                href="/conducteur/members/create"
+                                href={withBasePath(
+                                    "",
+                                    "/conducteur/members/create",
+                                )}
                                 className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition transform hover:scale-[1.02] flex items-center gap-2"
                             >
                                 <Plus className="w-5 h-5" /> Inscrire un membre
                             </Link>
                             <Link
-                                href="/conducteur/transferts"
+                                href={withBasePath(
+                                    "",
+                                    "/conducteur/transferts",
+                                )}
                                 className="bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition transform hover:scale-[1.02] flex items-center gap-2"
                             >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5V21M16.5 12H3" />
+                                <svg
+                                    className="w-5 h-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5V21M16.5 12H3"
+                                    />
                                 </svg>
                                 Transferts
                             </Link>
@@ -1585,7 +1604,7 @@ export default function Inscriptions({
                                                         Famille
                                                     </th>
                                                     <th className="p-5 text-xs font-bold uppercase tracking-wider">
-                                                                Code Famille
+                                                        Code Famille
                                                     </th>
                                                     <th className="p-5 text-xs font-bold uppercase tracking-wider">
                                                         Code Membre
@@ -2080,7 +2099,8 @@ export default function Inscriptions({
                                                                 <td className="p-5 text-slate-600">
                                                                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
                                                                         {memberFamily
-                                                                            ? memberFamily.code_famille || "N/A"
+                                                                            ? memberFamily.code_famille ||
+                                                                              "N/A"
                                                                             : "N/A"}
                                                                     </span>
                                                                 </td>
@@ -2318,14 +2338,14 @@ export default function Inscriptions({
                                                 Fonction
                                             </th>
                                             <th className="p-6 text-sm font-bold uppercase tracking-wider">
-                                                        Rôle
-                                                    </th>
-                                                    <th className="p-6 text-sm font-bold uppercase tracking-wider">
-                                                        Code Membre
-                                                    </th>
-                                                    <th className="p-6 text-sm font-bold uppercase tracking-wider">
-                                                        Date de création
-                                                    </th>
+                                                Rôle
+                                            </th>
+                                            <th className="p-6 text-sm font-bold uppercase tracking-wider">
+                                                Code Membre
+                                            </th>
+                                            <th className="p-6 text-sm font-bold uppercase tracking-wider">
+                                                Date de création
+                                            </th>
                                             <th className="p-6 text-sm font-bold uppercase tracking-wider">
                                                 {activeTab === "rejected"
                                                     ? "Refusé par"
@@ -2466,7 +2486,8 @@ export default function Inscriptions({
                                                             </td>
                                                             <td className="p-6 text-slate-600">
                                                                 <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
-                                                                    {item.code_membre || 'N/A'}
+                                                                    {item.code_membre ||
+                                                                        "N/A"}
                                                                 </span>
                                                             </td>
                                                             <td className="p-6 text-sm text-slate-600">
@@ -2859,7 +2880,9 @@ export default function Inscriptions({
                                                                     setData({
                                                                         ...data,
                                                                         prenom: sanitizeUppercasePrenom(
-                                                                            e.target.value,
+                                                                            e
+                                                                                .target
+                                                                                .value,
                                                                         ),
                                                                     })
                                                                 }

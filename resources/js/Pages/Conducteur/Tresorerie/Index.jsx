@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Head, Link } from "@inertiajs/react";
+import { withBasePath } from "../../../Utils/urlHelper";
 import {
     ArrowLeft,
     Download,
@@ -1008,12 +1009,12 @@ export default function ConducteurTresorerie({
             alert("Veuillez selectionner un membre.");
             return;
         }
-        
+
         try {
             setLoading(true);
             const response = await postJson(
                 "/conducteur/tresorerie/assign-tresorier",
-                { user_id: selectedMemberTresorier }
+                { user_id: selectedMemberTresorier },
             );
             alert("Tresorier assigne avec succes!");
             setModalTresorier(false);
@@ -1021,7 +1022,9 @@ export default function ConducteurTresorerie({
             // Recharger la page pour voir les changements
             window.location.reload();
         } catch (error) {
-            alert("Erreur lors de l'assignation du tresorier: " + error.message);
+            alert(
+                "Erreur lors de l'assignation du tresorier: " + error.message,
+            );
         } finally {
             setLoading(false);
         }
@@ -1143,7 +1146,7 @@ export default function ConducteurTresorerie({
                         }}
                     >
                         <Link
-                            href="/conducteur/dashboard"
+                            href={withBasePath("", "/conducteur/dashboard")}
                             style={{
                                 width: 40,
                                 height: 40,
@@ -3157,12 +3160,15 @@ export default function ConducteurTresorerie({
                     }}
                 >
                     <CheckCircle size={14} />
-                    Le tresorier aidera à assister la trésorerie de votre classe.
+                    Le tresorier aidera à assister la trésorerie de votre
+                    classe.
                 </div>
                 <FW label="Sélectionner un membre de la classe" span2>
                     <select
                         value={selectedMemberTresorier}
-                        onChange={(e) => setSelectedMemberTresorier(e.target.value)}
+                        onChange={(e) =>
+                            setSelectedMemberTresorier(e.target.value)
+                        }
                         style={{
                             ...inputStyle,
                             cursor: "pointer",
@@ -3186,7 +3192,8 @@ export default function ConducteurTresorerie({
                         marginBottom: 20,
                     }}
                 >
-                    Seuls les membres actifs de votre classe peuvent être assignés comme trésorier.
+                    Seuls les membres actifs de votre classe peuvent être
+                    assignés comme trésorier.
                 </p>
                 <div
                     style={{

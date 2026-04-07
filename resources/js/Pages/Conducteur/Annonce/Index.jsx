@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "@inertiajs/react";
 import { Eye } from "lucide-react";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 function Pagination({ paginator }) {
     if (!paginator || !paginator.links) return null;
@@ -59,7 +60,10 @@ export default function Index({
         <div className="conducteur-annonces-page">
             <div className="page-header">
                 <h1>Annonces</h1>
-                <Link href="/conducteur/dashboard" className="btn-ghost">
+                <Link
+                    href={withBasePath("", "/conducteur/dashboard")}
+                    className="btn-ghost"
+                >
                     ← Retour
                 </Link>
             </div>
