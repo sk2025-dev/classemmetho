@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+﻿import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import { Link, usePage } from "@inertiajs/react";
 import AddressAutocomplete from "../../Components/AddressAutocomplete";
@@ -156,7 +156,7 @@ const MultiSelectDropdown = ({
     items,
     selected,
     onChange,
-    placeholder = "Sélectionner...",
+    placeholder = "SÃ©lectionner...",
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef(null);
@@ -234,11 +234,11 @@ const MultiSelectDropdown = ({
 
 // --- Main Component ---
 export default function RegisterFamille({
-    labels = ["Famille", "Responsable", "Membres", "Vérification"],
+    labels = ["Famille", "Responsable", "Membres", "VÃ©rification"],
 }) {
     const { auth, classId } = usePage().props;
 
-    // --- États ---
+    // --- Ã‰tats ---
     const [step, setStep] = usePersistentState("registerFamille_step", 1);
     const {
         errors,
@@ -259,7 +259,7 @@ export default function RegisterFamille({
     // Classe du conducteur
     const [conductorClassName, setConductorClassName] = useState("");
 
-    // Base de données locales
+    // Base de donnÃ©es locales
     const [villesDatabase, setVillesDatabase] = useState([]);
     const [classesDatabase, setClassesDatabase] = useState([]);
 
@@ -270,7 +270,7 @@ export default function RegisterFamille({
     );
     const [showVillesDropdown, setShowVillesDropdown] = useState(false);
 
-    // États pour l'adresse autocomplete
+    // Ã‰tats pour l'adresse autocomplete
     const [adresseInputValue, setAdresseInputValue] = usePersistentState(
         "registerFamille_adresseInputValue",
         "",
@@ -281,7 +281,7 @@ export default function RegisterFamille({
     // Debounce pour l'adresse
     const debouncedAdresseTerm = useDebounce(adresseInputValue, 500);
 
-    // Données du formulaire
+    // DonnÃ©es du formulaire
     const [famille, setFamille] = usePersistentState(
         "registerFamille_famille",
         {
@@ -315,11 +315,11 @@ export default function RegisterFamille({
             lieuDivorce: "",
             dateDeces: "",
             lieuDeces: "",
-            // Champs religieux - baptême
+            // Champs religieux - baptÃªme
             baptise: false,
             dateBapteme: "",
             lieuBapteme: "",
-            // Champs religieux - première communion
+            // Champs religieux - premiÃ¨re communion
             premiereCommunion: false,
             datePremiereCommunion: "",
             lieuPremiereCommunion: "",
@@ -357,11 +357,11 @@ export default function RegisterFamille({
             dote: "",
             lieuDote: "",
             lienParente: "",
-            // Champs religieux - baptême
+            // Champs religieux - baptÃªme
             baptise: false,
             dateBapteme: "",
             lieuBapteme: "",
-            // Champs religieux - première communion
+            // Champs religieux - premiÃ¨re communion
             premiereCommunion: false,
             datePremiereCommunion: "",
             lieuPremiereCommunion: "",
@@ -408,7 +408,7 @@ export default function RegisterFamille({
 
     const totalSteps = labels.length;
 
-    // Réinitialiser la question à chaque visite de l'étape 3, mais garder la réponse si des membres ont été ajoutés
+    // RÃ©initialiser la question Ã  chaque visite de l'Ã©tape 3, mais garder la rÃ©ponse si des membres ont Ã©tÃ© ajoutÃ©s
     useEffect(() => {
         if (step === 3) {
             if (membres.length > 0) {
@@ -419,11 +419,11 @@ export default function RegisterFamille({
         }
     }, [step, membres.length]);
 
-    // --- Effets (Chargement des données) ---
+    // --- Effets (Chargement des donnÃ©es) ---
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Charger les villes depuis la base de données
+                // Charger les villes depuis la base de donnÃ©es
                 const villesRes = await fetch(withBasePath("", "/api/villes"));
                 if (villesRes.ok) {
                     const villesData = await villesRes.json();
@@ -442,7 +442,7 @@ export default function RegisterFamille({
                     setVillesDatabase([]);
                 }
 
-                // Charger les fonctions d'église
+                // Charger les fonctions d'Ã©glise
                 const rolesRes = await fetch(
                     withBasePath("", "/api/fonctions"),
                 );
@@ -459,7 +459,7 @@ export default function RegisterFamille({
                     setChurchRoles([]);
                 }
 
-                // Charger les classes depuis la base de données
+                // Charger les classes depuis la base de donnÃ©es
                 const classesRes = await fetch(
                     withBasePath("", "/api/classes"),
                 );
@@ -495,7 +495,7 @@ export default function RegisterFamille({
                     classe_id: conductorClass ? conductorClass.id : "",
                 }));
             } catch (error) {
-                console.error("Erreur chargement données:", error);
+                console.error("Erreur chargement donnÃ©es:", error);
                 setVillesDatabase([]);
                 setChurchRoles([]);
                 setClassesDatabase([]);
@@ -528,9 +528,9 @@ export default function RegisterFamille({
     const formatPrenom = (text) => sanitizeUppercasePrenom(text);
 
     /**
-     * Valider le format téléphone
+     * Valider le format tÃ©lÃ©phone
      * UNIQUEMENT 10 chiffres exactement
-     * Pas de caractères spéciaux
+     * Pas de caractÃ¨res spÃ©ciaux
      */
     const isValidPhoneFormat = (phone) => {
         if (!phone) return false;
@@ -540,9 +540,9 @@ export default function RegisterFamille({
     };
 
     /**
-     * Formatter le numéro de téléphone
+     * Formatter le numÃ©ro de tÃ©lÃ©phone
      * UNIQUEMENT les 10 premiers chiffres
-     * Enlève tous les caractères non-numériques
+     * EnlÃ¨ve tous les caractÃ¨res non-numÃ©riques
      */
     const formatPhoneNumber = (text) => {
         // Garder UNIQUEMENT les chiffres
@@ -556,7 +556,7 @@ export default function RegisterFamille({
         const newErrors = {};
 
         if (!membreTemp.nom) newErrors["membre.nom"] = "Nom requis";
-        if (!membreTemp.prenom) newErrors["membre.prenom"] = "Prénom requis";
+        if (!membreTemp.prenom) newErrors["membre.prenom"] = "PrÃ©nom requis";
         if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email))
             newErrors["membre.email"] = "Adresse email invalide";
         if (!membreTemp.relation)
@@ -565,9 +565,9 @@ export default function RegisterFamille({
             newErrors["membre.dateNaissance"] = "Date de naissance requise";
         else if (new Date(responsable.dateNaissance) > new Date())
             newErrors["responsable.dateNaissance"] =
-                "La date ne doit pas être dans le futur";
+                "La date ne doit pas Ãªtre dans le futur";
 
-        // Si fourni, valider le format téléphone
+        // Si fourni, valider le format tÃ©lÃ©phone
         if (membreTemp.telephone && !isValidPhoneFormat(membreTemp.telephone)) {
             newErrors["membre.telephone"] =
                 "Doit contenir exactement 10 chiffres";
@@ -579,7 +579,7 @@ export default function RegisterFamille({
         if (!membreTemp.profession)
             newErrors["membre.profession"] = "Profession requise";
 
-        // Vérifier conditions statut marital
+        // VÃ©rifier conditions statut marital
         if (membreTemp.statutMarital === "marie") {
             if (!membreTemp.dateMariage)
                 newErrors["membre.dateMariage"] = "Date requise";
@@ -609,12 +609,12 @@ export default function RegisterFamille({
             return;
         }
 
-        // Ajouter le membre à la liste
+        // Ajouter le membre Ã  la liste
         setMembres([...membres, { ...membreTemp }]);
 
         // Afficher toast avec bouton Modifier
         const memberToEdit = { ...membreTemp };
-        showSuccess("Membre ajouté avec succès !", 0, {
+        showSuccess("Membre ajoutÃ© avec succÃ¨s !", 0, {
             label: "Modifier",
             onClick: () => {
                 setMembreTemp(memberToEdit);
@@ -624,7 +624,7 @@ export default function RegisterFamille({
             },
         });
 
-        // Reset après 1.5s
+        // Reset aprÃ¨s 1.5s
         setTimeout(() => {
             setMembreTemp({
                 nom: "",
@@ -703,7 +703,7 @@ export default function RegisterFamille({
             if (!famille.quartier) newErrors["famille.quartier"] = "Requis";
             if (!famille.ville)
                 newErrors["famille.ville"] =
-                    "Veuillez sélectionner une ville dans la liste.";
+                    "Veuillez sÃ©lectionner une ville dans la liste.";
             if (!famille.telephone) {
                 newErrors["famille.telephone"] = "Requis";
             } else if (!isValidPhoneFormat(famille.telephone)) {
@@ -727,29 +727,29 @@ export default function RegisterFamille({
                 newErrors["responsable.dateNaissance"] = "Requis";
             else if (new Date(responsable.dateNaissance) > new Date())
                 newErrors["responsable.dateNaissance"] =
-                    "La date ne doit pas être dans le futur";
+                    "La date ne doit pas Ãªtre dans le futur";
             if (!responsable.genre) newErrors["responsable.genre"] = "Requis";
             if (!responsable.profession)
                 newErrors["responsable.profession"] = "Requis";
             if (!responsable.statutMarital)
                 newErrors["responsable.statutMarital"] = "Requis";
 
-            // Validation des champs religieux si cochés
+            // Validation des champs religieux si cochÃ©s
             if (responsable.baptise) {
                 if (!responsable.dateBapteme)
                     newErrors["responsable.dateBapteme"] =
-                        "Date de baptême requise";
+                        "Date de baptÃªme requise";
                 if (!responsable.lieuBapteme)
                     newErrors["responsable.lieuBapteme"] =
-                        "Lieu de baptême requis";
+                        "Lieu de baptÃªme requis";
             }
             if (responsable.premiereCommunion) {
                 if (!responsable.datePremiereCommunion)
                     newErrors["responsable.datePremiereCommunion"] =
-                        "Date de première communion requise";
+                        "Date de premiÃ¨re communion requise";
                 if (!responsable.lieuPremiereCommunion)
                     newErrors["responsable.lieuPremiereCommunion"] =
-                        "Lieu de première communion requis";
+                        "Lieu de premiÃ¨re communion requis";
             }
             if (responsable.marieReligieusement) {
                 if (!responsable.dateMariageReligieux)
@@ -782,7 +782,7 @@ export default function RegisterFamille({
     const handleSubmit = async (e) => {
         if (e) e.preventDefault();
 
-        // Valider toutes les étapes
+        // Valider toutes les Ã©tapes
         for (let s = 1; s <= totalSteps; s++) {
             if (!validateStep(s)) {
                 setStep(s);
@@ -799,14 +799,14 @@ export default function RegisterFamille({
 
         const formData = new FormData();
 
-        // --- 1. Famille (avec nettoyage téléphone) ---
+        // --- 1. Famille (avec nettoyage tÃ©lÃ©phone) ---
         Object.entries(famille).forEach(([k, v]) => {
             // On n'envoie pas les ID vides
             if (k === "ville" && (!v || v === "" || v === null)) return;
 
             let valueToSend = v;
 
-            // CORRECTION : On enlève le préfixe "225" si présent pour le téléphone
+            // CORRECTION : On enlÃ¨ve le prÃ©fixe "225" si prÃ©sent pour le tÃ©lÃ©phone
             if ((k === "telephone" || k === "telephone2") && valueToSend) {
                 valueToSend = valueToSend.toString().replace(/^225/, "");
             }
@@ -814,14 +814,14 @@ export default function RegisterFamille({
             formData.append(`famille[${k}]`, valueToSend ?? "");
         });
 
-        // --- 2. Responsable (avec nettoyage téléphone) ---
+        // --- 2. Responsable (avec nettoyage tÃ©lÃ©phone) ---
         Object.entries(responsable).forEach(([k, v]) => {
             let valueToSend = v;
 
             if (k === "photo" && v) {
                 formData.append(`responsable[photo]`, v);
             } else if (k !== "photoPreview") {
-                // CORRECTION : On enlève le préfixe "225" pour le téléphone du responsable
+                // CORRECTION : On enlÃ¨ve le prÃ©fixe "225" pour le tÃ©lÃ©phone du responsable
                 if (k === "tel" && valueToSend) {
                     valueToSend = valueToSend.toString().replace(/^225/, "");
                 }
@@ -836,7 +836,7 @@ export default function RegisterFamille({
                     if (k === "photo" && v) {
                         formData.append(`membres[${i}][photo]`, v);
                     } else if (k !== "photoPreview") {
-                        // Nettoyer le téléphone si présent
+                        // Nettoyer le tÃ©lÃ©phone si prÃ©sent
                         let valueToSend = v;
                         if (k === "telephone" && valueToSend) {
                             valueToSend = valueToSend
@@ -855,7 +855,7 @@ export default function RegisterFamille({
         formData.append("type", "family");
         formData.append("consentement", consentement ? "1" : "0");
 
-        // Récupérer et ajouter le token CSRF au FormData
+        // RÃ©cupÃ©rer et ajouter le token CSRF au FormData
         let csrfToken = document
             .querySelector('meta[name="csrf-token"]')
             ?.getAttribute("content");
@@ -874,10 +874,10 @@ export default function RegisterFamille({
         }
 
         try {
-            // Ne pas définir Content-Type - axios le fera automatiquement
+            // Ne pas dÃ©finir Content-Type - axios le fera automatiquement
             const headers = {};
 
-            // Ajouter le token CSRF au header aussi (double sécurité)
+            // Ajouter le token CSRF au header aussi (double sÃ©curitÃ©)
             if (csrfToken) {
                 headers["X-CSRF-TOKEN"] = csrfToken;
             }
@@ -890,9 +890,9 @@ export default function RegisterFamille({
                 },
             );
 
-            // Succès
+            // SuccÃ¨s
             const message =
-                res.data?.message || "Inscription soumise avec succès !";
+                res.data?.message || "Inscription soumise avec succÃ¨s !";
             showSuccess(message);
 
             // Reset du formulaire
@@ -975,12 +975,12 @@ export default function RegisterFamille({
             setSelectedRolesResponsable([]);
             setSelectedMembresRoles(new Set());
 
-            // Effacer les données sauvegardées après soumission réussie
+            // Effacer les donnÃ©es sauvegardÃ©es aprÃ¨s soumission rÃ©ussie
             clearFormPersistedData("registerFamille_");
             localStorage.removeItem("registerWelcomeState");
         } catch (err) {
             console.log(
-                "Détails de l'erreur JSON :",
+                "DÃ©tails de l'erreur JSON :",
                 JSON.stringify(err.response?.data || err, null, 2),
             );
 
@@ -995,7 +995,7 @@ export default function RegisterFamille({
                 handleApiError({
                     type: "NetworkError",
                     message:
-                        "Erreur de connexion. Veuillez vérifier votre connexion internet.",
+                        "Erreur de connexion. Veuillez vÃ©rifier votre connexion internet.",
                 });
             }
         } finally {
@@ -1007,14 +1007,14 @@ export default function RegisterFamille({
         v.nom.toLowerCase().includes(villesSearchTerm.toLowerCase()),
     );
 
-    // Helper pour aller à l'étape suivante
+    // Helper pour aller Ã  l'Ã©tape suivante
     const goToNextStep = () => {
         if (validateStep(step)) {
             setStep(step + 1);
         }
     };
 
-    // Helper pour aller à l'étape précédente
+    // Helper pour aller Ã  l'Ã©tape prÃ©cÃ©dente
     const goToPrevStep = () => {
         setStep(step - 1);
     };
@@ -1088,7 +1088,7 @@ export default function RegisterFamille({
                                         });
                                     }}
                                     options={buildVilleOptions(villesDatabase)}
-                                    placeholder="Sélectionner une ville"
+                                    placeholder="SÃ©lectionner une ville"
                                     hasError={Boolean(errors["famille.ville"])}
                                 />
                                 {errors["famille.ville"] && (
@@ -1100,7 +1100,7 @@ export default function RegisterFamille({
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField label="Téléphone" icon={Phone} required>
+                            <FormField label="TÃ©lÃ©phone" icon={Phone} required>
                                 <div className="flex">
                                     <span className="bg-gray-100 border border-gray-300 border-r-0 rounded-l-lg px-3 flex items-center text-gray-600">
                                         +225
@@ -1127,7 +1127,7 @@ export default function RegisterFamille({
                                     </p>
                                 )}
                             </FormField>
-                            <FormField label="Téléphone 2" icon={Phone}>
+                            <FormField label="TÃ©lÃ©phone 2" icon={Phone}>
                                 <div className="flex">
                                     <span className="bg-gray-100 border border-gray-300 border-r-0 rounded-l-lg px-3 flex items-center text-gray-600">
                                         +225
@@ -1158,8 +1158,8 @@ export default function RegisterFamille({
                                 readOnly
                             />
                             <p className="text-xs text-gray-500 mt-1">
-                                La classe est automatiquement définie selon
-                                votre rôle de conducteur
+                                La classe est automatiquement dÃ©finie selon
+                                votre rÃ´le de conducteur
                             </p>
                         </FormField>
                     </div>
@@ -1168,7 +1168,7 @@ export default function RegisterFamille({
             case 2:
                 return (
                     <div className="space-y-6 animate-fadeIn">
-                        {/* Photo Upload avec background complet - LARGEUR COMPLÈTE */}
+                        {/* Photo Upload avec background complet - LARGEUR COMPLÃˆTE */}
                         <div className="w-full p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-md">
                             <div className="flex flex-col items-center gap-3">
                                 <h3 className="text-sm font-bold text-gray-800">
@@ -1223,7 +1223,7 @@ export default function RegisterFamille({
                                     </p>
                                 )}
                             </FormField>
-                            <FormField label="Prénom" icon={User} required>
+                            <FormField label="PrÃ©nom" icon={User} required>
                                 <input
                                     ref={respPrenomRef}
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none capitalize"
@@ -1288,7 +1288,7 @@ export default function RegisterFamille({
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
-                                label="Téléphone 1"
+                                label="TÃ©lÃ©phone 1"
                                 icon={Phone}
                                 required
                             >
@@ -1318,7 +1318,7 @@ export default function RegisterFamille({
                                     </p>
                                 )}
                             </FormField>
-                            <FormField label="Téléphone 2" icon={Phone}>
+                            <FormField label="TÃ©lÃ©phone 2" icon={Phone}>
                                 <div className="flex">
                                     <span className="bg-gray-100 border border-gray-300 border-r-0 rounded-l-lg px-3 flex items-center text-gray-600">
                                         +225
@@ -1354,22 +1354,12 @@ export default function RegisterFamille({
                                         })
                                     }
                                     options={GENDER_OPTIONS}
-                                    placeholder="Sélectionner..."
+                                    placeholder="SÃ©lectionner..."
                                 />
                             </FormField>
-<<<<<<< HEAD
-                            <FormField
-                                label="Lien de parenté"
-                                icon={Users}
-                                required
-                                hint="Relation avec la famille"
-                            >
-                                <Select2Relation
-=======
-                            <FormField label="Lien de parenté" icon={Users} required hint="Relation avec la famille">
+                            <FormField label="Lien de parentÃ©" icon={Users} required hint="Relation avec la famille">
                                 <Select2Single
                                     name="responsable_lien_parente"
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                     value={responsable.lienParente}
                                     onChange={(e) =>
                                         setResponsable({
@@ -1378,7 +1368,7 @@ export default function RegisterFamille({
                                         })
                                     }
                                     options={RELATION_OPTIONS}
-                                    placeholder="Sélectionner un lien de parenté"
+                                    placeholder="SÃ©lectionner un lien de parentÃ©"
                                 />
                             </FormField>
                         </div>
@@ -1399,13 +1389,13 @@ export default function RegisterFamille({
                                             profession: e.target.value,
                                         })
                                     }
-                                    placeholder="ex: Enseignant, Commerçant"
+                                    placeholder="ex: Enseignant, CommerÃ§ant"
                                 />
                             </FormField>
                             <FormField
-                                label="Fonction dans l'église"
+                                label="Fonction dans l'Ã©glise"
                                 icon={Users}
-                                hint="Cliquez pour sélectionner"
+                                hint="Cliquez pour sÃ©lectionner"
                             >
                                 <Select2Fonction
                                     value={selectedRolesResponsable}
@@ -1415,25 +1405,15 @@ export default function RegisterFamille({
                                         )
                                     }
                                     options={churchRoles}
-                                    placeholder="Sélectionner des fonctions..."
+                                    placeholder="SÃ©lectionner des fonctions..."
                                 />
                             </FormField>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-<<<<<<< HEAD
-                            <FormField
-                                label="Statut Marital"
-                                icon={Heart}
-                                required
-                            >
-                                <select
-                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 bg-white"
-=======
                             <FormField label="Statut Marital" icon={Heart} required>
                                 <Select2Single
                                     name="responsable_statut_marital"
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                     value={responsable.statutMarital}
                                     onChange={(e) =>
                                         setResponsable({
@@ -1441,23 +1421,11 @@ export default function RegisterFamille({
                                             statutMarital: e.target.value,
                                         })
                                     }
-<<<<<<< HEAD
-                                >
-                                    <option value="">Sélectionner...</option>
-                                    <option value="celibataire">
-                                        Célibataire
-                                    </option>
-                                    <option value="marie">Mariage Civil</option>
-                                    <option value="divorce">Divorcé(e)</option>
-                                    <option value="veuf">Veuf(ve)</option>
-                                </select>
-=======
                                     options={MARITAL_STATUS_OPTIONS.filter(
                                         (option) => option.value !== "dot",
                                     )}
-                                    placeholder="Sélectionner..."
+                                    placeholder="SÃ©lectionner..."
                                 />
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                             </FormField>
                         </div>
 
@@ -1544,7 +1512,7 @@ export default function RegisterFamille({
                             <div className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField
-                                        label="Date du décès du conjoint"
+                                        label="Date du dÃ©cÃ¨s du conjoint"
                                         icon={Calendar}
                                         required
                                     >
@@ -1561,7 +1529,7 @@ export default function RegisterFamille({
                                         />
                                     </FormField>
                                     <FormField
-                                        label="Lieu du décès"
+                                        label="Lieu du dÃ©cÃ¨s"
                                         icon={Building}
                                     >
                                         <input
@@ -1608,7 +1576,7 @@ export default function RegisterFamille({
                                         className="w-5 h-5 rounded border-gray-300 text-blue-600"
                                     />
                                     <span className="text-sm font-semibold text-gray-700">
-                                        Baptisé(e)
+                                        BaptisÃ©(e)
                                     </span>
                                 </label>
                                 {responsable.baptise === true && (
@@ -1674,7 +1642,7 @@ export default function RegisterFamille({
                                 </label>
                                 {responsable.premiereCommunion === true && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 ml-8 mt-3">
-                                        <FormField label="Date de la première communion">
+                                        <FormField label="Date de la premiÃ¨re communion">
                                             <input
                                                 type="date"
                                                 className="w-full h-10 border border-gray-300 rounded px-2 bg-white"
@@ -1690,7 +1658,7 @@ export default function RegisterFamille({
                                                 }
                                             />
                                         </FormField>
-                                        <FormField label="Lieu de la première communion">
+                                        <FormField label="Lieu de la premiÃ¨re communion">
                                             <input
                                                 type="text"
                                                 className="w-full h-10 border border-gray-300 rounded px-2"
@@ -1736,7 +1704,7 @@ export default function RegisterFamille({
                                         className="w-5 h-5 rounded border-gray-300 text-pink-600"
                                     />
                                     <span className="text-sm font-semibold text-gray-700">
-                                        Marié(e) religieusement
+                                        MariÃ©(e) religieusement
                                     </span>
                                 </label>
                                 {responsable.marieReligieusement === true && (
@@ -1853,7 +1821,7 @@ export default function RegisterFamille({
                                         ? "Modifier le membre"
                                         : "Ajouter un nouveau membre"}
                                 </h3>
-                                {/* Photo Upload avec background complet - LARGEUR COMPLÈTE */}
+                                {/* Photo Upload avec background complet - LARGEUR COMPLÃˆTE */}
                                 <div className="w-full p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-md">
                                     <div className="flex flex-col items-center gap-3">
                                         <h3 className="text-sm font-bold text-gray-800">
@@ -1890,34 +1858,7 @@ export default function RegisterFamille({
                                     </div>
                                 </div>
 
-<<<<<<< HEAD
-                                {/* Identité: Nom, Prénom, Genre */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField label="Nom" icon={User} required>
-                                        <input
-                                            className={`${STYLES.input} uppercase`}
-                                            value={membreTemp.nom}
-                                            onChange={(e) =>
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    nom: e.target.value,
-                                                })
-                                            }
-                                            placeholder="Nom de famille"
-                                        />
-                                        {errors["membre.nom"] && (
-                                            <p className="text-red-500 text-xs mt-1">
-                                                {errors["membre.nom"]}
-                                            </p>
-                                        )}
-                                    </FormField>
-                                    <FormField
-                                        label="Prénom"
-                                        icon={User}
-                                        required
-                                    >
-=======
-                            {/* Identité: Nom, Prénom, Genre */}
+                            {/* IdentitÃ©: Nom, PrÃ©nom, Genre */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField label="Nom" icon={User} required>
                                     <input
@@ -1937,7 +1878,7 @@ export default function RegisterFamille({
                                         </p>
                                     )}
                                 </FormField>
-                                <FormField label="Prénom" icon={User} required>
+                                <FormField label="PrÃ©nom" icon={User} required>
                                     <input
                                         className={`${STYLES.input} capitalize`}
                                         value={membreTemp.prenom}
@@ -1949,7 +1890,7 @@ export default function RegisterFamille({
                                                 ),
                                             })
                                         }
-                                        placeholder="Prénom"
+                                        placeholder="PrÃ©nom"
                                     />
                                     {errors["membre.prenom"] && (
                                         <p className="text-red-500 text-xs mt-1">
@@ -1972,7 +1913,7 @@ export default function RegisterFamille({
                                             })
                                         }
                                         options={GENDER_OPTIONS}
-                                        placeholder="Sélectionner..."
+                                        placeholder="SÃ©lectionner..."
                                         hasError={Boolean(errors["membre.genre"])}
                                     />
                                     {errors["membre.genre"] && (
@@ -2001,7 +1942,7 @@ export default function RegisterFamille({
                                 </FormField>
                             </div>
 
-                            {/* Email et Téléphone */}
+                            {/* Email et TÃ©lÃ©phone */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField label="Email" icon={Mail}>
                                     <input
@@ -2023,7 +1964,7 @@ export default function RegisterFamille({
                                     )}
                                 </FormField>
                                 <FormField
-                                    label="Téléphone"
+                                    label="TÃ©lÃ©phone"
                                     icon={Phone}
                                     hint="Ex: 0102030405 (optionnel)"
                                 >
@@ -2031,7 +1972,6 @@ export default function RegisterFamille({
                                         <span className="bg-gray-100 border border-gray-300 border-r-0 rounded-l-lg px-3 flex items-center text-gray-600">
                                             +225
                                         </span>
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                         <input
                                             className={`${STYLES.input} capitalize`}
                                             value={membreTemp.prenom}
@@ -2043,26 +1983,8 @@ export default function RegisterFamille({
                                                     ),
                                                 })
                                             }
-                                            placeholder="Prénom"
+                                            placeholder="PrÃ©nom"
                                         />
-<<<<<<< HEAD
-                                        {errors["membre.prenom"] && (
-                                            <p className="text-red-500 text-xs mt-1">
-                                                {errors["membre.prenom"]}
-                                            </p>
-                                        )}
-                                    </FormField>
-                                </div>
-
-                                {/* Genre et Date de naissance */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                        label="Genre"
-                                        icon={Users}
-                                        required
-                                    >
-                                        <select
-=======
                                     </div>
                                     {errors["membre.telephone"] && (
                                         <p className="text-red-500 text-xs mt-1">
@@ -2071,14 +1993,14 @@ export default function RegisterFamille({
                                     )}
                                 </FormField>
                             </div>
-                            {/* Fonction dans l'église et vide */}
+                            {/* Fonction dans l'Ã©glise et vide */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField label="Fonction dans l'église" icon={Users} hint="Sélectionnez une fonction">
+                                <FormField label="Fonction dans l'Ã©glise" icon={Users} hint="SÃ©lectionnez une fonction">
                                     <Select2Fonction
                                         value={selectedRolesResponsable}
                                         onChange={(e) => setSelectedRolesResponsable(e.target.value)}
                                         options={churchRoles}
-                                        placeholder="Sélectionner des fonctions..."
+                                        placeholder="SÃ©lectionner des fonctions..."
                                         />
                                 </FormField>
                                 <FormField label="Profession" icon={Briefcase} required>
@@ -2100,9 +2022,9 @@ export default function RegisterFamille({
                                     )}
                                 </FormField>
                             </div>
-                            {/* Lien de parenté et Statut marital */}
+                            {/* Lien de parentÃ© et Statut marital */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField label="Lien de parenté" icon={Users} required hint="Relation avec le responsable">
+                                <FormField label="Lien de parentÃ©" icon={Users} required hint="Relation avec le responsable">
                                     <Select2Single
                                         name="membre_relation"
                                         value={membreTemp.relation}
@@ -2113,7 +2035,7 @@ export default function RegisterFamille({
                                             })
                                         }
                                         options={RELATION_OPTIONS}
-                                        placeholder="Sélectionner un lien de parenté"
+                                        placeholder="SÃ©lectionner un lien de parentÃ©"
                                     />
                                     {errors["membre.relation"] && (
                                         <p className="text-red-500 text-xs mt-1">
@@ -2132,7 +2054,7 @@ export default function RegisterFamille({
                                             })
                                         }
                                         options={MARITAL_STATUS_OPTIONS}
-                                        placeholder="Sélectionner..."
+                                        placeholder="SÃ©lectionner..."
                                         hasError={Boolean(errors["membre.statutMarital"])}
                                     />
                                     {errors["membre.statutMarital"] && (
@@ -2148,54 +2070,47 @@ export default function RegisterFamille({
                                     <FormField label="Date du mariage" icon={Calendar} required>
                                         <input
                                             type="date"
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                             className={STYLES.input}
-                                            value={membreTemp.genre}
+                                            value={membreTemp.dateMariage}
                                             onChange={(e) =>
                                                 setMembreTemp({
                                                     ...membreTemp,
-                                                    genre: e.target.value,
+                                                    dateMariage: e.target.value,
                                                 })
                                             }
-                                        >
-                                            <option value="">
-                                                Sélectionner...
-                                            </option>
-                                            <option value="M">Masculin</option>
-                                            <option value="F">Féminin</option>
-                                        </select>
-                                        {errors["membre.genre"] && (
+                                        />
+                                        {errors["membre.dateMariage"] && (
                                             <p className="text-red-500 text-xs mt-1">
-                                                {errors["membre.genre"]}
+                                                {errors["membre.dateMariage"]}
                                             </p>
                                         )}
                                     </FormField>
                                     <FormField
-                                        label="Date de naissance"
-                                        icon={Calendar}
+                                        label="Lieu du mariage"
+                                        icon={Building}
                                         required
                                     >
                                         <input
-                                            type="date"
                                             className={STYLES.input}
-                                            value={membreTemp.dateNaissance}
+                                            value={membreTemp.lieuMariage}
                                             onChange={(e) =>
                                                 setMembreTemp({
                                                     ...membreTemp,
-                                                    dateNaissance:
-                                                        e.target.value,
+                                                    lieuMariage: e.target.value,
                                                 })
                                             }
+                                            placeholder="Ville, Pays..."
                                         />
-                                        {errors["membre.dateNaissance"] && (
+                                        {errors["membre.lieuMariage"] && (
                                             <p className="text-red-500 text-xs mt-1">
-                                                {errors["membre.dateNaissance"]}
+                                                {errors["membre.lieuMariage"]}
                                             </p>
                                         )}
                                     </FormField>
                                 </div>
+                            )}
 
-                                {/* Email et Téléphone */}
+                                {/* Email et TÃ©lÃ©phone */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField label="Email" icon={Mail}>
                                         <input
@@ -2217,7 +2132,7 @@ export default function RegisterFamille({
                                         )}
                                     </FormField>
                                     <FormField
-                                        label="Téléphone"
+                                        label="TÃ©lÃ©phone"
                                         icon={Phone}
                                         hint="Ex: 0102030405 (optionnel)"
                                     >
@@ -2247,12 +2162,12 @@ export default function RegisterFamille({
                                         )}
                                     </FormField>
                                 </div>
-                                {/* Fonction dans l'église et vide */}
+                                {/* Fonction dans l'Ã©glise et vide */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField
-                                        label="Fonction dans l'église"
+                                        label="Fonction dans l'Ã©glise"
                                         icon={Users}
-                                        hint="Sélectionnez une fonction"
+                                        hint="SÃ©lectionnez une fonction"
                                     >
                                         <Select2Fonction
                                             value={selectedRolesResponsable}
@@ -2262,7 +2177,7 @@ export default function RegisterFamille({
                                                 )
                                             }
                                             options={churchRoles}
-                                            placeholder="Sélectionner des fonctions..."
+                                            placeholder="SÃ©lectionner des fonctions..."
                                         />
                                     </FormField>
                                     <FormField
@@ -2288,10 +2203,10 @@ export default function RegisterFamille({
                                         )}
                                     </FormField>
                                 </div>
-                                {/* Lien de parenté et Statut marital */}
+                                {/* Lien de parentÃ© et Statut marital */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField
-                                        label="Lien de parenté"
+                                        label="Lien de parentÃ©"
                                         icon={Users}
                                         required
                                         hint="Relation avec le responsable"
@@ -2304,7 +2219,7 @@ export default function RegisterFamille({
                                                     relation: e.target.value,
                                                 })
                                             }
-                                            placeholder="Sélectionner un lien de parenté"
+                                            placeholder="SÃ©lectionner un lien de parentÃ©"
                                         />
                                         {errors["membre.relation"] && (
                                             <p className="text-red-500 text-xs mt-1">
@@ -2329,16 +2244,16 @@ export default function RegisterFamille({
                                             }
                                         >
                                             <option value="">
-                                                Sélectionner...
+                                                SÃ©lectionner...
                                             </option>
                                             <option value="celibataire">
-                                                Célibataire
+                                                CÃ©libataire
                                             </option>
                                             <option value="marie">
-                                                Marié(e)
+                                                MariÃ©(e)
                                             </option>
                                             <option value="divorce">
-                                                Divorcé(e)
+                                                DivorcÃ©(e)
                                             </option>
                                             <option value="veuf">
                                                 Veuf(ve)
@@ -2474,7 +2389,7 @@ export default function RegisterFamille({
                                 {membreTemp.statutMarital === "veuf" && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-gray-200">
                                         <FormField
-                                            label="Date du décès"
+                                            label="Date du dÃ©cÃ¨s"
                                             icon={Calendar}
                                             required
                                         >
@@ -2497,7 +2412,7 @@ export default function RegisterFamille({
                                             )}
                                         </FormField>
                                         <FormField
-                                            label="Lieu du décès"
+                                            label="Lieu du dÃ©cÃ¨s"
                                             icon={Building}
                                             required
                                         >
@@ -2640,7 +2555,7 @@ export default function RegisterFamille({
                                                                         .value,
                                                             })
                                                         }
-                                                        placeholder="Église, Ville..."
+                                                        placeholder="Ã‰glise, Ville..."
                                                     />
                                                 </FormField>
                                             </div>
@@ -2670,13 +2585,13 @@ export default function RegisterFamille({
                                                 className="text-sm font-medium text-gray-700"
                                             >
                                                 Cette personne a fait sa
-                                                première communion
+                                                premiÃ¨re communion
                                             </label>
                                         </div>
 
                                         {membreTemp.premiereCommunion && (
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-8">
-                                                <FormField label="Date de première communion">
+                                                <FormField label="Date de premiÃ¨re communion">
                                                     <input
                                                         type="date"
                                                         className={STYLES.input}
@@ -2694,7 +2609,7 @@ export default function RegisterFamille({
                                                         }
                                                     />
                                                 </FormField>
-                                                <FormField label="Lieu de première communion">
+                                                <FormField label="Lieu de premiÃ¨re communion">
                                                     <input
                                                         className={STYLES.input}
                                                         value={
@@ -2709,7 +2624,7 @@ export default function RegisterFamille({
                                                                         .value,
                                                             })
                                                         }
-                                                        placeholder="Église, Ville..."
+                                                        placeholder="Ã‰glise, Ville..."
                                                     />
                                                 </FormField>
                                             </div>
@@ -2778,7 +2693,7 @@ export default function RegisterFamille({
                                                                         .value,
                                                             })
                                                         }
-                                                        placeholder="Église, Ville..."
+                                                        placeholder="Ã‰glise, Ville..."
                                                     />
                                                 </FormField>
                                             </div>
@@ -2967,11 +2882,11 @@ export default function RegisterFamille({
                                                                         Relation:
                                                                     </span>{" "}
                                                                     {m.relation}{" "}
-                                                                    •{" "}
+                                                                    â€¢{" "}
                                                                     {m.genre ===
                                                                     "M"
                                                                         ? "Masculin"
-                                                                        : "Féminin"}
+                                                                        : "FÃ©minin"}
                                                                 </div>
                                                                 <div>
                                                                     <span className="font-medium">
@@ -2982,7 +2897,7 @@ export default function RegisterFamille({
                                                                 {m.telephone && (
                                                                     <div>
                                                                         <span className="font-medium">
-                                                                            Téléphone:
+                                                                            TÃ©lÃ©phone:
                                                                         </span>{" "}
                                                                         {
                                                                             m.telephone
@@ -2991,7 +2906,7 @@ export default function RegisterFamille({
                                                                 )}
                                                                 <div>
                                                                     <span className="font-medium">
-                                                                        Né le:
+                                                                        NÃ© le:
                                                                     </span>{" "}
                                                                     {
                                                                         m.dateNaissance
@@ -3003,23 +2918,23 @@ export default function RegisterFamille({
                                                                     </span>{" "}
                                                                     {m.statutMarital ===
                                                                     "celibataire"
-                                                                        ? "Célibataire"
+                                                                        ? "CÃ©libataire"
                                                                         : m.statutMarital ===
                                                                             "marie"
-                                                                          ? "Marié(e)"
+                                                                          ? "MariÃ©(e)"
                                                                           : m.statutMarital ===
                                                                               "divorce"
-                                                                            ? "Divorcé(e)"
+                                                                            ? "DivorcÃ©(e)"
                                                                             : "Veuf(ve)"}
                                                                 </div>
                                                                 {m.statutMarital ===
                                                                     "marie" && (
                                                                     <div className="text-xs text-blue-600">
-                                                                        Marié le{" "}
+                                                                        MariÃ© le{" "}
                                                                         {
                                                                             m.dateMariage
                                                                         }{" "}
-                                                                        à{" "}
+                                                                        Ã {" "}
                                                                         {
                                                                             m.lieuMariage
                                                                         }
@@ -3028,12 +2943,12 @@ export default function RegisterFamille({
                                                                 {m.statutMarital ===
                                                                     "divorce" && (
                                                                     <div className="text-xs text-orange-600">
-                                                                        Divorcé
+                                                                        DivorcÃ©
                                                                         le{" "}
                                                                         {
                                                                             m.dateDivorce
                                                                         }{" "}
-                                                                        à{" "}
+                                                                        Ã {" "}
                                                                         {
                                                                             m.lieuDivorce
                                                                         }
@@ -3042,12 +2957,12 @@ export default function RegisterFamille({
                                                                 {m.statutMarital ===
                                                                     "veuf" && (
                                                                     <div className="text-xs text-gray-600">
-                                                                        Décédé
+                                                                        DÃ©cÃ©dÃ©
                                                                         le{" "}
                                                                         {
                                                                             m.dateDeces
                                                                         }{" "}
-                                                                        à{" "}
+                                                                        Ã {" "}
                                                                         {
                                                                             m.lieuDeces
                                                                         }
@@ -3055,11 +2970,11 @@ export default function RegisterFamille({
                                                                 )}
                                                                 {m.baptise && (
                                                                     <div className="text-xs text-indigo-600">
-                                                                        Baptisé
+                                                                        BaptisÃ©
                                                                         {m.dateBapteme &&
                                                                             ` le ${m.dateBapteme}`}
                                                                         {m.lieuBapteme &&
-                                                                            ` à ${m.lieuBapteme}`}
+                                                                            ` Ã  ${m.lieuBapteme}`}
                                                                     </div>
                                                                 )}
                                                                 {m.fonction && (
@@ -3161,7 +3076,7 @@ export default function RegisterFamille({
                 return (
                     <div className="space-y-6 animate-fadeIn">
                         <h3 className="text-xl font-bold text-gray-800 text-center mb-4">
-                            Vérification finale
+                            VÃ©rification finale
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
@@ -3222,7 +3137,7 @@ export default function RegisterFamille({
                             </h4>
                             {membres.length === 0 ? (
                                 <p className="text-gray-500">
-                                    Aucun membre ajouté
+                                    Aucun membre ajoutÃ©
                                 </p>
                             ) : (
                                 <ul className="space-y-2">
@@ -3255,7 +3170,7 @@ export default function RegisterFamille({
                                                 {m.genre === "M"
                                                     ? "Masculin"
                                                     : m.genre === "F"
-                                                      ? "Féminin"
+                                                      ? "FÃ©minin"
                                                       : ""}
                                             </span>
                                             <span className="text-xs text-gray-500">
@@ -3263,7 +3178,7 @@ export default function RegisterFamille({
                                             </span>
                                             {m.baptise && (
                                                 <span className="text-xs text-blue-600">
-                                                    Baptisé
+                                                    BaptisÃ©
                                                 </span>
                                             )}
                                         </li>
@@ -3283,8 +3198,8 @@ export default function RegisterFamille({
                                 />
                                 <span className="text-sm text-gray-600">
                                     J'atteste l'exactitude de ces informations
-                                    et accepte la politique de confidentialité
-                                    de l'église.
+                                    et accepte la politique de confidentialitÃ©
+                                    de l'Ã©glise.
                                 </span>
                             </label>
                         </div>

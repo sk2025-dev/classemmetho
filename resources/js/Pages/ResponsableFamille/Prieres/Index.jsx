@@ -1,4 +1,4 @@
-import { Head, Link, router } from "@inertiajs/react";
+﻿import { Head, Link, router } from "@inertiajs/react";
 import { useEffect, useMemo, useState } from "react";
 import Select2Single from "../../../Components/Select2Single";
 import {
@@ -177,14 +177,8 @@ export default function ResponsableFamillePrieresIndex({
             },
             {
                 title: "Exaucements",
-<<<<<<< HEAD
-                value: withComments,
-                subtitle:
-                    "Demandes ayant deja recu un retour ou un temoignage.",
-=======
                 value: fulfilledCount,
                 subtitle: "Demandes explicitement marquees comme exaucees.",
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                 icon: CheckCircle2,
                 iconWrapClass: "bg-emerald-100 text-emerald-700",
             },
@@ -250,12 +244,7 @@ export default function ResponsableFamillePrieresIndex({
         if (activeTab === "fulfilled") {
             return {
                 title: "Demandes exaucees",
-<<<<<<< HEAD
-                description:
-                    "Retrouvez ici les demandes ayant deja recu un retour, un temoignage ou un commentaire.",
-=======
                 description: "Retrouvez ici les demandes explicitement marquees comme exaucees.",
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
             };
         }
 
@@ -280,15 +269,9 @@ export default function ResponsableFamillePrieresIndex({
         setSubject("");
         setMessage("");
         setIdentityMode("anonymous");
-<<<<<<< HEAD
-        setVisibleName(
-            [authUser?.prenom, authUser?.nom].filter(Boolean).join(" ").trim(),
-        );
-=======
         setVisibleName([authUser?.prenom, authUser?.nom].filter(Boolean).join(" ").trim());
         setTargetType(targeting?.targetModes?.[0]?.value ?? "all_pasteurs");
         setTargetUserId("");
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
     };
 
     const closeModal = () => {
@@ -600,67 +583,6 @@ export default function ResponsableFamillePrieresIndex({
                                                     <div className="mt-3.5 rounded-[20px] border border-slate-200 bg-slate-50/80 p-3">
                                                         <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-900">
                                                             <MessageSquare className="h-4 w-4 text-sky-700" />
-<<<<<<< HEAD
-                                                            Commentaires
-                                                            d'exaucement
-                                                        </div>
-
-                                                        <div className="mt-2.5 space-y-2.5">
-                                                            {request.comments
-                                                                .length > 0 ? (
-                                                                request.comments.map(
-                                                                    (
-                                                                        comment,
-                                                                        index,
-                                                                    ) => (
-                                                                        <div
-                                                                            key={`${request.id}-${index}`}
-                                                                            className="rounded-2xl border border-emerald-200 bg-white px-3.5 py-2.5 text-sm leading-6 text-emerald-900 shadow-sm"
-                                                                        >
-                                                                            <div>
-                                                                                {
-                                                                                    comment.message
-                                                                                }
-                                                                            </div>
-                                                                            {comment
-                                                                                .reactions
-                                                                                ?.length >
-                                                                            0 ? (
-                                                                                <div className="mt-2 flex flex-wrap gap-2">
-                                                                                    {comment.reactions.map(
-                                                                                        (
-                                                                                            reaction,
-                                                                                        ) => (
-                                                                                            <span
-                                                                                                key={`${request.id}-${index}-${reaction.emoji}`}
-                                                                                                className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
-                                                                                            >
-                                                                                                <span>
-                                                                                                    {
-                                                                                                        reaction.emoji
-                                                                                                    }
-                                                                                                </span>
-                                                                                                <span>
-                                                                                                    {
-                                                                                                        reaction.count
-                                                                                                    }
-                                                                                                </span>
-                                                                                            </span>
-                                                                                        ),
-                                                                                    )}
-                                                                                </div>
-                                                                            ) : null}
-                                                                        </div>
-                                                                    ),
-                                                                )
-                                                            ) : (
-                                                                <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-500">
-                                                                    Aucun
-                                                                    commentaire
-                                                                    ajoute pour
-                                                                    le moment.
-                                                                </div>
-=======
                                                             Echange sur la demande
                                                         </div>
                                                         <div className="mt-2.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm">
@@ -677,7 +599,6 @@ export default function ResponsableFamillePrieresIndex({
                                                                 <p className="text-sm text-slate-500">
                                                                     Aucun commentaire ajoute pour le moment.
                                                                 </p>
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                                             )}
                                                         </div>
                                                     </div>
@@ -704,77 +625,22 @@ export default function ResponsableFamillePrieresIndex({
                                                 </div>
 
                                                 <div className="flex h-full w-full flex-col rounded-[22px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-3.5 shadow-sm">
-<<<<<<< HEAD
-                                                    {request.comments.length >
-                                                    0 ? (
-=======
                                                     {isReadOnlyScope ? (
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                                         <>
                                                             <p className="text-[13px] font-semibold text-slate-900">
                                                                 Consultation
                                                             </p>
                                                             <p className="mt-1 text-sm leading-5 text-slate-600">
-<<<<<<< HEAD
-                                                                Votre
-                                                                commentaire a
-                                                                deja ete
-                                                                enregistre. Vous
-                                                                pouvez
-                                                                maintenant
-                                                                confirmer que
-                                                                cette priere est
-                                                                exaucee.
+                                                                Cette demande vous a ete transmise. Elle est affichÃ©e en lecture seule dans cet onglet.
                                                             </p>
-
-                                                            <button
-                                                                type="button"
-                                                                disabled={
-                                                                    request.status ===
-                                                                    "Exaucement partage"
-                                                                }
-                                                                onClick={() =>
-                                                                    setRequestToFulfill(
-                                                                        request,
-                                                                    )
-                                                                }
-                                                                className={`mt-auto inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(5,150,105,0.24)] transition ${
-                                                                    request.status ===
-                                                                    "Exaucement partage"
-                                                                        ? "cursor-not-allowed bg-slate-400 shadow-none"
-                                                                        : "bg-emerald-600 hover:bg-emerald-700"
-                                                                }`}
-                                                            >
-                                                                <CheckCircle2 className="h-4 w-4" />
-                                                                {request.status ===
-                                                                "Exaucement partage"
-                                                                    ? "Priere deja exaucee"
-                                                                    : "Marquer comme priere exaucee"}
-                                                            </button>
-=======
-                                                                Cette demande vous a ete transmise. Elle est affichée en lecture seule dans cet onglet.
-                                                            </p>
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                                         </>
                                                     ) : (
                                                         <>
                                                             <p className="text-[13px] font-semibold text-slate-900">
-<<<<<<< HEAD
-                                                                Ajouter un
-                                                                retour
-                                                            </p>
-                                                            <p className="mt-1 text-sm leading-5 text-slate-600">
-                                                                Partagez un
-                                                                exaucement, une
-                                                                evolution ou un
-                                                                mot de
-                                                                gratitude.
-=======
                                                                 Ajouter un commentaire
                                                             </p>
                                                             <p className="mt-1 text-sm leading-5 text-slate-600">
                                                                 Vous pouvez ajouter autant de commentaires que necessaire. Chaque ajout garde sa date.
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                                             </p>
 
                                                             {replyTargets[request.id] ? (
@@ -904,14 +770,7 @@ export default function ResponsableFamillePrieresIndex({
                             </button>
                         </div>
 
-<<<<<<< HEAD
-                        <form
-                            onSubmit={handleSubmit}
-                            className="mt-6 space-y-5"
-                        >
-=======
                         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                             <div>
                                 <p className="text-sm font-semibold text-slate-800">
                                     Visibilite de votre identite
@@ -919,15 +778,8 @@ export default function ResponsableFamillePrieresIndex({
                                 <div className="mt-2 grid gap-2 md:grid-cols-2">
                                     <button
                                         type="button"
-<<<<<<< HEAD
-                                        onClick={() =>
-                                            setIdentityMode("anonymous")
-                                        }
-                                        className={`rounded-[22px] border p-4 text-left transition ${
-=======
                                         onClick={() => setIdentityMode("anonymous")}
                                         className={`rounded-2xl border px-4 py-3 text-left transition ${
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                             isAnonymous
                                                 ? "border-violet-500 bg-violet-50 text-violet-900"
                                                 : "border-slate-200 bg-white text-slate-800 hover:border-slate-300"
@@ -937,28 +789,15 @@ export default function ResponsableFamillePrieresIndex({
                                             <EyeOff className="h-4 w-4" />
                                             Rester anonyme
                                         </div>
-<<<<<<< HEAD
-                                        <p className="mt-2 text-sm leading-6 opacity-90">
-                                            Votre demande est transmise sans
-                                            afficher votre nom et prenom.
-=======
                                         <p className="mt-1 text-xs leading-5 text-slate-500">
                                             Votre demande est transmise sans afficher votre nom et prenom.
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                         </p>
                                     </button>
 
                                     <button
                                         type="button"
-<<<<<<< HEAD
-                                        onClick={() =>
-                                            setIdentityMode("visible")
-                                        }
-                                        className={`rounded-[22px] border p-4 text-left transition ${
-=======
                                         onClick={() => setIdentityMode("visible")}
                                         className={`rounded-2xl border px-4 py-3 text-left transition ${
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                             !isAnonymous
                                                 ? "border-teal-500 bg-teal-50 text-teal-900"
                                                 : "border-slate-200 bg-white text-slate-800 hover:border-slate-300"
@@ -968,14 +807,8 @@ export default function ResponsableFamillePrieresIndex({
                                             <UserRound className="h-4 w-4" />
                                             Afficher mon nom
                                         </div>
-<<<<<<< HEAD
-                                        <p className="mt-2 text-sm leading-6 opacity-90">
-                                            La demande est envoyee avec votre
-                                            identite visible pour les pasteurs.
-=======
                                         <p className="mt-1 text-xs leading-5 text-slate-500">
                                             Votre nom sera visible par les destinataires de cette priere.
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                         </p>
                                     </button>
                                 </div>
@@ -1010,14 +843,8 @@ export default function ResponsableFamillePrieresIndex({
                                 <input
                                     type="text"
                                     value={subject}
-<<<<<<< HEAD
-                                    onChange={(event) =>
-                                        setSubject(event.target.value)
-                                    }
-=======
                                     onChange={(event) => setSubject(event.target.value)}
                                     maxLength={40}
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                     placeholder="Ex: Sante, famille, travail, etudes..."
                                     className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                                 />
@@ -1093,14 +920,8 @@ export default function ResponsableFamillePrieresIndex({
                                 <textarea
                                     rows={4}
                                     value={message}
-<<<<<<< HEAD
-                                    onChange={(event) =>
-                                        setMessage(event.target.value)
-                                    }
-=======
                                     onChange={(event) => setMessage(event.target.value)}
                                     required
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                     placeholder="Decrivez votre besoin de priere avec les details que vous souhaitez partager."
                                     className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                                 />

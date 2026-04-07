@@ -15,14 +15,7 @@ use App\Http\Controllers\ResponsableFamille\DashboardController as ResponsableFa
 use App\Http\Controllers\ResponsableFamille\AnnuaireController as ResponsableFamilleAnnuaireController;
 use App\Http\Controllers\ResponsableFamille\InscriptionsController as ResponsableFamilleInscriptionsController;
 use App\Http\Controllers\ResponsableFamille\MemberController as ResponsableFamilleMemberController;
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
 use App\Http\Controllers\ResponsableFamille\ProgrammeMembreController;
-=======
-use App\Http\Controllers\ResponsableFamille\FormationController as ResponsableFamilleFormationController;
->>>>>>> c712b42032eb29828647cf7899ab84d9998199a8
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
 use App\Http\Controllers\Pasteur\AnnuaireController as PasteurAnnuaireController;
 use App\Http\Controllers\Pasteur\DashboardController as PasteurDashboardController;
 use App\Http\Controllers\Pasteur\TresorerieController as PasteurTresorerieController;
@@ -60,8 +53,6 @@ Route::get('/', function () {
 Route::get('/certificat/verification/{reference}', [VerificationCertificatController::class, 'show'])
     ->name('certificat.verification');
 
-<<<<<<< HEAD
-=======
 Route::get('/sondages/public/{token}', [\App\Http\Controllers\Public\SondageController::class, 'show'])
     ->name('sondages.public.show');
 Route::post('/sondages/public/{token}/acces', [\App\Http\Controllers\Public\SondageController::class, 'verifyAccess'])
@@ -71,8 +62,6 @@ Route::get('/sondages/public/{token}/repondre', [\App\Http\Controllers\Public\So
 Route::post('/sondages/public/{token}/reponses', [\App\Http\Controllers\Public\SondageController::class, 'storeResponse'])
     ->name('sondages.public.responses.store');
 
-
->>>>>>> c712b42032eb29828647cf7899ab84d9998199a8
 // Pages d'authentification (Inertia)
 Route::get('/login', function () {
     return Inertia::render('login');
@@ -325,10 +314,8 @@ Route::middleware(['auth'])->group(function () {
             ->name('conducteur.tresorerie.collectes.store');
         Route::post('/conducteur/tresorerie/paiements', [ConducteurTresorerieController::class, 'storePaiement'])
             ->name('conducteur.tresorerie.paiements.store');
-<<<<<<< HEAD
         Route::post('/conducteur/tresorerie/assign-tresorier', [ConducteurTresorerieController::class, 'assignTresorier'])
             ->name('conducteur.tresorerie.assign-tresorier');
-=======
 
         // ===== ROUTES PROGRAMMES CONDUCTEUR =====
         Route::get('/conducteur/programmes', [ProgrammesClasseController::class, 'index'])->name('conducteur.programmes');
@@ -343,7 +330,6 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/conducteur/galerie/add', [ProgrammesClasseController::class, 'addMedia'])->name('conducteur.galerie.add');
         Route::get('/conducteur/galerie', [ProgrammesClasseController::class, 'getGalleryMedia'])->name('conducteur.galerie');
         Route::delete('/conducteur/galerie/{id}', [ProgrammesClasseController::class, 'deleteMedia'])->name('conducteur.galerie.delete');
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
     });
 
     // Tableau de bord Responsable de Famille
@@ -420,24 +406,14 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:pasteur')->group(function () {
         Route::get('/pasteur/annuaire', [PasteurAnnuaireController::class, 'index'])->name('pasteur.annuaire.index');
         Route::get('/pasteur/dashboard', [PasteurDashboardController::class, 'index'])->name('pasteur.dashboard');
-<<<<<<< HEAD
         Route::get('/pasteur/prieres', [\App\Http\Controllers\Pasteur\Prieres\PrieresController::class, 'index'])->name('pasteur.prieres.index');
         Route::patch('/pasteur/prieres/{priere}/status', [\App\Http\Controllers\Pasteur\Prieres\PrieresController::class, 'updateStatus'])->name('pasteur.prieres.status');
         Route::patch('/pasteur/prieres/{priere}/commentaire', [\App\Http\Controllers\Pasteur\Prieres\PrieresController::class, 'addComment'])->name('pasteur.prieres.comment');
         Route::patch('/pasteur/prieres/{priere}/reaction', [\App\Http\Controllers\Pasteur\Prieres\PrieresController::class, 'toggleReaction'])->name('pasteur.prieres.reaction');
-=======
-<<<<<<< HEAD
-=======
-        Route::get('/pasteur/prieres', [\App\Http\Controllers\Pasteur\PrieresController::class, 'index'])->name('pasteur.prieres.index');
-        Route::patch('/pasteur/prieres/{priere}/status', [\App\Http\Controllers\Pasteur\PrieresController::class, 'updateStatus'])->name('pasteur.prieres.status');
-        Route::patch('/pasteur/prieres/{priere}/exaucee', [\App\Http\Controllers\Pasteur\PrieresController::class, 'markFulfilled'])->name('pasteur.prieres.fulfilled');
-        Route::patch('/pasteur/prieres/{priere}/reaction', [\App\Http\Controllers\Pasteur\PrieresController::class, 'toggleReaction'])->name('pasteur.prieres.reaction');
->>>>>>> ea51b49b97a39e61623ec5ba156b6d7207142844
         Route::get('/pasteur/sondages', [\App\Http\Controllers\Pasteur\Sondage\SondageController::class, 'index'])->name('pasteur.sondages.index');
         Route::get('/pasteur/sondages/{id}/export', [\App\Http\Controllers\Pasteur\Sondage\SondageController::class, 'export'])->whereNumber('id')->name('pasteur.sondages.export');
         Route::get('/pasteur/sondages/{id}', [\App\Http\Controllers\Pasteur\Sondage\SondageController::class, 'show'])->whereNumber('id')->name('pasteur.sondages.show');
         // Liste des inscriptions pour le pasteur (module controller)
->>>>>>> c712b42032eb29828647cf7899ab84d9998199a8
         Route::get('/pasteur/inscriptions', [\App\Http\Controllers\Pasteur\InscriptionsController::class, 'index'])
             ->name('pasteur.inscriptions');
 

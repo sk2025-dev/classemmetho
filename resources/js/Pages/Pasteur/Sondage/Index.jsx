@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Head, Link } from "@inertiajs/react";
 import Select2Single from "../../../Components/Select2Single";
 import {
@@ -331,24 +331,10 @@ export default function PasteurSondageIndex({
                                     onChange={(event) =>
                                         setStatusFilter(event.target.value)
                                     }
-<<<<<<< HEAD
-                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                >
-                                    <option value="all">
-                                        Tous les statuts
-                                    </option>
-                                    {statusOptions.map((statut) => (
-                                        <option key={statut} value={statut}>
-                                            {statut}
-                                        </option>
-                                    ))}
-                                </select>
-=======
                                     options={statusFilterOptions}
                                     placeholder="Tous les statuts"
                                     allowClearOption={false}
                                 />
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
 
                                 <Select2Single
                                     name="classe_filter"
@@ -356,24 +342,10 @@ export default function PasteurSondageIndex({
                                     onChange={(event) =>
                                         setClasseFilter(event.target.value)
                                     }
-<<<<<<< HEAD
-                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                >
-                                    <option value="all">
-                                        Toutes les classes
-                                    </option>
-                                    {classeOptions.map((classe) => (
-                                        <option key={classe} value={classe}>
-                                            {classe}
-                                        </option>
-                                    ))}
-                                </select>
-=======
                                     options={classeFilterOptions}
                                     placeholder="Toutes les classes"
                                     allowClearOption={false}
                                 />
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
 
                                 <Select2Single
                                     name="cible_filter"
@@ -381,24 +353,10 @@ export default function PasteurSondageIndex({
                                     onChange={(event) =>
                                         setCibleFilter(event.target.value)
                                     }
-<<<<<<< HEAD
-                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                >
-                                    <option value="all">
-                                        Toutes les cibles
-                                    </option>
-                                    {cibleOptions.map((cible) => (
-                                        <option key={cible} value={cible}>
-                                            {cible}
-                                        </option>
-                                    ))}
-                                </select>
-=======
                                     options={cibleFilterOptions}
                                     placeholder="Toutes les cibles"
                                     allowClearOption={false}
                                 />
->>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                             </div>
                         </div>
 
