@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Head, Link } from "@inertiajs/react";
+import Select2Single from "../../../Components/Select2Single";
 import {
     ArrowLeft,
     BarChart3,
@@ -153,6 +154,20 @@ export default function ResponsableFamilleSondageIndex({
         .filter(Boolean)
         .sort((a, b) => a.localeCompare(b, "fr"));
 
+    const statusFilterOptions = [
+        { value: "all", label: "Tous les statuts" },
+        { value: "Actif", label: "Actif" },
+        { value: "Cloture", label: "Cloture" },
+    ];
+
+    const audienceFilterOptions = [
+        { value: "all", label: "Toutes les audiences" },
+        ...audienceOptions.map((audience) => ({
+            value: audience,
+            label: audience,
+        })),
+    ];
+
     const filteredSondages = sondages.filter((survey) => {
         const term = search.trim().toLowerCase();
         const matchesSearch =
@@ -271,33 +286,28 @@ export default function ResponsableFamilleSondageIndex({
                                         />
                                     </label>
 
-                                    <select
+                                    <Select2Single
+                                        name="status_filter"
                                         value={statusFilter}
                                         onChange={(event) =>
                                             setStatusFilter(event.target.value)
                                         }
-                                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                    >
-                                        <option value="all">Tous les statuts</option>
-                                        <option value="Actif">Actif</option>
-                                        <option value="Cloture">Cloture</option>
-                                    </select>
+                                        options={statusFilterOptions}
+                                        placeholder="Tous les statuts"
+                                        allowClearOption={false}
+                                    />
 
                                     {showAudienceFilter ? (
-                                        <select
+                                        <Select2Single
+                                            name="audience_filter"
                                             value={audienceFilter}
                                             onChange={(event) =>
                                                 setAudienceFilter(event.target.value)
                                             }
-                                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                        >
-                                            <option value="all">Toutes les audiences</option>
-                                            {audienceOptions.map((audience) => (
-                                                <option key={audience} value={audience}>
-                                                    {audience}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            options={audienceFilterOptions}
+                                            placeholder="Toutes les audiences"
+                                            allowClearOption={false}
+                                        />
                                     ) : null}
                                 </div>
                             </div>

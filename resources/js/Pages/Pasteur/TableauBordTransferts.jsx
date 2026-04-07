@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { usePage, router } from '@inertiajs/react';
+import { withBasePath } from "../../Utils/urlHelper";
+import Select2Single from "../../Components/Select2Single";
 import {
   CheckCircle, Clock, XCircle,
   Eye, Plus, User, UsersRound, Inbox, Search, X, Info, Layers
@@ -452,6 +454,24 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
   const [formData,         setFormData]         = useState({ type: 'member', member_id: '', target_class_id: '', reason: '' });
   const [processing,       setProcessing]       = useState(false);
 
+  const statusFilterOptions = [
+    { value: '', label: 'Tous les statuts' },
+    { value: 'SOUMISE', label: 'Soumise' },
+    { value: 'VALIDEE_SOURCE', label: 'Validee Source' },
+    { value: 'TERMINEE', label: 'Terminee' },
+    { value: 'REFUSEE', label: 'Refusee' },
+  ];
+
+  const memberOptions = [
+    { value: '', label: 'Selectionner un membre...' },
+    ...members.map((m) => ({ value: String(m.id), label: `${m.nom} ${m.prenom}` })),
+  ];
+
+  const classOptions = [
+    { value: '', label: 'Selectionner une classe...' },
+    ...classes.map((c) => ({ value: String(c.id), label: c.nom })),
+  ];
+
   const stats = useMemo(() => ({
     total:     transfers.length,
     pending:   transfers.filter(t => ['SOUMISE','EN_ATTENTE_SOURCE','EN_ATTENTE_ACCUEIL'].includes(t.status)).length,
@@ -481,7 +501,7 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
 
   const handleSubmit = () => {
     setProcessing(true);
-    router.post('/pasteur/transferts', {
+    router.post(withBasePath("", '/pasteur/transferts'), {
       type: formData.type,
       user_id: formData.type === 'member' ? parseInt(formData.member_id) : null,
       target_class_id: parseInt(formData.target_class_id),

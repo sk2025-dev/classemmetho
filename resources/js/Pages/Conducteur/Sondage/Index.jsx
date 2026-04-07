@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import { withBasePath } from "../../../Utils/urlHelper";
+import Select2Single from "../../../Components/Select2Single";
 import {
     ArrowLeft,
     BarChart3,
@@ -13,7 +14,6 @@ import {
     TrendingUp,
     Users,
     X,
-    ChevronDown,
     ChevronLeft,
     ChevronRight,
 } from "lucide-react";
@@ -193,6 +193,21 @@ export default function ConducteurSondageIndex({
         .filter(Boolean)
         .sort((a, b) => a.localeCompare(b, "fr"));
 
+    const statusFilterOptions = [
+        { value: "all", label: "Tous les statuts" },
+        { value: "Actif", label: "Actif" },
+        { value: "Brouillon", label: "Brouillon" },
+        { value: "Cloture", label: "Cloture" },
+    ];
+
+    const cibleFilterOptions = [
+        { value: "all", label: "Toutes les cibles" },
+        ...cibleOptions.map((cible) => ({
+            value: cible,
+            label: cible,
+        })),
+    ];
+
     const sondagesFiltres = sondagesNormalises.filter((sondage) => {
         const term = search.trim().toLowerCase();
 
@@ -370,45 +385,27 @@ export default function ConducteurSondageIndex({
                                     />
                                 </label>
 
-                                <label className="relative block">
-                                    <select
-                                        value={statusFilter}
-                                        onChange={(event) =>
-                                            setStatusFilter(event.target.value)
-                                        }
-                                        className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-3 pl-4 pr-10 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                    >
-                                        <option value="all">
-                                            Tous les statuts
-                                        </option>
-                                        <option value="Actif">Actif</option>
-                                        <option value="Brouillon">
-                                            Brouillon
-                                        </option>
-                                        <option value="Cloture">Cloture</option>
-                                    </select>
-                                    <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                                </label>
+                                <Select2Single
+                                    name="status_filter"
+                                    value={statusFilter}
+                                    onChange={(event) =>
+                                        setStatusFilter(event.target.value)
+                                    }
+                                    options={statusFilterOptions}
+                                    placeholder="Tous les statuts"
+                                    allowClearOption={false}
+                                />
 
-                                <label className="relative block">
-                                    <select
-                                        value={cibleFilter}
-                                        onChange={(event) =>
-                                            setCibleFilter(event.target.value)
-                                        }
-                                        className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-3 pl-4 pr-10 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                    >
-                                        <option value="all">
-                                            Toutes les cibles
-                                        </option>
-                                        {cibleOptions.map((cible) => (
-                                            <option key={cible} value={cible}>
-                                                {cible}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                                </label>
+                                <Select2Single
+                                    name="cible_filter"
+                                    value={cibleFilter}
+                                    onChange={(event) =>
+                                        setCibleFilter(event.target.value)
+                                    }
+                                    options={cibleFilterOptions}
+                                    placeholder="Toutes les cibles"
+                                    allowClearOption={false}
+                                />
                             </div>
                         </div>
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Head, router, usePage } from "@inertiajs/react";
+import Select2Single from "../../../Components/Select2Single";
 import {
     CalendarDays,
     ChevronRight,
@@ -114,6 +115,20 @@ export default function PublicSondageRespond({
         () => (Array.isArray(survey?.questions) ? survey.questions : []),
         [survey],
     );
+
+    const genreOptions = [
+        { value: "", label: "Selectionner" },
+        { value: "M", label: "Masculin" },
+        { value: "F", label: "Feminin" },
+    ];
+
+    const employmentStatusOptions = [
+        { value: "", label: "Selectionner" },
+        { value: "TRAVAILLEUR", label: "Travailleur" },
+        { value: "RETRAITE", label: "Retraite" },
+        { value: "ETUDIANT", label: "Etudiant" },
+        { value: "SANS_EMPLOI", label: "Sans emploi" },
+    ];
 
     useEffect(() => {
         if (flash?.success && flash.success !== lastSuccessRef.current) {
@@ -290,21 +305,22 @@ export default function PublicSondageRespond({
                                         <Users className="h-3.5 w-3.5" />
                                         Genre
                                     </div>
-                                    <select
-                                        value={memberForm.genre}
-                                        onChange={(event) =>
-                                            setMemberForm((current) => ({
-                                                ...current,
-                                                genre: event.target.value,
-                                            }))
-                                        }
-                                        disabled={hasResponded || isExpired}
-                                        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                    >
-                                        <option value="">Selectionner</option>
-                                        <option value="M">Masculin</option>
-                                        <option value="F">Feminin</option>
-                                    </select>
+                                    <div className="mt-2">
+                                        <Select2Single
+                                            name="member.genre"
+                                            value={memberForm.genre}
+                                            onChange={(event) =>
+                                                setMemberForm((current) => ({
+                                                    ...current,
+                                                    genre: event.target.value,
+                                                }))
+                                            }
+                                            options={genreOptions}
+                                            disabled={hasResponded || isExpired}
+                                            placeholder="Selectionner"
+                                            allowClearOption={false}
+                                        />
+                                    </div>
                                     {errors["member.genre"] ? (
                                         <p className="mt-2 text-sm text-rose-600">
                                             {errors["member.genre"]}
@@ -388,23 +404,22 @@ export default function PublicSondageRespond({
                                         <ShieldCheck className="h-3.5 w-3.5" />
                                         Situation socio-pro
                                     </div>
-                                    <select
-                                        value={memberForm.employment_status}
-                                        onChange={(event) =>
-                                            setMemberForm((current) => ({
-                                                ...current,
-                                                employment_status: event.target.value,
-                                            }))
-                                        }
-                                        disabled={hasResponded || isExpired}
-                                        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                    >
-                                        <option value="">Selectionner</option>
-                                        <option value="TRAVAILLEUR">Travailleur</option>
-                                        <option value="RETRAITE">Retraite</option>
-                                        <option value="ETUDIANT">Etudiant</option>
-                                        <option value="SANS_EMPLOI">Sans emploi</option>
-                                    </select>
+                                    <div className="mt-2">
+                                        <Select2Single
+                                            name="member.employment_status"
+                                            value={memberForm.employment_status}
+                                            onChange={(event) =>
+                                                setMemberForm((current) => ({
+                                                    ...current,
+                                                    employment_status: event.target.value,
+                                                }))
+                                            }
+                                            options={employmentStatusOptions}
+                                            disabled={hasResponded || isExpired}
+                                            placeholder="Selectionner"
+                                            allowClearOption={false}
+                                        />
+                                    </div>
                                     {errors["member.employment_status"] ? (
                                         <p className="mt-2 text-sm text-rose-600">
                                             {errors["member.employment_status"]}

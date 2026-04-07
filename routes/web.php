@@ -22,7 +22,7 @@ use App\Http\Controllers\Pasteur\TresorerieController as PasteurTresorerieContro
 use App\Http\Controllers\MembreFamille\AnnuaireController as MembreFamilleAnnuaireController;
 use App\Http\Controllers\MembreFamille\DashboardController as MembreFamilleDashboardController;
 use App\Http\Controllers\MembreFamille\FinancesController as MembreFamilleFinancesController;
-use App\Http\Controllers\MembreFamille\ProgrammesActivitesController; 
+use App\Http\Controllers\MembreFamille\ProgrammesActivitesClasseController;
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\Profile\ChangePasswordController;
 use App\Http\Controllers\Admin\AdministrationController;
@@ -483,9 +483,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/membre-famille/finances/paiement/{paiement}/verify', [MembreFamilleFinancesController::class, 'verifyPaiement'])
             ->name('membre_famille.finances.paiement.verify');
 
-        Route::get('/membre-famille/programmes', [ProgrammesActivitesController::class, 'index'])->name('membre_famille.programmes');
-        Route::post('/membre-famille/programmes/agenda', [ProgrammesActivitesController::class, 'storeAgenda'])->name('membre_famille.programmes.agenda');
-        Route::post('/membre-famille/programmes/event', [ProgrammesActivitesController::class, 'storeEvent'])->name('membre_famille.programmes.event');
+        Route::get('/membre-famille/programmes', [ProgrammesActivitesClasseController::class, 'index'])->name('membre_famille.programmes');
+        Route::post('/membre-famille/programmes/agenda', [ProgrammesActivitesClasseController::class, 'storeAgenda'])->name('membre_famille.programmes.agenda');
+        Route::post('/membre-famille/programmes/event', [ProgrammesActivitesClasseController::class, 'storeEvent'])->name('membre_famille.programmes.event');
     });
 
     // Route pour changer le mot de passe

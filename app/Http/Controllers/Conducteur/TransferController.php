@@ -305,9 +305,12 @@ class TransferController extends Controller
                     'role' => 'responsable_famille', // Devient responsable de sa nouvelle famille
                 ]);
             } else {
-                // Pour un transfert familial, juste changer la classe des membres
+                // Pour un transfert familial, synchroniser la classe de la famille
+                // puis de tous ses membres.
+                Family::where('id', $transfer->family_id)
+                    ->update(['classe_id' => $transfer->target_class_id]);
+
                 User::where('family_id', $transfer->family_id)
-                    ->where('id', '!=', Auth::user()->id)
                     ->update(['classe_id' => $transfer->target_class_id]);
             }
 

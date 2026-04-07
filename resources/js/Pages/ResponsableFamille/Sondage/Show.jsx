@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Head, Link, router, usePage } from "@inertiajs/react";
+import Select2Single from "../../../Components/Select2Single";
 import {
     ArrowLeft,
     CalendarDays,
@@ -72,6 +73,29 @@ export default function ResponsableFamilleSondageShow({
     const resolvedHeaderSubtitle =
         headerSubtitle ??
         (classe?.nom ? `Classe ${classe.nom}` : "Votre reponse reste anonyme.");
+
+    const genreOptions = [
+        { value: "", label: "Non renseigne" },
+        { value: "Femmes", label: "Femmes" },
+        { value: "Hommes", label: "Hommes" },
+    ];
+
+    const roleOptions = [
+        { value: "", label: "Non renseigne" },
+        { value: "Responsables de famille", label: "Responsables de famille" },
+        { value: "Membres de famille", label: "Membres de famille" },
+        { value: "Conducteurs", label: "Conducteurs" },
+        { value: "Autres", label: "Autres" },
+    ];
+
+    const employmentStatusOptions = [
+        { value: "", label: "Non renseignee" },
+        { value: "Travailleurs", label: "Travailleurs" },
+        { value: "Etudiants", label: "Etudiants" },
+        { value: "Sans emploi", label: "Sans emploi" },
+        { value: "Retraites", label: "Retraites" },
+        { value: "Autres", label: "Autres" },
+    ];
 
     useEffect(() => {
         if (flash?.success && flash.success !== lastSuccessRef.current) {
@@ -247,7 +271,8 @@ export default function ResponsableFamilleSondageShow({
                                     <label className="mb-2 block text-sm font-semibold text-slate-700">
                                         Genre
                                     </label>
-                                    <select
+                                    <Select2Single
+                                        name="respondentProfile.genre"
                                         value={respondentProfile.genre}
                                         onChange={(event) =>
                                             setRespondentProfile((current) => ({
@@ -255,13 +280,11 @@ export default function ResponsableFamilleSondageShow({
                                                 genre: event.target.value,
                                             }))
                                         }
+                                        options={genreOptions}
                                         disabled={hasResponded || isExpired || previewMode}
-                                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                    >
-                                        <option value="">Non renseigne</option>
-                                        <option value="Femmes">Femmes</option>
-                                        <option value="Hommes">Hommes</option>
-                                    </select>
+                                        placeholder="Non renseigne"
+                                        allowClearOption={false}
+                                    />
                                     {errors["respondentProfile.genre"] ? (
                                         <p className="mt-2 text-sm text-rose-600">
                                             {errors["respondentProfile.genre"]}
@@ -273,7 +296,8 @@ export default function ResponsableFamilleSondageShow({
                                     <label className="mb-2 block text-sm font-semibold text-slate-700">
                                         Role
                                     </label>
-                                    <select
+                                    <Select2Single
+                                        name="respondentProfile.role"
                                         value={respondentProfile.role}
                                         onChange={(event) =>
                                             setRespondentProfile((current) => ({
@@ -281,15 +305,11 @@ export default function ResponsableFamilleSondageShow({
                                                 role: event.target.value,
                                             }))
                                         }
+                                        options={roleOptions}
                                         disabled={hasResponded || isExpired || previewMode}
-                                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                    >
-                                        <option value="">Non renseigne</option>
-                                        <option value="Responsables de famille">Responsables de famille</option>
-                                        <option value="Membres de famille">Membres de famille</option>
-                                        <option value="Conducteurs">Conducteurs</option>
-                                        <option value="Autres">Autres</option>
-                                    </select>
+                                        placeholder="Non renseigne"
+                                        allowClearOption={false}
+                                    />
                                     {errors["respondentProfile.role"] ? (
                                         <p className="mt-2 text-sm text-rose-600">
                                             {errors["respondentProfile.role"]}
@@ -301,7 +321,8 @@ export default function ResponsableFamilleSondageShow({
                                     <label className="mb-2 block text-sm font-semibold text-slate-700">
                                         Situation socio-pro
                                     </label>
-                                    <select
+                                    <Select2Single
+                                        name="respondentProfile.employment_status"
                                         value={respondentProfile.employment_status}
                                         onChange={(event) =>
                                             setRespondentProfile((current) => ({
@@ -309,16 +330,11 @@ export default function ResponsableFamilleSondageShow({
                                                 employment_status: event.target.value,
                                             }))
                                         }
+                                        options={employmentStatusOptions}
                                         disabled={hasResponded || isExpired || previewMode}
-                                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                    >
-                                        <option value="">Non renseignee</option>
-                                        <option value="Travailleurs">Travailleurs</option>
-                                        <option value="Etudiants">Etudiants</option>
-                                        <option value="Sans emploi">Sans emploi</option>
-                                        <option value="Retraites">Retraites</option>
-                                        <option value="Autres">Autres</option>
-                                    </select>
+                                        placeholder="Non renseignee"
+                                        allowClearOption={false}
+                                    />
                                     {errors["respondentProfile.employment_status"] ? (
                                         <p className="mt-2 text-sm text-rose-600">
                                             {errors["respondentProfile.employment_status"]}

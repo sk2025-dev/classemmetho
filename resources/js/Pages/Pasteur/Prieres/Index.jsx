@@ -195,20 +195,30 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
     const handleToggleDetails = (request) => {
         const isExpanded = Boolean(expandedRequests[request.id]);
         setExpandedRequests((current) => ({ ...current, [request.id]: !isExpanded }));
-        if (!isExpanded && ["Nouvelle", "Vu"].includes(request.status)) {
+        if (!isExpanded && ["Nouvelle", "Vu", "Transmise"].includes(request.status)) {
             updateRequestStatus(request.id, "En priere");
         }
     };
 
     const tabs = useMemo(() => [
         { id: "all", label: "Toutes les demandes", count: requests.length },
-        { id: "new", label: "Nouvelles demandes", count: requests.filter((r) => r.status === "Nouvelle").length },
+        {
+            id: "new",
+            label: "Nouvelles demandes",
+            count: requests.filter((r) =>
+                ["Nouvelle", "Vu", "Transmise"].includes(r.status),
+            ).length,
+        },
         { id: "in_prayer", label: "En priere", count: requests.filter((r) => r.status === "En priere").length },
         { id: "fulfilled", label: "Exaucees", count: requests.filter((r) => r.status === "Exaucement" || r.status === "Exaucement partage").length },
     ], [requests]);
 
     const filteredRequests = useMemo(() => {
-        if (activeTab === "new") return requests.filter((r) => r.status === "Nouvelle");
+        if (activeTab === "new") {
+            return requests.filter((r) =>
+                ["Nouvelle", "Vu", "Transmise"].includes(r.status),
+            );
+        }
         if (activeTab === "in_prayer") return requests.filter((r) => r.status === "En priere");
         if (activeTab === "fulfilled") return requests.filter((r) => r.status === "Exaucement" || r.status === "Exaucement partage");
         return requests;
@@ -400,7 +410,7 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
                                                                     type="button"
                                                                     onClick={() => {
                                                                         setOpenThread(request.id);
-                                                                        if (["Nouvelle", "Vu"].includes(request.status)) {
+                                                                        if (["Nouvelle", "Vu", "Transmise"].includes(request.status)) {
                                                                             updateRequestStatus(request.id, "En priere");
                                                                         }
                                                                     }}
@@ -429,15 +439,15 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
                     <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm" onClick={() => setOpenThread(null)} />
 
                     {/* Panel */}
-                    <div className="relative flex w-full max-w-[600px] flex-col overflow-hidden rounded-l-[28px] border-l border-white/80 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
+                    <div className="relative flex w-full max-w-[560px] flex-col overflow-hidden rounded-l-[28px] border-l border-slate-200 bg-[#f8fafc] shadow-[0_26px_64px_rgba(15,23,42,0.18)]">
 
                         {/* Header du Drawer */}
-                        <div className="relative border-b border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#f1f5f9_100%)] px-6 py-5">
+                        <div className="relative border-b border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f3f7fb_100%)] px-6 py-5">
                             <div className="flex items-center justify-between gap-4">
                                 <div className="min-w-0 flex-1">
                                     <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">Fil de discussion</p>
-                                    <h3 className="truncate text-[16px] font-bold text-slate-900">{currentThreadData.subject}</h3>
-                                    <div className="mt-1 flex items-center gap-2">
+                                    <h3 className="truncate text-[17px] font-bold text-slate-900">{currentThreadData.subject}</h3>
+                                    <div className="mt-2 flex flex-wrap items-center gap-2">
                                         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${getStatusConfig(currentThreadData.status).badge}`}>
                                             <span className="h-1.5 w-1.5 rounded-full" style={{ background: getStatusConfig(currentThreadData.status).dot }} />
                                             {currentThreadData.status}
@@ -452,7 +462,30 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
                         </div>
 
                         {/* Zone de Chat (Scrollable) */}
-                        <div className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,#f8fafc_0%,#f3f6fb_100%)] px-6 py-6">
+                        <div
+                            className="flex-1 overflow-y-auto px-6 py-6"
+                            style={{
+                                backgroundColor: "#e9f0e8",
+                                backgroundImage:
+                                    "radial-gradient(circle at 25px 25px, rgba(255,255,255,0.55) 2px, transparent 0), radial-gradient(circle at 75px 75px, rgba(15,23,42,0.03) 2px, transparent 0), linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.08))",
+                                backgroundSize: "100px 100px, 100px 100px, 100% 100%",
+                                backgroundPosition: "0 0, 0 0, 0 0",
+                            }}
+                        >
+                            <div className="mb-5 rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                    Sujet de priere
+                                </p>
+                                <p className="mt-2 text-sm font-semibold text-slate-900">
+                                    {currentThreadData.subject}
+                                </p>
+                                <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                    Demande
+                                </p>
+                                <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-600">
+                                    {currentThreadData.message}
+                                </p>
+                            </div>
 
                             {/* Bouton Charger plus (Si > 5 commentaires) */}
                             {currentThreadData.comments.length > visibleComments && (
@@ -468,28 +501,36 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
                             )}
 
                             {/* Messages */}
-                            <div className="space-y-4">
+                            <div className="mb-3 flex items-center gap-3">
+                                <div className="h-px flex-1 bg-slate-200" />
+                                <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                                    Echanges
+                                </span>
+                                <div className="h-px flex-1 bg-slate-200" />
+                            </div>
+
+                            <div className="space-y-5">
                                 {currentThreadData.comments.slice(-visibleComments).map((comment, index) => {
                                     const isPastor = comment.actorType === "pastor";
                                     return (
                                         <div key={`${openThread}-c-${comment.id ?? index}`} className={`flex ${isPastor ? 'justify-end' : 'justify-start'}`}>
-                                            <div className={`group relative max-w-[85%] ${isPastor ? 'order-2' : 'order-1'}`}>
+                                            <div className={`group relative max-w-[88%] ${isPastor ? 'order-2' : 'order-1'}`}>
 
                                                 {/* Citation de réponse */}
                                                 {comment.replyTo && (
-                                                    <div className={`mb-1.5 rounded-xl px-3 py-2 ${isPastor ? 'border-r-2 border-slate-300 bg-slate-100/80 text-right' : 'border-l-2 border-slate-300 bg-white/90'}`}>
+                                                    <div className="mb-2 rounded-[10px] border border-slate-200 bg-slate-50/90 px-3 py-2.5">
                                                         <p className="text-[11px] font-semibold text-slate-500">{comment.replyTo.actorLabel}</p>
                                                         <p className="line-clamp-1 text-[11px] text-slate-600">{formatReplySnippet(comment.replyTo.message)}</p>
                                                     </div>
                                                 )}
 
                                                 {/* Bulle du message */}
-                                                <div className={`rounded-2xl px-4 py-3 ${isPastor ? 'rounded-br-[6px] border border-slate-300 bg-[linear-gradient(180deg,#eef4ff_0%,#e2ebf8_100%)] text-slate-800 shadow-[0_10px_24px_rgba(148,163,184,0.18)]' : 'rounded-bl-[6px] border border-slate-200 bg-white/95 text-slate-900 shadow-sm'}`}>
+                                                <div className={`rounded-[12px] px-4 py-3.5 ${isPastor ? 'rounded-br-[4px] border border-slate-300 bg-[linear-gradient(180deg,#eef4ff_0%,#e2ebf8_100%)] text-slate-800 shadow-[0_10px_24px_rgba(148,163,184,0.18)]' : 'rounded-bl-[4px] border border-slate-200 bg-white/95 text-slate-900 shadow-sm'}`}>
                                                     <p className="text-sm leading-6 whitespace-pre-wrap">{comment.message}</p>
                                                 </div>
 
                                                 {/* Métadonnées et Actions sous le message */}
-                                                <div className={`mt-1.5 flex items-center gap-3 px-1 ${isPastor ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`mt-2 flex items-center gap-3 px-1 ${isPastor ? 'justify-end' : 'justify-start'}`}>
                                                     <span className="text-[11px] text-slate-500">
                                                         {comment.actorLabel} - {comment.createdAt}
                                                     </span>
@@ -542,10 +583,10 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
 
                         {/* Zone de saisie (Footer fixe) */}
                         {currentThreadData.canComment ? (
-                            <div className="border-t border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-5 py-4">
+                            <div className="border-t border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f4f8fb_100%)] px-5 py-4">
                                 {/* Indicateur de réponse ciblée */}
                                 {replyTargets[openThread] && (
-                                    <div className="mb-3 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5">
+                                    <div className="mb-3 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
                                         <div className="min-w-0 flex-1">
                                             <p className="text-[11px] font-bold text-slate-700">
                                                 Reponse a {currentThreadData.comments.find(c => c.id === replyTargets[openThread])?.actorLabel}
@@ -567,7 +608,7 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
                                         onChange={(e) => setCommentDrafts(current => ({...current, [openThread]: e.target.value}))}
                                         onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitComment(openThread); }}}
                                         placeholder="Ecrire un message pastoral..."
-                                        className="flex-1 resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-[13px] text-slate-800 placeholder-slate-400 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                                        className="flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[13px] text-slate-800 placeholder-slate-400 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                                     />
                                     <button
                                         onClick={() => submitComment(openThread)}

@@ -1023,7 +1023,8 @@ export default function Transfers() {
             url = `/conducteur/transferts/${id}/approve-source`;
         if (t.status === "EN_ATTENTE_ACCUEIL")
             url = `/conducteur/transferts/${id}/approve-accueil`;
-        if (url) router.post(url, {}, { preserveScroll: true });
+        if (url)
+            router.post(withBasePath("", url), {}, { preserveScroll: true });
     };
 
     const handleRefuse = (id, reason) =>
