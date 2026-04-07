@@ -23,6 +23,9 @@ return new class extends Migration
             $table->string('nom_affiche')->nullable();
             $table->string('statut', 50)->default('Nouvelle');
             $table->text('temoignage')->nullable();
+            $table->json('commentaires_data')->nullable();
+            $table->json('destinataires_data')->nullable();
+            $table->json('historiques_data')->nullable();
             $table->timestamp('vue_le')->nullable();
             $table->timestamp('prise_en_priere_le')->nullable();
             $table->timestamp('exaucee_le')->nullable();

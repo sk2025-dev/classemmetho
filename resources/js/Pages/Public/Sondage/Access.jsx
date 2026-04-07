@@ -56,7 +56,7 @@ export default function PublicSondageAccess({
                         "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
                 }}
             >
-                <div className="mx-auto max-w-5xl">
+                <div className="w-full">
                     <div className="mb-6 text-white">
                         <div>
                             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">

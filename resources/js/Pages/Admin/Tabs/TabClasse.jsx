@@ -3,7 +3,7 @@ import { useForm, router } from "@inertiajs/react";
 import useToast from "../../../Hooks/useToast";
 import ToastContainer from "../../../Components/ToastContainer";
 import Select2Fonction from "../../../Components/Select2Fonction";
-import Select2Relation from "../../../Components/Select2Relation";
+import Select2Single from "../../../Components/Select2Single";
 import {
     User,
     Mail,
@@ -24,6 +24,11 @@ import {
 import { resolveMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
 import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
 import { withBasePath } from "../../../Utils/urlHelper";
+import {
+    GENDER_OPTIONS,
+    MEMBER_MARITAL_STATUS_OPTIONS,
+    RELATION_OPTIONS,
+} from "../../../Helpers/select2SingleOptions";
 
 // --- CSS GLOBAL (identique à celui de la page utilisateur) ---
 const GLOBAL_STYLES = `
@@ -1238,23 +1243,14 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                             placeholder="ex: Jean"
                                         />
                                     </FormField>
-                                    <FormField
-                                        label="Genre"
-                                        icon={Users}
-                                        required
-                                    >
-                                        <select
-                                            className="w-full h-12 border rounded-lg px-4 bg-white focus:shadow-md focus:shadow-blue-200 transition-all duration-300 border-gray-300 focus:border-blue-500"
+                                    <FormField label="Genre" icon={Users} required>
+                                        <Select2Single
+                                            name="genre"
                                             value={formData.genre || ""}
                                             onChange={handleChange}
-                                            name="genre"
-                                        >
-                                            <option value="">
-                                                Sélectionner...
-                                            </option>
-                                            <option value="M">Masculin</option>
-                                            <option value="F">Féminin</option>
-                                        </select>
+                                            options={GENDER_OPTIONS}
+                                            placeholder="Sélectionner..."
+                                        />
                                     </FormField>
                                     <FormField
                                         label="Date de naissance"
@@ -1360,12 +1356,9 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                             placeholder="Sélectionner une fonction..."
                                         />
                                     </FormField>
-                                    <FormField
-                                        label="Relation de Famille"
-                                        icon={Users}
-                                        required
-                                    >
-                                        <Select2Relation
+                                    <FormField label="Relation de Famille" icon={Users} required>
+                                        <Select2Single
+                                            name="relation"
                                             value={formData.relation || ""}
                                             onChange={(e) =>
                                                 setFormData({
@@ -1373,6 +1366,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                                     relation: e.target.value,
                                                 })
                                             }
+                                            options={RELATION_OPTIONS}
                                             placeholder="Sélectionner une relation..."
                                         />
                                     </FormField>
@@ -1388,38 +1382,14 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                     Situation Matrimoniale
                                 </h3>
                                 <div className="space-y-4">
-                                    <FormField
-                                        label="Statut Marital"
-                                        icon={Heart}
-                                        required
-                                    >
-                                        <select
-                                            className="w-full h-12 border border-gray-300 rounded-lg px-4 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
-                                            value={
-                                                formData.statut_marital || ""
-                                            }
-                                            onChange={handleChange}
+                                    <FormField label="Statut Marital" icon={Heart} required>
+                                        <Select2Single
                                             name="statut_marital"
-                                        >
-                                            <option value="">
-                                                Sélectionner...
-                                            </option>
-                                            <option value="Célibataire">
-                                                Célibataire
-                                            </option>
-                                            <option value="Marié(e)">
-                                                Marié(e)
-                                            </option>
-                                            <option value="Divorcé(e)">
-                                                Divorcé(e)
-                                            </option>
-                                            <option value="Veuf(ve)">
-                                                Veuf(ve)
-                                            </option>
-                                            <option value="Dote">
-                                                Doté(e)
-                                            </option>
-                                        </select>
+                                            value={formData.statut_marital || ""}
+                                            onChange={handleChange}
+                                            options={MEMBER_MARITAL_STATUS_OPTIONS}
+                                            placeholder="Sélectionner..."
+                                        />
                                     </FormField>
 
                                     {formData.statut_marital &&

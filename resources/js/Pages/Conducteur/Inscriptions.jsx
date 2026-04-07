@@ -3,9 +3,9 @@ import { Link, router, useForm, Head, usePage } from "@inertiajs/react";
 import axios from "axios";
 import { withBasePath } from "../../Utils/urlHelper";
 import Select from "react-select";
-import Select2Family from "../../Components/Select2Family";
 import Select2Fonction from "../../Components/Select2Fonction";
-import Select2Relation from "../../Components/Select2Relation";
+import Select2Single from "../../Components/Select2Single";
+import { RELATION_OPTIONS } from "../../Helpers/select2SingleOptions";
 import { sanitizeUppercasePrenom } from "../../Helpers/nameSanitizers";
 import {
     Eye,
@@ -58,6 +58,33 @@ const lucideIcons = {
     "user-check": UserCheck,
 };
 
+const MEMBER_ROLE_FILTER_OPTIONS = [
+    { value: "all", label: "Tous les roles" },
+    { value: "responsable_famille", label: "Responsable" },
+    { value: "membre_famille", label: "Membre" },
+    { value: "conducteur", label: "Conducteur" },
+    { value: "autre", label: "Autre" },
+];
+
+const MEMBER_STATUS_FILTER_OPTIONS = [
+    { value: "all", label: "Tous les statuts" },
+    { value: "actif", label: "Actif" },
+    { value: "inactif", label: "Inactif" },
+];
+
+const GENDER_OPTIONS = [
+    { value: "M", label: "Masculin" },
+    { value: "F", label: "Feminin" },
+];
+
+const MEMBER_MARITAL_STATUS_OPTIONS = [
+    { value: "Célibataire", label: "Célibataire" },
+    { value: "Marié(e)", label: "Marié(e)" },
+    { value: "Divorcé(e)", label: "Divorcé(e)" },
+    { value: "Veuf(ve)", label: "Veuf(ve)" },
+    { value: "Dote", label: "Doté(e)" },
+];
+
 // --- Pagination Component ---
 const PaginationControls = ({
     currentPage,
@@ -86,7 +113,7 @@ const PaginationControls = ({
                             : "bg-blue-600 text-white hover:bg-blue-700"
                     }`}
                 >
-                    ← Précédent
+                    Precedent
                 </button>
                 <span className="px-3 py-2 text-slate-700 font-semibold">
                     {currentPage} / {totalPages}
@@ -100,7 +127,7 @@ const PaginationControls = ({
                             : "bg-blue-600 text-white hover:bg-blue-700"
                     }`}
                 >
-                    Suivant →
+                    Suivant
                 </button>
             </div>
         </div>
@@ -499,6 +526,30 @@ export default function Inscriptions({
         members: family.members || [],
         memberCount: family.member_count || family.members?.length || 0,
     }));
+
+    const familyFilterOptions = [
+        { value: "", label: "Toutes les familles" },
+        ...familiesList.map((family) => ({
+            value: family.familyId,
+            label: family.nom,
+        })),
+    ];
+
+    const relationOptions =
+        data.relation &&
+        !RELATION_OPTIONS.some((option) => option.value === data.relation)
+            ? [
+                  {
+                      value: data.relation,
+                      label: String(data.relation)
+                          .replace(/[_-]+/g, " ")
+                          .replace(/\s+/g, " ")
+                          .trim()
+                          .replace(/\b\w/g, (char) => char.toUpperCase()),
+                  },
+                  ...RELATION_OPTIONS,
+              ]
+            : RELATION_OPTIONS;
 
     // Pour les onglets inscription (pending, approved, rejected): afficher uniquement les inscriptions
     // Pour l'onglet membres: afficher uniquement les membres
@@ -1090,7 +1141,10 @@ export default function Inscriptions({
             console.log("AUTO-SAVE - Réponse du serveur:", response.data);
 
             // Afficher la notification de sauvegarde
-            setSaveNotification({ show: true, message: "✓ Sauvegardé" });
+            setSaveNotification({
+                show: true,
+                message: "Sauvegarde effectuee",
+            });
             setTimeout(
                 () => setSaveNotification({ show: false, message: "" }),
                 2000,
@@ -1503,52 +1557,43 @@ export default function Inscriptions({
                             {activeTab === "members" && (
                                 <div className="flex flex-wrap gap-3 items-center">
                                     {/* Filtre par rôle */}
-                                    <select
-                                        value={filters.role}
-                                        onChange={(e) =>
-                                            setFilters({
-                                                ...filters,
-                                                role: e.target.value,
-                                            })
-                                        }
-                                        className="px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition min-w-[160px]"
-                                    >
-                                        <option value="all">
-                                            Tous les rôles
-                                        </option>
-                                        <option value="responsable_famille">
-                                            Responsable
-                                        </option>
-                                        <option value="membre_famille">
-                                            Membre
-                                        </option>
-                                        <option value="conducteur">
-                                            Conducteur
-                                        </option>
-                                        <option value="autre">Autre</option>
-                                    </select>
+                                    <div className="min-w-[160px]">
+                                        <Select2Single
+                                            name="member_role_filter"
+                                            value={filters.role}
+                                            onChange={(e) =>
+                                                setFilters({
+                                                    ...filters,
+                                                    role: e.target.value,
+                                                })
+                                            }
+                                            options={MEMBER_ROLE_FILTER_OPTIONS}
+                                            placeholder="Tous les roles"
+                                            allowClearOption={false}
+                                        />
+                                    </div>
 
                                     {/* Filtre par statut */}
-                                    <select
-                                        value={filters.status}
-                                        onChange={(e) =>
-                                            setFilters({
-                                                ...filters,
-                                                status: e.target.value,
-                                            })
-                                        }
-                                        className="px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition min-w-[160px]"
-                                    >
-                                        <option value="all">
-                                            Tous les statuts
-                                        </option>
-                                        <option value="actif">Actif</option>
-                                        <option value="inactif">Inactif</option>
-                                    </select>
+                                    <div className="min-w-[160px]">
+                                        <Select2Single
+                                            name="member_status_filter"
+                                            value={filters.status}
+                                            onChange={(e) =>
+                                                setFilters({
+                                                    ...filters,
+                                                    status: e.target.value,
+                                                })
+                                            }
+                                            options={MEMBER_STATUS_FILTER_OPTIONS}
+                                            placeholder="Tous les statuts"
+                                            allowClearOption={false}
+                                        />
+                                    </div>
 
                                     {/* Filtre par famille */}
                                     <div className="min-w-[200px]">
-                                        <Select2Family
+                                        <Select2Single
+                                            name="member_family_filter"
                                             value={filters.familyFilter}
                                             onChange={(e) =>
                                                 setFilters({
@@ -1557,10 +1602,10 @@ export default function Inscriptions({
                                                         e.target.value,
                                                 })
                                             }
-                                            options={familiesList}
+                                            options={familyFilterOptions}
                                             placeholder="Toutes les familles"
                                             disabled={false}
-                                            showNoFamilyOption={false}
+                                            allowClearOption={false}
                                         />
                                     </div>
 
@@ -2415,7 +2460,7 @@ export default function Inscriptions({
                                                                     "inscription"
                                                                         ? item.inscriptionType ===
                                                                           "famille"
-                                                                            ? "👨‍👩‍👧‍👦 Famille"
+                                                                            ? "Famille"
                                                                             : "Inscription"
                                                                         : "Membre"}
                                                                 </span>
@@ -2638,7 +2683,7 @@ export default function Inscriptions({
                                                                                 {approvingId ===
                                                                                 item.id
                                                                                     ? "..."
-                                                                                    : "✓"}
+                                                                                    : "Valider"}
                                                                             </button>
                                                                             <button
                                                                                 onClick={() =>
@@ -2656,7 +2701,7 @@ export default function Inscriptions({
                                                                                 {rejectingId ===
                                                                                 item.id
                                                                                     ? "..."
-                                                                                    : "✕"}
+                                                                                    : "Refuser"}
                                                                             </button>
                                                                         </div>
                                                                     )}
@@ -2901,12 +2946,8 @@ export default function Inscriptions({
                                                             icon={Users}
                                                             required
                                                         >
-                                                            <select
-                                                                className={`w-full h-12 border rounded-lg px-4 bg-white focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
-                                                                    fieldErrors.genre
-                                                                        ? "border-red-500 focus:border-red-500"
-                                                                        : "border-gray-300 focus:border-blue-500"
-                                                                }`}
+                                                            <Select2Single
+                                                                name="genre"
                                                                 value={
                                                                     data.genre
                                                                 }
@@ -2918,17 +2959,17 @@ export default function Inscriptions({
                                                                             .value,
                                                                     })
                                                                 }
-                                                            >
-                                                                <option value="">
-                                                                    Sélectionner...
-                                                                </option>
-                                                                <option value="M">
-                                                                    Masculin
-                                                                </option>
-                                                                <option value="F">
-                                                                    Féminin
-                                                                </option>
-                                                            </select>
+                                                                options={
+                                                                    GENDER_OPTIONS
+                                                                }
+                                                                placeholder="Selectionner..."
+                                                                hasError={
+                                                                    !!fieldErrors.genre
+                                                                }
+                                                                allowClearOption={
+                                                                    false
+                                                                }
+                                                            />
                                                             {fieldErrors.genre && (
                                                                 <p className="text-red-500 text-xs mt-1">
                                                                     {
@@ -3142,7 +3183,8 @@ export default function Inscriptions({
                                                             label="Relation de Famille"
                                                             icon={Users}
                                                         >
-                                                            <Select2Relation
+                                                            <Select2Single
+                                                                name="relation"
                                                                 value={
                                                                     data.relation
                                                                 }
@@ -3152,8 +3194,11 @@ export default function Inscriptions({
                                                                         relation:
                                                                             e
                                                                                 .target
-                                                                                .value,
+                                                                            .value,
                                                                     })
+                                                                }
+                                                                options={
+                                                                    relationOptions
                                                                 }
                                                                 placeholder="Non renseigné"
                                                             />
@@ -3182,8 +3227,8 @@ export default function Inscriptions({
                                                             icon={Heart}
                                                             required
                                                         >
-                                                            <select
-                                                                className="w-full h-12 border border-gray-300 rounded-lg px-4 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
+                                                            <Select2Single
+                                                                name="statut_marital"
                                                                 value={
                                                                     data.statut_marital
                                                                 }
@@ -3193,30 +3238,14 @@ export default function Inscriptions({
                                                                         statut_marital:
                                                                             e
                                                                                 .target
-                                                                                .value,
+                                                                            .value,
                                                                     })
                                                                 }
-                                                            >
-                                                                <option value="">
-                                                                    Non
-                                                                    renseigné
-                                                                </option>
-                                                                <option value="Célibataire">
-                                                                    Célibataire
-                                                                </option>
-                                                                <option value="Marié(e)">
-                                                                    Marié(e)
-                                                                </option>
-                                                                <option value="Divorcé(e)">
-                                                                    Divorcé(e)
-                                                                </option>
-                                                                <option value="Veuf(ve)">
-                                                                    Veuf(ve)
-                                                                </option>
-                                                                <option value="Dote">
-                                                                    Doté(e)
-                                                                </option>
-                                                            </select>
+                                                                options={
+                                                                    MEMBER_MARITAL_STATUS_OPTIONS
+                                                                }
+                                                                placeholder="Non renseigné"
+                                                            />
                                                             {errors.statut_marital && (
                                                                 <p className="text-red-500 text-xs mt-1">
                                                                     {
@@ -4095,7 +4124,7 @@ export default function Inscriptions({
                                 >
                                     {rejectingId === selectedInscription.id
                                         ? "Rejet..."
-                                        : "✕ Rejeter"}
+                                        : "Rejeter"}
                                 </button>
                                 <button
                                     onClick={() =>
@@ -4110,7 +4139,7 @@ export default function Inscriptions({
                                 >
                                     {approvingId === selectedInscription.id
                                         ? "Approbation..."
-                                        : "✓ Approuver"}
+                                        : "Approuver"}
                                 </button>
                             </div>
                         </div>
@@ -4508,7 +4537,7 @@ export default function Inscriptions({
                                     }}
                                     className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition shadow-md"
                                 >
-                                    ✏️ Modifier
+                                    Modifier
                                 </button>
                             </div>
                         </div>
@@ -4773,3 +4802,4 @@ export default function Inscriptions({
         </>
     );
 }
+

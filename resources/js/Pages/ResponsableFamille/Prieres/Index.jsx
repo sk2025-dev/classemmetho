@@ -1,8 +1,11 @@
 import { Head, Link, router } from "@inertiajs/react";
 import { useEffect, useMemo, useState } from "react";
+import Select2Single from "../../../Components/Select2Single";
 import {
     ArrowLeft,
     CheckCircle2,
+    ChevronUp,
+    CornerDownRight,
     FileHeart,
     EyeOff,
     Eye,
@@ -10,6 +13,7 @@ import {
     PlusCircle,
     Send,
     UserRound,
+    X,
 } from "lucide-react";
 import { withBasePath } from "../../../Utils/urlHelper";
 
@@ -38,11 +42,55 @@ function requestIdentityLabel(authUser, isAnonymous) {
     return visibleName || "Nom visible";
 }
 
+function formatReplySnippet(message) {
+    const normalized = String(message || "").trim();
+
+    if (normalized.length <= 90) {
+        return normalized;
+    }
+
+    return `${normalized.slice(0, 90)}...`;
+}
+
+function commentRowClasses(actorType) {
+    return actorType === "requester" ? "justify-end" : "justify-start";
+}
+
+function commentCardClasses(actorType) {
+    if (actorType === "requester") {
+        return "border-emerald-200 bg-emerald-50 text-emerald-950";
+    }
+
+    if (actorType === "pastor") {
+        return "border-sky-200 bg-sky-50 text-sky-950";
+    }
+
+    return "border-slate-200 bg-white text-slate-900";
+}
+
 export default function ResponsableFamillePrieresIndex({
     authUser = null,
     prayerRequests = [],
+    receivedPrayerRequests = [],
+    targeting = null,
 }) {
-    const [requests, setRequests] = useState(() => prayerRequests);
+    const normalizeRequest = (request) => ({
+        ...request,
+        comments:
+            request.comments ??
+            (request.testimony
+                ? [{ message: request.testimony, reactions: request.reactions ?? [] }]
+                : []),
+        history: request.history ?? [],
+        sourceLabel: request.sourceLabel ?? null,
+        targetLabel: request.targetLabel ?? null,
+    });
+
+    const [requests, setRequests] = useState(() => prayerRequests.map(normalizeRequest));
+    const [receivedRequests, setReceivedRequests] = useState(() =>
+        receivedPrayerRequests.map(normalizeRequest),
+    );
+    const [scopeTab, setScopeTab] = useState("mine");
     const [activeTab, setActiveTab] = useState("all");
     const [subject, setSubject] = useState("");
     const [message, setMessage] = useState("");
@@ -51,22 +99,70 @@ export default function ResponsableFamillePrieresIndex({
         [authUser?.prenom, authUser?.nom].filter(Boolean).join(" ").trim(),
     );
     const [commentDrafts, setCommentDrafts] = useState({});
+    const [replyTargets, setReplyTargets] = useState({});
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [requestToFulfill, setRequestToFulfill] = useState(null);
+    const [openThread, setOpenThread] = useState(null);
+    const [visibleComments, setVisibleComments] = useState(5);
+    const [targetType, setTargetType] = useState(
+        targeting?.targetModes?.[0]?.value ?? "all_pasteurs",
+    );
+    const [targetUserId, setTargetUserId] = useState("");
 
     useEffect(() => {
-        setRequests(prayerRequests);
+        setRequests(prayerRequests.map(normalizeRequest));
     }, [prayerRequests]);
+
+    useEffect(() => {
+        setReceivedRequests(receivedPrayerRequests.map(normalizeRequest));
+    }, [receivedPrayerRequests]);
+
+    useEffect(() => {
+        setVisibleComments(5);
+    }, [openThread]);
 
     const isAnonymous = identityMode === "anonymous";
     const visibleIdentity = requestIdentityLabel(authUser, false);
+    const scopedRequests = scopeTab === "received" ? receivedRequests : requests;
+    const isReadOnlyScope = scopeTab === "received";
+
+    const currentTargetOptions = useMemo(() => {
+        if (targetType === "specific_pasteur") return targeting?.pastors ?? [];
+        if (targetType === "specific_conducteur_classe") return targeting?.conductors ?? [];
+        if (targetType === "specific_membre_classe") return targeting?.members ?? [];
+        return [];
+    }, [targetType, targeting]);
+
+    const selectedTargetMode = useMemo(
+        () =>
+            (targeting?.targetModes ?? []).find((mode) => mode.value === targetType) ??
+            null,
+        [targetType, targeting],
+    );
+    const targetModeOptions = useMemo(
+        () =>
+            (targeting?.targetModes ?? []).map((mode) => ({
+                value: mode.value,
+                label: mode.label,
+                description: mode.description,
+            })),
+        [targeting],
+    );
+    const targetUserOptions = useMemo(
+        () =>
+            currentTargetOptions.map((option) => ({
+                value: option.id,
+                label: option.label,
+            })),
+        [currentTargetOptions],
+    );
 
     const stats = useMemo(() => {
-        const total = requests.length;
-        const withComments = requests.filter(
-            (request) => request.comments.length > 0,
+        const total = scopedRequests.length;
+        const fulfilledCount = scopedRequests.filter(
+            (request) => request.status === "Exaucement partage",
         ).length;
-        const anonymousCount = requests.filter(
+        const anonymousCount = scopedRequests.filter(
             (request) => request.isAnonymous,
         ).length;
 
@@ -81,9 +177,14 @@ export default function ResponsableFamillePrieresIndex({
             },
             {
                 title: "Exaucements",
+<<<<<<< HEAD
                 value: withComments,
                 subtitle:
                     "Demandes ayant deja recu un retour ou un temoignage.",
+=======
+                value: fulfilledCount,
+                subtitle: "Demandes explicitement marquees comme exaucees.",
+>>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                 icon: CheckCircle2,
                 iconWrapClass: "bg-emerald-100 text-emerald-700",
             },
@@ -96,48 +197,46 @@ export default function ResponsableFamillePrieresIndex({
                 iconWrapClass: "bg-violet-100 text-violet-700",
             },
         ];
-    }, [requests]);
+    }, [scopedRequests]);
 
     const tabs = useMemo(
         () => [
-            { id: "all", label: "Total des demandes", count: requests.length },
+            { id: "all", label: "Total des demandes", count: scopedRequests.length },
             {
                 id: "in_prayer",
                 label: "En priere",
-                count: requests.filter((request) =>
+                count: scopedRequests.filter((request) =>
                     ["Transmise", "En priere"].includes(request.status),
                 ).length,
             },
             {
                 id: "fulfilled",
                 label: "Exaucees",
-                count: requests.filter(
+                count: scopedRequests.filter(
                     (request) =>
-                        request.status === "Exaucement partage" ||
-                        request.comments.length > 0,
+                    request.status === "Exaucement partage",
                 ).length,
             },
         ],
-        [requests],
+        [scopedRequests],
     );
 
     const filteredRequests = useMemo(() => {
         if (activeTab === "in_prayer") {
-            return requests.filter((request) =>
+            return scopedRequests.filter((request) =>
                 ["Transmise", "En priere"].includes(request.status),
             );
         }
 
         if (activeTab === "fulfilled") {
-            return requests.filter(
+            return scopedRequests.filter(
                 (request) =>
-                    request.status === "Exaucement partage" ||
-                    request.comments.length > 0,
+                    request.status === "Exaucement partage",
             );
         }
 
-        return requests;
-    }, [activeTab, requests]);
+        return scopedRequests;
+    }, [activeTab, scopedRequests]);
 
     const activeTabContent = useMemo(() => {
         if (activeTab === "in_prayer") {
@@ -151,8 +250,12 @@ export default function ResponsableFamillePrieresIndex({
         if (activeTab === "fulfilled") {
             return {
                 title: "Demandes exaucees",
+<<<<<<< HEAD
                 description:
                     "Retrouvez ici les demandes ayant deja recu un retour, un temoignage ou un commentaire.",
+=======
+                description: "Retrouvez ici les demandes explicitement marquees comme exaucees.",
+>>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
             };
         }
 
@@ -163,13 +266,29 @@ export default function ResponsableFamillePrieresIndex({
         };
     }, [activeTab]);
 
+    const currentThreadData = useMemo(() => {
+        if (!openThread?.id) {
+            return null;
+        }
+
+        return [...requests, ...receivedRequests].find(
+            (request) => request.id === openThread.id,
+        ) ?? null;
+    }, [openThread, requests, receivedRequests]);
+
     const resetForm = () => {
         setSubject("");
         setMessage("");
         setIdentityMode("anonymous");
+<<<<<<< HEAD
         setVisibleName(
             [authUser?.prenom, authUser?.nom].filter(Boolean).join(" ").trim(),
         );
+=======
+        setVisibleName([authUser?.prenom, authUser?.nom].filter(Boolean).join(" ").trim());
+        setTargetType(targeting?.targetModes?.[0]?.value ?? "all_pasteurs");
+        setTargetUserId("");
+>>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
     };
 
     const closeModal = () => {
@@ -199,6 +318,11 @@ export default function ResponsableFamillePrieresIndex({
                 demande: trimmedMessage,
                 mode_identite: isAnonymous ? "anonymous" : "visible",
                 nom_affiche: isAnonymous ? null : trimmedVisibleName,
+                type_cible: targetType,
+                user_cible_id:
+                    currentTargetOptions.length > 0 && targetUserId
+                        ? Number(targetUserId)
+                        : null,
             },
             {
                 preserveScroll: true,
@@ -220,6 +344,7 @@ export default function ResponsableFamillePrieresIndex({
             `/responsable-famille/prieres/${requestId}/commentaire`,
             {
                 temoignage: draft,
+                reply_to_comment_id: replyTargets[requestId] ?? null,
             },
             {
                 preserveScroll: true,
@@ -227,6 +352,10 @@ export default function ResponsableFamillePrieresIndex({
                     setCommentDrafts((current) => ({
                         ...current,
                         [requestId]: "",
+                    }));
+                    setReplyTargets((current) => ({
+                        ...current,
+                        [requestId]: null,
                     }));
                 },
             },
@@ -257,7 +386,7 @@ export default function ResponsableFamillePrieresIndex({
                         "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
                 }}
             >
-                <div className="mx-auto max-w-7xl">
+                <div className="w-full">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div className="flex items-center gap-3 text-white">
                             <Link
@@ -309,6 +438,48 @@ export default function ResponsableFamillePrieresIndex({
 
                     <section className="mt-8 overflow-hidden rounded-[34px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.97)_100%)] shadow-[0_24px_70px_rgba(15,23,42,0.14)]">
                         <div className="border-b border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96))] px-4 py-4">
+                            <div className="mb-4 flex flex-wrap gap-2">
+                                {[
+                                    {
+                                        id: "mine",
+                                        label: "Mes demandes",
+                                        count: requests.length,
+                                    },
+                                    {
+                                        id: "received",
+                                        label: "Demandes recues",
+                                        count: receivedRequests.length,
+                                    },
+                                ].map((tab) => {
+                                    const isActive = scopeTab === tab.id;
+                                    return (
+                                        <button
+                                            key={tab.id}
+                                            type="button"
+                                            onClick={() => {
+                                                setScopeTab(tab.id);
+                                                setActiveTab("all");
+                                            }}
+                                            className={`inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-[13px] font-semibold transition ${
+                                                isActive
+                                                    ? "border-teal-500 bg-teal-600 text-white shadow-[0_12px_28px_rgba(13,148,136,0.30)]"
+                                                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                                            }`}
+                                        >
+                                            <span>{tab.label}</span>
+                                            <span
+                                                className={`rounded-full px-2 py-0.5 text-xs ${
+                                                    isActive
+                                                        ? "bg-white/20 text-white"
+                                                        : "bg-slate-100 text-slate-600"
+                                                }`}
+                                            >
+                                                {tab.count}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                 <div>
                                     <h2 className="text-xl font-bold tracking-tight text-slate-900">
@@ -320,14 +491,16 @@ export default function ResponsableFamillePrieresIndex({
                                 </div>
 
                                 <div className="flex w-full justify-center md:w-auto md:min-w-[240px] md:justify-center">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsModalOpen(true)}
-                                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_18px_45px_rgba(13,148,136,0.22)] transition hover:bg-teal-700"
-                                    >
-                                        <PlusCircle className="h-4 w-4" />
-                                        Nouvelle demande
-                                    </button>
+                                    {!isReadOnlyScope ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsModalOpen(true)}
+                                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_18px_45px_rgba(13,148,136,0.22)] transition hover:bg-teal-700"
+                                        >
+                                            <PlusCircle className="h-4 w-4" />
+                                            Nouvelle demande
+                                        </button>
+                                    ) : null}
                                 </div>
                             </div>
 
@@ -413,10 +586,21 @@ export default function ResponsableFamillePrieresIndex({
                                                     <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
                                                         {request.message}
                                                     </p>
+                                                    {request.sourceLabel ? (
+                                                        <div className="mt-3 inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">
+                                                            Source: {request.sourceLabel}
+                                                        </div>
+                                                    ) : null}
+                                                    {request.targetLabel ? (
+                                                        <div className="mt-3 inline-flex items-center rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700 ring-1 ring-teal-200">
+                                                            Cible: {request.targetLabel}
+                                                        </div>
+                                                    ) : null}
 
                                                     <div className="mt-3.5 rounded-[20px] border border-slate-200 bg-slate-50/80 p-3">
                                                         <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-900">
                                                             <MessageSquare className="h-4 w-4 text-sky-700" />
+<<<<<<< HEAD
                                                             Commentaires
                                                             d'exaucement
                                                         </div>
@@ -476,19 +660,62 @@ export default function ResponsableFamillePrieresIndex({
                                                                     ajoute pour
                                                                     le moment.
                                                                 </div>
+=======
+                                                            Echange sur la demande
+                                                        </div>
+                                                        <div className="mt-2.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm">
+                                                            {request.comments.length > 0 ? (
+                                                                <>
+                                                                    <p className="text-sm font-semibold text-slate-900">
+                                                                        {request.comments.length} message{request.comments.length > 1 ? "s" : ""}
+                                                                    </p>
+                                                                    <p className="mt-1 text-sm leading-5 text-slate-600">
+                                                                        {request.comments[request.comments.length - 1]?.message}
+                                                                    </p>
+                                                                </>
+                                                            ) : (
+                                                                <p className="text-sm text-slate-500">
+                                                                    Aucun commentaire ajoute pour le moment.
+                                                                </p>
+>>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                                             )}
                                                         </div>
                                                     </div>
+                                                    {request.history?.length > 0 ? (
+                                                        <div className="mt-3.5 rounded-[20px] border border-slate-200 bg-slate-50/80 p-3">
+                                                            <div className="text-[13px] font-semibold text-slate-900">
+                                                                Historique
+                                                            </div>
+                                                            <div className="mt-2.5 space-y-2.5">
+                                                                {request.history.map((item) => (
+                                                                    <div
+                                                                        key={`${request.id}-history-${item.id}`}
+                                                                        className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 shadow-sm"
+                                                                    >
+                                                                        <div>{item.description}</div>
+                                                                        <div className="mt-1 text-xs text-slate-500">
+                                                                            {item.actorLabel} - {item.createdAt}
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ) : null}
                                                 </div>
 
                                                 <div className="flex h-full w-full flex-col rounded-[22px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-3.5 shadow-sm">
+<<<<<<< HEAD
                                                     {request.comments.length >
                                                     0 ? (
+=======
+                                                    {isReadOnlyScope ? (
+>>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                                         <>
                                                             <p className="text-[13px] font-semibold text-slate-900">
-                                                                Priere exaucee
+                                                                Consultation
                                                             </p>
                                                             <p className="mt-1 text-sm leading-5 text-slate-600">
+<<<<<<< HEAD
                                                                 Votre
                                                                 commentaire a
                                                                 deja ete
@@ -524,10 +751,15 @@ export default function ResponsableFamillePrieresIndex({
                                                                     ? "Priere deja exaucee"
                                                                     : "Marquer comme priere exaucee"}
                                                             </button>
+=======
+                                                                Cette demande vous a ete transmise. Elle est affichée en lecture seule dans cet onglet.
+                                                            </p>
+>>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                                         </>
                                                     ) : (
                                                         <>
                                                             <p className="text-[13px] font-semibold text-slate-900">
+<<<<<<< HEAD
                                                                 Ajouter un
                                                                 retour
                                                             </p>
@@ -537,7 +769,41 @@ export default function ResponsableFamillePrieresIndex({
                                                                 evolution ou un
                                                                 mot de
                                                                 gratitude.
+=======
+                                                                Ajouter un commentaire
                                                             </p>
+                                                            <p className="mt-1 text-sm leading-5 text-slate-600">
+                                                                Vous pouvez ajouter autant de commentaires que necessaire. Chaque ajout garde sa date.
+>>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
+                                                            </p>
+
+                                                            {replyTargets[request.id] ? (
+                                                                <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 px-3.5 py-3 text-sm text-blue-900">
+                                                                    <div className="font-semibold">Reponse ciblee</div>
+                                                                    <div className="mt-1 text-xs text-blue-800">
+                                                                        {
+                                                                            request.comments.find((comment) => comment.id === replyTargets[request.id])?.actorLabel
+                                                                        }
+                                                                    </div>
+                                                                    <div className="mt-1 text-xs leading-5 text-blue-700">
+                                                                        {formatReplySnippet(
+                                                                            request.comments.find((comment) => comment.id === replyTargets[request.id])?.message,
+                                                                        )}
+                                                                    </div>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            setReplyTargets((current) => ({
+                                                                                ...current,
+                                                                                [request.id]: null,
+                                                                            }))
+                                                                        }
+                                                                        className="mt-2 text-xs font-semibold text-blue-700 transition hover:text-blue-800"
+                                                                    >
+                                                                        Annuler la reponse
+                                                                    </button>
+                                                                </div>
+                                                            ) : null}
 
                                                             <textarea
                                                                 rows={5}
@@ -579,6 +845,26 @@ export default function ResponsableFamillePrieresIndex({
                                                                 Enregistrer le
                                                                 commentaire
                                                             </button>
+
+                                                            <button
+                                                                type="button"
+                                                                disabled={
+                                                                    request.status === "Exaucement partage" ||
+                                                                    request.comments.length === 0
+                                                                }
+                                                                onClick={() => setRequestToFulfill(request)}
+                                                                className={`mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(5,150,105,0.24)] transition ${
+                                                                    request.status === "Exaucement partage" ||
+                                                                    request.comments.length === 0
+                                                                        ? "cursor-not-allowed bg-slate-400 shadow-none"
+                                                                        : "bg-emerald-600 hover:bg-emerald-700"
+                                                                }`}
+                                                            >
+                                                                <CheckCircle2 className="h-4 w-4" />
+                                                                {request.status === "Exaucement partage"
+                                                                    ? "Priere deja exaucee"
+                                                                    : "Marquer comme priere exaucee"}
+                                                            </button>
                                                         </>
                                                     )}
                                                 </div>
@@ -618,54 +904,78 @@ export default function ResponsableFamillePrieresIndex({
                             </button>
                         </div>
 
+<<<<<<< HEAD
                         <form
                             onSubmit={handleSubmit}
                             className="mt-6 space-y-5"
                         >
+=======
+                        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+>>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                             <div>
                                 <p className="text-sm font-semibold text-slate-800">
                                     Visibilite de votre identite
                                 </p>
-                                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                                <div className="mt-2 grid gap-2 md:grid-cols-2">
                                     <button
                                         type="button"
+<<<<<<< HEAD
                                         onClick={() =>
                                             setIdentityMode("anonymous")
                                         }
                                         className={`rounded-[22px] border p-4 text-left transition ${
+=======
+                                        onClick={() => setIdentityMode("anonymous")}
+                                        className={`rounded-2xl border px-4 py-3 text-left transition ${
+>>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                             isAnonymous
-                                                ? "border-violet-600 bg-violet-600 text-white"
-                                                : "border-slate-200 bg-slate-50 text-slate-800"
+                                                ? "border-violet-500 bg-violet-50 text-violet-900"
+                                                : "border-slate-200 bg-white text-slate-800 hover:border-slate-300"
                                         }`}
                                     >
                                         <div className="flex items-center gap-2 text-sm font-semibold">
                                             <EyeOff className="h-4 w-4" />
                                             Rester anonyme
                                         </div>
+<<<<<<< HEAD
                                         <p className="mt-2 text-sm leading-6 opacity-90">
                                             Votre demande est transmise sans
                                             afficher votre nom et prenom.
+=======
+                                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                                            Votre demande est transmise sans afficher votre nom et prenom.
+>>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                         </p>
                                     </button>
 
                                     <button
                                         type="button"
+<<<<<<< HEAD
                                         onClick={() =>
                                             setIdentityMode("visible")
                                         }
                                         className={`rounded-[22px] border p-4 text-left transition ${
+=======
+                                        onClick={() => setIdentityMode("visible")}
+                                        className={`rounded-2xl border px-4 py-3 text-left transition ${
+>>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                             !isAnonymous
-                                                ? "border-teal-600 bg-teal-600 text-white"
-                                                : "border-slate-200 bg-slate-50 text-slate-800"
+                                                ? "border-teal-500 bg-teal-50 text-teal-900"
+                                                : "border-slate-200 bg-white text-slate-800 hover:border-slate-300"
                                         }`}
                                     >
                                         <div className="flex items-center gap-2 text-sm font-semibold">
                                             <UserRound className="h-4 w-4" />
                                             Afficher mon nom
                                         </div>
+<<<<<<< HEAD
                                         <p className="mt-2 text-sm leading-6 opacity-90">
                                             La demande est envoyee avec votre
                                             identite visible pour les pasteurs.
+=======
+                                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                                            Votre nom sera visible par les destinataires de cette priere.
+>>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                         </p>
                                     </button>
                                 </div>
@@ -700,36 +1010,109 @@ export default function ResponsableFamillePrieresIndex({
                                 <input
                                     type="text"
                                     value={subject}
+<<<<<<< HEAD
                                     onChange={(event) =>
                                         setSubject(event.target.value)
                                     }
+=======
+                                    onChange={(event) => setSubject(event.target.value)}
+                                    maxLength={40}
+>>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                     placeholder="Ex: Sante, famille, travail, etudes..."
                                     className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                                 />
+                                <p className="mt-2 text-xs text-slate-500">
+                                    40 caracteres maximum.
+                                </p>
                             </div>
 
                             <div>
+                                <div>
+                                    <p className="text-sm font-semibold text-slate-800">
+                                        A qui envoyer cette priere ?
+                                    </p>
+                                    <p className="mt-1 text-sm leading-5 text-slate-600">
+                                        Vous pouvez l envoyer a un pasteur precis, a tous les
+                                        pasteurs, a un conducteur precis de votre classe, aux
+                                        conducteurs de votre classe, ou a un membre precis de
+                                        votre classe.
+                                    </p>
+                                </div>
+
+                                <div className="mt-3">
+                                    <label className="text-sm font-semibold text-slate-800">
+                                        Destinataire
+                                    </label>
+                                    <div className="mt-2">
+                                        <Select2Single
+                                            name="target_type"
+                                            value={targetType}
+                                            onChange={(event) => {
+                                                setTargetType(event.target.value);
+                                                setTargetUserId("");
+                                            }}
+                                            options={targetModeOptions}
+                                            placeholder="Selectionnez un destinataire"
+                                            isClearable={false}
+                                            allowClearOption={false}
+                                        />
+                                    </div>
+                                    <p className="mt-2 text-sm text-slate-500">
+                                        {selectedTargetMode?.description ??
+                                            "Choisissez la cible de votre demande avant l envoi."}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {currentTargetOptions.length > 0 ? (
+                                <div>
+                                    <label className="text-sm font-semibold text-slate-800">
+                                        Choix precis du destinataire
+                                    </label>
+                                    <div className="mt-2">
+                                        <Select2Single
+                                            name="target_user_id"
+                                            value={targetUserId}
+                                            onChange={(event) => setTargetUserId(event.target.value)}
+                                            options={targetUserOptions}
+                                            placeholder="Selectionnez la personne concernee"
+                                            isClearable
+                                        />
+                                    </div>
+                                    <p className="mt-2 text-sm text-slate-500">
+                                        Ce champ apparait seulement quand vous choisissez un
+                                        destinataire unique.
+                                    </p>
+                                </div>
+                            ) : null}
+
+                            <div>
                                 <label className="text-sm font-semibold text-slate-800">
-                                    Demande
+                                    Details du sujet de priere *
                                 </label>
                                 <textarea
                                     rows={4}
                                     value={message}
+<<<<<<< HEAD
                                     onChange={(event) =>
                                         setMessage(event.target.value)
                                     }
+=======
+                                    onChange={(event) => setMessage(event.target.value)}
+                                    required
+>>>>>>> add0da1ba6e02c1b4547f1fd93fc2e7958b75869
                                     placeholder="Decrivez votre besoin de priere avec les details que vous souhaitez partager."
                                     className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                                 />
                             </div>
 
-                            <div className="flex flex-col gap-3 rounded-[24px] border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                                 <div>
-                                    <p className="text-sm font-semibold text-slate-900">
-                                        Apercu avant envoi
+                                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                        Resume
                                     </p>
-                                    <p className="mt-1 text-sm text-slate-600">
-                                        Identite envoyee :{" "}
+                                    <p className="mt-2 text-sm text-slate-600">
+                                        Identite :{" "}
                                         <span className="font-semibold text-slate-900">
                                             {isAnonymous
                                                 ? "Anonyme"
@@ -737,8 +1120,24 @@ export default function ResponsableFamillePrieresIndex({
                                                   visibleIdentity}
                                         </span>
                                     </p>
+                                    <p className="mt-1 text-sm text-slate-600">
+                                        Destinataire :{" "}
+                                        <span className="font-semibold text-slate-900">
+                                            {currentTargetOptions.length > 0
+                                                ? currentTargetOptions.find(
+                                                      (option) =>
+                                                          String(option.id) ===
+                                                          String(targetUserId),
+                                                  )?.label ||
+                                                  "Selection precise requise"
+                                                : selectedTargetMode?.label ||
+                                                  "Destinataire non precise"}
+                                        </span>
+                                    </p>
                                 </div>
+                            </div>
 
+                            <div className="flex justify-end">
                                 <button
                                     type="submit"
                                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-teal-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-teal-700"

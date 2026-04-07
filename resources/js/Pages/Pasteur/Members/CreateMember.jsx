@@ -7,8 +7,13 @@ import {
 import useToast from "../../../Hooks/useToast";
 import ToastContainer from "../../../Components/ToastContainer";
 import Select2Fonction from "../../../Components/Select2Fonction";
-import Select2Relation from "../../../Components/Select2Relation";
+import Select2Single from "../../../Components/Select2Single";
 import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
+import {
+    GENDER_OPTIONS,
+    MEMBER_MARITAL_STATUS_OPTIONS,
+    RELATION_OPTIONS,
+} from "../../../Helpers/select2SingleOptions";
 import {
     ArrowLeft,
     User,
@@ -588,12 +593,8 @@ export default function CreateMember({ family, errors }) {
                                         icon={Users}
                                         required
                                     >
-                                        <select
-                                            className={`w-full h-12 border rounded-lg px-4 bg-white focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
-                                                fieldErrors.genre
-                                                    ? "border-red-500 focus:border-red-500"
-                                                    : "border-gray-300 focus:border-blue-500"
-                                            }`}
+                                        <Select2Single
+                                            name="genre"
                                             value={data.genre}
                                             onChange={(e) =>
                                                 handleFieldChange(
@@ -601,16 +602,10 @@ export default function CreateMember({ family, errors }) {
                                                     e.target.value,
                                                 )
                                             }
-                                            onBlur={() =>
-                                                handleFieldBlur("genre")
-                                            }
-                                        >
-                                            <option value="">
-                                                Sélectionner...
-                                            </option>
-                                            <option value="M">Masculin</option>
-                                            <option value="F">Féminin</option>
-                                        </select>
+                                            options={GENDER_OPTIONS}
+                                            placeholder="Sélectionner..."
+                                            hasError={Boolean(fieldErrors.genre)}
+                                        />
                                         {fieldErrors.genre && (
                                             <p className="text-red-500 text-xs mt-1">
                                                 {fieldErrors.genre}
@@ -788,7 +783,8 @@ export default function CreateMember({ family, errors }) {
                                         label="Relation de Famille"
                                         icon={Users}
                                     >
-                                        <Select2Relation
+                                        <Select2Single
+                                            name="relation"
                                             value={data.relation}
                                             onChange={(e) =>
                                                 setData({
@@ -796,6 +792,7 @@ export default function CreateMember({ family, errors }) {
                                                     relation: e.target.value,
                                                 })
                                             }
+                                            options={RELATION_OPTIONS}
                                             placeholder="Sélectionner une relation..."
                                         />
                                         {errors.relation && (
@@ -821,8 +818,8 @@ export default function CreateMember({ family, errors }) {
                                         icon={Heart}
                                         required
                                     >
-                                        <select
-                                            className="w-full h-12 border border-gray-300 rounded-lg px-4 bg-white focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
+                                        <Select2Single
+                                            name="statut_marital"
                                             value={data.statut_marital}
                                             onChange={(e) =>
                                                 setData({
@@ -831,26 +828,10 @@ export default function CreateMember({ family, errors }) {
                                                         e.target.value,
                                                 })
                                             }
-                                        >
-                                            <option value="">
-                                                Sélectionner...
-                                            </option>
-                                            <option value="Célibataire">
-                                                Célibataire
-                                            </option>
-                                            <option value="Marié(e)">
-                                                Marié(e)
-                                            </option>
-                                            <option value="Divorcé(e)">
-                                                Divorcé(e)
-                                            </option>
-                                            <option value="Veuf(ve)">
-                                                Veuf(ve)
-                                            </option>
-                                            <option value="Dote">
-                                                Doté(e)
-                                            </option>
-                                        </select>
+                                            options={MEMBER_MARITAL_STATUS_OPTIONS}
+                                            placeholder="Sélectionner..."
+                                            hasError={Boolean(errors.statut_marital)}
+                                        />
                                         {errors.statut_marital && (
                                             <p className="text-red-500 text-xs mt-1">
                                                 {errors.statut_marital}
