@@ -79,8 +79,7 @@ class SondageController extends Controller
             ->withCount('responses')
             ->findOrFail($id);
 
-        $participantCount = (int) ($this->sondageService->getAllSondages()
-            ->firstWhere('id', $survey->id)['participants'] ?? 0);
+        $participantCount = $this->sondageService->resolveParticipantCountForSurvey($survey);
 
         return [$survey, $participantCount];
     }

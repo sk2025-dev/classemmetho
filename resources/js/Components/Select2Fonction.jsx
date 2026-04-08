@@ -14,6 +14,10 @@ const Select2Fonction = ({
     placeholder = "Sélectionner des fonctions...",
     disabled = false,
 }) => {
+    const normalizedFieldKey = String(name || id || "")
+        .trim()
+        .replace(/\s+/g, "_");
+
     // Transformer les options pour react-select
     const selectOptions = options.map((option) => ({
         value: option.id,
@@ -157,9 +161,15 @@ const Select2Fonction = ({
     };
 
     return (
-        <div className="w-full">
+        <div
+            className="w-full"
+            data-field-name={name || normalizedFieldKey}
+            data-error-target="true"
+            id={!id && normalizedFieldKey ? normalizedFieldKey : undefined}
+        >
             <Select
-                id={id}
+                id={id || normalizedFieldKey}
+                inputId={id || normalizedFieldKey}
                 name={name}
                 value={selectedValues}
                 onChange={handleChange}

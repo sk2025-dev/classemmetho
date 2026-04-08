@@ -36,9 +36,22 @@ class SondageController extends Controller
     public function index(): Response
     {
         $user = Auth::user();
+        $sondages = $user
+            ? $this->sondageService->attachUserParticipationToSurveyItems(
+                $this->sondageService->getClasseSondages($user->classe_id),
+                $user,
+            )->map(function (array $sondage) use ($user) {
+                $sondage['canCurrentUserRespond'] = $this->sondageService->canRoleRespondToAudience(
+                    $sondage['audience'] ?? null,
+                    $user->role,
+                );
+
+                return $sondage;
+            })->values()
+            : collect();
 
         return Inertia::render('Conducteur/Sondage/Index', [
-            'sondages' => $this->sondageService->getClasseSondages($user?->classe_id),
+            'sondages' => $sondages,
             'authUser' => [
                 'id' => $user?->id,
                 'nom' => $user?->nom,
@@ -627,9 +640,7 @@ class SondageController extends Controller
             $survey->refresh();
         }
 
-        $participantCount = (int) ($this->sondageService
-            ->getClasseSondages($classeId)
-            ->firstWhere('id', $survey->id)['participants'] ?? 0);
+        $participantCount = $this->sondageService->resolveParticipantCountForSurvey($survey);
 
         return [$survey, $participantCount];
     }

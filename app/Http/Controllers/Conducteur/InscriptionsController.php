@@ -208,6 +208,7 @@ class InscriptionsController extends Controller
                         // Récupérer les noms des approbateurs
                         $adminName = null;
                         $conducteurName = null;
+                        $inscriptionUser = null;
 
                         if ($insc->admin_id) {
                             $admin = \App\Models\User::find($insc->admin_id);
@@ -217,6 +218,18 @@ class InscriptionsController extends Controller
                         if ($insc->conducteur_id) {
                             $conducteur = \App\Models\User::find($insc->conducteur_id);
                             $conducteurName = $conducteur ? $conducteur->prenom . ' ' . $conducteur->nom : 'Conducteur inconnu';
+                        }
+
+                        if (!empty($insc->user_id)) {
+                            $inscriptionUser = \App\Models\User::find($insc->user_id);
+                        } elseif (!empty($insc->family_id)) {
+                            $family = \App\Models\Family::with('responsable')->find($insc->family_id);
+                            $inscriptionUser = $family?->responsable;
+                        } elseif (!empty($insc->responsable_email)) {
+                            $inscriptionUser = \App\Models\User::query()
+                                ->where('email', $insc->responsable_email)
+                                ->when($insc->classe_id, fn ($query) => $query->where('classe_id', $insc->classe_id))
+                                ->first();
                         }
 
                         $mapped = [
@@ -243,6 +256,7 @@ class InscriptionsController extends Controller
                             'mariage_religieux' => $insc->responsable_marie_religieusement,
                             'date_mariage_religieux' => $insc->responsable_date_mariage_religieux,
                             'famille_id' => $insc->family_id,
+                            'code_membre' => $inscriptionUser?->code_membre,
                             'responsable_famille' => ($insc->responsable_nom && $insc->responsable_prenom) ? $insc->responsable_nom . ' ' . $insc->responsable_prenom : 'N/A',
                             'status' => $insc->status,
                             'role' => $insc->type === 'conducteur'
@@ -391,6 +405,7 @@ class InscriptionsController extends Controller
                                 'prenom' => $family->responsable->prenom ?? '',
                                 'email' => $family->responsable->email ?? '',
                                 'phone' => $family->responsable->telephone ?? '',
+                                'code_membre' => $family->responsable->code_membre ?? null,
                                 'profile_photo_url' => $family->responsable->profile_photo_url
                                     ?: PhotoHelper::getPhotoUrl(
                                         $family->responsable->photo_path ?? null,

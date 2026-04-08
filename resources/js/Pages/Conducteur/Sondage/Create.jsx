@@ -23,8 +23,16 @@ import {
     Trash2,
     Users,
 } from "lucide-react";
+import Select2Single from "../../../Components/Select2Single";
 import { ToastContainer } from "../../../Components/Toast";
 import useToast from "../../../Hooks/useToast";
+
+const PREVIEW_STORAGE_KEY = "conducteur-sondage-preview";
+const AUDIENCE_OPTIONS = [
+    "Responsables de famille",
+    "Conducteurs de classe",
+    "Tous les membres",
+];
 
 const questionTypeOptions = [
     {
@@ -108,15 +116,8 @@ function formatDate(dateString) {
     }).format(date);
 }
 
-export default function ConducteurSondageCreate({
-    authUser = null,
-    existingSurvey = null,
-    mode = "create",
-}) {
-    const isEditing = mode === "edit" && existingSurvey?.id;
-    const isDraftSurvey = existingSurvey?.statut === "draft";
-
-    const [survey, setSurvey] = useState({
+function buildInitialSurvey(existingSurvey = null) {
+    return {
         titre: existingSurvey?.titre || "",
         description: existingSurvey?.description || "",
         objectif: existingSurvey?.objectif || "",
@@ -126,14 +127,48 @@ export default function ConducteurSondageCreate({
             existingSurvey?.messageFin ||
             "Merci pour votre participation. Vos reponses aideront a la prise de decision.",
         diffusion: existingSurvey?.diffusion || "Lien partage",
-    });
+    };
+}
 
-    const [questions, setQuestions] = useState(existingSurvey?.questions || []);
+function buildInitialQuestions(existingSurvey = null) {
+    return Array.isArray(existingSurvey?.questions) ? existingSurvey.questions : [];
+}
+
+export default function ConducteurSondageCreate({
+    authUser = null,
+    existingSurvey = null,
+    mode = "create",
+}) {
+    const isEditing = mode === "edit" && existingSurvey?.id;
+    const isDraftSurvey = existingSurvey?.statut === "draft";
+
+    const [survey, setSurvey] = useState(() => buildInitialSurvey(existingSurvey));
+    const [questions, setQuestions] = useState(() =>
+        buildInitialQuestions(existingSurvey),
+    );
     const [activeId, setActiveId] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formErrors, setFormErrors] = useState({});
     const { toasts, removeToast, error: showError } = useToast();
     const lastErrorKeyRef = useRef(null);
+    const hasLegacyAudience =
+        survey.audience && !AUDIENCE_OPTIONS.includes(survey.audience);
+    const audienceSelectOptions = [
+        ...(hasLegacyAudience
+            ? [
+                  {
+                      value: survey.audience,
+                      label: `${survey.audience} (ancienne valeur)`,
+                      description:
+                          "Valeur heritee d'un ancien sondage ou brouillon.",
+                  },
+              ]
+            : []),
+        ...AUDIENCE_OPTIONS.map((audienceOption) => ({
+            value: audienceOption,
+            label: audienceOption,
+        })),
+    ];
 
     useEffect(() => {
         const errorKeys = Object.keys(formErrors);
@@ -152,6 +187,69 @@ export default function ConducteurSondageCreate({
             );
         }
     }, [formErrors, showError]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") {
+            return;
+        }
+
+        const currentUrl = new URL(window.location.href);
+        const shouldRestorePreview =
+            currentUrl.searchParams.get("restorePreview") === "1";
+
+        if (!shouldRestorePreview) {
+            return;
+        }
+
+        const rawDraft = window.localStorage.getItem(PREVIEW_STORAGE_KEY);
+
+        if (!rawDraft) {
+            currentUrl.searchParams.delete("restorePreview");
+            window.history.replaceState(
+                window.history.state,
+                "",
+                `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`,
+            );
+            return;
+        }
+
+        try {
+            const parsedDraft = JSON.parse(rawDraft);
+            const expectedBackHref = isEditing
+                ? `/conducteur/sondages/${existingSurvey?.id}/edit?restorePreview=1`
+                : "/conducteur/sondages/create?restorePreview=1";
+
+            if (parsedDraft?.previewBackHref !== expectedBackHref) {
+                return;
+            }
+
+            const restoredSurvey =
+                parsedDraft?.survey && typeof parsedDraft.survey === "object"
+                    ? {
+                          ...buildInitialSurvey(existingSurvey),
+                          ...parsedDraft.survey,
+                      }
+                    : buildInitialSurvey(existingSurvey);
+
+            const restoredQuestions = Array.isArray(parsedDraft?.questions)
+                ? parsedDraft.questions
+                : buildInitialQuestions(existingSurvey);
+
+            setSurvey(restoredSurvey);
+            setQuestions(restoredQuestions);
+            setActiveId(restoredQuestions[0]?.id || null);
+            setFormErrors({});
+        } catch {
+            window.localStorage.removeItem(PREVIEW_STORAGE_KEY);
+        } finally {
+            currentUrl.searchParams.delete("restorePreview");
+            window.history.replaceState(
+                window.history.state,
+                "",
+                `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`,
+            );
+        }
+    }, [existingSurvey, isEditing]);
 
     const addQuestion = (type = "multiple", title = "") => {
         const question = createQuestion(type, title);
@@ -238,11 +336,11 @@ export default function ConducteurSondageCreate({
         }
 
         const previewBackHref = isEditing
-            ? `/conducteur/sondages/${existingSurvey.id}/edit`
-            : "/conducteur/sondages/create";
+            ? `/conducteur/sondages/${existingSurvey.id}/edit?restorePreview=1`
+            : "/conducteur/sondages/create?restorePreview=1";
 
         window.localStorage.setItem(
-            "conducteur-sondage-preview",
+            PREVIEW_STORAGE_KEY,
             JSON.stringify({
                 survey,
                 questions,
@@ -273,9 +371,7 @@ export default function ConducteurSondageCreate({
             },
             onSuccess: () => {
                 if (typeof window !== "undefined") {
-                    window.localStorage.removeItem(
-                        "conducteur-sondage-preview",
-                    );
+                    window.localStorage.removeItem(PREVIEW_STORAGE_KEY);
                 }
             },
             onFinish: () => setIsSubmitting(false),
@@ -453,34 +549,21 @@ export default function ConducteurSondageCreate({
                                         <label className="mb-2 block text-sm font-semibold text-slate-700">
                                             Public cible
                                         </label>
-                                        <div className="relative">
-                                            <Users className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                                            <select
-                                                value={survey.audience}
-                                                onChange={(event) =>
-                                                    setSurvey((prev) => ({
-                                                        ...prev,
-                                                        audience:
-                                                            event.target.value,
-                                                    }))
-                                                }
-                                                className={`${fieldClasses()} appearance-none pl-11`}
-                                            >
-                                                <option>
-                                                    Responsables de famille
-                                                </option>
-                                                <option>
-                                                    Conducteurs de classe
-                                                </option>
-                                                <option>
-                                                    Membres de famille
-                                                </option>
-                                                <option>
-                                                    Tous les membres
-                                                </option>
-                                            </select>
-                                            <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                                        </div>
+                                        <Select2Single
+                                            name="audience"
+                                            value={survey.audience}
+                                            onChange={(event) =>
+                                                setSurvey((prev) => ({
+                                                    ...prev,
+                                                    audience:
+                                                        event.target.value,
+                                                }))
+                                            }
+                                            options={audienceSelectOptions}
+                                            placeholder="Selectionner un public cible"
+                                            allowClearOption={false}
+                                            hasError={Boolean(formErrors.audience)}
+                                        />
                                     </div>
                                 </div>
                             </section>

@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { usePage, router } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import { withBasePath } from "../../Utils/urlHelper";
 import Select2Single from "../../Components/Select2Single";
 import {
   CheckCircle, Clock, XCircle,
+  ArrowLeft,
   Eye, Plus, User, UsersRound, Inbox, Search, X, Info, MapPin,
   Layers
 } from 'lucide-react';
@@ -607,10 +608,20 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
           </div>
         )}
 
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 24px' }}>
+        <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto', padding: '32px clamp(12px, 2vw, 24px) 40px', boxSizing: 'border-box' }}>
+
+          <div className="card-enter" style={{ marginBottom: 18 }}>
+            <Link
+              href={withBasePath("", "/responsable-famille/inscriptions")}
+              className="inline-flex items-center gap-2 text-white/90 hover:text-white bg-white/10 hover:bg-white/20 backdrop-blur-md px-5 py-2.5 rounded-full transition-all text-sm font-semibold border border-white/10"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Retour aux inscriptions
+            </Link>
+          </div>
 
           {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 36 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 36 }}>
             <div className="card-enter">
               <p style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
                 Gestion des demandes
@@ -633,7 +644,7 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
           </div>
 
           {/* Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 28 }}>
             <StatCard icon={Layers}      label="Total"    value={stats.total}     iconBg="#EDE9FE" iconColor="#7C3AED" delay={0}   />
             <StatCard icon={Clock}       label="En cours" value={stats.pending}   iconBg="#FEF3C7" iconColor="#D97706" delay={60}  />
             <StatCard icon={CheckCircle} label="Validés"  value={stats.completed} iconBg="#DCFCE7" iconColor="#16A34A" delay={120} />
@@ -643,8 +654,8 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
           {/* Barre de recherche */}
           {transfers.length > 0 && (
             <div className="filter-bar card-enter" style={{ padding: '14px 18px', marginBottom: 24, animationDelay: '200ms' }}>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <div style={{ position: 'relative', flex: 1 }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ position: 'relative', flex: '1 1 320px', minWidth: 0 }}>
                   <Search style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', width: 15, height: 15, color: '#f97316' }} />
                   <input
                     type="text"
@@ -659,7 +670,7 @@ export default function Index({ transfers = [], classes = [], family = {}, membe
                   className="input-field"
                   value={statusFilter}
                   onChange={e => setStatusFilter(e.target.value)}
-                  style={{ padding: '10px 14px', fontSize: 13.5, color: '#333', cursor: 'pointer', fontWeight: 500, minWidth: 160 }}
+                  style={{ padding: '10px 14px', fontSize: 13.5, color: '#333', cursor: 'pointer', fontWeight: 500, minWidth: 180, flex: '0 1 220px', width: '100%', maxWidth: 240 }}
                 >
                   <option value="">Tous les statuts</option>
                   <option value="SOUMISE">Soumise</option>

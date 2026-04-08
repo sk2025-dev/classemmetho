@@ -290,11 +290,12 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/conducteur/annonces/{id}/transmettre', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'transmettreAuPasteur'])->name('conducteur.annonces.transmettre');
         Route::post('/conducteur/annonces/{id}/rejeter', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'rejeter'])->name('conducteur.annonces.rejeter');
 
-        // Routes pour les demandes de transfert (validation par conducteur)
-        Route::get('/conducteur/transferts', [\App\Http\Controllers\Conducteur\TransferController::class, 'index'])->name('conducteur.transferts.index');
-        Route::post('/conducteur/transferts/{id}/approve-source', [\App\Http\Controllers\Conducteur\TransferController::class, 'approveAsSource'])->name('conducteur.transferts.approve_source');
-        Route::post('/conducteur/transferts/{id}/approve-accueil', [\App\Http\Controllers\Conducteur\TransferController::class, 'approveAsAccueil'])->name('conducteur.transferts.approve_accueil');
-        Route::post('/conducteur/transferts/{id}/refuse', [\App\Http\Controllers\Conducteur\TransferController::class, 'refuse'])->name('conducteur.transferts.refuse');
+        // Routes pour les demandes de transfert (creation + validation conducteur)
+        Route::get('/conducteur/transferts', [\App\Http\Controllers\Conducteur\TransferWorkflowController::class, 'index'])->name('conducteur.transferts.index');
+        Route::post('/conducteur/transferts', [\App\Http\Controllers\Conducteur\TransferWorkflowController::class, 'store'])->name('conducteur.transferts.store');
+        Route::post('/conducteur/transferts/{id}/approve-source', [\App\Http\Controllers\Conducteur\TransferWorkflowController::class, 'approveAsSource'])->name('conducteur.transferts.approve_source');
+        Route::post('/conducteur/transferts/{id}/approve-accueil', [\App\Http\Controllers\Conducteur\TransferWorkflowController::class, 'approveAsAccueil'])->name('conducteur.transferts.approve_accueil');
+        Route::post('/conducteur/transferts/{id}/refuse', [\App\Http\Controllers\Conducteur\TransferWorkflowController::class, 'refuse'])->name('conducteur.transferts.refuse');
         Route::post('/conducteur/annonces/{id}/publier', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'publier'])->name('conducteur.annonces.publier');
         Route::post('/conducteur/annonces/{id}/archiver', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'archiver'])->name('conducteur.annonces.archiver');
         Route::get('/conducteur/annonces/{id}/fiche', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'fiche'])->name('conducteur.annonces.fiche');

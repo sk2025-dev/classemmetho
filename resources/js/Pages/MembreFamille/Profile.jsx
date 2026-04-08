@@ -31,6 +31,7 @@ import {
     MEMBER_MARITAL_STATUS_OPTIONS,
     RELATION_OPTIONS,
 } from "../../Helpers/select2SingleOptions";
+import FormField from "@/Components/FormField";
 
 // Fonction utilitaire pour formater les dates ISO en yyyy-MM-dd
 const formatDateForInput = (dateString) => {
@@ -47,17 +48,6 @@ const formatDateForInput = (dateString) => {
 };
 
 // --- Form Field Component ---
-const FormField = ({ label, children, icon: Icon, required }) => (
-    <div className="space-y-2">
-        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-            {Icon && <Icon className="w-4 h-4 text-blue-500" />}
-            {label}
-            {required && <span className="text-red-500">*</span>}
-        </label>
-        {children}
-    </div>
-);
-
 // Sous-composant pour les sections de Sacrements (AccordÃ©on)
 const SacrementSection = ({
     title,

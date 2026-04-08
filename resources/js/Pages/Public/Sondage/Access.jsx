@@ -23,7 +23,6 @@ function formatDate(dateString) {
 export default function PublicSondageAccess({
     publicToken,
     survey,
-    classe = null,
 }) {
     const { errors = {} } = usePage().props;
     const [form, setForm] = useState({
@@ -79,7 +78,7 @@ export default function PublicSondageAccess({
                                         Identifiez le membre
                                     </h2>
                                     <p className="mt-2 text-sm leading-6 text-slate-600">
-                                        Cette etape permet d'associer la reponse au bon membre sans demander de connexion classique.
+                                        Cette etape autorise l'acces au questionnaire sans afficher ensuite la fiche personnelle du membre.
                                     </p>
                                 </div>
                                 <div className="rounded-2xl bg-blue-50 p-3 text-blue-700">
@@ -165,12 +164,6 @@ export default function PublicSondageAccess({
 
                             <div className="mt-5 space-y-3 text-sm text-slate-600">
                                 <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                                    Classe:{" "}
-                                    <strong>
-                                        {classe?.nom || survey?.classe || "Non renseignee"}
-                                    </strong>
-                                </div>
-                                <div className="rounded-2xl bg-slate-50 px-4 py-3">
                                     Audience:{" "}
                                     <strong>{survey?.audience || "Non renseignee"}</strong>
                                 </div>
@@ -188,7 +181,7 @@ export default function PublicSondageAccess({
                                     Ce qui se passe ensuite
                                 </div>
                                 <p className="mt-2 leading-6">
-                                    Si les codes sont valides, la fiche du membre s'affiche avec ses informations puis le sondage apparait juste en dessous.
+                                    Si les codes sont valides, le questionnaire s'ouvre directement avec une participation anonyme, sans afficher les informations personnelles du membre.
                                 </p>
                             </div>
                         </aside>

@@ -56,6 +56,7 @@ class SondageController extends Controller
                 'nom' => $user->classe?->nom,
             ],
             'hasResponded' => (bool) ($survey['aDejaRepondu'] ?? false),
+            'previousAnswers' => $this->sondageService->getUserResponseAnswers($id, $user),
         ]);
     }
 

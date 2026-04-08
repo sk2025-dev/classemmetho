@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import { withBasePath } from "../../../Utils/urlHelper";
+import { formatPercentage, truncateDecimal } from "../../../Utils/percentage";
 import Select2Single from "../../../Components/Select2Single";
 import {
     ArrowLeft,
@@ -61,6 +62,26 @@ function formatDate(dateString) {
     }).format(parsedDate);
 }
 
+function formatDateTime(dateString) {
+    if (!dateString) {
+        return "Non definie";
+    }
+
+    const parsedDate = new Date(dateString);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        return dateString;
+    }
+
+    return new Intl.DateTimeFormat("fr-FR", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(parsedDate);
+}
+
 function getStatusClasses(statut) {
     if (statut === "Actif") {
         return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
@@ -73,15 +94,20 @@ function getStatusClasses(statut) {
     return "bg-amber-50 text-amber-700 ring-1 ring-amber-200";
 }
 
-function canConducteurRespondToSurvey(cible) {
-    const normalizedCible = (cible || "").trim();
+function canOpenConducteurParticipation(sondage) {
+    if (!sondage?.canCurrentUserRespond) {
+        return false;
+    }
 
-    return [
-        "Tous les membres",
-        "Tout le monde (tous les membres)",
-        "Responsables de famille",
-        "Conducteurs de classe",
-    ].includes(normalizedCible);
+    if (sondage?.statut === "Brouillon") {
+        return false;
+    }
+
+    if (sondage?.statut === "Cloture") {
+        return Boolean(sondage?.aDejaRepondu);
+    }
+
+    return true;
 }
 
 function normalizeSondage(sondage, authUser, index) {
@@ -122,14 +148,11 @@ function normalizeSondage(sondage, authUser, index) {
         [authUser?.prenom, authUser?.nom].filter(Boolean).join(" ") ||
         "Non renseigne";
 
-    const tauxParticipation =
-        Number(
-            sondage.tauxParticipation ??
-                sondage.taux_participation ??
-                (participants > 0
-                    ? Math.round((reponses / participants) * 100)
-                    : 0),
-        ) || 0;
+    const tauxParticipation = truncateDecimal(
+        sondage.tauxParticipation ??
+            sondage.taux_participation ??
+            (participants > 0 ? (reponses / participants) * 100 : 0),
+    );
 
     return {
         id: sondage.id ?? index,
@@ -145,6 +168,9 @@ function normalizeSondage(sondage, authUser, index) {
         tauxParticipation,
         canEdit: Boolean(sondage.canEdit),
         canPublish: Boolean(sondage.canPublish),
+        canCurrentUserRespond: Boolean(sondage.canCurrentUserRespond),
+        aDejaRepondu: Boolean(sondage.aDejaRepondu),
+        dateParticipation: sondage.dateParticipation || null,
     };
 }
 
@@ -246,7 +272,7 @@ export default function ConducteurSondageIndex({
     );
     const tauxMoyen =
         totalSondages > 0
-            ? Math.round(
+            ? truncateDecimal(
                   sondagesNormalises.reduce(
                       (sum, sondage) => sum + sondage.tauxParticipation,
                       0,
@@ -352,7 +378,7 @@ export default function ConducteurSondageIndex({
                         />
                         <StatCard
                             title="Taux Moyen"
-                            value={`${tauxMoyen}%`}
+                            value={formatPercentage(tauxMoyen)}
                             subtitle="Participation moyenne observee"
                             icon={BarChart3}
                             accent="rounded-2xl bg-purple-50 text-purple-700"
@@ -483,6 +509,14 @@ export default function ConducteurSondageIndex({
                                                                         }{" "}
                                                                         participants
                                                                     </span>
+                                                                    {sondage.aDejaRepondu ? (
+                                                                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700 ring-1 ring-emerald-200">
+                                                                            <CalendarDays className="h-3.5 w-3.5" />
+                                                                            {sondage.dateParticipation
+                                                                                ? `Participation le ${formatDateTime(sondage.dateParticipation)}`
+                                                                                : "Participation enregistree"}
+                                                                        </span>
+                                                                    ) : null}
                                                                 </div>
                                                             </div>
                                                         </td>
@@ -524,10 +558,9 @@ export default function ConducteurSondageIndex({
                                                         </td>
                                                         <td className="px-5 py-4">
                                                             <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-700 ring-1 ring-amber-200">
-                                                                {
-                                                                    sondage.tauxParticipation
-                                                                }
-                                                                %
+                                                                {formatPercentage(
+                                                                    sondage.tauxParticipation,
+                                                                )}
                                                             </span>
                                                         </td>
                                                         <td className="px-5 py-4">
@@ -541,18 +574,16 @@ export default function ConducteurSondageIndex({
                                                                         ? "Voir l'historique"
                                                                         : "Voir"}
                                                                 </Link>
-                                                                {sondage.statut !==
-                                                                    "Cloture" &&
-                                                                sondage.statut !==
-                                                                    "Brouillon" &&
-                                                                canConducteurRespondToSurvey(
-                                                                    sondage.cible,
+                                                                {canOpenConducteurParticipation(
+                                                                    sondage,
                                                                 ) ? (
                                                                     <Link
                                                                         href={`/conducteur/sondages/${sondage.id}/repondre`}
                                                                         className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
                                                                     >
-                                                                        Repondre
+                                                                        {sondage.aDejaRepondu
+                                                                            ? "Voir mes reponses"
+                                                                            : "Repondre au sondage"}
                                                                     </Link>
                                                                 ) : null}
                                                                 {sondage.canEdit ? (

@@ -30,6 +30,26 @@ function formatDate(dateString) {
     }).format(parsedDate);
 }
 
+function formatDateTime(dateString) {
+    if (!dateString) {
+        return "Non definie";
+    }
+
+    const parsedDate = new Date(dateString);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        return dateString;
+    }
+
+    return new Intl.DateTimeFormat("fr-FR", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(parsedDate);
+}
+
 function questionTypeLabel(type) {
     if (type === "multiple") return "Choix multiples";
     if (type === "checkbox") return "Choix unique";
@@ -64,6 +84,34 @@ function getStatusClasses(statut) {
     return "bg-amber-50 text-amber-700 ring-1 ring-amber-200";
 }
 
+function formatSavedAnswer(question, value) {
+    if (question?.type === "rating") {
+        return `${value} - ${getRatingLabel(question, value)}`;
+    }
+
+    return String(value);
+}
+
+function getSavedAnswerLines(question, value) {
+    if (Array.isArray(value)) {
+        return value
+            .map((item) => formatSavedAnswer(question, item))
+            .filter(Boolean);
+    }
+
+    if (typeof value === "string") {
+        const trimmedValue = value.trim();
+
+        return trimmedValue ? [formatSavedAnswer(question, trimmedValue)] : [];
+    }
+
+    if (typeof value === "number") {
+        return [formatSavedAnswer(question, value)];
+    }
+
+    return [];
+}
+
 export default function ConducteurSondageRespond({
     survey,
     classe = null,
@@ -87,6 +135,18 @@ export default function ConducteurSondageRespond({
         () => (Array.isArray(survey?.questions) ? survey.questions : []),
         [survey],
     );
+    const participationDate = survey?.dateParticipation || null;
+    const savedAnswers = useMemo(
+        () =>
+            previousAnswers && typeof previousAnswers === "object"
+                ? previousAnswers
+                : {},
+        [previousAnswers],
+    );
+    const shouldShowSavedAnswers = hasResponded;
+    const pageTitle = hasResponded
+        ? "Voir mes reponses"
+        : "Repondre au sondage";
 
     useEffect(() => {
         setAnswers(previousAnswers || {});
@@ -166,7 +226,7 @@ export default function ConducteurSondageRespond({
                             </Link>
                             <div>
                                 <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                                    Repondre au sondage
+                                    {pageTitle}
                                 </h1>
                                 <p className="text-sm text-blue-100">
                                     Votre reponse reste anonyme.
@@ -203,6 +263,13 @@ export default function ConducteurSondageRespond({
                                         Date de cloture:{" "}
                                         {formatDate(survey.dateEcheance)}
                                     </span>
+                                    {hasResponded && participationDate ? (
+                                        <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">
+                                            <CalendarDays className="h-4 w-4" />
+                                            Participation le{" "}
+                                            {formatDateTime(participationDate)}
+                                        </span>
+                                    ) : null}
                                 </div>
                                 <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-900">
                                     {survey.titre}
@@ -250,9 +317,84 @@ export default function ConducteurSondageRespond({
 
                     {hasResponded ? (
                         <div className="mt-6 rounded-[24px] border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-700">
-                            Votre reponse anonyme a deja ete enregistree pour ce
-                            sondage.
+                            {participationDate
+                                ? `Votre reponse anonyme a deja ete enregistree le ${formatDateTime(participationDate)}.`
+                                : "Votre reponse anonyme a deja ete enregistree pour ce sondage."}
                         </div>
+                    ) : null}
+
+                    {shouldShowSavedAnswers ? (
+                        <section className="mt-6 rounded-[28px] border border-sky-100 bg-white p-6 shadow-sm">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                                <div>
+                                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-500">
+                                        Voir mes reponses
+                                    </p>
+                                    <h3 className="mt-2 text-lg font-semibold text-slate-900">
+                                        Vos reponses enregistrees
+                                    </h3>
+                                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                                        Vos choix restent visibles apres validation.
+                                    </p>
+                                </div>
+                                {participationDate ? (
+                                    <span className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-sm font-medium text-sky-700 ring-1 ring-sky-200">
+                                        <CalendarDays className="h-4 w-4" />
+                                        {formatDateTime(participationDate)}
+                                    </span>
+                                ) : null}
+                            </div>
+
+                            <div className="mt-5 space-y-4">
+                                {questions.map((question, index) => {
+                                    const answerLines = getSavedAnswerLines(
+                                        question,
+                                        savedAnswers[question.id],
+                                    );
+
+                                    return (
+                                        <div
+                                            key={question.id || index}
+                                            className="rounded-[24px] border border-slate-200 bg-slate-50 p-4"
+                                        >
+                                            <div className="flex flex-wrap items-start justify-between gap-3">
+                                                <div>
+                                                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                                        Question {index + 1}
+                                                    </p>
+                                                    <h4 className="mt-2 text-base font-semibold text-slate-900">
+                                                        {question.title ||
+                                                            "Question sans titre"}
+                                                    </h4>
+                                                </div>
+                                                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">
+                                                    {questionTypeLabel(question.type)}
+                                                </span>
+                                            </div>
+
+                                            <div className="mt-4 flex flex-wrap gap-2">
+                                                {answerLines.length > 0 ? (
+                                                    answerLines.map(
+                                                        (answerLine, answerIndex) => (
+                                                            <span
+                                                                key={`${question.id || index}-${answerIndex}`}
+                                                                className="rounded-full bg-white px-3 py-1.5 text-sm font-medium text-slate-700 ring-1 ring-slate-200"
+                                                            >
+                                                                {answerLine}
+                                                            </span>
+                                                        ),
+                                                    )
+                                                ) : (
+                                                    <p className="text-sm text-slate-500">
+                                                        Aucune reponse enregistree.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </section>
                     ) : null}
 
                     {isExpired ? (
@@ -262,7 +404,9 @@ export default function ConducteurSondageRespond({
                         </div>
                     ) : null}
 
-                    <div className="mt-6 space-y-5">
+                    {!shouldShowSavedAnswers ? (
+                        <>
+                            <div className="mt-6 space-y-5">
                         {questions.length === 0 ? (
                             <div className="rounded-[28px] border border-dashed border-slate-300 bg-white px-6 py-12 text-center text-sm text-slate-500">
                                 Ce sondage ne contient encore aucune question.
@@ -455,25 +599,27 @@ export default function ConducteurSondageRespond({
                                 ) : null}
                             </section>
                         ))}
-                    </div>
+                            </div>
 
-                    <div className="mt-6 flex justify-center">
-                        <button
-                            type="button"
-                            onClick={submitAnswers}
-                            disabled={
-                                hasResponded ||
-                                isExpired ||
-                                isSubmitting ||
-                                questions.length === 0
-                            }
-                            className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-8 py-3 text-base font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            <Send className="h-4 w-4" />
-                            {isSubmitting ? "Envoi..." : "Envoyer mes reponses"}
-                            <ChevronRight className="h-4 w-4" />
-                        </button>
-                    </div>
+                            <div className="mt-6 flex justify-center">
+                                <button
+                                    type="button"
+                                    onClick={submitAnswers}
+                                    disabled={
+                                        hasResponded ||
+                                        isExpired ||
+                                        isSubmitting ||
+                                        questions.length === 0
+                                    }
+                                    className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-8 py-3 text-base font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    <Send className="h-4 w-4" />
+                                    {isSubmitting ? "Envoi..." : "Envoyer mes reponses"}
+                                    <ChevronRight className="h-4 w-4" />
+                                </button>
+                            </div>
+                        </>
+                    ) : null}
                 </div>
             </div>
         </>

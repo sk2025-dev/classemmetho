@@ -51,6 +51,9 @@
     </style>
 </head>
 <body>
+    @php
+        $formatPercentage = fn ($value) => number_format((float) ($value ?? 0), 2, '.', '');
+    @endphp
     <h1>Rapport de sondage</h1>
     <div class="muted">{{ $scopeLabel ?? 'Sondage' }} - genere le {{ optional($generatedAt)->format('d/m/Y H:i') }}</div>
 
@@ -66,7 +69,7 @@
             <div><strong>Date de cloture :</strong> {{ !empty($survey['dateEcheance']) ? \Carbon\Carbon::parse($survey['dateEcheance'])->format('d/m/Y') : 'Non definie' }}</div>
             <div><strong>Participants :</strong> {{ $survey['participants'] ?? 0 }}</div>
             <div><strong>Reponses :</strong> {{ $survey['reponses'] ?? 0 }}</div>
-            <div><strong>Taux de participation :</strong> {{ $survey['tauxParticipation'] ?? 0 }}%</div>
+            <div><strong>Taux de participation :</strong> {{ $formatPercentage($survey['tauxParticipation'] ?? 0) }}%</div>
         </div>
         @if(!empty($survey['description']))
             <div class="section">
@@ -99,7 +102,7 @@
                         <tr>
                             <td>{{ $item['label'] ?? 'Non renseigne' }}</td>
                             <td>{{ $item['count'] ?? 0 }}</td>
-                            <td>{{ $item['percentage'] ?? 0 }}%</td>
+                            <td>{{ $formatPercentage($item['percentage'] ?? 0) }}%</td>
                         </tr>
                     @empty
                         <tr>
@@ -134,7 +137,7 @@
                             <tr>
                                 <td>{{ $option['label'] ?? 'Option' }}</td>
                                 <td>{{ $option['count'] ?? 0 }}</td>
-                                <td>{{ $option['percentage'] ?? 0 }}%</td>
+                                <td>{{ $formatPercentage($option['percentage'] ?? 0) }}%</td>
                             </tr>
                         @endforeach
                     </tbody>
