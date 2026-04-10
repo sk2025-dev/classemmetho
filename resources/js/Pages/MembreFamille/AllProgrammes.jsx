@@ -1107,7 +1107,7 @@ export default function AllProgrammes() {
   };
 
   const handleGoBack = () => {
-    router.visit('/conducteur/programmes');
+    router.visit('/membre-famille/programmes');
   };
 
   const openEditModal = (event) => {
