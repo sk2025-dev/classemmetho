@@ -52,7 +52,7 @@ class PrierePresenter
             'comments' => $comments,
             'testimony' => collect($comments)->last()['message'] ?? null,
             'direction' => 'received',
-            'canComment' => $viewerRole === 'pasteur' && !in_array($status, ['Exaucement', 'Exaucement partage'], true),
+            'canComment' => self::canRecipientComment($viewerRole, $status),
             'canMarkFulfilled' => false,
             'targetLabel' => self::formatTargetLabel($request),
             'history' => self::formatHistory($request),
@@ -175,7 +175,7 @@ class PrierePresenter
             return 'Anonyme';
         }
 
-        return 'Pasteur';
+        return self::maskedRecipientLabel($comment['actor_role'] ?? $viewerRole);
     }
 
     private static function resolveCommentActorType(Priere $request, array $comment): string
@@ -204,7 +204,7 @@ class PrierePresenter
             if ((int) ($replyToComment['actor_id'] ?? 0) === (int) $request->user_id) {
                 $replyActorLabel = 'Anonyme';
             } elseif ($replyToComment) {
-                $replyActorLabel = 'Pasteur';
+                $replyActorLabel = self::maskedRecipientLabel($replyToComment['actor_role'] ?? $viewerRole);
             }
         }
 
@@ -228,5 +228,29 @@ class PrierePresenter
             $dateTime->locale('fr')->translatedFormat('d F Y'),
             $dateTime->format('H:i'),
         );
+    }
+
+    private static function canRecipientComment(string $viewerRole, string $status): bool
+    {
+        if (!in_array($viewerRole, ['pasteur', 'conducteur', 'responsable_famille', 'membre_famille'], true)) {
+            return false;
+        }
+
+        if ($viewerRole === 'pasteur') {
+            return !in_array($status, ['Exaucement', 'Exaucement partage', 'Non exaucee'], true);
+        }
+
+        return true;
+    }
+
+    private static function maskedRecipientLabel(?string $role): string
+    {
+        return match ($role) {
+            'pasteur' => 'Pasteur',
+            'conducteur' => 'Conducteur',
+            'responsable_famille' => 'Responsable de famille',
+            'membre_famille' => 'Membre de famille',
+            default => 'Participant',
+        };
     }
 }

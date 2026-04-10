@@ -109,22 +109,50 @@ class PrieresController extends Controller
     public function updateTestimony(Request $request, Priere $priere): RedirectResponse
     {
         $user = Auth::user();
-        abort_unless($user && $priere->user_id === $user->id, 403);
+        abort_unless($user, 403);
 
         $validated = $request->validate([
             'temoignage' => ['required', 'string', 'max:5000'],
             'reply_to_comment_id' => ['nullable', 'integer'],
         ]);
 
+        $isOwner = (int) $priere->user_id === (int) $user->id;
+
+        abort_unless($isOwner || $this->canAccessReceivedPrayer($priere, $user), 403);
+
+        if (!$isOwner) {
+            $this->markPrayerAsInPrayer($priere, $user);
+        }
+
         $priere->addCommentaire(
             $user,
             trim($validated['temoignage']),
             isset($validated['reply_to_comment_id']) ? (int) $validated['reply_to_comment_id'] : null,
         );
-        $priere->addHistorique($user, 'temoignage', 'Un commentaire a ete ajoute par le conducteur.');
+        $priere->addHistorique(
+            $user,
+            'temoignage',
+            $isOwner
+                ? 'Un commentaire a ete ajoute par le conducteur.'
+                : 'Un commentaire a ete ajoute par le conducteur destinataire.',
+        );
         $priere->save();
 
         return back()->with('success', 'Votre commentaire a ete ajoute.');
+    }
+
+    public function updateStatus(Request $request, Priere $priere): RedirectResponse
+    {
+        $user = Auth::user();
+        abort_unless($user && $this->canAccessReceivedPrayer($priere, $user), 403);
+
+        $validated = $request->validate([
+            'statut' => ['required', 'in:En priere'],
+        ]);
+
+        $this->markPrayerAsInPrayer($priere, $user, $validated['statut']);
+
+        return back()->with('success', 'La demande est maintenant en priere.');
     }
 
     public function markFulfilled(Priere $priere): RedirectResponse
@@ -149,5 +177,58 @@ class PrieresController extends Controller
         $priere->save();
 
         return back()->with('success', 'La priere a ete marquee comme exaucee.');
+    }
+
+    public function markUnfulfilled(Priere $priere): RedirectResponse
+    {
+        $user = Auth::user();
+        abort_unless($user && $priere->user_id === $user->id, 403);
+
+        if ($priere->statut === 'Non exaucee') {
+            return back()->with('success', 'Cette priere est deja marquee comme non exaucee.');
+        }
+
+        if ($priere->statut === 'Exaucement partage') {
+            return back()->with('error', 'Cette priere est deja marquee comme exaucee.');
+        }
+
+        $priere->update([
+            'statut' => 'Non exaucee',
+            'exaucee_le' => null,
+            'exaucee_par_pasteur_id' => null,
+        ]);
+
+        $priere->addHistorique($user, 'non_exaucement', 'La priere a ete marquee comme non exaucee par son auteur.');
+        $priere->save();
+
+        return back()->with('success', 'La priere a ete marquee comme non exaucee.');
+    }
+
+    private function canAccessReceivedPrayer(Priere $priere, $user): bool
+    {
+        return (int) $priere->user_id !== (int) $user->id
+            && PriereTargeting::filterVisibleForUser(collect([$priere]), $user)->isNotEmpty();
+    }
+
+    private function markPrayerAsInPrayer(Priere $priere, $user, string $status = 'En priere'): void
+    {
+        if (!in_array($priere->statut, ['Nouvelle', 'Vu', 'Transmise', 'En priere'], true)) {
+            return;
+        }
+
+        if ($priere->statut !== $status) {
+            $priere->update([
+                'statut' => $status,
+                'prise_en_priere_le' => $priere->prise_en_priere_le ?: now(),
+            ]);
+
+            $priere->addHistorique(
+                $user,
+                'prise_en_priere',
+                'La priere a ete prise en priere par un conducteur.',
+                ['statut' => $status],
+            );
+            $priere->save();
+        }
     }
 }

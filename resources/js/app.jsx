@@ -221,20 +221,36 @@ router.on("navigate", () => {
 });
 
 router.on("finish", (event) => {
-    // Mettre à jour l'URL courante
     const visit = event.detail.visit;
+    const method = String(visit?.method || "").toLowerCase();
+    const isMutationRequest = ["post", "put", "patch", "delete"].includes(
+        method,
+    );
 
-    if (visit.cancelled || visit.interrupted || !visit.completed) {
-        hideNavigationLoader();
+    if (
+        visit.cancelled ||
+        visit.interrupted ||
+        !visit.completed ||
+        isMutationRequest
+    ) {
+        requestAnimationFrame(() => {
+            hideNavigationLoader();
+        });
     }
 
-    // Masquer le loading screen initial s'il existe encore (UNE FOIS)
     hideInitialLoadingScreen();
 
-    // Réinitialiser les flags après navigation
     window.justLoggedIn = false;
     window.isWelcomeLoaderActive = false;
     window.isGoodbyeLoaderActive = false;
+});
+
+router.on("error", () => {
+    hideNavigationLoader();
+});
+
+router.on("invalid", () => {
+    hideNavigationLoader();
 });
 
 /**
@@ -313,3 +329,4 @@ createInertiaApp({
     },
     progress: false, // Désactiver la progress bar d'Inertia (on gère le loader manuellement)
 });
+
