@@ -23,6 +23,7 @@ import {
 import { useToastWithErrorHandling } from "../../Hooks/useToastWithErrorHandling";
 import ToastContainer from "../../Components/ToastContainer";
 import { sanitizeUppercasePrenom } from "../../Helpers/nameSanitizers";
+import FormField from "@/Components/FormField";
 import { withBasePath } from "../../Utils/urlHelper";
 import {
     Home,
@@ -146,17 +147,6 @@ const FormStepper = ({ currentStep, totalSteps, labels, onStepClick }) => {
 };
 
 // --- Form Field Component ---
-const FormField = ({ label, children, icon: Icon, required }) => (
-    <div className="space-y-2">
-        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-            {Icon && <Icon className="w-4 h-4 text-blue-500" />}
-            {label}
-            {required && <span className="text-red-500">*</span>}
-        </label>
-        {children}
-    </div>
-);
-
 // --- MultiSelectDropdown Component ---
 const MultiSelectDropdown = ({
     items,

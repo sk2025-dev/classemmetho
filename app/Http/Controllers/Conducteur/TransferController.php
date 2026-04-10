@@ -32,12 +32,12 @@ class TransferController extends Controller
         ])
             ->where(function ($query) use ($user) {
                 // Soit en attente de validation source (conducteur source)
-                $query->where('source_class_id', $user->classe_id)
-                    ->where('status', 'EN_ATTENTE_SOURCE')
+                $query->where('classe_source_id', $user->classe_id)
+                    ->where('statut', 'EN_ATTENTE_SOURCE')
                     // Soit en attente de validation accueil (conducteur accueil)
                     ->orWhere(function ($q) use ($user) {
-                        $q->where('target_class_id', $user->classe_id)
-                            ->where('status', 'EN_ATTENTE_ACCUEIL');
+                        $q->where('classe_cible_id', $user->classe_id)
+                            ->where('statut', 'EN_ATTENTE_ACCUEIL');
                     });
             })
             ->orderBy('created_at', 'desc')
@@ -106,9 +106,9 @@ class TransferController extends Controller
         ])
             ->where(function ($query) use ($user) {
                 // Soit validées source par ce conducteur
-                $query->where('validated_by_source_id', $user->id)
+                $query->where('validateur_source_id', $user->id)
                     // Soit validées accueil par ce conducteur
-                    ->orWhere('validated_by_accueil_id', $user->id);
+                    ->orWhere('validateur_accueil_id', $user->id);
             })
             ->orderBy('updated_at', 'desc')
             ->limit(10)
@@ -305,9 +305,12 @@ class TransferController extends Controller
                     'role' => 'responsable_famille', // Devient responsable de sa nouvelle famille
                 ]);
             } else {
-                // Pour un transfert familial, juste changer la classe des membres
+                // Pour un transfert familial, synchroniser la classe de la famille
+                // puis de tous ses membres.
+                Family::where('id', $transfer->family_id)
+                    ->update(['classe_id' => $transfer->target_class_id]);
+
                 User::where('family_id', $transfer->family_id)
-                    ->where('id', '!=', Auth::user()->id)
                     ->update(['classe_id' => $transfer->target_class_id]);
             }
 

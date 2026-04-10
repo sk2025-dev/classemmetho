@@ -28,16 +28,12 @@ class SondageController extends Controller
         $member = $this->resolveAuthorizedMember($request, $survey, $token);
 
         if ($member) {
-            return $this->renderRespondPage($request, $survey, $member, $token);
+            return $this->renderRespondPage($survey, $member, $token);
         }
 
         return Inertia::render('Public/Sondage/Access', [
             'publicToken' => $token,
-            'survey' => $this->sondageService->buildPublicSurveyPayload($survey),
-            'classe' => [
-                'id' => $survey->classe?->id,
-                'nom' => $survey->classe?->nom,
-            ],
+            'survey' => $this->buildSanitizedPublicSurveyPayload($survey),
         ]);
     }
 
@@ -50,7 +46,6 @@ class SondageController extends Controller
         ]);
 
         $member = User::query()
-            ->with('family:id,code_famille')
             ->whereRaw('UPPER(code_membre) = ?', [mb_strtoupper(trim($validated['codeMembre']))])
             ->whereHas('family', function ($query) use ($validated) {
                 $query->whereRaw('UPPER(code_famille) = ?', [mb_strtoupper(trim($validated['codeFamille']))]);
@@ -79,7 +74,7 @@ class SondageController extends Controller
 
         abort_unless($member, 403, 'Acces public non autorise pour ce sondage.');
 
-        return $this->renderRespondPage($request, $survey, $member, $token);
+        return $this->renderRespondPage($survey, $member, $token);
     }
 
     public function storeResponse(Request $request, string $token): RedirectResponse
@@ -113,36 +108,27 @@ class SondageController extends Controller
 
         $validated = $request->validate([
             'answers' => ['nullable', 'array'],
-            'member.nom' => ['required', 'string', 'max:255'],
-            'member.prenom' => ['required', 'string', 'max:255'],
-            'member.genre' => ['nullable', 'string', 'max:50'],
-            'member.email' => ['nullable', 'email', 'max:255'],
-            'member.contact' => ['nullable', 'regex:/^\d{1,10}$/'],
-            'member.date_naissance' => ['nullable', 'date'],
-            'member.employment_status' => ['nullable', 'string', 'max:255'],
-            'member.profession_detail' => ['nullable', 'string', 'max:255'],
+            'respondentProfile' => ['required', 'array'],
+            'respondentProfile.genre' => ['required', 'string', 'max:255'],
+            'respondentProfile.date_naissance' => ['required', 'date'],
+            'respondentProfile.employment_status' => ['required', 'string', 'max:255'],
+        ], [
+            'respondentProfile.genre.required' => 'Le genre est obligatoire.',
+            'respondentProfile.date_naissance.required' => 'La date de naissance est obligatoire.',
+            'respondentProfile.date_naissance.date' => 'La date de naissance est invalide.',
+            'respondentProfile.employment_status.required' => 'La situation socio-pro est obligatoire.',
         ]);
 
         $answers = $validated['answers'] ?? [];
         $this->validateAnswers($survey->questions ?? [], $answers);
-
-        $memberPayload = $validated['member'] ?? [];
-        $member->update([
-            'nom' => $memberPayload['nom'] ?? $member->nom,
-            'prenom' => $memberPayload['prenom'] ?? $member->prenom,
-            'genre' => $memberPayload['genre'] ?? null,
-            'email' => $memberPayload['email'] ?? null,
-            'telephone' => $memberPayload['contact'] ?? null,
-            'date_naissance' => $memberPayload['date_naissance'] ?? null,
-            'employment_status' => $memberPayload['employment_status'] ?? null,
-            'profession_detail' => $memberPayload['profession_detail'] ?? null,
-        ]);
-        $member->refresh();
+        $respondentProfile = $this->sondageService->buildPublicProfileSnapshot(
+            $validated['respondentProfile'] ?? [],
+        );
 
         SondageReponse::create([
             'sondage_id' => $survey->id,
             'respondent_key' => $this->sondageService->makeRespondentKey($survey->id, $member),
-            'respondent_profile' => $this->sondageService->buildAnonymousProfileSnapshot($member),
+            'respondent_profile' => $respondentProfile,
             'reponses' => $answers,
             'submitted_at' => now(),
         ]);
@@ -168,31 +154,13 @@ class SondageController extends Controller
         return $survey;
     }
 
-    private function renderRespondPage(Request $request, Sondage $survey, User $member, string $token): Response
+    private function renderRespondPage(Sondage $survey, User $member, string $token): Response
     {
-        return Inertia::render('Public/Sondage/Respond', [
+        return Inertia::render('Public/Sondage/Show', [
             'publicToken' => $token,
-            'survey' => $this->sondageService->buildPublicSurveyPayload($survey),
-            'classe' => [
-                'id' => $survey->classe?->id,
-                'nom' => $survey->classe?->nom,
-            ],
-            'member' => [
-                'id' => $member->id,
-                'nom' => $member->nom,
-                'prenom' => $member->prenom,
-                'genre' => $member->genre,
-                'role' => $this->sondageService->labelRole($member->role),
-                'email' => $member->email,
-                'contact' => $member->telephone,
-                'date_naissance' => optional($member->date_naissance)?->format('Y-m-d'),
-                'employment_status' => $member->employment_status,
-                'profession_detail' => $member->profession_detail,
-                'profile_photo_url' => $member->profile_photo_url,
-                'code_membre' => $member->code_membre,
-                'code_famille' => $member->family?->code_famille,
-            ],
+            'survey' => $this->buildSanitizedPublicSurveyPayload($survey),
             'hasResponded' => $this->sondageService->hasUserResponded($survey->id, $member),
+            'previousAnswers' => $this->sondageService->getUserResponseAnswers($survey->id, $member),
         ]);
     }
 
@@ -205,9 +173,7 @@ class SondageController extends Controller
             return null;
         }
 
-        $member = User::query()
-            ->with('family:id,code_famille')
-            ->find($memberId);
+        $member = User::query()->find($memberId);
 
         if (!$member || !$this->memberCanAccessSurvey($member, $survey)) {
             unset($accessMap[$token]);
@@ -217,6 +183,15 @@ class SondageController extends Controller
         }
 
         return $member;
+    }
+
+    private function buildSanitizedPublicSurveyPayload(Sondage $survey): array
+    {
+        $payload = $this->sondageService->buildPublicSurveyPayload($survey);
+
+        unset($payload['classe'], $payload['createur']);
+
+        return $payload;
     }
 
     private function memberCanAccessSurvey(User $member, Sondage $survey): bool

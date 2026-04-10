@@ -8,6 +8,7 @@ import { migrateCorruptedStorageData } from "./Hooks/migrateStorage";
 import { router } from "@inertiajs/react";
 import AppLayout from "./Layouts/AppLayout";
 import MainLayout from "./Layouts/MainLayout";
+import GlobalFormErrorHandler from "./Components/GlobalFormErrorHandler";
 import { loadingScreenHTML } from "./Utils/loadingScreenTemplate.jsx";
 
 // Migrer les données localStorage corrompues au démarrage
@@ -76,7 +77,9 @@ const hideInitialLoadingScreen = () => {
  */
 
 // Garder trace de l'URL courante
-let currentPageUrl = window.location.pathname;
+let currentPageUrl =
+    `${window.location.pathname}${window.location.search}` || "/";
+let navigationLoaderHideTimeout = null;
 
 // Initialiser les variables window si elles n'existent pas
 if (!window.justLoggedIn) {
@@ -103,6 +106,67 @@ window.setWelcomeLoaderActive = (active) => {
 // Fonction pour définir l'état du goodbye loader
 window.setGoodbyeLoaderActive = (active) => {
     window.isGoodbyeLoaderActive = active;
+};
+
+const clearNavigationLoaderHideTimeout = () => {
+    if (navigationLoaderHideTimeout) {
+        clearTimeout(navigationLoaderHideTimeout);
+        navigationLoaderHideTimeout = null;
+    }
+};
+
+const showNavigationLoader = () => {
+    clearNavigationLoaderHideTimeout();
+
+    let loader = document.getElementById("navigationLoadingScreen");
+
+    if (!loader) {
+        const loadingHTML = `
+            <div class="loading-screen active" id="navigationLoadingScreen">
+                ${loadingScreenHTML}
+            </div>
+        `;
+        document.body.insertAdjacentHTML("beforeend", loadingHTML);
+        loader = document.getElementById("navigationLoadingScreen");
+    }
+
+    if (loader) {
+        loader.classList.remove("is-hiding");
+        loader.style.opacity = "1";
+        loader.style.visibility = "visible";
+        loader.style.pointerEvents = "auto";
+    }
+};
+
+const hideNavigationLoader = () => {
+    clearNavigationLoaderHideTimeout();
+
+    const navScreen = document.getElementById("navigationLoadingScreen");
+
+    if (!navScreen) {
+        return;
+    }
+
+    navScreen.classList.add("is-hiding");
+    navigationLoaderHideTimeout = setTimeout(() => {
+        navScreen.remove();
+        navigationLoaderHideTimeout = null;
+    }, 350);
+};
+
+const shouldShowNavigationLoader = (visit) => {
+    if (!visit || window.isWelcomeLoaderActive || window.isGoodbyeLoaderActive) {
+        return false;
+    }
+
+    if (visit.prefetch) {
+        return false;
+    }
+
+    const targetUrl = new URL(visit.url, window.location.origin);
+    const normalizedTargetUrl = `${targetUrl.pathname}${targetUrl.search}`;
+
+    return normalizedTargetUrl !== currentPageUrl;
 };
 
 const normalizeInertiaUrl = (url) => {
@@ -137,45 +201,31 @@ router.visit = (url, options = {}) => {
     return originalVisit(normalizeInertiaUrl(url), options);
 };
 
-router.on("before", (visit) => {
-    // Ne pas afficher de loader si:
-    // 1. Le welcome loader est actif
-    // 2. Le goodbye loader est actif
-    if (window.isWelcomeLoaderActive || window.isGoodbyeLoaderActive) {
-        return;
-    }
-
-    // Extraire le chemin de la nouvelle URL
-    const newUrl = new URL(visit.url, window.location.origin).pathname;
-
-    // Si on change vraiment de page (pas juste erreur de validation)
-    if (newUrl !== currentPageUrl) {
-        // Afficher le loader de navigation
-        const existingLoader = document.getElementById(
-            "navigationLoadingScreen",
-        );
-        if (!existingLoader) {
-            const loadingHTML = `
-                <div class="loading-screen active" id="navigationLoadingScreen">
-                    ${loadingScreenHTML}
-                </div>
-            `;
-            document.body.insertAdjacentHTML("beforeend", loadingHTML);
-        }
+router.on("before", (event) => {
+    if (shouldShowNavigationLoader(event.detail.visit)) {
+        showNavigationLoader();
     }
 });
 
-router.on("finish", (visit) => {
-    // Mettre à jour l'URL courante
-    currentPageUrl = window.location.pathname;
+router.on("start", (event) => {
+    if (shouldShowNavigationLoader(event.detail.visit)) {
+        showNavigationLoader();
+    }
+});
 
-    // Masquer le loader de navigation
-    const navScreen = document.getElementById("navigationLoadingScreen");
-    if (navScreen) {
-        navScreen.style.animation = "fadeOut 0.8s ease-out forwards";
-        setTimeout(() => {
-            navScreen.remove();
-        }, 800);
+router.on("navigate", () => {
+    currentPageUrl = `${window.location.pathname}${window.location.search}`;
+    requestAnimationFrame(() => {
+        hideNavigationLoader();
+    });
+});
+
+router.on("finish", (event) => {
+    // Mettre à jour l'URL courante
+    const visit = event.detail.visit;
+
+    if (visit.cancelled || visit.interrupted || !visit.completed) {
+        hideNavigationLoader();
     }
 
     // Masquer le loading screen initial s'il existe encore (UNE FOIS)
@@ -213,6 +263,20 @@ createInertiaApp({
         // Si la page n'a pas déjà un layout défini et qu'elle n'est pas une page d'authentification
         if (page && !page.default.layout && !authRoutes.includes(name)) {
             page.default.layout = (pageContent) => {
+                const content = pageContent.props.auth?.user ? (
+                    <MainLayout auth={pageContent.props.auth}>
+                        {pageContent}
+                    </MainLayout>
+                ) : (
+                    pageContent
+                );
+
+                return (
+                    <>
+                        <GlobalFormErrorHandler />
+                        {content}
+                    </>
+                );
                 // Vérifier que l'utilisateur est authentifié (auth.user existe)
                 if (pageContent.props.auth?.user) {
                     return (

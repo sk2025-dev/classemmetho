@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { focusFirstErrorField } from "../Utils/formFeedback";
 
 /**
  * Hook pour gérer les erreurs de validation (client + serveur)
@@ -8,6 +9,19 @@ export function useFormErrors() {
     const [errors, setErrors] = useState({});
     const [serverErrors, setServerErrors] = useState({});
     const [globalError, setGlobalError] = useState(null);
+
+    useEffect(() => {
+        const mergedErrors = {
+            ...serverErrors,
+            ...errors,
+        };
+
+        if (Object.keys(mergedErrors).length === 0) {
+            return;
+        }
+
+        focusFirstErrorField(mergedErrors);
+    }, [errors, serverErrors]);
 
     /**
      * Récupère l'erreur pour un champ (client ou serveur)

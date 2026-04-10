@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
 import { Head, Link } from "@inertiajs/react";
+import Select2Single from "../../../Components/Select2Single";
+import {
+    formatFixedTruncated,
+    formatPercentage,
+    truncateDecimal,
+} from "../../../Utils/percentage";
 import {
     ArrowLeft,
     BarChart3,
@@ -50,6 +56,26 @@ function formatDate(dateString) {
         day: "2-digit",
         month: "short",
         year: "numeric",
+    }).format(parsedDate);
+}
+
+function formatDateTime(dateString) {
+    if (!dateString) {
+        return "Non definie";
+    }
+
+    const parsedDate = new Date(dateString);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        return dateString;
+    }
+
+    return new Intl.DateTimeFormat("fr-FR", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
     }).format(parsedDate);
 }
 
@@ -107,7 +133,7 @@ export default function ResponsableFamilleSondageIndex({
     );
     const tauxMoyen =
         totalSondages > 0
-            ? Math.round(
+            ? truncateDecimal(
                   sondages.reduce(
                       (sum, sondage) =>
                           sum + Number(sondage.tauxParticipation ?? 0),
@@ -142,7 +168,7 @@ export default function ResponsableFamilleSondageIndex({
         },
         {
             title: "Taux Moyen",
-            value: `${tauxMoyen}%`,
+            value: formatPercentage(tauxMoyen),
             subtitle: "Participation moyenne observee",
             icon: BarChart3,
             accent: "rounded-2xl bg-purple-50 text-purple-700",
@@ -152,6 +178,20 @@ export default function ResponsableFamilleSondageIndex({
     const audienceOptions = [...new Set(sondages.map((sondage) => sondage.audience))]
         .filter(Boolean)
         .sort((a, b) => a.localeCompare(b, "fr"));
+
+    const statusFilterOptions = [
+        { value: "all", label: "Tous les statuts" },
+        { value: "Actif", label: "Actif" },
+        { value: "Cloture", label: "Cloture" },
+    ];
+
+    const audienceFilterOptions = [
+        { value: "all", label: "Toutes les audiences" },
+        ...audienceOptions.map((audience) => ({
+            value: audience,
+            label: audience,
+        })),
+    ];
 
     const filteredSondages = sondages.filter((survey) => {
         const term = search.trim().toLowerCase();
@@ -271,33 +311,28 @@ export default function ResponsableFamilleSondageIndex({
                                         />
                                     </label>
 
-                                    <select
+                                    <Select2Single
+                                        name="status_filter"
                                         value={statusFilter}
                                         onChange={(event) =>
                                             setStatusFilter(event.target.value)
                                         }
-                                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                    >
-                                        <option value="all">Tous les statuts</option>
-                                        <option value="Actif">Actif</option>
-                                        <option value="Cloture">Cloture</option>
-                                    </select>
+                                        options={statusFilterOptions}
+                                        placeholder="Tous les statuts"
+                                        allowClearOption={false}
+                                    />
 
                                     {showAudienceFilter ? (
-                                        <select
+                                        <Select2Single
+                                            name="audience_filter"
                                             value={audienceFilter}
                                             onChange={(event) =>
                                                 setAudienceFilter(event.target.value)
                                             }
-                                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                        >
-                                            <option value="all">Toutes les audiences</option>
-                                            {audienceOptions.map((audience) => (
-                                                <option key={audience} value={audience}>
-                                                    {audience}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            options={audienceFilterOptions}
+                                            placeholder="Toutes les audiences"
+                                            allowClearOption={false}
+                                        />
                                     ) : null}
                                 </div>
                             </div>
@@ -366,6 +401,13 @@ export default function ResponsableFamilleSondageIndex({
                                                                 }{" "}
                                                                 reponses
                                                             </span>
+                                                            {survey.aDejaRepondu ? (
+                                                                <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700 ring-1 ring-emerald-200">
+                                                                    {survey.dateParticipation
+                                                                        ? `Participation le ${formatDateTime(survey.dateParticipation)}`
+                                                                        : "Participation enregistree"}
+                                                                </span>
+                                                            ) : null}
                                                         </div>
                                                     </div>
 
@@ -375,17 +417,16 @@ export default function ResponsableFamilleSondageIndex({
                                                                 Participation
                                                             </span>
                                                             <span className="font-bold text-slate-900">
-                                                                {
-                                                                    survey.tauxParticipation
-                                                                }
-                                                                %
+                                                                {formatPercentage(
+                                                                    survey.tauxParticipation,
+                                                                )}
                                                             </span>
                                                         </div>
                                                         <div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-200">
                                                             <div
                                                                 className={`h-full rounded-full ${status.progress}`}
                                                                 style={{
-                                                                    width: `${survey.tauxParticipation}%`,
+                                                                    width: `${formatFixedTruncated(survey.tauxParticipation)}%`,
                                                                 }}
                                                             />
                                                         </div>
@@ -411,8 +452,8 @@ export default function ResponsableFamilleSondageIndex({
                                                             className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
                                                         >
                                                             {survey.aDejaRepondu
-                                                                ? "Voir ma participation"
-                                                                : "Ouvrir le sondage"}
+                                                                ? "Voir mes reponses"
+                                                                : "Repondre au sondage"}
                                                             <ChevronRight className="h-4 w-4" />
                                                         </Link>
                                                     </div>

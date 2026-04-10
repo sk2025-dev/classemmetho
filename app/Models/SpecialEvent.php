@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SpecialEvent extends Model
 {
@@ -12,21 +14,142 @@ class SpecialEvent extends Model
         'time',
         'orateur',
         'moderateur',
-        'dirigeant_priere',
-        'lieu',  // Changé de 'desc' à 'lieu'
+        'famille_reception',
+        'lieu',
         'class_id',
         'created_by',
         'is_parish'
     ];
     
-    // Si vous voulez garder la compatibilité avec l'ancien nom
-    public function getDescAttribute()
+    protected $casts = [
+        'date' => 'date',
+        'time' => 'datetime:H:i',
+        'is_parish' => 'boolean',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+    
+    /**
+     * Relation avec la classe
+     */
+    public function classe(): BelongsTo
     {
-        return $this->lieu;
+        return $this->belongsTo(Classe::class, 'class_id');
     }
     
-    public function setDescAttribute($value)
+    /**
+     * Relation avec le créateur (conducteur)
+     */
+    public function creator(): BelongsTo
     {
-        $this->attributes['lieu'] = $value;
+        return $this->belongsTo(User::class, 'created_by');
+    }
+    
+    /**
+     * Relation avec les médias associés
+     */
+    public function medias(): HasMany
+    {
+        return $this->hasMany(Media::class, 'special_event_id');
+    }
+    
+    /**
+     * Accesseur pour la date formatée
+     */
+    public function getFormattedDateAttribute(): string
+    {
+        return $this->date->format('d/m/Y');
+    }
+    
+    /**
+     * Accesseur pour l'heure formatée
+     */
+    public function getFormattedTimeAttribute(): string
+    {
+        return $this->time ? \Carbon\Carbon::parse($this->time)->format('H:i') : '';
+    }
+    
+    /**
+     * Accesseur pour la date complète formatée
+     */
+    public function getFullDateAttribute(): string
+    {
+        return $this->date->translatedFormat('l d F Y');
+    }
+    
+    /**
+     * Scope pour les événements à venir
+     */
+    public function scopeUpcoming($query)
+    {
+        return $query->where('date', '>=', now()->startOfDay())
+            ->orderBy('date', 'asc')
+            ->orderBy('time', 'asc');
+    }
+    
+    /**
+     * Scope pour les événements passés
+     */
+    public function scopePast($query)
+    {
+        return $query->where('date', '<', now()->startOfDay())
+            ->orderBy('date', 'desc')
+            ->orderBy('time', 'desc');
+    }
+    
+    /**
+     * Scope pour les événements d'une année spécifique
+     */
+    public function scopeForYear($query, $year)
+    {
+        return $query->whereYear('date', $year);
+    }
+    
+    /**
+     * Scope pour les événements d'une classe spécifique
+     */
+    public function scopeForClass($query, $classId)
+    {
+        return $query->where('class_id', $classId);
+    }
+    
+    /**
+     * Scope pour les événements non paroissiaux
+     */
+    public function scopeNonParish($query)
+    {
+        return $query->where('is_parish', false);
+    }
+    
+    /**
+     * Vérifier si l'événement est à venir
+     */
+    public function isUpcoming(): bool
+    {
+        return $this->date >= now()->startOfDay();
+    }
+    
+    /**
+     * Vérifier si l'événement est passé
+     */
+    public function isPast(): bool
+    {
+        return $this->date < now()->startOfDay();
+    }
+    
+    /**
+     * Vérifier si l'événement est aujourd'hui
+     */
+    public function isToday(): bool
+    {
+        return $this->date->isToday();
+    }
+    
+    /**
+     * Obtenir le nombre de médias associés
+     */
+    public function getMediaCountAttribute(): int
+    {
+        return $this->medias()->count();
     }
 }

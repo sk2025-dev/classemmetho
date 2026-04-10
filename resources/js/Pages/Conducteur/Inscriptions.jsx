@@ -3,6 +3,7 @@ import { Link, router, useForm, Head, usePage } from "@inertiajs/react";
 import axios from "axios";
 import { withBasePath } from "../../Utils/urlHelper";
 import Select from "react-select";
+import FormField from "@/Components/FormField";
 import Select2Fonction from "../../Components/Select2Fonction";
 import Select2Single from "../../Components/Select2Single";
 import { RELATION_OPTIONS } from "../../Helpers/select2SingleOptions";
@@ -135,17 +136,6 @@ const PaginationControls = ({
 };
 
 // --- Form Field Component ---
-const FormField = ({ label, children, icon: Icon, required }) => (
-    <div className="space-y-2">
-        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-            {Icon && <Icon className="w-4 h-4 text-blue-500" />}
-            {label}
-            {required && <span className="text-red-500">*</span>}
-        </label>
-        {children}
-    </div>
-);
-
 // Sous-composant pour les sections de Sacrements (Accordéon)
 const SacrementSection = ({
     title,
@@ -460,6 +450,7 @@ export default function Inscriptions({
                         ? "rejected"
                         : "pending",
             famille_id: insc.famille_id || null,
+            code_membre: insc.code_membre || null,
             responsable_famille: insc.responsable_famille || false,
             admin_approved: insc.admin_approved,
             admin_name: insc.admin_name,
@@ -499,6 +490,8 @@ export default function Inscriptions({
             return "actif";
         })(),
         famille_id: member.famille_id || member.family_id || null,
+        code_famille: member.code_famille || null,
+        code_membre: member.code_membre || null,
         responsable_famille: member.responsable_famille || false,
         profile_photo_url: normalizePhotoUrl(
             member.profile_photo_url ||
@@ -516,12 +509,14 @@ export default function Inscriptions({
     const familiesList = (families || []).map((family) => ({
         familyId: family.id,
         nom: family.nom,
+        code_famille: family.code_famille || null,
         responsable: {
             id: family.responsable?.id,
             nom: family.responsable?.nom || "N/A",
             prenom: family.responsable?.prenom || "N/A",
             email: family.responsable?.email,
             phone: family.responsable?.phone,
+            code_membre: family.responsable?.code_membre || null,
         },
         members: family.members || [],
         memberCount: family.member_count || family.members?.length || 0,
@@ -1681,9 +1676,21 @@ export default function Inscriptions({
                                                             if (
                                                                 family.responsable
                                                             ) {
+                                                                const responsibleMember =
+                                                                    family.members?.find(
+                                                                        (
+                                                                            member,
+                                                                        ) =>
+                                                                            member.id ===
+                                                                            family
+                                                                                .responsable
+                                                                                ?.id,
+                                                                    ) || null;
+
                                                                 allMembers.push(
                                                                     {
                                                                         ...family.responsable,
+                                                                        ...responsibleMember,
                                                                         famille_nom:
                                                                             family.nom ||
                                                                             family
@@ -1691,6 +1698,12 @@ export default function Inscriptions({
                                                                                 .nom,
                                                                         code_famille:
                                                                             family.code_famille,
+                                                                        code_membre:
+                                                                            family
+                                                                                .responsable
+                                                                                ?.code_membre ||
+                                                                            responsibleMember?.code_membre ||
+                                                                            null,
                                                                         is_responsable: true,
                                                                     },
                                                                 );
@@ -1738,7 +1751,7 @@ export default function Inscriptions({
                                                         return (
                                                             <tr>
                                                                 <td
-                                                                    colSpan="8"
+                                                                    colSpan="10"
                                                                     className="p-12 text-center text-slate-500"
                                                                 >
                                                                     <Users className="w-16 h-16 mx-auto mb-4 text-slate-300" />
@@ -1839,6 +1852,12 @@ export default function Inscriptions({
                                                                 <td className="p-5 text-slate-600">
                                                                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
                                                                         {member.code_famille ||
+                                                                            "N/A"}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="p-5 text-slate-600">
+                                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-slate-50 border border-slate-200 rounded-full text-xs font-semibold text-slate-700">
+                                                                        {member.code_membre ||
                                                                             "N/A"}
                                                                     </span>
                                                                 </td>
@@ -2143,10 +2162,9 @@ export default function Inscriptions({
                                                                 </td>
                                                                 <td className="p-5 text-slate-600">
                                                                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
-                                                                        {memberFamily
-                                                                            ? memberFamily.code_famille ||
-                                                                              "N/A"
-                                                                            : "N/A"}
+                                                                        {member.code_famille ||
+                                                                            memberFamily?.code_famille ||
+                                                                            "N/A"}
                                                                     </span>
                                                                 </td>
                                                                 <td className="p-5 text-slate-600">
@@ -4802,4 +4820,3 @@ export default function Inscriptions({
         </>
     );
 }
-

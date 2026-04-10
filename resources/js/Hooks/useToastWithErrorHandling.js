@@ -1,4 +1,9 @@
 import useToast from './useToast';
+import {
+    buildValidationToastMessage,
+    focusFieldByName,
+    focusFirstErrorField,
+} from "../Utils/formFeedback";
 
 export const useToastWithErrorHandling = () => {
     const toast = useToast();
@@ -12,7 +17,7 @@ export const useToastWithErrorHandling = () => {
             scrollToFirst = true
         } = options;
 
-        const { error, warning, info } = toast;
+        const { error, warning } = toast;
 
         if (!result || result.success) {
             return; // Pas d'erreur
@@ -20,12 +25,17 @@ export const useToastWithErrorHandling = () => {
 
         // Mettre en surbrillance les champs en erreur
         if (showFieldHighlight && result.errors) {
-            highlightErrorFields(result.errors);
+            focusFirstErrorField(result.errors, { delay: 0 });
         }
 
         // Scroller jusqu'au premier champ en erreur
         if (scrollToFirst && result.field) {
-            scrollToErrorField(result.field);
+            focusFieldByName(result.field);
+        }
+
+        if (result.type === "ValidationError") {
+            error(buildValidationToastMessage(result.errors || {}), 6000);
+            return;
         }
 
         // Afficher le toast selon le type d'erreur
@@ -62,9 +72,21 @@ export const useToastWithErrorHandling = () => {
         }
     };
 
+    const handleFieldErrors = (errors, options = {}) => {
+        if (!errors || Object.keys(errors).length === 0) {
+            return null;
+        }
+
+        const firstField = focusFirstErrorField(errors, options);
+        toast.error(buildValidationToastMessage(errors), 6000);
+
+        return firstField;
+    };
+
     return {
         ...toast,
-        handleApiError
+        handleApiError,
+        handleFieldErrors
     };
 };
 

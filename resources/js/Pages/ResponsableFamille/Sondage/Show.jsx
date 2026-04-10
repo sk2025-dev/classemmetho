@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Head, Link, router, usePage } from "@inertiajs/react";
+import Select2Single from "../../../Components/Select2Single";
 import {
     ArrowLeft,
     CalendarDays,
@@ -28,6 +29,26 @@ function formatDate(dateString) {
     }).format(parsedDate);
 }
 
+function formatDateTime(dateString) {
+    if (!dateString) {
+        return "Non definie";
+    }
+
+    const parsedDate = new Date(dateString);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        return dateString;
+    }
+
+    return new Intl.DateTimeFormat("fr-FR", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(parsedDate);
+}
+
 function questionTypeLabel(type) {
     if (type === "multiple") return "Choix multiples";
     if (type === "checkbox") return "Choix unique";
@@ -36,14 +57,57 @@ function questionTypeLabel(type) {
     return "Reponse libre";
 }
 
+const ratingScaleLabels = {
+    1: "Tres insatisfait",
+    2: "Insatisfait",
+    3: "Neutre",
+    4: "Satisfait",
+    5: "Tres satisfait",
+};
+
+function getRatingLabel(question, option) {
+    return (
+        question?.scaleLabels?.[option] || ratingScaleLabels[option] || option
+    );
+}
+
+function formatSavedAnswer(question, value) {
+    if (question?.type === "rating") {
+        return `${value} - ${getRatingLabel(question, value)}`;
+    }
+
+    return String(value);
+}
+
+function getSavedAnswerLines(question, value) {
+    if (Array.isArray(value)) {
+        return value
+            .map((item) => formatSavedAnswer(question, item))
+            .filter(Boolean);
+    }
+
+    if (typeof value === "string") {
+        const trimmedValue = value.trim();
+
+        return trimmedValue ? [formatSavedAnswer(question, trimmedValue)] : [];
+    }
+
+    if (typeof value === "number") {
+        return [formatSavedAnswer(question, value)];
+    }
+
+    return [];
+}
+
 export default function ResponsableFamilleSondageShow({
     survey,
     classe = null,
     hasResponded = false,
+    previousAnswers = {},
     previewMode = false,
     publicMode = false,
     backHref = "/responsable-famille/sondages",
-    headerTitle = "Repondre au sondage",
+    headerTitle = null,
     headerSubtitle = null,
     badgeLabel = "Reponses anonymes",
     submitUrl = survey?.id
@@ -53,10 +117,10 @@ export default function ResponsableFamilleSondageShow({
     submitDisabled = false,
 }) {
     const { errors = {}, flash = {} } = usePage().props;
-    const [answers, setAnswers] = useState({});
+    const [answers, setAnswers] = useState(previousAnswers || {});
     const [respondentProfile, setRespondentProfile] = useState({
         genre: "",
-        role: "",
+        date_naissance: "",
         employment_status: "",
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -68,10 +132,39 @@ export default function ResponsableFamilleSondageShow({
         () => (Array.isArray(survey?.questions) ? survey.questions : []),
         [survey],
     );
+    const savedAnswers = useMemo(
+        () =>
+            previousAnswers && typeof previousAnswers === "object"
+                ? previousAnswers
+                : {},
+        [previousAnswers],
+    );
+    const shouldShowSavedAnswers = hasResponded && !previewMode;
 
+    const resolvedHeaderTitle =
+        headerTitle ??
+        (hasResponded && !previewMode
+            ? "Voir mes reponses"
+            : "Repondre au sondage");
     const resolvedHeaderSubtitle =
         headerSubtitle ??
         (classe?.nom ? `Classe ${classe.nom}` : "Votre reponse reste anonyme.");
+    const participationDate = survey?.dateParticipation || null;
+
+    const genreOptions = [
+        { value: "", label: "Non renseigne" },
+        { value: "Femmes", label: "Femmes" },
+        { value: "Hommes", label: "Hommes" },
+    ];
+
+    const employmentStatusOptions = [
+        { value: "", label: "Non renseignee" },
+        { value: "Travailleurs", label: "Travailleurs" },
+        { value: "Etudiants", label: "Etudiants" },
+        { value: "Sans emploi", label: "Sans emploi" },
+        { value: "Retraites", label: "Retraites" },
+        { value: "Autres", label: "Autres" },
+    ];
 
     useEffect(() => {
         if (flash?.success && flash.success !== lastSuccessRef.current) {
@@ -79,6 +172,10 @@ export default function ResponsableFamilleSondageShow({
             showSuccess(flash.success);
         }
     }, [flash?.success, showSuccess]);
+
+    useEffect(() => {
+        setAnswers(previousAnswers || {});
+    }, [previousAnswers]);
 
     const updateCheckboxAnswer = (questionId, option, checked) => {
         setAnswers((current) => {
@@ -135,7 +232,7 @@ export default function ResponsableFamilleSondageShow({
                             </Link>
                             <div>
                                 <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                                    {headerTitle}
+                                    {resolvedHeaderTitle}
                                 </h1>
                                 <p className="text-sm text-blue-100">
                                     {resolvedHeaderSubtitle}
@@ -168,6 +265,13 @@ export default function ResponsableFamilleSondageShow({
                                         <CalendarDays className="h-4 w-4" />
                                         Date de cloture: {formatDate(survey.dateEcheance)}
                                     </span>
+                                    {hasResponded && participationDate ? (
+                                        <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">
+                                            <CalendarDays className="h-4 w-4" />
+                                            Participation le{" "}
+                                            {formatDateTime(participationDate)}
+                                        </span>
+                                    ) : null}
                                 </div>
                                 <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-900">
                                     {survey.titre}
@@ -180,16 +284,20 @@ export default function ResponsableFamilleSondageShow({
                                         Audience:{" "}
                                         <strong>{survey.audience || "Non renseignee"}</strong>
                                     </span>
-                                    <span className="rounded-full bg-slate-100 px-3 py-1.5">
-                                        Classe:{" "}
-                                        <strong>
-                                            {survey.classe || classe?.nom || "Non renseignee"}
-                                        </strong>
-                                    </span>
-                                    <span className="rounded-full bg-slate-100 px-3 py-1.5">
-                                        Createur:{" "}
-                                        <strong>{survey.createur || "Non renseigne"}</strong>
-                                    </span>
+                                    {!publicMode ? (
+                                        <span className="rounded-full bg-slate-100 px-3 py-1.5">
+                                            Classe:{" "}
+                                            <strong>
+                                                {survey.classe || classe?.nom || "Non renseignee"}
+                                            </strong>
+                                        </span>
+                                    ) : null}
+                                    {!publicMode ? (
+                                        <span className="rounded-full bg-slate-100 px-3 py-1.5">
+                                            Createur:{" "}
+                                            <strong>{survey.createur || "Non renseigne"}</strong>
+                                        </span>
+                                    ) : null}
                                 </div>
                             </div>
 
@@ -200,7 +308,7 @@ export default function ResponsableFamilleSondageShow({
                                 <p className="mt-2 text-sm leading-6 text-slate-600">
                                     {publicMode
                                         ? "Le lien public ne demande pas de connexion. Aucun nom, email ou telephone n'apparaitra dans les resultats. Seules les informations statistiques que vous renseignez ici peuvent etre utilisees."
-                                        : "Le systeme enregistre une participation anonyme. Aucun nom, email ou telephone n'apparaitra dans les resultats. Seules des statistiques globales de profil comme le genre, le role ou la situation socio-pro peuvent etre utilisees."}
+                                        : "Le systeme enregistre une participation anonyme. Aucun nom, email ou telephone n'apparaitra dans les resultats. Seules des statistiques globales de profil comme le genre, la tranche d'age ou la situation socio-pro peuvent etre utilisees."}
                                 </p>
                             </div>
                         </div>
@@ -209,9 +317,82 @@ export default function ResponsableFamilleSondageShow({
                     {hasResponded && !previewMode ? (
                         <div className="mt-6 rounded-[24px] border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-700">
                             {publicMode
-                                ? "Une reponse anonyme a deja ete enregistree depuis cet appareil pour ce lien."
-                                : "Votre reponse anonyme a deja ete enregistree pour ce sondage."}
+                                ? "Une reponse anonyme a deja ete enregistree pour cet acces."
+                                : participationDate
+                                  ? `Votre reponse anonyme a deja ete enregistree le ${formatDateTime(participationDate)}.`
+                                  : "Votre reponse anonyme a deja ete enregistree pour ce sondage."}
                         </div>
+                    ) : null}
+
+                    {shouldShowSavedAnswers ? (
+                        <section className="mt-6 rounded-[28px] border border-sky-100 bg-white p-6 shadow-sm">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                                <div>
+                                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-500">
+                                        Voir mes reponses
+                                    </p>
+                                    <h3 className="mt-2 text-lg font-semibold text-slate-900">
+                                        Vos reponses enregistrees
+                                    </h3>
+                                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                                        Vos choix restent visibles apres validation.
+                                    </p>
+                                </div>
+                                {participationDate ? (
+                                    <span className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-sm font-medium text-sky-700 ring-1 ring-sky-200">
+                                        <CalendarDays className="h-4 w-4" />
+                                        {formatDateTime(participationDate)}
+                                    </span>
+                                ) : null}
+                            </div>
+
+                            <div className="mt-5 space-y-4">
+                                {questions.map((question, index) => {
+                                    const answerLines = getSavedAnswerLines(
+                                        question,
+                                        savedAnswers[question.id],
+                                    );
+
+                                    return (
+                                        <div
+                                            key={question.id || index}
+                                            className="rounded-[24px] border border-slate-200 bg-slate-50 p-4"
+                                        >
+                                            <div className="flex flex-wrap items-start justify-between gap-3">
+                                                <div>
+                                                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                                        Question {index + 1}
+                                                    </p>
+                                                    <h4 className="mt-2 text-base font-semibold text-slate-900">
+                                                        {question.title || "Question sans titre"}
+                                                    </h4>
+                                                </div>
+                                                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">
+                                                    {questionTypeLabel(question.type)}
+                                                </span>
+                                            </div>
+
+                                            <div className="mt-4 flex flex-wrap gap-2">
+                                                {answerLines.length > 0 ? (
+                                                    answerLines.map((answerLine, answerIndex) => (
+                                                        <span
+                                                            key={`${question.id || index}-${answerIndex}`}
+                                                            className="rounded-full bg-white px-3 py-1.5 text-sm font-medium text-slate-700 ring-1 ring-slate-200"
+                                                        >
+                                                            {answerLine}
+                                                        </span>
+                                                    ))
+                                                ) : (
+                                                    <p className="text-sm text-slate-500">
+                                                        Aucune reponse enregistree.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </section>
                     ) : null}
 
                     {(errors.survey || errors.answers) && !previewMode ? (
@@ -226,7 +407,7 @@ export default function ResponsableFamilleSondageShow({
                         </div>
                     ) : null}
 
-                    {publicMode ? (
+                    {publicMode && !shouldShowSavedAnswers ? (
                         <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
                             <div className="flex items-start justify-between gap-4">
                                 <div>
@@ -237,17 +418,21 @@ export default function ResponsableFamilleSondageShow({
                                         Quelques informations anonymes
                                     </h3>
                                     <p className="mt-2 text-sm leading-6 text-slate-600">
-                                        Ces champs restent non nominaux et servent uniquement aux repartitions statistiques.
+                                        Ces champs sont obligatoires, restent non nominaux et servent uniquement aux repartitions statistiques.
                                     </p>
                                 </div>
+                                <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+                                    Obligatoire
+                                </span>
                             </div>
 
                             <div className="mt-5 grid gap-4 md:grid-cols-3">
                                 <div>
                                     <label className="mb-2 block text-sm font-semibold text-slate-700">
-                                        Genre
+                                        Genre *
                                     </label>
-                                    <select
+                                    <Select2Single
+                                        name="respondentProfile.genre"
                                         value={respondentProfile.genre}
                                         onChange={(event) =>
                                             setRespondentProfile((current) => ({
@@ -255,13 +440,12 @@ export default function ResponsableFamilleSondageShow({
                                                 genre: event.target.value,
                                             }))
                                         }
+                                        options={genreOptions}
                                         disabled={hasResponded || isExpired || previewMode}
-                                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                    >
-                                        <option value="">Non renseigne</option>
-                                        <option value="Femmes">Femmes</option>
-                                        <option value="Hommes">Hommes</option>
-                                    </select>
+                                        placeholder="Non renseigne"
+                                        allowClearOption={false}
+                                        hasError={Boolean(errors["respondentProfile.genre"])}
+                                    />
                                     {errors["respondentProfile.genre"] ? (
                                         <p className="mt-2 text-sm text-rose-600">
                                             {errors["respondentProfile.genre"]}
@@ -271,37 +455,39 @@ export default function ResponsableFamilleSondageShow({
 
                                 <div>
                                     <label className="mb-2 block text-sm font-semibold text-slate-700">
-                                        Role
+                                        Date de naissance *
                                     </label>
-                                    <select
-                                        value={respondentProfile.role}
+                                    <input
+                                        type="date"
+                                        name="respondentProfile.date_naissance"
+                                        value={respondentProfile.date_naissance}
                                         onChange={(event) =>
                                             setRespondentProfile((current) => ({
                                                 ...current,
-                                                role: event.target.value,
+                                                date_naissance: event.target.value,
                                             }))
                                         }
+                                        required
                                         disabled={hasResponded || isExpired || previewMode}
-                                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                    >
-                                        <option value="">Non renseigne</option>
-                                        <option value="Responsables de famille">Responsables de famille</option>
-                                        <option value="Membres de famille">Membres de famille</option>
-                                        <option value="Conducteurs">Conducteurs</option>
-                                        <option value="Autres">Autres</option>
-                                    </select>
-                                    {errors["respondentProfile.role"] ? (
+                                        className={`w-full rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:ring-4 ${
+                                            errors["respondentProfile.date_naissance"]
+                                                ? "border border-rose-400 focus:border-rose-400 focus:ring-rose-100"
+                                                : "border border-slate-200 focus:border-blue-400 focus:ring-blue-100"
+                                        }`}
+                                    />
+                                    {errors["respondentProfile.date_naissance"] ? (
                                         <p className="mt-2 text-sm text-rose-600">
-                                            {errors["respondentProfile.role"]}
+                                            {errors["respondentProfile.date_naissance"]}
                                         </p>
                                     ) : null}
                                 </div>
 
                                 <div>
                                     <label className="mb-2 block text-sm font-semibold text-slate-700">
-                                        Situation socio-pro
+                                        Situation socio-pro *
                                     </label>
-                                    <select
+                                    <Select2Single
+                                        name="respondentProfile.employment_status"
                                         value={respondentProfile.employment_status}
                                         onChange={(event) =>
                                             setRespondentProfile((current) => ({
@@ -309,16 +495,14 @@ export default function ResponsableFamilleSondageShow({
                                                 employment_status: event.target.value,
                                             }))
                                         }
+                                        options={employmentStatusOptions}
                                         disabled={hasResponded || isExpired || previewMode}
-                                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                    >
-                                        <option value="">Non renseignee</option>
-                                        <option value="Travailleurs">Travailleurs</option>
-                                        <option value="Etudiants">Etudiants</option>
-                                        <option value="Sans emploi">Sans emploi</option>
-                                        <option value="Retraites">Retraites</option>
-                                        <option value="Autres">Autres</option>
-                                    </select>
+                                        placeholder="Non renseignee"
+                                        allowClearOption={false}
+                                        hasError={Boolean(
+                                            errors["respondentProfile.employment_status"],
+                                        )}
+                                    />
                                     {errors["respondentProfile.employment_status"] ? (
                                         <p className="mt-2 text-sm text-rose-600">
                                             {errors["respondentProfile.employment_status"]}
@@ -329,7 +513,9 @@ export default function ResponsableFamilleSondageShow({
                         </section>
                     ) : null}
 
-                    <div className="mt-6 space-y-5">
+                    {!shouldShowSavedAnswers ? (
+                        <>
+                            <div className="mt-6 space-y-5">
                         {questions.length === 0 ? (
                             <div className="rounded-[28px] border border-dashed border-slate-300 bg-white px-6 py-12 text-center text-sm text-slate-500">
                                 Ce sondage ne contient encore aucune question.
@@ -467,27 +653,29 @@ export default function ResponsableFamilleSondageShow({
                                 ) : null}
                             </section>
                         ))}
-                    </div>
+                            </div>
 
-                    <div className="mt-6 flex justify-center">
-                        <button
-                            type="button"
-                            onClick={submitAnswers}
-                            disabled={
-                                hasResponded ||
-                                isExpired ||
-                                isSubmitting ||
-                                questions.length === 0 ||
-                                previewMode ||
-                                submitDisabled
-                            }
-                            className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-8 py-3 text-base font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            <Send className="h-4 w-4" />
-                            {isSubmitting ? "Envoi..." : submitLabel}
-                            <ChevronRight className="h-4 w-4" />
-                        </button>
-                    </div>
+                            <div className="mt-6 flex justify-center">
+                                <button
+                                    type="button"
+                                    onClick={submitAnswers}
+                                    disabled={
+                                        hasResponded ||
+                                        isExpired ||
+                                        isSubmitting ||
+                                        questions.length === 0 ||
+                                        previewMode ||
+                                        submitDisabled
+                                    }
+                                    className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-8 py-3 text-base font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    <Send className="h-4 w-4" />
+                                    {isSubmitting ? "Envoi..." : submitLabel}
+                                    <ChevronRight className="h-4 w-4" />
+                                </button>
+                            </div>
+                        </>
+                    ) : null}
                 </div>
             </div>
         </>

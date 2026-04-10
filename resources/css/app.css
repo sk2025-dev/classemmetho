@@ -120,7 +120,13 @@ body, #app {
     justify-content: center;
     z-index: 10000;
     overflow: hidden;
-    animation: fadeOut 0.8s ease-out 2s forwards;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.loading-screen.is-hiding {
+    animation: fadeOut 0.35s ease-out forwards;
 }
 
 /* Particules animées en arrière-plan */

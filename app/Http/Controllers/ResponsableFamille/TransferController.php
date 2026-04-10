@@ -31,16 +31,16 @@ class TransferController extends Controller
             'validatedBySource',
             'validatedByAccueil',
         ])
-            ->where('family_id', $user->family_id)
+            ->where('famille_id', $user->family_id)
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($transfer) {
                 return [
                     'id' => $transfer->id,
                     'reference' => $transfer->reference,
-                    'status' => $transfer->status,
+                    'status' => $transfer->statut,
                     'type' => $transfer->type,
-                    'reason' => $transfer->reason,
+                    'reason' => $transfer->motif,
                     'member' => $transfer->type === 'member' && $transfer->user ? [
                         'id' => $transfer->user->id,
                         'name' => $transfer->user->nom . ' ' . $transfer->user->prenom,
@@ -57,7 +57,7 @@ class TransferController extends Controller
                         'id' => $transfer->targetClass->id,
                         'nom' => $transfer->targetClass->nom,
                     ] : null,
-                    'external_destination' => $transfer->destination_city
+                    'external_destination' => $transfer->ville_destination
                         ? trim($transfer->destination_city . ($transfer->destination_country ? " • {$transfer->destination_country}" : ''))
                         : null,
                     'destination_note' => $transfer->destination_note,
@@ -107,8 +107,18 @@ class TransferController extends Controller
                 'integer',
                 'exists:classes,id',
             ],
-            'destination_city' => 'required_if:type,external|string|max:255',
-            'destination_country' => 'required_if:type,external|string|max:255',
+            'destination_city' => [
+                Rule::requiredIf(fn () => $request->input('type') === 'external'),
+                'nullable',
+                'string',
+                'max:255',
+            ],
+            'destination_country' => [
+                Rule::requiredIf(fn () => $request->input('type') === 'external'),
+                'nullable',
+                'string',
+                'max:255',
+            ],
             'destination_note' => 'nullable|string|max:500',
             'reason' => 'nullable|string|max:500',
         ]);

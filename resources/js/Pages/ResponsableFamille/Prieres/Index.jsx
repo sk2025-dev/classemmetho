@@ -199,8 +199,8 @@ export default function ResponsableFamillePrieresIndex({
             {
                 id: "in_prayer",
                 label: "En priere",
-                count: scopedRequests.filter((request) =>
-                    ["Transmise", "En priere"].includes(request.status),
+                count: scopedRequests.filter(
+                    (request) => request.status === "En priere",
                 ).length,
             },
             {
@@ -217,8 +217,8 @@ export default function ResponsableFamillePrieresIndex({
 
     const filteredRequests = useMemo(() => {
         if (activeTab === "in_prayer") {
-            return scopedRequests.filter((request) =>
-                ["Transmise", "En priere"].includes(request.status),
+            return scopedRequests.filter(
+                (request) => request.status === "En priere",
             );
         }
 
@@ -536,9 +536,9 @@ export default function ResponsableFamillePrieresIndex({
                                     {filteredRequests.map((request) => (
                                         <article
                                             key={request.id}
-                                            className="rounded-[24px] border border-slate-200/90 bg-white shadow-[0_14px_30px_rgba(15,23,42,0.07)]"
+                                            className="rounded-[20px] border border-slate-200/90 bg-white shadow-[0_12px_24px_rgba(15,23,42,0.06)]"
                                         >
-                                            <div className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-stretch">
+                                            <div className="grid gap-3 p-3 xl:grid-cols-[minmax(0,1fr)_260px] xl:items-stretch">
                                                 <div className="min-w-0 flex-1">
                                                     <div className="flex flex-wrap items-center gap-3">
                                                         <span
@@ -563,7 +563,7 @@ export default function ResponsableFamillePrieresIndex({
                                                         </span>
                                                     </div>
 
-                                                    <h3 className="mt-3 text-base font-bold tracking-tight text-slate-900">
+                                                    <h3 className="mt-2.5 text-base font-bold tracking-tight text-slate-900">
                                                         {request.subject}
                                                     </h3>
                                                     <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
@@ -579,160 +579,54 @@ export default function ResponsableFamillePrieresIndex({
                                                             Cible: {request.targetLabel}
                                                         </div>
                                                     ) : null}
-
-                                                    <div className="mt-3.5 rounded-[20px] border border-slate-200 bg-slate-50/80 p-3">
-                                                        <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-900">
-                                                            <MessageSquare className="h-4 w-4 text-sky-700" />
-                                                            Echange sur la demande
-                                                        </div>
-                                                        <div className="mt-2.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm">
-                                                            {request.comments.length > 0 ? (
-                                                                <>
-                                                                    <p className="text-sm font-semibold text-slate-900">
-                                                                        {request.comments.length} message{request.comments.length > 1 ? "s" : ""}
-                                                                    </p>
-                                                                    <p className="mt-1 text-sm leading-5 text-slate-600">
-                                                                        {request.comments[request.comments.length - 1]?.message}
-                                                                    </p>
-                                                                </>
-                                                            ) : (
-                                                                <p className="text-sm text-slate-500">
-                                                                    Aucun commentaire ajoute pour le moment.
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    {request.history?.length > 0 ? (
-                                                        <div className="mt-3.5 rounded-[20px] border border-slate-200 bg-slate-50/80 p-3">
-                                                            <div className="text-[13px] font-semibold text-slate-900">
-                                                                Historique
-                                                            </div>
-                                                            <div className="mt-2.5 space-y-2.5">
-                                                                {request.history.map((item) => (
-                                                                    <div
-                                                                        key={`${request.id}-history-${item.id}`}
-                                                                        className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 shadow-sm"
-                                                                    >
-                                                                        <div>{item.description}</div>
-                                                                        <div className="mt-1 text-xs text-slate-500">
-                                                                            {item.actorLabel} - {item.createdAt}
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    ) : null}
                                                 </div>
 
-                                                <div className="flex h-full w-full flex-col rounded-[22px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-3.5 shadow-sm">
-                                                    {isReadOnlyScope ? (
-                                                        <>
-                                                            <p className="text-[13px] font-semibold text-slate-900">
-                                                                Consultation
-                                                            </p>
-                                                            <p className="mt-1 text-sm leading-5 text-slate-600">
-                                                                Cette demande vous a ete transmise. Elle est affichÃ©e en lecture seule dans cet onglet.
-                                                            </p>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <p className="text-[13px] font-semibold text-slate-900">
-                                                                Ajouter un commentaire
-                                                            </p>
-                                                            <p className="mt-1 text-sm leading-5 text-slate-600">
-                                                                Vous pouvez ajouter autant de commentaires que necessaire. Chaque ajout garde sa date.
-                                                            </p>
+                                                <div className="flex h-full w-full flex-col rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-3 shadow-sm">
+                                                    <div className="rounded-[16px] border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                                                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                                            Dernier commentaire
+                                                        </p>
+                                                        <p className="mt-2 text-sm leading-5 text-slate-600">
+                                                            {request.comments.length > 0
+                                                                ? request.comments[request.comments.length - 1]?.message
+                                                                : "Aucun commentaire pour le moment."}
+                                                        </p>
+                                                    </div>
 
-                                                            {replyTargets[request.id] ? (
-                                                                <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 px-3.5 py-3 text-sm text-blue-900">
-                                                                    <div className="font-semibold">Reponse ciblee</div>
-                                                                    <div className="mt-1 text-xs text-blue-800">
-                                                                        {
-                                                                            request.comments.find((comment) => comment.id === replyTargets[request.id])?.actorLabel
-                                                                        }
-                                                                    </div>
-                                                                    <div className="mt-1 text-xs leading-5 text-blue-700">
-                                                                        {formatReplySnippet(
-                                                                            request.comments.find((comment) => comment.id === replyTargets[request.id])?.message,
-                                                                        )}
-                                                                    </div>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            setReplyTargets((current) => ({
-                                                                                ...current,
-                                                                                [request.id]: null,
-                                                                            }))
-                                                                        }
-                                                                        className="mt-2 text-xs font-semibold text-blue-700 transition hover:text-blue-800"
-                                                                    >
-                                                                        Annuler la reponse
-                                                                    </button>
-                                                                </div>
-                                                            ) : null}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setOpenThread({
+                                                                id: request.id,
+                                                            })
+                                                        }
+                                                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-[16px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                                                    >
+                                                        <MessageSquare className="h-4 w-4" />
+                                                        Faire un commentaire
+                                                    </button>
 
-                                                            <textarea
-                                                                rows={5}
-                                                                value={
-                                                                    commentDrafts[
-                                                                        request
-                                                                            .id
-                                                                    ] || ""
-                                                                }
-                                                                onChange={(
-                                                                    event,
-                                                                ) =>
-                                                                    setCommentDrafts(
-                                                                        (
-                                                                            current,
-                                                                        ) => ({
-                                                                            ...current,
-                                                                            [request.id]:
-                                                                                event
-                                                                                    .target
-                                                                                    .value,
-                                                                        }),
-                                                                    )
-                                                                }
-                                                                placeholder="Ex: Merci, la situation a evolue favorablement..."
-                                                                className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                                            />
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleCommentSubmit(
-                                                                        request.id,
-                                                                    )
-                                                                }
-                                                                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(5,150,105,0.24)] transition hover:bg-emerald-700"
-                                                            >
-                                                                <CheckCircle2 className="h-4 w-4" />
-                                                                Enregistrer le
-                                                                commentaire
-                                                            </button>
-
-                                                            <button
-                                                                type="button"
-                                                                disabled={
-                                                                    request.status === "Exaucement partage" ||
-                                                                    request.comments.length === 0
-                                                                }
-                                                                onClick={() => setRequestToFulfill(request)}
-                                                                className={`mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(5,150,105,0.24)] transition ${
-                                                                    request.status === "Exaucement partage" ||
-                                                                    request.comments.length === 0
-                                                                        ? "cursor-not-allowed bg-slate-400 shadow-none"
-                                                                        : "bg-emerald-600 hover:bg-emerald-700"
-                                                                }`}
-                                                            >
-                                                                <CheckCircle2 className="h-4 w-4" />
-                                                                {request.status === "Exaucement partage"
-                                                                    ? "Priere deja exaucee"
-                                                                    : "Marquer comme priere exaucee"}
-                                                            </button>
-                                                        </>
-                                                    )}
+                                                    {!isReadOnlyScope ? (
+                                                        <button
+                                                            type="button"
+                                                            disabled={
+                                                                request.status === "Exaucement partage" ||
+                                                                request.comments.length === 0
+                                                            }
+                                                            onClick={() => setRequestToFulfill(request)}
+                                                            className={`mt-2 inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-[16px] px-3 py-2.5 text-[13px] font-semibold text-white transition ${
+                                                                request.status === "Exaucement partage" ||
+                                                                request.comments.length === 0
+                                                                    ? "cursor-not-allowed bg-slate-400"
+                                                                    : "bg-emerald-600 hover:bg-emerald-700"
+                                                            }`}
+                                                        >
+                                                            <CheckCircle2 className="h-4 w-4" />
+                                                            {request.status === "Exaucement partage"
+                                                                ? "Priere deja exaucee"
+                                                                : "Marquer exaucee"}
+                                                        </button>
+                                                    ) : null}
                                                 </div>
                                             </div>
                                         </article>
@@ -743,6 +637,245 @@ export default function ResponsableFamillePrieresIndex({
                     </section>
                 </div>
             </div>
+
+            {openThread && currentThreadData ? (
+                <div className="fixed inset-0 z-[9997] flex justify-end">
+                    <div
+                        className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm"
+                        onClick={() => setOpenThread(null)}
+                    />
+
+                    <div className="relative flex w-full max-w-[560px] flex-col overflow-hidden rounded-l-[28px] border-l border-slate-200 bg-[#f8fafc] shadow-[0_26px_64px_rgba(15,23,42,0.18)]">
+                        <div className="border-b border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f3f7fb_100%)] px-6 py-5">
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">
+                                        Fil de discussion
+                                    </p>
+                                    <h3 className="truncate text-[17px] font-bold text-slate-900">
+                                        {currentThreadData.subject}
+                                    </h3>
+                                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                                        <span
+                                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${badgeClasses(
+                                                currentThreadData.status,
+                                            )}`}
+                                        >
+                                            {currentThreadData.status}
+                                        </span>
+                                        <span className="text-[11px] text-slate-500">
+                                            {currentThreadData.authorLabel}
+                                        </span>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setOpenThread(null)}
+                                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div
+                            className="flex-1 overflow-y-auto px-6 py-6"
+                            style={{
+                                backgroundColor: "#e9f0e8",
+                                backgroundImage:
+                                    "radial-gradient(circle at 25px 25px, rgba(255,255,255,0.55) 2px, transparent 0), radial-gradient(circle at 75px 75px, rgba(15,23,42,0.03) 2px, transparent 0), linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.08))",
+                                backgroundSize: "100px 100px, 100px 100px, 100% 100%",
+                                backgroundPosition: "0 0, 0 0, 0 0",
+                            }}
+                        >
+                            <div className="mb-5 rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                    Sujet de priere
+                                </p>
+                                <p className="mt-2 text-sm font-semibold text-slate-900">
+                                    {currentThreadData.subject}
+                                </p>
+                                <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                    Demande
+                                </p>
+                                <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-600">
+                                    {currentThreadData.message}
+                                </p>
+                            </div>
+
+                            {currentThreadData.comments.length > visibleComments ? (
+                                <div className="mb-4 flex justify-center">
+                                    <button
+                                        type="button"
+                                        onClick={() => setVisibleComments((prev) => prev + 10)}
+                                        className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                                    >
+                                        <ChevronUp className="h-4 w-4" />
+                                        Voir les messages precedents
+                                    </button>
+                                </div>
+                            ) : null}
+
+                            <div className="mb-3 flex items-center gap-3">
+                                <div className="h-px flex-1 bg-slate-200" />
+                                <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                                    Echanges
+                                </span>
+                                <div className="h-px flex-1 bg-slate-200" />
+                            </div>
+
+                            <div className="space-y-5">
+                                {currentThreadData.comments.length > 0 ? (
+                                    currentThreadData.comments
+                                        .slice(-visibleComments)
+                                        .map((comment, index) => (
+                                            <div
+                                                key={`${openThread.id}-c-${comment.id ?? index}`}
+                                                className={`flex ${commentRowClasses(comment.actorType)}`}
+                                            >
+                                                <div className="max-w-[88%]">
+                                                    {comment.replyTo ? (
+                                                        <div className="mb-2 rounded-[10px] border border-slate-200 bg-slate-50/90 px-3 py-2.5">
+                                                            <p className="text-[11px] font-semibold text-slate-500">
+                                                                {comment.replyTo.actorLabel}
+                                                            </p>
+                                                            <p className="line-clamp-1 text-[11px] text-slate-600">
+                                                                {formatReplySnippet(comment.replyTo.message)}
+                                                            </p>
+                                                        </div>
+                                                    ) : null}
+
+                                                    <div
+                                                        className={`rounded-[12px] border px-4 py-3.5 shadow-sm ${commentCardClasses(
+                                                            comment.actorType,
+                                                        )}`}
+                                                    >
+                                                        <p className="whitespace-pre-wrap text-sm leading-6">
+                                                            {comment.message}
+                                                        </p>
+                                                    </div>
+
+                                                    <div
+                                                        className={`mt-2 flex items-center gap-3 px-1 ${commentRowClasses(
+                                                            comment.actorType,
+                                                        )}`}
+                                                    >
+                                                        <span className="text-[11px] text-slate-500">
+                                                            {comment.actorLabel}
+                                                            {comment.createdAt ? ` - ${comment.createdAt}` : ""}
+                                                        </span>
+                                                        {currentThreadData.canComment ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    setReplyTargets((current) => ({
+                                                                        ...current,
+                                                                        [openThread.id]: comment.id,
+                                                                    }))
+                                                                }
+                                                                className="rounded-full p-1 text-slate-400 transition hover:bg-slate-200/80 hover:text-slate-700"
+                                                            >
+                                                                <CornerDownRight className="h-3 w-3" />
+                                                            </button>
+                                                        ) : null}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                ) : (
+                                    <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-500">
+                                        Aucun commentaire pour le moment.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {currentThreadData.canComment ? (
+                            <div className="border-t border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f4f8fb_100%)] px-5 py-4">
+                                {replyTargets[openThread.id] ? (
+                                    <div className="mb-3 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-[11px] font-bold text-slate-700">
+                                                Reponse a {currentThreadData.comments.find((comment) => comment.id === replyTargets[openThread.id])?.actorLabel}
+                                            </p>
+                                            <p className="truncate text-[11px] text-slate-500">
+                                                {formatReplySnippet(
+                                                    currentThreadData.comments.find((comment) => comment.id === replyTargets[openThread.id])?.message,
+                                                )}
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setReplyTargets((current) => ({
+                                                    ...current,
+                                                    [openThread.id]: null,
+                                                }))
+                                            }
+                                            className="ml-2 rounded-full p-1 text-slate-400 transition hover:text-slate-700"
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                ) : null}
+
+                                <div className="flex items-end gap-3">
+                                    <textarea
+                                        rows={2}
+                                        value={commentDrafts[openThread.id] || ""}
+                                        onChange={(event) =>
+                                            setCommentDrafts((current) => ({
+                                                ...current,
+                                                [openThread.id]: event.target.value,
+                                            }))
+                                        }
+                                        onKeyDown={(event) => {
+                                            if (event.key === "Enter" && !event.shiftKey) {
+                                                event.preventDefault();
+                                                handleCommentSubmit(openThread.id);
+                                            }
+                                        }}
+                                        placeholder="Ecrire un commentaire..."
+                                        className="flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[13px] text-slate-800 placeholder-slate-400 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => handleCommentSubmit(openThread.id)}
+                                        disabled={!commentDrafts[openThread.id]?.trim()}
+                                        className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-xl bg-slate-800 text-white shadow-[0_10px_22px_rgba(15,23,42,0.18)] transition hover:bg-slate-900 disabled:opacity-30 disabled:shadow-none"
+                                    >
+                                        <Send className="h-4 w-4" />
+                                    </button>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    disabled={
+                                        currentThreadData.status === "Exaucement partage" ||
+                                        currentThreadData.comments.length === 0
+                                    }
+                                    onClick={() => setRequestToFulfill(currentThreadData)}
+                                    className={`mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold text-white transition ${
+                                        currentThreadData.status === "Exaucement partage" ||
+                                        currentThreadData.comments.length === 0
+                                            ? "cursor-not-allowed bg-slate-400"
+                                            : "bg-emerald-600 hover:bg-emerald-700"
+                                    }`}
+                                >
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    {currentThreadData.status === "Exaucement partage"
+                                        ? "Priere deja exaucee"
+                                        : "Marquer comme priere exaucee"}
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="border-t border-slate-200 bg-slate-50 px-6 py-4 text-center text-[12px] text-slate-500">
+                                Cette demande est affichee en lecture seule dans cet espace.
+                            </div>
+                        )}
+                    </div>
+                </div>
+            ) : null}
 
             {isModalOpen ? (
                 <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-slate-950/55 p-4">

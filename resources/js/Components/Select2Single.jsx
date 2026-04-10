@@ -25,7 +25,7 @@ const VARIANT_STYLES = {
         focusBorder: "#ea580c",
         focusRing: "0 0 0 3px rgba(234,88,12,0.16)",
         activeBg: "#ea580c",
-        activeText: "#111827",
+        activeText: "#ffffff",
         selectedIcon: "#ea580c",
         text: "#111827",
         hoverBorder: "#ea580c",
@@ -116,7 +116,7 @@ const Option = (props) => {
                             style={{
                                 lineHeight: 1.35,
                                 color: isFocused
-                                    ? "#111827"
+                                    ? variantStyle.activeText
                                     : "#475569",
                             }}
                         >
@@ -313,6 +313,9 @@ export default function Select2Single({
 }) {
     const menuPortalTarget =
         typeof document !== "undefined" ? document.body : null;
+    const normalizedFieldKey = String(name || id || "")
+        .trim()
+        .replace(/\s+/g, "_");
 
     const normalizedOptions = options.map((option) => ({
         value: option.value,
@@ -352,9 +355,14 @@ export default function Select2Single({
     };
 
     return (
-        <div className="w-full">
+        <div
+            className="w-full"
+            data-field-name={name || normalizedFieldKey}
+            data-error-target="true"
+            id={!id && normalizedFieldKey ? normalizedFieldKey : undefined}
+        >
             <Select
-                inputId={id}
+                inputId={id || normalizedFieldKey || undefined}
                 name={name}
                 value={selectedValue}
                 onChange={handleChange}

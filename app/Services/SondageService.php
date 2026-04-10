@@ -13,6 +13,12 @@ use Illuminate\Support\Str;
 
 class SondageService
 {
+    private const RESPONDENT_ROLES = [
+        'responsable_famille',
+        'membre_famille',
+        'conducteur',
+    ];
+
     public function generateSurveyCodeForClasse(int|Classe|null $classe, ?int $ignoreSurveyId = null): string
     {
         $classeModel = $classe instanceof Classe
@@ -91,6 +97,8 @@ class SondageService
 
     public function buildAnonymousProfileSnapshot(User $user): array
     {
+        $professionDetail = trim((string) ($user->profession_detail ?? $user->profession ?? ''));
+
         return [
             '_member_id' => $user->id,
             'genre' => $this->normalizeProfileValue(
@@ -102,7 +110,7 @@ class SondageService
                 'Autre',
             ),
             'employment_status' => $this->normalizeProfileValue(
-                $this->normalizeEmploymentStatusLabel($user->employment_status, $user->profession),
+                $this->normalizeEmploymentStatusLabel($user->employment_status, $professionDetail),
                 'Non renseignee',
             ),
             'tranche_age' => $this->normalizeProfileValue(
@@ -185,6 +193,8 @@ class SondageService
     public function buildPublicSurveyPayload(Sondage $survey): array
     {
         $responseCount = $this->countEligibleResponses($survey->responses ?? []);
+        $participantCount = $this->resolveParticipantCountForSurvey($survey);
+        $participationRate = $this->calculatePercentage($responseCount, $participantCount);
 
         return [
             'id' => $survey->id,
@@ -199,9 +209,9 @@ class SondageService
             'statut' => $this->resolveStatut($survey),
             'classe' => $survey->classe?->nom,
             'createur' => trim(($survey->createur?->prenom ?? '') . ' ' . ($survey->createur?->nom ?? '')) ?: 'Non renseigne',
-            'participants' => $responseCount,
+            'participants' => $participantCount,
             'reponses' => $responseCount,
-            'tauxParticipation' => 100,
+            'tauxParticipation' => $participationRate,
             'questions' => $survey->questions ?? [],
         ];
     }
@@ -301,8 +311,7 @@ class SondageService
         }
 
         $this->repairSurveyCodesForClasse($classeId);
-
-        $participantCount = $this->countEligibleParticipantsForClasse($classeId);
+        $eligibleUsers = $this->getEligibleClasseUsers($classeId);
 
         return Sondage::query()
             ->with([
@@ -315,7 +324,7 @@ class SondageService
             ->get()
             ->map(fn (Sondage $sondage) => $this->formatSurveyListItem(
                 $sondage,
-                $participantCount,
+                $this->countEligibleParticipantsForAudience($eligibleUsers, $sondage->audience),
                 $this->countEligibleResponses($sondage->responses),
             ))
             ->values();
@@ -325,12 +334,12 @@ class SondageService
     {
         $this->repairAllSurveyCodes();
 
-        $participantCounts = User::query()
-            ->selectRaw('classe_id, COUNT(*) as aggregate')
+        $usersByClasseId = User::query()
+            ->select(['id', 'classe_id', 'role'])
             ->whereNotNull('classe_id')
-            ->where('role', '!=', 'pasteur')
-            ->groupBy('classe_id')
-            ->pluck('aggregate', 'classe_id');
+            ->whereIn('role', self::RESPONDENT_ROLES)
+            ->get()
+            ->groupBy('classe_id');
 
         return Sondage::query()
             ->with([
@@ -340,8 +349,11 @@ class SondageService
             ])
             ->latest()
             ->get()
-            ->map(function (Sondage $sondage) use ($participantCounts) {
-                $participantCount = (int) ($participantCounts[$sondage->classe_id] ?? 0);
+            ->map(function (Sondage $sondage) use ($usersByClasseId) {
+                $participantCount = $this->countEligibleParticipantsForAudience(
+                    $usersByClasseId->get($sondage->classe_id, collect()),
+                    $sondage->audience,
+                );
 
                 return $this->formatSurveyListItem(
                     $sondage,
@@ -350,6 +362,14 @@ class SondageService
                 );
             })
             ->values();
+    }
+
+    public function resolveParticipantCountForSurvey(Sondage $survey): int
+    {
+        return $this->countEligibleParticipantsForAudience(
+            $this->getEligibleClasseUsers($survey->classe_id),
+            $survey->audience,
+        );
     }
 
     public function buildSurveyAnalyticsPayload(Sondage $survey, int $participantCount): array
@@ -361,9 +381,7 @@ class SondageService
         $responses = $this->hydrateRealProfileData($survey, $responses);
 
         $responseCount = $responses->count();
-        $participationRate = $participantCount > 0
-            ? (int) round(($responseCount / $participantCount) * 100)
-            : 0;
+        $participationRate = $this->calculatePercentage($responseCount, $participantCount);
 
         return [
             'survey' => [
@@ -391,7 +409,7 @@ class SondageService
                     return [
                         'id' => $response->id,
                         'label' => 'Reponse ' . ($index + 1),
-                        'submittedAt' => optional($response->submitted_at)?->toIso8601String(),
+                        'submittedAt' => $this->formatResponseSubmittedAt($response),
                         'profile' => $this->sanitizeRespondentProfileForAnalytics(
                             $response->respondent_profile ?? [],
                         ),
@@ -404,7 +422,7 @@ class SondageService
 
     public function getVisibleSondagesForUser(User $user): Collection
     {
-        return $this->getClasseSondages($user->classe_id)
+        $sondages = $this->getClasseSondages($user->classe_id)
             ->filter(function (array $sondage) use ($user) {
                 if ($sondage['statut'] === 'Brouillon') {
                     return false;
@@ -415,15 +433,31 @@ class SondageService
                     $user->role,
                 );
             })
-            ->values()
-            ->map(function (array $sondage) use ($user) {
-                $sondage['aDejaRepondu'] = $this->hasUserResponded(
-                    (int) $sondage['id'],
-                    $user,
-                );
+            ->values();
+
+        return $this->attachUserParticipationToSurveyItems($sondages, $user);
+    }
+
+    public function attachUserParticipationToSurveyItems(Collection $sondages, User $user): Collection
+    {
+        if ($sondages->isEmpty()) {
+            return $sondages;
+        }
+
+        $responsesBySurveyId = $this->getUserResponsesBySurveyIds(
+            $sondages->pluck('id')->all(),
+            $user,
+        );
+
+        return $sondages
+            ->map(function (array $sondage) use ($responsesBySurveyId) {
+                $response = $responsesBySurveyId->get((int) ($sondage['id'] ?? 0));
+                $sondage['aDejaRepondu'] = $response !== null;
+                $sondage['dateParticipation'] = $this->formatResponseSubmittedAt($response);
 
                 return $sondage;
-            });
+            })
+            ->values();
     }
 
     public function findVisibleSondageForUser(User $user, int $sondageId): ?array
@@ -442,10 +476,7 @@ class SondageService
 
     public function getUserResponseAnswers(int $sondageId, User $user): array
     {
-        return SondageReponse::query()
-            ->where('sondage_id', $sondageId)
-            ->where('respondent_key', $this->makeRespondentKey($sondageId, $user))
-            ->value('reponses') ?? [];
+        return $this->findLatestUserResponse($sondageId, $user)?->reponses ?? [];
     }
 
     public function makeRespondentKey(int $sondageId, User $user): string
@@ -457,11 +488,96 @@ class SondageService
         );
     }
 
+    public function canRoleRespondToAudience(?string $audience, ?string $role): bool
+    {
+        return $this->audienceMatchesRole($audience, $role);
+    }
+
     private function normalizeProfileValue(?string $value, string $fallback): string
     {
         $normalized = trim((string) $value);
 
         return $normalized !== '' ? $normalized : $fallback;
+    }
+
+    private function calculatePercentage(int|float $count, int|float $total): float
+    {
+        if ($total <= 0) {
+            return 0.0;
+        }
+
+        return $this->truncateDecimal((((float) $count) / ((float) $total)) * 100);
+    }
+
+    private function truncateDecimal(float $value, int $precision = 2): float
+    {
+        if ($value <= 0) {
+            return 0.0;
+        }
+
+        $factor = 10 ** $precision;
+
+        return floor(($value * $factor) + 1e-9) / $factor;
+    }
+
+    private function findLatestUserResponse(int $sondageId, User $user): ?SondageReponse
+    {
+        return SondageReponse::query()
+            ->where('sondage_id', $sondageId)
+            ->where('respondent_key', $this->makeRespondentKey($sondageId, $user))
+            ->latest('submitted_at')
+            ->latest('created_at')
+            ->first();
+    }
+
+    private function getUserResponsesBySurveyIds(iterable $surveyIds, User $user): Collection
+    {
+        $normalizedSurveyIds = collect($surveyIds)
+            ->filter(fn ($surveyId) => (int) $surveyId > 0)
+            ->map(fn ($surveyId) => (int) $surveyId)
+            ->unique()
+            ->values();
+
+        if ($normalizedSurveyIds->isEmpty()) {
+            return collect();
+        }
+
+        $keysBySurveyId = $normalizedSurveyIds
+            ->mapWithKeys(fn (int $surveyId) => [
+                $surveyId => $this->makeRespondentKey($surveyId, $user),
+            ]);
+
+        return SondageReponse::query()
+            ->whereIn('sondage_id', $normalizedSurveyIds->all())
+            ->whereIn('respondent_key', $keysBySurveyId->values()->all())
+            ->get()
+            ->filter(function (SondageReponse $response) use ($keysBySurveyId) {
+                return $keysBySurveyId->get((int) $response->sondage_id) === $response->respondent_key;
+            })
+            ->sortByDesc(function (SondageReponse $response) {
+                $submittedAt = $response->submitted_at ?? $response->created_at;
+
+                return $submittedAt instanceof \DateTimeInterface
+                    ? $submittedAt->getTimestamp()
+                    : 0;
+            })
+            ->unique('sondage_id')
+            ->keyBy(fn (SondageReponse $response) => (int) $response->sondage_id);
+    }
+
+    private function formatResponseSubmittedAt(?SondageReponse $response): ?string
+    {
+        if (!$response) {
+            return null;
+        }
+
+        $submittedAt = $response->submitted_at ?? $response->created_at;
+
+        if (!$submittedAt instanceof \DateTimeInterface) {
+            return null;
+        }
+
+        return Carbon::instance($submittedAt)->toIso8601String();
     }
 
     private function buildClasseCodePrefix(?string $classeName): string
@@ -473,11 +589,22 @@ class SondageService
         return substr(str_pad($normalized, 4, 'X'), 0, 4);
     }
 
-    private function countEligibleParticipantsForClasse(int $classeId): int
+    private function getEligibleClasseUsers(?int $classeId): Collection
     {
+        if (!$classeId) {
+            return collect();
+        }
+
         return User::query()
             ->where('classe_id', $classeId)
-            ->where('role', '!=', 'pasteur')
+            ->whereIn('role', self::RESPONDENT_ROLES)
+            ->get(['id', 'classe_id', 'role']);
+    }
+
+    private function countEligibleParticipantsForAudience(Collection $users, ?string $audience): int
+    {
+        return $users
+            ->filter(fn (User $user) => $this->audienceMatchesRole($audience, $user->role))
             ->count();
     }
 
@@ -501,9 +628,7 @@ class SondageService
 
     private function formatSurveyListItem(Sondage $sondage, int $participantCount, int $responseCount): array
     {
-        $tauxParticipation = $participantCount > 0
-            ? (int) round(($responseCount / $participantCount) * 100)
-            : 0;
+        $tauxParticipation = $this->calculatePercentage($responseCount, $participantCount);
 
         return [
             'id' => $sondage->id,
@@ -592,7 +717,7 @@ class SondageService
                         return [
                             'label' => $option,
                             'count' => $count,
-                            'percentage' => $total > 0 ? (int) round(($count / $total) * 100) : 0,
+                            'percentage' => $this->calculatePercentage($count, $total),
                         ];
                     });
                 }
@@ -607,7 +732,7 @@ class SondageService
                         return [
                             'label' => $option,
                             'count' => $count,
-                            'percentage' => $total > 0 ? (int) round(($count / $total) * 100) : 0,
+                            'percentage' => $this->calculatePercentage($count, $total),
                         ];
                     });
                 }
@@ -685,7 +810,7 @@ class SondageService
             ->map(fn ($count, $label) => [
                 'label' => $label,
                 'count' => (int) $count,
-                'percentage' => (int) round((((int) $count) / $total) * 100),
+                'percentage' => $this->calculatePercentage((int) $count, $total),
             ])
             ->values()
             ->map(function (array $item, int $index) use ($palette) {
@@ -705,7 +830,7 @@ class SondageService
         $users = User::query()
             ->where('classe_id', $survey->classe_id)
             ->where('role', '!=', 'pasteur')
-            ->get(['id', 'date_naissance', 'employment_status', 'profession']);
+            ->get(['id', 'date_naissance', 'employment_status', 'profession', 'profession_detail']);
 
         $usersByRespondentKey = $users
             ->mapWithKeys(fn (User $user) => [
@@ -746,7 +871,7 @@ class SondageService
                     $profile['employment_status'] = $this->normalizeProfileValue(
                         $this->normalizeEmploymentStatusLabel(
                             $user->employment_status,
-                            $user->profession,
+                            $user->profession_detail ?? $user->profession,
                         ),
                         'Non renseignee',
                     );
@@ -858,7 +983,7 @@ class SondageService
         }
 
         return match ($normalizedAudience) {
-            'Responsables de famille' => $normalizedRole === 'responsable_famille',
+            'Responsables de famille' => in_array($normalizedRole, ['responsable_famille', 'conducteur'], true),
             'Conducteurs de classe' => $normalizedRole === 'conducteur',
             'Membres de famille' => $normalizedRole === 'membre_famille',
             'Pasteurs' => false,

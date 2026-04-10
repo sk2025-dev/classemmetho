@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from "react";
-import { usePage, router } from "@inertiajs/react";
+import { Link, usePage, router } from "@inertiajs/react";
 import { withBasePath } from "../../Utils/urlHelper";
 import {
     CheckCircle,
     XCircle,
     Clock,
+    ArrowLeft,
     ArrowRight,
     User,
     Users,
@@ -1023,7 +1024,8 @@ export default function Transfers() {
             url = `/conducteur/transferts/${id}/approve-source`;
         if (t.status === "EN_ATTENTE_ACCUEIL")
             url = `/conducteur/transferts/${id}/approve-accueil`;
-        if (url) router.post(url, {}, { preserveScroll: true });
+        if (url)
+            router.post(withBasePath("", url), {}, { preserveScroll: true });
     };
 
     const handleRefuse = (id, reason) =>
@@ -1052,12 +1054,26 @@ export default function Transfers() {
             <div
                 style={{
                     minHeight: "100vh",
+                    width: "100%",
                     background:
                         "linear-gradient(135deg,#6B46C1 0%,#1E40AF 50%,#B6C01A 100%)",
-                    padding: "36px 24px",
+                    padding: "28px clamp(12px, 2vw, 24px) 40px",
                 }}
             >
-                <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+                <div style={{ width: "100%", maxWidth: "none", margin: 0 }}>
+                    <div
+                        className="fade-up"
+                        style={{ marginBottom: 18 }}
+                    >
+                        <Link
+                            href={withBasePath("", "/conducteur/inscriptions")}
+                            className="inline-flex items-center gap-2 text-white/90 hover:text-white bg-white/10 hover:bg-white/20 backdrop-blur-md px-5 py-2.5 rounded-full transition-all text-sm font-semibold border border-white/10"
+                        >
+                            <ArrowLeft className="w-4 h-4" />
+                            Retour aux inscriptions
+                        </Link>
+                    </div>
+
                     {/* HEADER */}
                     <div
                         style={{

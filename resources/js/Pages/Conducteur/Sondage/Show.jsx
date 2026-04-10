@@ -1,6 +1,7 @@
 import { Head, Link } from "@inertiajs/react";
 import { useMemo, useState } from "react";
 import { withBasePath } from "../../../Utils/urlHelper";
+import Select2Single from "../../../Components/Select2Single";
 import {
     ArrowLeft,
     CalendarDays,
@@ -27,6 +28,11 @@ import {
 } from "recharts";
 import { ToastContainer } from "../../../Components/Toast";
 import useToast from "../../../Hooks/useToast";
+import {
+    formatFixedTruncated,
+    formatPercentage,
+    truncateDecimal,
+} from "../../../Utils/percentage";
 
 function formatDate(dateString) {
     if (!dateString) {
@@ -284,7 +290,7 @@ function PieSlicePercentageLabel({
             fontSize={isSmallSlice ? 10 : 12}
             fontWeight={700}
         >
-            {`${Math.round(percent * 100)}%`}
+            {formatPercentage((percent || 0) * 100)}
         </text>
     );
 }
@@ -308,7 +314,7 @@ function BarPercentageLabel(props) {
             fontSize={isSmallBar ? 10 : 12}
             fontWeight={700}
         >
-            {`${payload?.percentage ?? value}%`}
+            {formatPercentage(payload?.percentage ?? value)}
         </text>
     );
 }
@@ -357,6 +363,171 @@ function ChartLegendList({ items = [] }) {
                     </div>
                 </div>
             ))}
+        </div>
+    );
+}
+
+function ProfileDistributionSection({
+    profileChartMode,
+    setProfileChartMode,
+    profileDistributionCards,
+    className = "mt-6",
+}) {
+    return (
+        <div className={className}>
+            <div className="flex items-center justify-end">
+                <div className="inline-flex rounded-full border border-slate-200 bg-white/85 p-1 shadow-sm">
+                    {[
+                        { value: "bar", label: "Barres" },
+                        { value: "pie", label: "Cercles" },
+                    ].map((option) => (
+                        <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setProfileChartMode(option.value)}
+                            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                                profileChartMode === option.value
+                                    ? "bg-slate-900 text-white"
+                                    : "text-slate-600 hover:bg-slate-100"
+                            }`}
+                        >
+                            {option.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="mt-4 grid gap-5 xl:grid-cols-3">
+                {profileDistributionCards.map((section) => (
+                    <ChartCard
+                        key={section.key}
+                        title={section.title}
+                        subtitle={section.subtitle}
+                        tone="bg-[linear-gradient(155deg,#fffef7_0%,#f8fafc_45%,#ffffff_100%)]"
+                    >
+                        {section.chartData.length > 0 ? (
+                            <div className="rounded-[26px] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(248,250,252,0.94)_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_16px_35px_rgba(15,23,42,0.08)]">
+                                <div className="rounded-[24px] bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.08),transparent_55%)] p-2">
+                                    <div className="h-[260px]">
+                                        <ResponsiveContainer
+                                            width="100%"
+                                            height="100%"
+                                        >
+                                            {profileChartMode === "pie" ? (
+                                                <PieChart>
+                                                    <Pie
+                                                        data={section.chartData}
+                                                        dataKey="count"
+                                                        nameKey="label"
+                                                        innerRadius={52}
+                                                        outerRadius={92}
+                                                        paddingAngle={3}
+                                                        stroke="#ffffff"
+                                                        strokeWidth={4}
+                                                        labelLine={false}
+                                                        label={
+                                                            <PieSlicePercentageLabel />
+                                                        }
+                                                    >
+                                                        {section.chartData.map(
+                                                            (item) => (
+                                                                <Cell
+                                                                    key={`${section.key}-${item.label}`}
+                                                                    fill={
+                                                                        item.color
+                                                                    }
+                                                                />
+                                                            ),
+                                                        )}
+                                                    </Pie>
+                                                    <Tooltip
+                                                        content={
+                                                            <CustomTooltip />
+                                                        }
+                                                    />
+                                                </PieChart>
+                                            ) : (
+                                                <BarChart
+                                                    data={section.chartData}
+                                                    layout="vertical"
+                                                    margin={{
+                                                        top: 6,
+                                                        right: 12,
+                                                        left: 6,
+                                                        bottom: 6,
+                                                    }}
+                                                    barCategoryGap={14}
+                                                >
+                                                    <CartesianGrid
+                                                        strokeDasharray="3 3"
+                                                        horizontal={false}
+                                                        stroke="#e7e5e4"
+                                                    />
+                                                    <XAxis
+                                                        type="number"
+                                                        allowDecimals={false}
+                                                        tick={{ fontSize: 11 }}
+                                                        stroke="#a8a29e"
+                                                    />
+                                                    <YAxis
+                                                        type="category"
+                                                        dataKey="shortLabel"
+                                                        tick={{ fontSize: 12 }}
+                                                        width={120}
+                                                        stroke="#78716c"
+                                                    />
+                                                    <Tooltip
+                                                        content={
+                                                            <CustomTooltip />
+                                                        }
+                                                    />
+                                                    <Bar
+                                                        dataKey="count"
+                                                        name="Repondants"
+                                                        radius={[0, 12, 12, 0]}
+                                                        barSize={22}
+                                                    >
+                                                        {section.chartData.map(
+                                                            (item) => (
+                                                                <Cell
+                                                                    key={`${section.key}-${item.label}`}
+                                                                    fill={
+                                                                        item.color
+                                                                    }
+                                                                />
+                                                            ),
+                                                        )}
+                                                        <LabelList
+                                                            dataKey="percentage"
+                                                            content={
+                                                                <BarPercentageLabel />
+                                                            }
+                                                        />
+                                                    </Bar>
+                                                </BarChart>
+                                            )}
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                                <div className="mt-4">
+                                    <ChartLegendList
+                                        items={section.chartData.map((item) => ({
+                                            label: item.label,
+                                            value: item.count,
+                                            meta: formatPercentage(
+                                                item.percentage,
+                                            ),
+                                            color: item.color,
+                                        }))}
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <EmptyChartState message="Aucune donnee de profil disponible." />
+                        )}
+                    </ChartCard>
+                ))}
+            </div>
         </div>
     );
 }
@@ -417,8 +588,7 @@ function buildQuestionStats(questions = [], responses = []) {
                             ? getRatingOptionLabel(question, option)
                             : option,
                     count,
-                    percentage:
-                        total > 0 ? Math.round((count / total) * 100) : 0,
+                    percentage: total > 0 ? truncateDecimal((count / total) * 100) : 0,
                 };
             });
         }
@@ -433,8 +603,7 @@ function buildQuestionStats(questions = [], responses = []) {
                 return {
                     label: option,
                     count,
-                    percentage:
-                        total > 0 ? Math.round((count / total) * 100) : 0,
+                    percentage: total > 0 ? truncateDecimal((count / total) * 100) : 0,
                 };
             });
         }
@@ -506,7 +675,7 @@ function buildProfileSections(responses = []) {
             .map(([label, count], index) => ({
                 label,
                 count,
-                percentage: total > 0 ? Math.round((count / total) * 100) : 0,
+                percentage: total > 0 ? truncateDecimal((count / total) * 100) : 0,
                 color: palette[index % palette.length],
             }));
 
@@ -574,6 +743,14 @@ export default function ConducteurSondageShow({
         }));
     }, [computedResponseStats]);
 
+    const questionFilterOptions = useMemo(
+        () => [
+            { value: "all", label: "Toutes les questions" },
+            ...questionOptions,
+        ],
+        [questionOptions],
+    );
+
     const filteredResponses = useMemo(() => {
         return (responses || []).filter((response) => {
             const hasMatchingAnswer =
@@ -626,55 +803,6 @@ export default function ConducteurSondageShow({
         });
     }, [computedResponseStats, questionFilter, responseFilter]);
 
-    const globalTypeStats = useMemo(() => {
-        const totals = new Map();
-
-        (filteredResponseStats || []).forEach((question) => {
-            const key = question.type || "text";
-            const current = totals.get(key) || {
-                type: key,
-                label: questionTypeLabel(key),
-                questions: 0,
-                answers: 0,
-            };
-
-            current.questions += 1;
-            current.answers += Number(question.answersCount || 0);
-            totals.set(key, current);
-        });
-
-        const result = Array.from(totals.values());
-        const maxAnswers = Math.max(...result.map((item) => item.answers), 0);
-
-        return result.map((item) => ({
-            ...item,
-            width:
-                maxAnswers > 0
-                    ? Math.max(
-                          12,
-                          Math.round((item.answers / maxAnswers) * 100),
-                      )
-                    : 0,
-        }));
-    }, [filteredResponseStats]);
-
-    const donutTypeStats = useMemo(() => {
-        const palette = [
-            { color: "#2563eb" },
-            { color: "#10b981" },
-            { color: "#f59e0b" },
-            { color: "#8b5cf6" },
-            { color: "#ef4444" },
-        ];
-
-        return globalTypeStats.map((item, index) => ({
-            label: item.label,
-            value: item.answers,
-            color: palette[index % palette.length].color,
-            meta: `${item.questions} question(s)`,
-        }));
-    }, [globalTypeStats]);
-
     const filteredCategoryStats = useMemo(() => {
         const categoryMap = new Map();
 
@@ -712,6 +840,32 @@ export default function ConducteurSondageShow({
                     : 0,
         }));
     }, [filteredResponseStats]);
+
+    const selectedQuestionDonutData = useMemo(() => {
+        const palette = [
+            { color: "#2563eb" },
+            { color: "#10b981" },
+            { color: "#f59e0b" },
+            { color: "#8b5cf6" },
+            { color: "#ef4444" },
+            { color: "#0f766e" },
+        ];
+        const totalVotes = filteredCategoryStats.reduce(
+            (sum, item) => sum + Number(item.count || 0),
+            0,
+        );
+
+        return filteredCategoryStats.map((item, index) => ({
+            id: `donut-${index}-${item.label}`,
+            label: item.label,
+            value: Number(item.count || 0),
+            color: palette[index % palette.length].color,
+            percentage:
+                totalVotes > 0
+                    ? truncateDecimal((Number(item.count || 0) / totalVotes) * 100)
+                    : 0,
+        }));
+    }, [filteredCategoryStats]);
 
     const submissionTrend = useMemo(() => {
         const grouped = new Map();
@@ -796,7 +950,7 @@ export default function ConducteurSondageShow({
     const surveySummary = useMemo(() => {
         const totalResponses = Number(survey?.reponses || 0);
         const totalParticipants = Number(survey?.participants || 0);
-        const participationRate = Number(survey?.tauxParticipation || 0);
+        const participationRate = truncateDecimal(survey?.tauxParticipation || 0);
         const totalQuestions = Array.isArray(survey?.questions)
             ? survey.questions.length
             : 0;
@@ -969,7 +1123,9 @@ export default function ConducteurSondageShow({
                                             Taux de participation
                                         </p>
                                         <p className="mt-2 text-2xl font-semibold">
-                                            {surveySummary.participationRate}%
+                                            {formatPercentage(
+                                                surveySummary.participationRate,
+                                            )}
                                         </p>
                                     </div>
                                     <div className="text-right text-sm text-slate-300">
@@ -1112,6 +1268,12 @@ export default function ConducteurSondageShow({
                         </ChartCard>
                     </div>
 
+                    <ProfileDistributionSection
+                        profileChartMode={profileChartMode}
+                        setProfileChartMode={setProfileChartMode}
+                        profileDistributionCards={profileDistributionCards}
+                    />
+
                     <section className="relative mt-8 overflow-hidden rounded-[36px] border border-white/70 bg-[linear-gradient(160deg,rgba(255,255,255,0.97)_0%,rgba(241,245,249,0.95)_48%,rgba(255,255,255,0.98)_100%)] p-6 shadow-[0_30px_90px_rgba(15,23,42,0.16)] sm:p-7">
                         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
                         <div className="absolute -left-16 top-10 h-40 w-40 rounded-full bg-cyan-200/25 blur-3xl" />
@@ -1143,26 +1305,19 @@ export default function ConducteurSondageShow({
                                 >
                                     Filtre par question
                                 </label>
-                                <select
-                                    id="question-filter"
-                                    value={questionFilter}
-                                    onChange={(event) =>
-                                        setQuestionFilter(event.target.value)
-                                    }
-                                    className="mt-3 w-full rounded-2xl border border-white/80 bg-white/95 px-4 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none ring-1 ring-white/80 transition focus:border-emerald-200 focus:ring-emerald-200"
-                                >
-                                    <option value="all">
-                                        Toutes les questions
-                                    </option>
-                                    {questionOptions.map((question) => (
-                                        <option
-                                            key={question.value}
-                                            value={question.value}
-                                        >
-                                            {question.label}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className="mt-3">
+                                    <Select2Single
+                                        id="question-filter"
+                                        name="question_filter"
+                                        value={questionFilter}
+                                        onChange={(event) =>
+                                            setQuestionFilter(event.target.value)
+                                        }
+                                        options={questionFilterOptions}
+                                        placeholder="Toutes les questions"
+                                        allowClearOption={false}
+                                    />
+                                </div>
                             </div>
 
                             <div className="rounded-[26px] border border-emerald-100 bg-[linear-gradient(145deg,#ecfccb_0%,#f0fdf4_52%,#ffffff_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
@@ -1196,11 +1351,15 @@ export default function ConducteurSondageShow({
 
                         <div className="mt-6 grid gap-5 xl:grid-cols-2">
                             <ChartCard
-                                title="Répartition par type"
-                                subtitle="Distribution des réponses selon le type de question"
+                                title="Top reponses par question"
+                                subtitle={
+                                    questionFilter === "all"
+                                        ? "Lecture circulaire des memes options que le graphique en barres, sur toutes les questions visibles."
+                                        : "Lecture circulaire des options les plus votees pour la question filtree."
+                                }
                                 tone="bg-[linear-gradient(155deg,#f8fffd_0%,#ecfeff_48%,#ffffff_100%)]"
                             >
-                                {donutTypeStats.length > 0 ? (
+                                {selectedQuestionDonutData.length > 0 ? (
                                     <div className="rounded-[26px] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(248,250,252,0.94)_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_16px_35px_rgba(15,23,42,0.08)]">
                                         <div className="rounded-[24px] bg-[radial-gradient(circle_at_top,rgba(45,212,191,0.10),transparent_55%)] p-2">
                                             <div className="h-[250px]">
@@ -1211,7 +1370,7 @@ export default function ConducteurSondageShow({
                                                     <PieChart>
                                                         <Pie
                                                             data={
-                                                                donutTypeStats
+                                                                selectedQuestionDonutData
                                                             }
                                                             dataKey="value"
                                                             nameKey="label"
@@ -1221,10 +1380,11 @@ export default function ConducteurSondageShow({
                                                             stroke="#ffffff"
                                                             strokeWidth={4}
                                                         >
-                                                            {donutTypeStats.map(
+                                                            {selectedQuestionDonutData.map(
                                                                 (entry) => (
                                                                     <Cell
                                                                         key={
+                                                                            entry.id ||
                                                                             entry.label
                                                                         }
                                                                         fill={
@@ -1244,9 +1404,9 @@ export default function ConducteurSondageShow({
                                             </div>
                                         </div>
                                         <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2">
-                                            {donutTypeStats.map((item) => (
+                                            {selectedQuestionDonutData.map((item) => (
                                                 <div
-                                                    key={item.label}
+                                                    key={item.id || item.label}
                                                     className="flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 text-xs text-slate-500 ring-1 ring-slate-200/70 shadow-sm"
                                                 >
                                                     <span
@@ -1258,14 +1418,20 @@ export default function ConducteurSondageShow({
                                                     />
                                                     <span>
                                                         {item.label} (
-                                                        {item.value})
+                                                        {item.value} vote(s))
                                                     </span>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
                                 ) : (
-                                    <EmptyChartState message="Aucune donnee disponible." />
+                                    <EmptyChartState
+                                        message={
+                                            questionFilter === "all"
+                                                ? "Aucune donnee de vote disponible pour les questions visibles."
+                                                : "Aucune donnee de vote disponible pour cette question."
+                                        }
+                                    />
                                 )}
                             </ChartCard>
 
@@ -1470,193 +1636,6 @@ export default function ConducteurSondageShow({
                             </div>
                         </div>
 
-                        <div className="mt-6 flex items-center justify-end">
-                            <div className="inline-flex rounded-full border border-slate-200 bg-white/85 p-1 shadow-sm">
-                                {[
-                                    { value: "bar", label: "Barres" },
-                                    { value: "pie", label: "Cercles" },
-                                ].map((option) => (
-                                    <button
-                                        key={option.value}
-                                        type="button"
-                                        onClick={() =>
-                                            setProfileChartMode(option.value)
-                                        }
-                                        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                                            profileChartMode === option.value
-                                                ? "bg-slate-900 text-white"
-                                                : "text-slate-600 hover:bg-slate-100"
-                                        }`}
-                                    >
-                                        {option.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="mt-4 grid gap-5 xl:grid-cols-3">
-                            {profileDistributionCards.map((section) => (
-                                <ChartCard
-                                    key={section.key}
-                                    title={section.title}
-                                    subtitle={section.subtitle}
-                                    tone="bg-[linear-gradient(155deg,#fffef7_0%,#f8fafc_45%,#ffffff_100%)]"
-                                >
-                                    {section.chartData.length > 0 ? (
-                                        <div className="rounded-[26px] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(248,250,252,0.94)_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_16px_35px_rgba(15,23,42,0.08)]">
-                                            <div className="rounded-[24px] bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.08),transparent_55%)] p-2">
-                                                <div className="h-[260px]">
-                                                    <ResponsiveContainer
-                                                        width="100%"
-                                                        height="100%"
-                                                    >
-                                                        {profileChartMode ===
-                                                        "pie" ? (
-                                                            <PieChart>
-                                                                <Pie
-                                                                    data={
-                                                                        section.chartData
-                                                                    }
-                                                                    dataKey="count"
-                                                                    nameKey="label"
-                                                                    innerRadius={
-                                                                        52
-                                                                    }
-                                                                    outerRadius={
-                                                                        92
-                                                                    }
-                                                                    paddingAngle={
-                                                                        3
-                                                                    }
-                                                                    stroke="#ffffff"
-                                                                    strokeWidth={
-                                                                        4
-                                                                    }
-                                                                    labelLine={
-                                                                        false
-                                                                    }
-                                                                    label={
-                                                                        <PieSlicePercentageLabel />
-                                                                    }
-                                                                >
-                                                                    {section.chartData.map(
-                                                                        (
-                                                                            item,
-                                                                        ) => (
-                                                                            <Cell
-                                                                                key={`${section.key}-${item.label}`}
-                                                                                fill={
-                                                                                    item.color
-                                                                                }
-                                                                            />
-                                                                        ),
-                                                                    )}
-                                                                </Pie>
-                                                                <Tooltip
-                                                                    content={
-                                                                        <CustomTooltip />
-                                                                    }
-                                                                />
-                                                            </PieChart>
-                                                        ) : (
-                                                            <BarChart
-                                                                data={
-                                                                    section.chartData
-                                                                }
-                                                                layout="vertical"
-                                                                margin={{
-                                                                    top: 6,
-                                                                    right: 12,
-                                                                    left: 6,
-                                                                    bottom: 6,
-                                                                }}
-                                                                barCategoryGap={
-                                                                    14
-                                                                }
-                                                            >
-                                                                <CartesianGrid
-                                                                    strokeDasharray="3 3"
-                                                                    horizontal={
-                                                                        false
-                                                                    }
-                                                                    stroke="#e7e5e4"
-                                                                />
-                                                                <XAxis
-                                                                    type="number"
-                                                                    allowDecimals={
-                                                                        false
-                                                                    }
-                                                                    tick={{
-                                                                        fontSize: 11,
-                                                                    }}
-                                                                    stroke="#a8a29e"
-                                                                />
-                                                                <YAxis
-                                                                    type="category"
-                                                                    dataKey="shortLabel"
-                                                                    tick={{
-                                                                        fontSize: 12,
-                                                                    }}
-                                                                    width={120}
-                                                                    stroke="#78716c"
-                                                                />
-                                                                <Tooltip
-                                                                    content={
-                                                                        <CustomTooltip />
-                                                                    }
-                                                                />
-                                                                <Bar
-                                                                    dataKey="count"
-                                                                    name="Repondants"
-                                                                    radius={[
-                                                                        0, 12,
-                                                                        12, 0,
-                                                                    ]}
-                                                                    barSize={22}
-                                                                >
-                                                                    {section.chartData.map(
-                                                                        (
-                                                                            item,
-                                                                        ) => (
-                                                                            <Cell
-                                                                                key={`${section.key}-${item.label}`}
-                                                                                fill={
-                                                                                    item.color
-                                                                                }
-                                                                            />
-                                                                        ),
-                                                                    )}
-                                                                    <LabelList
-                                                                        dataKey="percentage"
-                                                                        content={
-                                                                            <BarPercentageLabel />
-                                                                        }
-                                                                    />
-                                                                </Bar>
-                                                            </BarChart>
-                                                        )}
-                                                    </ResponsiveContainer>
-                                                </div>
-                                            </div>
-                                            <div className="mt-4">
-                                                <ChartLegendList
-                                                    items={section.chartData.map(
-                                                        (item) => ({
-                                                            label: item.label,
-                                                            value: item.count,
-                                                            meta: `${item.percentage}%`,
-                                                            color: item.color,
-                                                        }),
-                                                    )}
-                                                />
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <EmptyChartState message="Aucune donnee de profil disponible." />
-                                    )}
-                                </ChartCard>
-                            ))}
-                        </div>
                     </section>
 
                     <div className="mt-8">
@@ -1714,17 +1693,16 @@ export default function ConducteurSondageShow({
                                                                         option.count
                                                                     }{" "}
                                                                     ·{" "}
-                                                                    {
-                                                                        option.percentage
-                                                                    }
-                                                                    %
+                                                                    {formatPercentage(
+                                                                        option.percentage,
+                                                                    )}
                                                                 </span>
                                                             </div>
                                                             <div className="mt-3 h-3 overflow-hidden rounded-full bg-[#f2f1ee]">
                                                                 <div
                                                                     className="h-full rounded-full bg-[#2a9d8f] shadow-[0_2px_10px_rgba(42,157,143,0.28)]"
                                                                     style={{
-                                                                        width: `${option.percentage}%`,
+                                                                        width: `${formatFixedTruncated(option.percentage)}%`,
                                                                     }}
                                                                 />
                                                             </div>

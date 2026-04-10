@@ -1,6 +1,7 @@
 ﻿import { useState } from "react";
 import { Head, Link } from "@inertiajs/react";
 import Select2Single from "../../../Components/Select2Single";
+import { formatPercentage, truncateDecimal } from "../../../Utils/percentage";
 import {
     ArrowLeft,
     BarChart3,
@@ -104,14 +105,11 @@ function normalizeSondage(sondage, authUser, index) {
         [authUser?.prenom, authUser?.nom].filter(Boolean).join(" ") ||
         "Non renseigne";
 
-    const tauxParticipation =
-        Number(
-            sondage.tauxParticipation ??
-                sondage.taux_participation ??
-                (participants > 0
-                    ? Math.round((reponses / participants) * 100)
-                    : 0),
-        ) || 0;
+    const tauxParticipation = truncateDecimal(
+        sondage.tauxParticipation ??
+            sondage.taux_participation ??
+            (participants > 0 ? (reponses / participants) * 100 : 0),
+    );
 
     return {
         id: sondage.id ?? index,
@@ -228,7 +226,7 @@ export default function PasteurSondageIndex({
     );
     const tauxMoyen =
         totalSondages > 0
-            ? Math.round(
+            ? truncateDecimal(
                   sondagesNormalises.reduce(
                       (sum, sondage) => sum + sondage.tauxParticipation,
                       0,
@@ -292,7 +290,7 @@ export default function PasteurSondageIndex({
                         />
                         <StatCard
                             title="Taux Moyen"
-                            value={`${tauxMoyen}%`}
+                            value={formatPercentage(tauxMoyen)}
                             subtitle="Participation moyenne observee"
                             icon={BarChart3}
                             accent="rounded-2xl bg-purple-50 text-purple-700"
@@ -481,10 +479,9 @@ export default function PasteurSondageIndex({
                                                         </td>
                                                         <td className="px-5 py-4">
                                                             <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-700 ring-1 ring-amber-200">
-                                                                {
-                                                                    sondage.tauxParticipation
-                                                                }
-                                                                %
+                                                                {formatPercentage(
+                                                                    sondage.tauxParticipation,
+                                                                )}
                                                             </span>
                                                         </td>
                                                         <td className="px-5 py-4">

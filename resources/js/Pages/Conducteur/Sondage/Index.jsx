@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import { withBasePath } from "../../../Utils/urlHelper";
+import { formatPercentage, truncateDecimal } from "../../../Utils/percentage";
+import Select2Single from "../../../Components/Select2Single";
 import {
     ArrowLeft,
     BarChart3,
@@ -13,7 +15,6 @@ import {
     TrendingUp,
     Users,
     X,
-    ChevronDown,
     ChevronLeft,
     ChevronRight,
 } from "lucide-react";
@@ -61,6 +62,26 @@ function formatDate(dateString) {
     }).format(parsedDate);
 }
 
+function formatDateTime(dateString) {
+    if (!dateString) {
+        return "Non definie";
+    }
+
+    const parsedDate = new Date(dateString);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        return dateString;
+    }
+
+    return new Intl.DateTimeFormat("fr-FR", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(parsedDate);
+}
+
 function getStatusClasses(statut) {
     if (statut === "Actif") {
         return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
@@ -73,15 +94,20 @@ function getStatusClasses(statut) {
     return "bg-amber-50 text-amber-700 ring-1 ring-amber-200";
 }
 
-function canConducteurRespondToSurvey(cible) {
-    const normalizedCible = (cible || "").trim();
+function canOpenConducteurParticipation(sondage) {
+    if (!sondage?.canCurrentUserRespond) {
+        return false;
+    }
 
-    return [
-        "Tous les membres",
-        "Tout le monde (tous les membres)",
-        "Responsables de famille",
-        "Conducteurs de classe",
-    ].includes(normalizedCible);
+    if (sondage?.statut === "Brouillon") {
+        return false;
+    }
+
+    if (sondage?.statut === "Cloture") {
+        return Boolean(sondage?.aDejaRepondu);
+    }
+
+    return true;
 }
 
 function normalizeSondage(sondage, authUser, index) {
@@ -122,14 +148,11 @@ function normalizeSondage(sondage, authUser, index) {
         [authUser?.prenom, authUser?.nom].filter(Boolean).join(" ") ||
         "Non renseigne";
 
-    const tauxParticipation =
-        Number(
-            sondage.tauxParticipation ??
-                sondage.taux_participation ??
-                (participants > 0
-                    ? Math.round((reponses / participants) * 100)
-                    : 0),
-        ) || 0;
+    const tauxParticipation = truncateDecimal(
+        sondage.tauxParticipation ??
+            sondage.taux_participation ??
+            (participants > 0 ? (reponses / participants) * 100 : 0),
+    );
 
     return {
         id: sondage.id ?? index,
@@ -145,6 +168,9 @@ function normalizeSondage(sondage, authUser, index) {
         tauxParticipation,
         canEdit: Boolean(sondage.canEdit),
         canPublish: Boolean(sondage.canPublish),
+        canCurrentUserRespond: Boolean(sondage.canCurrentUserRespond),
+        aDejaRepondu: Boolean(sondage.aDejaRepondu),
+        dateParticipation: sondage.dateParticipation || null,
     };
 }
 
@@ -193,6 +219,21 @@ export default function ConducteurSondageIndex({
         .filter(Boolean)
         .sort((a, b) => a.localeCompare(b, "fr"));
 
+    const statusFilterOptions = [
+        { value: "all", label: "Tous les statuts" },
+        { value: "Actif", label: "Actif" },
+        { value: "Brouillon", label: "Brouillon" },
+        { value: "Cloture", label: "Cloture" },
+    ];
+
+    const cibleFilterOptions = [
+        { value: "all", label: "Toutes les cibles" },
+        ...cibleOptions.map((cible) => ({
+            value: cible,
+            label: cible,
+        })),
+    ];
+
     const sondagesFiltres = sondagesNormalises.filter((sondage) => {
         const term = search.trim().toLowerCase();
 
@@ -231,7 +272,7 @@ export default function ConducteurSondageIndex({
     );
     const tauxMoyen =
         totalSondages > 0
-            ? Math.round(
+            ? truncateDecimal(
                   sondagesNormalises.reduce(
                       (sum, sondage) => sum + sondage.tauxParticipation,
                       0,
@@ -337,7 +378,7 @@ export default function ConducteurSondageIndex({
                         />
                         <StatCard
                             title="Taux Moyen"
-                            value={`${tauxMoyen}%`}
+                            value={formatPercentage(tauxMoyen)}
                             subtitle="Participation moyenne observee"
                             icon={BarChart3}
                             accent="rounded-2xl bg-purple-50 text-purple-700"
@@ -370,45 +411,27 @@ export default function ConducteurSondageIndex({
                                     />
                                 </label>
 
-                                <label className="relative block">
-                                    <select
-                                        value={statusFilter}
-                                        onChange={(event) =>
-                                            setStatusFilter(event.target.value)
-                                        }
-                                        className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-3 pl-4 pr-10 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                    >
-                                        <option value="all">
-                                            Tous les statuts
-                                        </option>
-                                        <option value="Actif">Actif</option>
-                                        <option value="Brouillon">
-                                            Brouillon
-                                        </option>
-                                        <option value="Cloture">Cloture</option>
-                                    </select>
-                                    <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                                </label>
+                                <Select2Single
+                                    name="status_filter"
+                                    value={statusFilter}
+                                    onChange={(event) =>
+                                        setStatusFilter(event.target.value)
+                                    }
+                                    options={statusFilterOptions}
+                                    placeholder="Tous les statuts"
+                                    allowClearOption={false}
+                                />
 
-                                <label className="relative block">
-                                    <select
-                                        value={cibleFilter}
-                                        onChange={(event) =>
-                                            setCibleFilter(event.target.value)
-                                        }
-                                        className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-3 pl-4 pr-10 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                    >
-                                        <option value="all">
-                                            Toutes les cibles
-                                        </option>
-                                        {cibleOptions.map((cible) => (
-                                            <option key={cible} value={cible}>
-                                                {cible}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                                </label>
+                                <Select2Single
+                                    name="cible_filter"
+                                    value={cibleFilter}
+                                    onChange={(event) =>
+                                        setCibleFilter(event.target.value)
+                                    }
+                                    options={cibleFilterOptions}
+                                    placeholder="Toutes les cibles"
+                                    allowClearOption={false}
+                                />
                             </div>
                         </div>
 
@@ -486,6 +509,14 @@ export default function ConducteurSondageIndex({
                                                                         }{" "}
                                                                         participants
                                                                     </span>
+                                                                    {sondage.aDejaRepondu ? (
+                                                                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700 ring-1 ring-emerald-200">
+                                                                            <CalendarDays className="h-3.5 w-3.5" />
+                                                                            {sondage.dateParticipation
+                                                                                ? `Participation le ${formatDateTime(sondage.dateParticipation)}`
+                                                                                : "Participation enregistree"}
+                                                                        </span>
+                                                                    ) : null}
                                                                 </div>
                                                             </div>
                                                         </td>
@@ -527,10 +558,9 @@ export default function ConducteurSondageIndex({
                                                         </td>
                                                         <td className="px-5 py-4">
                                                             <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-700 ring-1 ring-amber-200">
-                                                                {
-                                                                    sondage.tauxParticipation
-                                                                }
-                                                                %
+                                                                {formatPercentage(
+                                                                    sondage.tauxParticipation,
+                                                                )}
                                                             </span>
                                                         </td>
                                                         <td className="px-5 py-4">
@@ -547,12 +577,8 @@ export default function ConducteurSondageIndex({
                                                                         ? "Voir l'historique"
                                                                         : "Voir"}
                                                                 </Link>
-                                                                {sondage.statut !==
-                                                                    "Cloture" &&
-                                                                sondage.statut !==
-                                                                    "Brouillon" &&
-                                                                canConducteurRespondToSurvey(
-                                                                    sondage.cible,
+                                                                {canOpenConducteurParticipation(
+                                                                    sondage,
                                                                 ) ? (
                                                                     <Link
                                                                         href={withBasePath(
@@ -561,7 +587,9 @@ export default function ConducteurSondageIndex({
                                                                         )}
                                                                         className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
                                                                     >
-                                                                        Repondre
+                                                                        {sondage.aDejaRepondu
+                                                                            ? "Voir mes reponses"
+                                                                            : "Repondre au sondage"}
                                                                     </Link>
                                                                 ) : null}
                                                                 {sondage.canEdit ? (

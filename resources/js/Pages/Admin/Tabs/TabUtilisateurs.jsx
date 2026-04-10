@@ -3,6 +3,7 @@ import { router, useForm } from "@inertiajs/react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import axios from "axios";
+import FormField from "@/Components/FormField";
 import {
     User,
     UsersRound,
@@ -796,17 +797,6 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
 
 // ------------------------------------------------------------------
 // --- Form Field Component ---
-const FormField = ({ label, children, icon: Icon, required }) => (
-    <div className="space-y-2">
-        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-            {Icon && <Icon className="w-4 h-4 text-blue-500" />}
-            {label}
-            {required && <span className="text-red-500">*</span>}
-        </label>
-        {children}
-    </div>
-);
-
 // Sous-composant pour les sections de Sacrements (Accordéon)
 const SacrementSection = ({
     title,
@@ -2989,4 +2979,3 @@ const TabUtilisateurs = ({
 };
 
 export default TabUtilisateurs;
-
