@@ -19,8 +19,10 @@ export default function MembreFamilleFinances({
     historiquePaiements: historiquePaiementsProp,
     donsFamille: donsFamilleProp,
     campagnesActives: campagnesActivesProp,
+    initialTab = "fimeco",
+    openDonModal = false,
 }) {
-    const [activeTab, setActiveTab] = useState("fimeco");
+    const [activeTab, setActiveTab] = useState(initialTab);
     const [paymentMethod, setPaymentMethod] = useState("MOBILE_MONEY");
     const [mobileProvider, setMobileProvider] = useState("wave");
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -29,7 +31,7 @@ export default function MembreFamilleFinances({
     const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
     const [freeDonAmount, setFreeDonAmount] = useState("");
     const [isSubmittingDon, setIsSubmittingDon] = useState(false);
-    const [isDonModalOpen, setIsDonModalOpen] = useState(false);
+    const [isDonModalOpen, setIsDonModalOpen] = useState(openDonModal);
     const [donPaymentMethod, setDonPaymentMethod] = useState("MOBILE_MONEY");
     const [donMobileProvider, setDonMobileProvider] = useState("wave");
 
@@ -474,7 +476,7 @@ export default function MembreFamilleFinances({
 
             {/* Header */}
             <div className="bg-white/10 backdrop-blur-sm border-b border-white/20 sticky top-0 z-40 shadow-sm">
-                <div className="max-w-6xl mx-auto px-4 py-6">
+                <div className=" mx-auto px-4 py-6">
                     <div className="flex items-center gap-4">
                         <Link
                             href={withBasePath("", "/membre-famille/dashboard")}
@@ -495,10 +497,10 @@ export default function MembreFamilleFinances({
             </div>
 
             {/* Main Content */}
-            <div className="max-w-6xl mx-auto px-4 py-8">
+            <div className=" mx-auto px-4 py-8">
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="bg-white rounded-lg p-6 shadow-md border-l-4 border-green-500">
+                    <div className="bg-white rounded-lg p-6 shadow-md ">
                         <div className="flex justify-between items-start">
                             <div>
                                 <p className="text-gray-600 text-sm font-semibold">
@@ -521,7 +523,7 @@ export default function MembreFamilleFinances({
                     </div>
 
                     <div
-                        className={`bg-white rounded-lg p-6 shadow-md border-l-4 ${totalCotisations > 0 ? "border-red-500" : "border-blue-500"}`}
+                        className={`bg-white rounded-lg p-6 shadow-md ${totalCotisations > 0 ? "" : "border-blue-500"}`}
                     >
                         <div className="flex justify-between items-start">
                             <div>
@@ -550,7 +552,7 @@ export default function MembreFamilleFinances({
                         </p>
                     </div>
 
-                    <div className="bg-white rounded-lg p-6 shadow-md border-l-4 border-purple-500">
+                    <div className="bg-white rounded-lg p-6 shadow-md ">
                         <div className="flex justify-between items-start">
                             <div>
                                 <p className="text-gray-600 text-sm font-semibold">

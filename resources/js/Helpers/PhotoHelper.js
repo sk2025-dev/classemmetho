@@ -4,10 +4,24 @@
  * sinon génère un avatar avec les initiales
  */
 
+import { withBasePath } from "../Utils/urlHelper";
+
+function toAppPath(path) {
+    return withBasePath("", path);
+}
+
 // Couleurs pour les avatars
 const AVATAR_COLORS = [
-    '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
-    '#F7DC6F', '#BB8FCE', '#85C1E9', '#F8B88B', '#D7BDE2'
+    "#FF6B6B",
+    "#4ECDC4",
+    "#45B7D1",
+    "#FFA07A",
+    "#98D8C8",
+    "#F7DC6F",
+    "#BB8FCE",
+    "#85C1E9",
+    "#F8B88B",
+    "#D7BDE2",
 ];
 
 // Obtenir une couleur basée sur les initiales
@@ -19,14 +33,14 @@ function getColorFromInitials(initials) {
 
 // Obtenir les initiales
 function getInitials(prenom, nom) {
-    let initials = '';
-    if (prenom && typeof prenom === 'string') {
+    let initials = "";
+    if (prenom && typeof prenom === "string") {
         initials += prenom.charAt(0).toUpperCase();
     }
-    if (nom && typeof nom === 'string') {
+    if (nom && typeof nom === "string") {
         initials += nom.charAt(0).toUpperCase();
     }
-    return initials || '?';
+    return initials || "?";
 }
 
 /**
@@ -36,9 +50,9 @@ function getInitials(prenom, nom) {
  * @param {string} nom - Nom pour l'avatar
  * @returns {string} URL de la photo ou avatar
  */
-export function getPhotoUrl(photoPath, prenom = '', nom = '') {
+export function getPhotoUrl(photoPath, prenom = "", nom = "") {
     // Si pas de photo, générer un avatar avec les initiales
-    if (!photoPath || photoPath === null || photoPath === '') {
+    if (!photoPath || photoPath === null || photoPath === "") {
         const initials = getInitials(prenom, nom);
         const bgColor = getColorFromInitials(initials);
         const name = `${prenom} ${nom}`.trim() || initials;
@@ -46,28 +60,28 @@ export function getPhotoUrl(photoPath, prenom = '', nom = '') {
     }
 
     // Si c'est déjà une URL externe (http/https)
-    if (photoPath.startsWith('http://') || photoPath.startsWith('https://')) {
+    if (photoPath.startsWith("http://") || photoPath.startsWith("https://")) {
         return photoPath;
     }
 
     // Si c'est déjà un chemin web complet
-    if (photoPath.startsWith('/storage/') || photoPath.startsWith('/')) {
-        return photoPath;
+    if (photoPath.startsWith("/storage/") || photoPath.startsWith("/")) {
+        return toAppPath(photoPath);
     }
 
     // Si chemin relatif avec "storage/" au début
-    if (photoPath.startsWith('storage/')) {
-        return '/' + photoPath;
+    if (photoPath.startsWith("storage/")) {
+        return toAppPath("/" + photoPath);
     }
 
     // Si chemin avec "public/" au début, le convertir
-    if (photoPath.startsWith('public/')) {
+    if (photoPath.startsWith("public/")) {
         const relativePath = photoPath.substring(7);
-        return `/storage/${relativePath}`;
+        return toAppPath(`/storage/${relativePath}`);
     }
 
     // Par défaut, ajouter /storage/ devant
-    return `/storage/${photoPath}`;
+    return toAppPath(`/storage/${photoPath}`);
 }
 
 /**
@@ -80,46 +94,53 @@ export function resolveMemberPhotoUrl(member) {
     if (!member) return null;
 
     // Priorité: profile_photo_url > photo > photo_path
-    const photoPath = member.profile_photo_url || member.photo || member.photo_path || null;
+    const photoPath =
+        member.profile_photo_url || member.photo || member.photo_path || null;
 
     if (!photoPath) return null;
 
     // Si c'est une URL externe
-    if (typeof photoPath === 'string' && (photoPath.startsWith('http://') || photoPath.startsWith('https://'))) {
+    if (
+        typeof photoPath === "string" &&
+        (photoPath.startsWith("http://") || photoPath.startsWith("https://"))
+    ) {
         return photoPath;
     }
 
     // Nettoyer le chemin
     let cleanedPath = photoPath;
-    if (typeof cleanedPath === 'string') {
+    if (typeof cleanedPath === "string") {
         cleanedPath = cleanedPath.trim();
     }
 
     // Vérifier les différents formats de chemin
     if (!cleanedPath) return null;
 
-    if (cleanedPath.startsWith('http://') || cleanedPath.startsWith('https://')) {
+    if (
+        cleanedPath.startsWith("http://") ||
+        cleanedPath.startsWith("https://")
+    ) {
         return cleanedPath;
     }
 
-    if (cleanedPath.startsWith('/storage/')) {
+    if (cleanedPath.startsWith("/storage/")) {
         return cleanedPath;
     }
 
-    if (cleanedPath.startsWith('/')) {
-        return cleanedPath;
+    if (cleanedPath.startsWith("/")) {
+        return toAppPath(cleanedPath);
     }
 
-    if (cleanedPath.startsWith('storage/')) {
-        return '/' + cleanedPath;
+    if (cleanedPath.startsWith("storage/")) {
+        return toAppPath("/" + cleanedPath);
     }
 
-    if (cleanedPath.startsWith('public/')) {
-        return '/storage/' + cleanedPath.substring(7);
+    if (cleanedPath.startsWith("public/")) {
+        return toAppPath("/storage/" + cleanedPath.substring(7));
     }
 
     // Par défaut
-    return `/storage/${cleanedPath}`;
+    return toAppPath(`/storage/${cleanedPath}`);
 }
 
 /**
@@ -129,21 +150,21 @@ export function resolveMemberPhotoUrl(member) {
  */
 export function getMemberPhotoUrl(member) {
     if (!member) {
-        return getPhotoUrl(null, '', '');
+        return getPhotoUrl(null, "", "");
     }
 
     const photoUrl = resolveMemberPhotoUrl(member);
-    
+
     if (photoUrl) {
         return photoUrl;
     }
 
     // Fallback vers avatar avec les initiales
-    return getPhotoUrl(null, member.prenom || '', member.nom || '');
+    return getPhotoUrl(null, member.prenom || "", member.nom || "");
 }
 
 export default {
     getPhotoUrl,
     resolveMemberPhotoUrl,
-    getMemberPhotoUrl
+    getMemberPhotoUrl,
 };

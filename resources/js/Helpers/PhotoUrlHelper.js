@@ -3,6 +3,12 @@
  * Utilise dans tout le frontend pour afficher les photos correctement
  */
 
+import { withBasePath } from "../Utils/urlHelper";
+
+function toAppPath(path) {
+    return withBasePath("", path);
+}
+
 /**
  * Normalise l'URL d'une photo depuis n'importe quel format
  * @param {string|null} photoPath - Chemin de la photo (peut être: URL complète, /storage/..., storage/..., public/..., ou chemin brut)
@@ -27,26 +33,26 @@ export function normalizePhotoUrl(photoPath) {
 
     // Déjà un chemin web absolu
     if (trimmed.startsWith("/storage/")) {
-        return trimmed;
+        return toAppPath(trimmed);
     }
 
     // Tout autre chemin absolu web est déjà exploitable (/images/..., /assets/...)
     if (trimmed.startsWith("/")) {
-        return trimmed;
+        return toAppPath(trimmed);
     }
 
     // Chemin avec "storage/" au début sans le slash
     if (trimmed.startsWith("storage/")) {
-        return `/${trimmed}`;
+        return toAppPath(`/${trimmed}`);
     }
 
     // Nettoyer le préfixe "public/" et convertir en chemin web
     if (trimmed.startsWith("public/")) {
-        return `/storage/${trimmed.substring(7)}`;
+        return toAppPath(`/storage/${trimmed.substring(7)}`);
     }
 
     // Chemin brut de fichier (ex: "profiles/photo.jpg") -> ajouter /storage/
-    return `/storage/${trimmed}`;
+    return toAppPath(`/storage/${trimmed}`);
 }
 
 /**

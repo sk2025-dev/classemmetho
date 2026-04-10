@@ -23,10 +23,12 @@ class CheckRole
 
         $userRole = trim((string) auth()->user()->role);
 
-        // Mapper pasteur -> responsable_famille pour accès aux fonctionnalités identiques
+        // Mapper certains rôles vers un rôle effectif pour partager les mêmes accès.
         $effectiveRole = $userRole;
         if (in_array($userRole, ['pasteur', 'responsable'], true)) {
             $effectiveRole = 'responsable_famille';
+        } elseif ($userRole === 'tresorier') {
+            $effectiveRole = 'membre_famille';
         }
 
         \Log::info('role check', compact('userRole', 'effectiveRole', 'roles'));

@@ -10,6 +10,8 @@ use App\Models\User;
 use App\Services\ActeLiturgiqueService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -254,15 +256,35 @@ class LiturgieController extends Controller
             $methoDataUri = $this->buildImageDataUri(public_path('images/metho.jpg'));
             $view = $typeActe === 'naissance' ? 'pdf.fiche-naissance' : 'pdf.fiche-demande';
 
-            $pdf = Pdf::loadView($view, [
-                'acte' => $acte,
-                'logoDataUri' => $logoDataUri,
-                'methoDataUri' => $methoDataUri,
-            ])->setPaper('a4', 'portrait');
+            try {
+                $pdf = Pdf::loadView($view, [
+                    'acte' => $acte,
+                    'logoDataUri' => $logoDataUri,
+                    'methoDataUri' => $methoDataUri,
+                ])->setPaper('a4', 'portrait');
 
-            $filename = 'fiche-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
+                $filename = 'fiche-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
 
-            return $pdf->download($filename);
+                return $pdf->download($filename);
+            } catch (\Throwable $e) {
+                Log::error('Echec generation fiche conducteur (certificat method)', [
+                    'acte_id' => $acte->id,
+                    'type_acte' => $typeActe,
+                    'view' => $view,
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]);
+
+                return response()->json([
+                    'error' => 'Erreur generation fiche',
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'view' => $view,
+                    'acte_id' => $acte->id,
+                ], 500);
+            }
         }
 
         if (!in_array($typeActe, $typesCertificat, true)) {
@@ -299,19 +321,39 @@ class LiturgieController extends Controller
         $scanDataUri = $this->buildImageDataUri(public_path('images/scan.png'))
             ?? $this->buildImageDataUri(public_path('images/image.png'));
 
-        $pdf = Pdf::loadView('pdf.acte-liturgique-certificat', [
-            'acte' => $acte,
-            'signaturePath' => $signaturePath,
-            'signatureName' => $signatureName,
-            'signatureRole' => $signatureRole,
-            'qrDataUri' => $qrDataUri,
-            'logoDataUri' => $logoDataUri,
-            'scanDataUri' => $scanDataUri,
-        ])->setPaper('a4', 'landscape');
+        try {
+            $pdf = Pdf::loadView('pdf.acte-liturgique-certificat', [
+                'acte' => $acte,
+                'signaturePath' => $signaturePath,
+                'signatureName' => $signatureName,
+                'signatureRole' => $signatureRole,
+                'qrDataUri' => $qrDataUri,
+                'logoDataUri' => $logoDataUri,
+                'scanDataUri' => $scanDataUri,
+            ])->setPaper('a4', 'landscape');
 
-        $filename = 'certificat-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
+            $filename = 'certificat-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
 
-        return $pdf->download($filename);
+            return $pdf->download($filename);
+        } catch (\Throwable $e) {
+            Log::error('Echec generation certificat conducteur', [
+                'acte_id' => $acte->id,
+                'type_acte' => $typeActe,
+                'view' => 'pdf.acte-liturgique-certificat',
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return response()->json([
+                'error' => 'Erreur generation certificat',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'view' => 'pdf.acte-liturgique-certificat',
+                'acte_id' => $acte->id,
+            ], 500);
+        }
     }
 
     public function ficheConducteur(Request $request, int $id)
@@ -350,21 +392,38 @@ class LiturgieController extends Controller
                 abort(404, 'Certaines demandes de fiche sont introuvables.');
             }
 
-            $pdf = Pdf::loadView('pdf.fiche-acte-conducteur', [
-                'actes' => $actes,
-                'logoDataUri' => $logoDataUri,
-                'generatedBy' => $user,
-                'generatedAt' => now(),
-                'documentLabel' => 'Fiche du conducteur',
-            ])->setPaper('a4', 'portrait');
+            try {
+                $pdf = Pdf::loadView('pdf.fiche-acte-conducteur', [
+                    'actes' => $actes,
+                    'logoDataUri' => $logoDataUri,
+                    'generatedBy' => $user,
+                    'generatedAt' => now(),
+                    'documentLabel' => 'Fiche du conducteur',
+                ])->setPaper('a4', 'portrait');
 
-            $filename = 'fiche-conducteur-' . ($actes->first()->reference ?: ('acte-' . $actes->first()->id)) . '.pdf';
+                $filename = 'fiche-conducteur-' . ($actes->first()->reference ?: ('acte-' . $actes->first()->id)) . '.pdf';
 
-            if ($request->query('preview')) {
-                return $pdf->stream($filename);
+                if ($request->query('preview')) {
+                    return $pdf->stream($filename);
+                }
+
+                return $pdf->download($filename);
+            } catch (\Throwable $e) {
+                Log::error('Echec generation fiche-acte-conducteur (multi-actes)', [
+                    'requested_ids' => $requestedIds,
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]);
+
+                return response()->json([
+                    'error' => 'Erreur generation fiche conducteur',
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'view' => 'pdf.fiche-acte-conducteur',
+                ], 500);
             }
-
-            return $pdf->download($filename);
         }
 
         $acte = ActeLiturgique::with([
@@ -411,16 +470,140 @@ class LiturgieController extends Controller
             $pdfData['methoDataUri'] = $methoDataUri;
         }
 
-        $pdf = Pdf::loadView($view, $pdfData)
-            ->setPaper('a4', 'portrait');
+        try {
+            $pdf = Pdf::loadView($view, $pdfData)
+                ->setPaper('a4', 'portrait');
 
-        $filename = 'fiche-conducteur-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
+            $filename = 'fiche-conducteur-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
 
-        if ($request->query('preview')) {
-            return $pdf->stream($filename);
+            if ($request->query('preview')) {
+                return $pdf->stream($filename);
+            }
+
+            return $pdf->download($filename);
+        } catch (\Throwable $e) {
+            Log::error('Echec generation fiche-conducteur (simple-acte)', [
+                'acte_id' => $acte->id,
+                'type_acte' => $acte->type_acte,
+                'view' => $view,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return response()->json([
+                'error' => 'Erreur generation fiche conducteur',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'view' => $view,
+                'acte_id' => $acte->id,
+            ], 500);
+        }
+    }
+
+    public function envoyerFiche(Request $request)
+    {
+        $payload = $request->validate([
+            'destinataire' => ['required', 'email'],
+            'subject' => ['nullable', 'string', 'max:255'],
+            'message' => ['nullable', 'string', 'max:2000'],
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $user = Auth::user();
+        $classIds = $user->getManagedClasses()->pluck('id')->toArray();
+        $acteIds = array_filter(
+            array_unique(array_map('intval', $payload['ids'] ?? [])),
+        );
+
+        if (empty($acteIds)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Aucune demande valide sélectionnée.',
+            ], 422);
         }
 
-        return $pdf->download($filename);
+        $actes = ActeLiturgique::with([
+            'createur.classe',
+            'createur.family',
+            'family.ville',
+            'classe.conducteur',
+            'conducteur',
+            'pasteur',
+            'membre.family',
+            'membre.classe',
+            'historiques.acteur',
+        ])
+            ->where('type_acte', ActeLiturgique::TYPE_MARIAGE)
+            ->whereIn('classe_id', $classIds)
+            ->whereIn('id', $acteIds)
+            ->get();
+
+        if ($actes->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Aucune fiche de mariage trouvée pour votre classe.',
+            ], 404);
+        }
+
+        $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
+        $pdf = Pdf::loadView('pdf.fiche-acte-conducteur', [
+            'actes' => $actes,
+            'logoDataUri' => $logoDataUri,
+            'generatedBy' => $user,
+            'generatedAt' => now(),
+            'documentLabel' => 'Fiche finale des mariages',
+        ])->setPaper('a4', 'portrait');
+
+        $filename = 'fiche-finale-mariages-' . now()->format('Ymd-His') . '.pdf';
+        $mailSubject = trim((string) ($payload['subject'] ?? '')) ?: 'Fiche finale des mariages';
+        $mailMessage = trim((string) ($payload['message'] ?? ''))
+            ?: "Bonjour,\n\nVeuillez trouver en pièce jointe la fiche finale des mariages.\n\nBien cordialement.";
+
+        try {
+            Mail::raw($mailMessage, function ($message) use ($payload, $mailSubject, $pdf, $filename) {
+                $message
+                    ->to($payload['destinataire'])
+                    ->subject($mailSubject)
+                    ->attachData($pdf->output(), $filename, [
+                        'mime' => 'application/pdf',
+                    ]);
+            });
+        } catch (\Throwable $e) {
+            Log::error('Echec envoi fiche finale mariage (conducteur)', [
+                'acte_ids' => $acteIds,
+                'destinataire' => $payload['destinataire'] ?? null,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Impossible d’envoyer l’email pour le moment.',
+            ], 500);
+        }
+
+        $actes->each(function (ActeLiturgique $acte) use ($payload, $user) {
+            $details = (array) ($acte->details ?? []);
+            $details['fiche_conducteur_envoyee'] = true;
+            $details['fiche_conducteur_envoyee_at'] = now()->toISOString();
+            $details['fiche_conducteur_destinataire'] = $payload['destinataire'] ?? null;
+            $details['fiche_conducteur_envoyee_par'] = $user->id;
+            $acte->update(['details' => $details]);
+        });
+
+        $updatedActes = ActeLiturgique::with(['membre', 'classe', 'family', 'historiques.acteur'])
+            ->whereIn('id', $actes->pluck('id')->toArray())
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Fiche envoyée avec succès depuis l’application.',
+            'actes' => $updatedActes,
+        ]);
     }
 
     /**
@@ -453,11 +636,33 @@ class LiturgieController extends Controller
             ? 'pdf.fiche-naissance'
             : ($typeActe === 'deces' ? 'pdf.fiche-deces' : 'pdf.fiche-demande');
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($view, [
-            'acte' => $acte,
-            'logoDataUri' => $logoDataUri,
-        ])
-            ->setPaper('a4', 'portrait');
+        try {
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($view, [
+                'acte' => $acte,
+                'logoDataUri' => $logoDataUri,
+            ])
+                ->setPaper('a4', 'portrait');
+        } catch (\Throwable $e) {
+            Log::error('Echec generation fiche conducteur (vue principale)', [
+                'acte_id' => $acte->id,
+                'type_acte' => $typeActe,
+                'view' => $view,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            // TEMPORAIRE: retourner l'erreur directement pour debug en prod
+            return response()->json([
+                'error' => 'Erreur generation PDF',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'view' => $view,
+                'acte_id' => $acte->id,
+            ], 500);
+        }
 
         $prefix = $acte->type_acte === 'priere' ? 'Priere' : 'Acte';
         $filename = "{$prefix}_{$acte->reference}.pdf";

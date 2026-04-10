@@ -53,7 +53,7 @@ class StoreActeLiturgiqueRequest extends FormRequest
                 'confirmation' => ['confirmand', 'date', 'lieu'],
                 // Le membre concerne est deja l'un des conjoints
                 'mariage' => [],
-                'naissance' => ['nom_enfant', 'date_naissance', 'parents'],
+                'naissance' => ['nom_enfant', 'date_naissance'],
                 // Le membre concerne est deja le defunt
                 'deces' => ['date_deces'],
             ];
@@ -61,6 +61,36 @@ class StoreActeLiturgiqueRequest extends FormRequest
             foreach (($requiredByType[$type] ?? []) as $field) {
                 if (!array_key_exists($field, $details) || $details[$field] === null || $details[$field] === '') {
                     $validator->errors()->add("details.{$field}", "Le champ {$field} est obligatoire pour le type {$type}.");
+                }
+            }
+
+            if ($type === 'naissance') {
+                $nomPere = trim((string) ($details['nom_pere'] ?? ''));
+                $nomMere = trim((string) ($details['nom_mere'] ?? ''));
+                $parents = trim((string) ($details['parents'] ?? ''));
+                $lien = trim((string) ($details['lien_enfant'] ?? ''));
+
+                if ($lien === 'Pere' && $nomMere === '') {
+                    $validator->errors()->add(
+                        'details.nom_mere',
+                        'Le nom de la mere est obligatoire quand le lien avec l\'enfant est Pere.'
+                    );
+                    return;
+                }
+
+                if ($lien === 'Mere' && $nomPere === '') {
+                    $validator->errors()->add(
+                        'details.nom_pere',
+                        'Le nom du pere est obligatoire quand le lien avec l\'enfant est Mere.'
+                    );
+                    return;
+                }
+
+                if ($nomPere === '' && $nomMere === '' && $parents === '') {
+                    $validator->errors()->add(
+                        'details.nom_pere',
+                        'Renseignez au moins un parent (nom du pere ou nom de la mere).'
+                    );
                 }
             }
         });

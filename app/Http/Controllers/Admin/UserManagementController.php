@@ -397,7 +397,7 @@ class UserManagementController extends Controller
 
         // Upload photo si fournie
         if ($request->hasFile('photo')) {
-            $userData['photo_path'] = $request->file('photo')->store('members', 'public');
+            $userData['photo_path'] = $request->file('photo')->store('photos/users', 'public');
         }
 
         $user = User::create($userData);
@@ -431,7 +431,7 @@ class UserManagementController extends Controller
             if ($user->photo_path && Storage::exists($user->photo_path)) {
                 Storage::delete($user->photo_path);
             }
-            $user->photo_path = $request->file('photo')->store('members', 'public');
+            $user->photo_path = $request->file('photo')->store('photos/users', 'public');
         }
 
         $user->save();

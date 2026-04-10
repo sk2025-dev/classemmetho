@@ -5,10 +5,10 @@ namespace App\Providers;
 use App\Models\ActeLiturgique;
 use App\Models\Classe;
 use App\Models\Family;
-
 use App\Models\Inscription;
 use App\Models\LoginHistory;
 use App\Models\Notification;
+use App\Support\ResilientPdfWrapper;
 use App\Models\User;
 use App\Observers\AuditObserver;
 use Illuminate\Support\ServiceProvider;
@@ -22,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->configureDompdfPublicPath();
     }
 
     /**
@@ -30,6 +30,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->configureDompdfPublicPath();
+        $this->registerResilientPdfWrapper();
+
         // Enregistrer l'observer pour tracer les modifications
         User::observe(AuditObserver::class);
         Classe::observe(AuditObserver::class);
@@ -106,5 +109,53 @@ class AppServiceProvider extends ServiceProvider
                     ->get();
             },
         ]);
+    }
+
+    /**
+     * Configure a stable DomPDF public path for shared-hosting deployments
+     * where Laravel may run from a subdirectory (e.g. /demo/classemetho).
+     */
+    private function configureDompdfPublicPath(): void
+    {
+        $candidates = [
+            public_path(),
+            base_path('public'),
+            dirname(base_path()) . DIRECTORY_SEPARATOR . 'public',
+            dirname(base_path()),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (!is_string($candidate) || $candidate === '') {
+                continue;
+            }
+
+            if (is_dir($candidate)) {
+                config([
+                    'dompdf.public_path' => $candidate,
+                    'dompdf.chroot' => $candidate,
+                ]);
+                break;
+            }
+        }
+
+        // Keep this config in place for older Dompdf behavior and shared-hosting quirks.
+        if (!class_exists(\Masterminds\HTML5\Parser\DOMTreeBuilder::class)) {
+            config([
+                'dompdf.options.enable_html5_parser' => false,
+                'dompdf.options.isHtml5ParserEnabled' => false,
+            ]);
+        }
+    }
+
+    private function registerResilientPdfWrapper(): void
+    {
+        $this->app->bind('dompdf.wrapper', function ($app) {
+            return new ResilientPdfWrapper(
+                $app['dompdf'],
+                $app['config'],
+                $app['files'],
+                $app['view']
+            );
+        });
     }
 }

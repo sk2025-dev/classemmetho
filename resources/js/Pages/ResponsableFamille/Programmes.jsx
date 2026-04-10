@@ -1,6 +1,7 @@
 // pages/Famille/Programmes.jsx
-import React, { useState } from 'react';
-import { Head, usePage, router } from '@inertiajs/react';
+import React, { useState } from "react";
+import { Head, usePage, router } from "@inertiajs/react";
+import { withBasePath } from "../../Utils/urlHelper";
 
 // --- STYLES INTÉGRÉS (Identiques au design Conducteur) ---
 const styles = `
@@ -546,487 +547,940 @@ const styles = `
 
 // --- ICONS ---
 const IconCalendar = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+        <line x1="16" y1="2" x2="16" y2="6"></line>
+        <line x1="8" y1="2" x2="8" y2="6"></line>
+        <line x1="3" y1="10" x2="21" y2="10"></line>
+    </svg>
 );
 const IconClock = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+    </svg>
 );
 const IconArchive = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <polyline points="21 8 21 21 3 21 3 8"></polyline>
+        <rect x="1" y="3" width="22" height="5"></rect>
+        <line x1="10" y1="12" x2="14" y2="12"></line>
+    </svg>
 );
 const IconArrowLeft = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <path d="M19 12H5M12 19l-7-7 7-7" />
+    </svg>
 );
 const IconActivity = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+    </svg>
 );
 const IconHistory = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline><path d="M4 4L8 8M20 4L16 8M4 20L8 16M20 20L16 16"></path></svg>
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+        <path d="M4 4L8 8M20 4L16 8M4 20L8 16M20 20L16 16"></path>
+    </svg>
 );
 const IconEye = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+        <circle cx="12" cy="12" r="3"></circle>
+    </svg>
 );
 const IconPlay = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="white"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+    </svg>
 );
 const IconRoadmap = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path></svg>
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path>
+        <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path>
+    </svg>
 );
 const IconLocation = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+        <circle cx="12" cy="10" r="3"></circle>
+    </svg>
 );
 const IconPhoto = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect>
+        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+        <polyline points="21 15 16 10 5 21"></polyline>
+    </svg>
 );
 const IconVideo = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+        <polygon points="10 8 16 12 10 16 10 8"></polygon>
+    </svg>
 );
 
 // --- COMPOSANTS ---
 const MiniCalendar = ({ eventsDates = [] }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
+    const [currentDate, setCurrentDate] = useState(new Date());
 
-  const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+    const monthNames = [
+        "Janvier",
+        "Février",
+        "Mars",
+        "Avril",
+        "Mai",
+        "Juin",
+        "Juillet",
+        "Août",
+        "Septembre",
+        "Octobre",
+        "Novembre",
+        "Décembre",
+    ];
 
-  const goToPreviousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-  };
+    const goToPreviousMonth = () => {
+        setCurrentDate(
+            new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
+        );
+    };
 
-  const goToNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-  };
+    const goToNextMonth = () => {
+        setCurrentDate(
+            new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1),
+        );
+    };
 
-  const getDaysInMonth = (date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const days = [];
-    const startPadding = firstDay.getDay();
-    const padCount = (startPadding === 0 ? 6 : startPadding - 1);
-    for (let i = padCount; i > 0; i--) {
-      const d = new Date(year, month, -i + 1);
-      days.push({ date: d, isCurrentMonth: false });
-    }
-    for (let i = 1; i <= lastDay.getDate(); i++) {
-      days.push({ date: new Date(year, month, i), isCurrentMonth: true });
-    }
-    const remaining = 42 - days.length;
-    for (let i = 1; i <= remaining; i++) {
-      const d = new Date(year, month + 1, i);
-      days.push({ date: d, isCurrentMonth: false });
-    }
-    return days;
-  };
+    const getDaysInMonth = (date) => {
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const days = [];
+        const startPadding = firstDay.getDay();
+        const padCount = startPadding === 0 ? 6 : startPadding - 1;
+        for (let i = padCount; i > 0; i--) {
+            const d = new Date(year, month, -i + 1);
+            days.push({ date: d, isCurrentMonth: false });
+        }
+        for (let i = 1; i <= lastDay.getDate(); i++) {
+            days.push({ date: new Date(year, month, i), isCurrentMonth: true });
+        }
+        const remaining = 42 - days.length;
+        for (let i = 1; i <= remaining; i++) {
+            const d = new Date(year, month + 1, i);
+            days.push({ date: d, isCurrentMonth: false });
+        }
+        return days;
+    };
 
-  const hasEventOnDate = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    return eventsDates.includes(dateStr);
-  };
+    const hasEventOnDate = (date) => {
+        const dateStr = date.toISOString().split("T")[0];
+        return eventsDates.includes(dateStr);
+    };
 
-  const daysOfWeek = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-  const days = getDaysInMonth(currentDate);
-  const today = new Date();
-  const isToday = (date) => date.toDateString() === today.toDateString();
+    const daysOfWeek = ["L", "M", "M", "J", "V", "S", "D"];
+    const days = getDaysInMonth(currentDate);
+    const today = new Date();
+    const isToday = (date) => date.toDateString() === today.toDateString();
 
-  return (
-    <div className="mini-calendar">
-      <div className="cal-header">
-        <button className="cal-nav-btn" onClick={goToPreviousMonth}>‹</button>
-        <span className="cal-month-year">{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</span>
-        <button className="cal-nav-btn" onClick={goToNextMonth}>›</button>
-      </div>
-      <div className="cal-grid">
-        {daysOfWeek.map(d => <div key={d} className="cal-day-label">{d}</div>)}
-        {days.map((day, idx) => (
-          <div
-            key={idx}
-            className={`cal-day ${!day.isCurrentMonth ? 'empty' : ''} ${isToday(day.date) ? 'today' : ''} ${hasEventOnDate(day.date) && day.isCurrentMonth ? 'has-event' : ''}`}
-          >
-            {day.date.getDate()}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+    return (
+        <div className="mini-calendar">
+            <div className="cal-header">
+                <button className="cal-nav-btn" onClick={goToPreviousMonth}>
+                    ‹
+                </button>
+                <span className="cal-month-year">
+                    {monthNames[currentDate.getMonth()]}{" "}
+                    {currentDate.getFullYear()}
+                </span>
+                <button className="cal-nav-btn" onClick={goToNextMonth}>
+                    ›
+                </button>
+            </div>
+            <div className="cal-grid">
+                {daysOfWeek.map((d) => (
+                    <div key={d} className="cal-day-label">
+                        {d}
+                    </div>
+                ))}
+                {days.map((day, idx) => (
+                    <div
+                        key={idx}
+                        className={`cal-day ${!day.isCurrentMonth ? "empty" : ""} ${isToday(day.date) ? "today" : ""} ${hasEventOnDate(day.date) && day.isCurrentMonth ? "has-event" : ""}`}
+                    >
+                        {day.date.getDate()}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
 };
 
 // Modal pour afficher les médias en grand (Seul modal conservé pour la vue)
 const MediaViewerModal = ({ isOpen, onClose, media }) => {
-  if (!isOpen || !media) return null;
+    if (!isOpen || !media) return null;
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{media.title}</h2>
-          <button onClick={onClose}>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
-        <div className="modal-body">
-          <div className="media-viewer">
-            {media.type === 'video' ? (
-              <video controls autoPlay>
-                <source src={media.url} type="video/mp4" />
-                Votre navigateur ne supporte pas la lecture vidéo.
-              </video>
-            ) : (
-              <img src={media.url} alt={media.title} />
-            )}
-            <div className="media-viewer-info">
-              <p><strong>Date:</strong> {new Date(media.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-              {media.description && <p><strong>Description:</strong> {media.description}</p>}
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h2>{media.title}</h2>
+                    <button onClick={onClose}>
+                        <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                            />
+                        </svg>
+                    </button>
+                </div>
+                <div className="modal-body">
+                    <div className="media-viewer">
+                        {media.type === "video" ? (
+                            <video controls autoPlay>
+                                <source src={media.url} type="video/mp4" />
+                                Votre navigateur ne supporte pas la lecture
+                                vidéo.
+                            </video>
+                        ) : (
+                            <img src={media.url} alt={media.title} />
+                        )}
+                        <div className="media-viewer-info">
+                            <p>
+                                <strong>Date:</strong>{" "}
+                                {new Date(media.date).toLocaleDateString(
+                                    "fr-FR",
+                                    {
+                                        day: "numeric",
+                                        month: "long",
+                                        year: "numeric",
+                                    },
+                                )}
+                            </p>
+                            {media.description && (
+                                <p>
+                                    <strong>Description:</strong>{" "}
+                                    {media.description}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 // --- PAGE PRINCIPALE (FAMILLE) ---
 export default function Programmes() {
-  const { props } = usePage();
-  const {
-    initialClassList = [],
-    initialClassHistory = [],
-    galleryMedia = [],
-  } = props;
+    const { props } = usePage();
+    const {
+        initialClassList = [],
+        initialClassHistory = [],
+        galleryMedia = [],
+    } = props;
 
-  const [activeTab, setActiveTab] = useState('programmes');
-  const [selectedMedia, setSelectedMedia] = useState(null);
-  const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState("programmes");
+    const [selectedMedia, setSelectedMedia] = useState(null);
+    const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false);
 
-  // Récupérer toutes les dates d'événements pour le calendrier
-  const getAllEventDates = () => {
-    const allEvents = [...initialClassList, ...initialClassHistory];
-    return allEvents.map(event => {
-      const date = new Date(event.date);
-      return date.toISOString().split('T')[0];
-    });
-  };
+    // Récupérer toutes les dates d'événements pour le calendrier
+    const getAllEventDates = () => {
+        const allEvents = [...initialClassList, ...initialClassHistory];
+        return allEvents.map((event) => {
+            const date = new Date(event.date);
+            return date.toISOString().split("T")[0];
+        });
+    };
 
-  const openMediaViewer = (media) => {
-    setSelectedMedia(media);
-    setIsMediaViewerOpen(true);
-  };
+    const openMediaViewer = (media) => {
+        setSelectedMedia(media);
+        setIsMediaViewerOpen(true);
+    };
 
-  const closeMediaViewer = () => {
-    setSelectedMedia(null);
-    setIsMediaViewerOpen(false);
-  };
+    const closeMediaViewer = () => {
+        setSelectedMedia(null);
+        setIsMediaViewerOpen(false);
+    };
 
-  const handleGoBack = () => {
-    router.visit('/famille/dashboard');
-  };
+    const handleGoBack = () => {
+        router.visit(withBasePath("", "/famille/dashboard"));
+    };
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'programmes':
-        return (
-          <>
-            <div className="action-bar">
-              <h2>
-                🔥 ACTIVITÉS À VENIR
-                <span style={{ fontSize: '0.9rem', color: '#6b7280', marginLeft: '10px', fontWeight: '400' }}>
-                  {initialClassList.length} activité{initialClassList.length !== 1 ? 's' : ''}
-                </span>
-              </h2>
-              {/* PAS DE BOUTONS D'ACTION POUR LE RESPONSABLE */}
-            </div>
-
-            <div className="glass-container">
-              <div className="main-layout">
-                <div className="cards-container">
-                  {initialClassList.length > 0 ? (
-                    <div className="horizontal-scroller">
-                      <div className="cards-wrapper">
-                        {initialClassList.map(event => (
-                          <div key={event.id} className="special-card">
-                            <div>
-                              <div className="special-header">
-                                <span className="special-date">
-                                  {new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+    const renderContent = () => {
+        switch (activeTab) {
+            case "programmes":
+                return (
+                    <>
+                        <div className="action-bar">
+                            <h2>
+                                🔥 ACTIVITÉS À VENIR
+                                <span
+                                    style={{
+                                        fontSize: "0.9rem",
+                                        color: "#6b7280",
+                                        marginLeft: "10px",
+                                        fontWeight: "400",
+                                    }}
+                                >
+                                    {initialClassList.length} activité
+                                    {initialClassList.length !== 1 ? "s" : ""}
                                 </span>
-                              </div>
-                              <h4 className="special-title">{event.title}</h4>
-                              {event.lieu && (
-                                <p className="special-lieu">
-                                  <IconLocation style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
-                                  {event.lieu}
-                                </p>
-                              )}
-                              {event.time && (
-                                <p style={{ 
-                                  fontSize: '0.9rem', 
-                                  color: '#2563eb',
-                                  fontWeight: 'bold',
-                                  marginTop: '0.5rem',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '6px'
-                                }}>
-                                  <IconClock /> {event.time.substring(0, 5)}
-                                </p>
-                              )}
-                              {(event.orateur || event.moderateur || event.dirigeant_priere) && (
-                                <div className="special-meta">
-                                  {event.orateur && (
-                                    <div className="special-meta-item">
-                                      <span className="special-meta-label">Orateur:</span>
-                                      <span>{event.orateur}</span>
-                                    </div>
-                                  )}
-                                  {event.moderateur && (
-                                    <div className="special-meta-item">
-                                      <span className="special-meta-label">Modérateur:</span>
-                                      <span>{event.moderateur}</span>
-                                    </div>
-                                  )}
-                                  {event.dirigeant_priere && (
-                                    <div className="special-meta-item">
-                                      <span className="special-meta-label">Dir. prière:</span>
-                                      <span>{event.dirigeant_priere}</span>
-                                    </div>
-                                  )}
+                            </h2>
+                            {/* PAS DE BOUTONS D'ACTION POUR LE RESPONSABLE */}
+                        </div>
+
+                        <div className="glass-container">
+                            <div className="main-layout">
+                                <div className="cards-container">
+                                    {initialClassList.length > 0 ? (
+                                        <div className="horizontal-scroller">
+                                            <div className="cards-wrapper">
+                                                {initialClassList.map(
+                                                    (event) => (
+                                                        <div
+                                                            key={event.id}
+                                                            className="special-card"
+                                                        >
+                                                            <div>
+                                                                <div className="special-header">
+                                                                    <span className="special-date">
+                                                                        {new Date(
+                                                                            event.date,
+                                                                        ).toLocaleDateString(
+                                                                            "fr-FR",
+                                                                            {
+                                                                                day: "numeric",
+                                                                                month: "long",
+                                                                                year: "numeric",
+                                                                            },
+                                                                        )}
+                                                                    </span>
+                                                                </div>
+                                                                <h4 className="special-title">
+                                                                    {
+                                                                        event.title
+                                                                    }
+                                                                </h4>
+                                                                {event.lieu && (
+                                                                    <p className="special-lieu">
+                                                                        <IconLocation
+                                                                            style={{
+                                                                                display:
+                                                                                    "inline",
+                                                                                marginRight:
+                                                                                    "6px",
+                                                                                verticalAlign:
+                                                                                    "middle",
+                                                                            }}
+                                                                        />
+                                                                        {
+                                                                            event.lieu
+                                                                        }
+                                                                    </p>
+                                                                )}
+                                                                {event.time && (
+                                                                    <p
+                                                                        style={{
+                                                                            fontSize:
+                                                                                "0.9rem",
+                                                                            color: "#2563eb",
+                                                                            fontWeight:
+                                                                                "bold",
+                                                                            marginTop:
+                                                                                "0.5rem",
+                                                                            display:
+                                                                                "flex",
+                                                                            alignItems:
+                                                                                "center",
+                                                                            gap: "6px",
+                                                                        }}
+                                                                    >
+                                                                        <IconClock />{" "}
+                                                                        {event.time.substring(
+                                                                            0,
+                                                                            5,
+                                                                        )}
+                                                                    </p>
+                                                                )}
+                                                                {(event.orateur ||
+                                                                    event.moderateur ||
+                                                                    event.dirigeant_priere) && (
+                                                                    <div className="special-meta">
+                                                                        {event.orateur && (
+                                                                            <div className="special-meta-item">
+                                                                                <span className="special-meta-label">
+                                                                                    Orateur:
+                                                                                </span>
+                                                                                <span>
+                                                                                    {
+                                                                                        event.orateur
+                                                                                    }
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+                                                                        {event.moderateur && (
+                                                                            <div className="special-meta-item">
+                                                                                <span className="special-meta-label">
+                                                                                    Modérateur:
+                                                                                </span>
+                                                                                <span>
+                                                                                    {
+                                                                                        event.moderateur
+                                                                                    }
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+                                                                        {event.dirigeant_priere && (
+                                                                            <div className="special-meta-item">
+                                                                                <span className="special-meta-label">
+                                                                                    Dir.
+                                                                                    prière:
+                                                                                </span>
+                                                                                <span>
+                                                                                    {
+                                                                                        event.dirigeant_priere
+                                                                                    }
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ),
+                                                )}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="empty-dialog">
+                                            <div className="empty-dialog-icon">
+                                                📋
+                                            </div>
+                                            <div className="empty-dialog-title">
+                                                Aucune activité à venir
+                                            </div>
+                                            <div className="empty-dialog-message">
+                                                Il n'y a actuellement aucun
+                                                programme prévu pour votre
+                                                classe.
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                              )}
+                                <div className="calendar-container">
+                                    <MiniCalendar
+                                        eventsDates={getAllEventDates()}
+                                    />
+                                </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="empty-dialog">
-                        <div className="empty-dialog-icon">📋</div>
-                        <div className="empty-dialog-title">Aucune activité à venir</div>
-                        <div className="empty-dialog-message">
-                            Il n'y a actuellement aucun programme prévu pour votre classe.
+                        </div>
+                    </>
+                );
+
+            case "historique":
+                return (
+                    <>
+                        <div className="action-bar">
+                            <h2>📜 HISTORIQUE DES ACTIVITÉS</h2>
+                        </div>
+                        <div className="glass-container">
+                            <div className="main-layout">
+                                <div className="cards-container">
+                                    <div className="horizontal-scroller">
+                                        <div className="cards-wrapper">
+                                            {initialClassHistory.length > 0 ? (
+                                                initialClassHistory.map(
+                                                    (item) => (
+                                                        <div
+                                                            key={item.id}
+                                                            className="historical-card"
+                                                        >
+                                                            <div>
+                                                                <div className="historical-header">
+                                                                    <span className="historical-date">
+                                                                        {new Date(
+                                                                            item.date,
+                                                                        ).toLocaleDateString(
+                                                                            "fr-FR",
+                                                                            {
+                                                                                day: "numeric",
+                                                                                month: "long",
+                                                                                year: "numeric",
+                                                                            },
+                                                                        )}
+                                                                    </span>
+                                                                </div>
+                                                                <h4 className="historical-title">
+                                                                    {item.title}
+                                                                </h4>
+                                                                {item.lieu && (
+                                                                    <p className="historical-lieu">
+                                                                        <IconLocation
+                                                                            style={{
+                                                                                display:
+                                                                                    "inline",
+                                                                                marginRight:
+                                                                                    "6px",
+                                                                                verticalAlign:
+                                                                                    "middle",
+                                                                            }}
+                                                                        />
+                                                                        {
+                                                                            item.lieu
+                                                                        }
+                                                                    </p>
+                                                                )}
+                                                                {item.time && (
+                                                                    <p
+                                                                        style={{
+                                                                            fontSize:
+                                                                                "0.85rem",
+                                                                            color: "#2563eb",
+                                                                            fontWeight:
+                                                                                "bold",
+                                                                            marginTop:
+                                                                                "0.5rem",
+                                                                            display:
+                                                                                "flex",
+                                                                            alignItems:
+                                                                                "center",
+                                                                            gap: "6px",
+                                                                        }}
+                                                                    >
+                                                                        <IconClock />{" "}
+                                                                        {item.time.substring(
+                                                                            0,
+                                                                            5,
+                                                                        )}
+                                                                    </p>
+                                                                )}
+                                                                {(item.orateur ||
+                                                                    item.moderateur ||
+                                                                    item.dirigeant_priere) && (
+                                                                    <div className="historical-meta">
+                                                                        {item.orateur && (
+                                                                            <div className="historical-meta-item">
+                                                                                <span className="historical-meta-label">
+                                                                                    Orateur:
+                                                                                </span>
+                                                                                <span>
+                                                                                    {
+                                                                                        item.orateur
+                                                                                    }
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+                                                                        {item.moderateur && (
+                                                                            <div className="historical-meta-item">
+                                                                                <span className="historical-meta-label">
+                                                                                    Modérateur:
+                                                                                </span>
+                                                                                <span>
+                                                                                    {
+                                                                                        item.moderateur
+                                                                                    }
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+                                                                        {item.dirigeant_priere && (
+                                                                            <div className="historical-meta-item">
+                                                                                <span className="historical-meta-label">
+                                                                                    Dir.
+                                                                                    prière:
+                                                                                </span>
+                                                                                <span>
+                                                                                    {
+                                                                                        item.dirigeant_priere
+                                                                                    }
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ),
+                                                )
+                                            ) : (
+                                                <div
+                                                    style={{
+                                                        padding: 40,
+                                                        textAlign: "center",
+                                                        color: "#9ca3af",
+                                                        width: "100%",
+                                                    }}
+                                                >
+                                                    <IconArchive
+                                                        style={{
+                                                            width: 48,
+                                                            height: 48,
+                                                            marginBottom: 16,
+                                                            opacity: 0.5,
+                                                        }}
+                                                    />
+                                                    <p>
+                                                        Aucun historique
+                                                        disponible pour cette
+                                                        classe.
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="calendar-container">
+                                    <div className="archive-card">
+                                        <div className="cal-header">
+                                            <span className="cal-month-year">
+                                                <IconArchive /> Archives
+                                            </span>
+                                        </div>
+                                        <div className="archive-stats">
+                                            {initialClassHistory.length}{" "}
+                                            Activité
+                                            {initialClassHistory.length !== 1
+                                                ? "s"
+                                                : ""}{" "}
+                                            archivée
+                                            {initialClassHistory.length !== 1
+                                                ? "s"
+                                                : ""}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                );
+
+            case "parcours":
+                return (
+                    <>
+                        <div className="action-bar">
+                            <h2>📸 GALERIE PHOTOS & VIDEOS</h2>
+                        </div>
+                        <div className="glass-container">
+                            <div className="main-layout">
+                                <div className="cards-container">
+                                    {galleryMedia.length > 0 ? (
+                                        <div className="horizontal-scroller">
+                                            <div className="cards-wrapper">
+                                                {galleryMedia.map((media) => (
+                                                    <div
+                                                        key={media.id}
+                                                        className="media-card"
+                                                        onClick={() =>
+                                                            openMediaViewer(
+                                                                media,
+                                                            )
+                                                        }
+                                                    >
+                                                        <div className="media-thumbnail">
+                                                            <img
+                                                                src={
+                                                                    media.type ===
+                                                                    "video"
+                                                                        ? media.thumbnail ||
+                                                                          media.url
+                                                                        : media.url
+                                                                }
+                                                                alt={
+                                                                    media.title
+                                                                }
+                                                            />
+                                                            {media.type ===
+                                                                "video" && (
+                                                                <div className="media-play-icon">
+                                                                    <IconPlay />
+                                                                </div>
+                                                            )}
+                                                            <div className="media-badge">
+                                                                {media.type ===
+                                                                "video" ? (
+                                                                    <IconVideo />
+                                                                ) : (
+                                                                    <IconPhoto />
+                                                                )}
+                                                                {media.type ===
+                                                                "video"
+                                                                    ? "Vidéo"
+                                                                    : "Photo"}
+                                                            </div>
+                                                        </div>
+                                                        <div className="media-info">
+                                                            <h4 className="media-title">
+                                                                {media.title}
+                                                            </h4>
+                                                            <p className="media-date">
+                                                                <IconCalendar
+                                                                    style={{
+                                                                        width: "12px",
+                                                                        height: "12px",
+                                                                    }}
+                                                                />
+                                                                {new Date(
+                                                                    media.date,
+                                                                ).toLocaleDateString(
+                                                                    "fr-FR",
+                                                                    {
+                                                                        day: "numeric",
+                                                                        month: "long",
+                                                                        year: "numeric",
+                                                                    },
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="empty-dialog">
+                                            <div className="empty-dialog-icon">
+                                                📸
+                                            </div>
+                                            <div className="empty-dialog-title">
+                                                Galerie Vide
+                                            </div>
+                                            <div className="empty-dialog-message">
+                                                Aucun média n'a été partagé pour
+                                                le moment.
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="calendar-container">
+                                    <div
+                                        className="archive-card"
+                                        style={{
+                                            background:
+                                                "linear-gradient(135deg, #667eea, #764ba2)",
+                                        }}
+                                    >
+                                        <div className="cal-header">
+                                            <span className="cal-month-year">
+                                                <IconRoadmap /> Médiathèque
+                                            </span>
+                                        </div>
+                                        <div className="archive-stats">
+                                            {galleryMedia.length} Médias
+                                            disponibles
+                                        </div>
+                                        <div
+                                            className="archive-stats"
+                                            style={{
+                                                fontSize: "0.8rem",
+                                                marginTop: "10px",
+                                            }}
+                                        >
+                                            {
+                                                galleryMedia.filter(
+                                                    (m) => m.type === "photo",
+                                                ).length
+                                            }{" "}
+                                            Photos •{" "}
+                                            {
+                                                galleryMedia.filter(
+                                                    (m) => m.type === "video",
+                                                ).length
+                                            }{" "}
+                                            Vidéos
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                );
+
+            default:
+                return null;
+        }
+    };
+
+    return (
+        <>
+            <Head title="Programme et Activités" />
+            <style>{styles}</style>
+
+            <MediaViewerModal
+                isOpen={isMediaViewerOpen}
+                onClose={closeMediaViewer}
+                media={selectedMedia}
+            />
+
+            <div
+                className="min-h-screen animate-fade-in-up"
+                style={{
+                    background:
+                        "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
+                    paddingBottom: "40px",
+                }}
+            >
+                <main style={{ padding: "0 15px" }}>
+                    <div className="page-header-wrapper">
+                        <Link
+                            href={withBasePath("", "/famille/dashboard")}
+                            className="btn-back"
+                        >
+                            <IconArrowLeft /> Retour
+                        </Link>
+                        <div className="tabs-container-header">
+                            <button
+                                className={`tab-btn-header ${activeTab === "programmes" ? "active" : ""}`}
+                                onClick={() => setActiveTab("programmes")}
+                            >
+                                <IconActivity /> Programmes
+                            </button>
+                            <button
+                                className={`tab-btn-header ${activeTab === "historique" ? "active" : ""}`}
+                                onClick={() => setActiveTab("historique")}
+                            >
+                                <IconHistory /> Historique
+                            </button>
+                            <button
+                                className={`tab-btn-header ${activeTab === "parcours" ? "active" : ""}`}
+                                onClick={() => setActiveTab("parcours")}
+                            >
+                                <IconRoadmap /> Galerie
+                            </button>
                         </div>
                     </div>
-                  )}
-                </div>
-                <div className="calendar-container">
-                  <MiniCalendar eventsDates={getAllEventDates()} />
-                </div>
-              </div>
+
+                    {renderContent()}
+                </main>
             </div>
-          </>
-        );
-
-      case 'historique':
-        return (
-          <>
-            <div className="action-bar">
-              <h2>📜 HISTORIQUE DES ACTIVITÉS</h2>
-            </div>
-            <div className="glass-container">
-              <div className="main-layout">
-                <div className="cards-container">
-                  <div className="horizontal-scroller">
-                    <div className="cards-wrapper">
-                      {initialClassHistory.length > 0 ? (
-                        initialClassHistory.map(item => (
-                          <div key={item.id} className="historical-card">
-                            <div>
-                              <div className="historical-header">
-                                <span className="historical-date">
-                                  {new Date(item.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                </span>
-                              </div>
-                              <h4 className="historical-title">{item.title}</h4>
-                              {item.lieu && (
-                                <p className="historical-lieu">
-                                  <IconLocation style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
-                                  {item.lieu}
-                                </p>
-                              )}
-                              {item.time && (
-                                <p style={{ 
-                                  fontSize: '0.85rem', 
-                                  color: '#2563eb',
-                                  fontWeight: 'bold',
-                                  marginTop: '0.5rem',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '6px'
-                                }}>
-                                  <IconClock /> {item.time.substring(0, 5)}
-                                </p>
-                              )}
-                              {(item.orateur || item.moderateur || item.dirigeant_priere) && (
-                                <div className="historical-meta">
-                                  {item.orateur && (
-                                    <div className="historical-meta-item">
-                                      <span className="historical-meta-label">Orateur:</span>
-                                      <span>{item.orateur}</span>
-                                    </div>
-                                  )}
-                                  {item.moderateur && (
-                                    <div className="historical-meta-item">
-                                      <span className="historical-meta-label">Modérateur:</span>
-                                      <span>{item.moderateur}</span>
-                                    </div>
-                                  )}
-                                  {item.dirigeant_priere && (
-                                    <div className="historical-meta-item">
-                                      <span className="historical-meta-label">Dir. prière:</span>
-                                      <span>{item.dirigeant_priere}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af', width: '100%' }}>
-                          <IconArchive style={{ width: 48, height: 48, marginBottom: 16, opacity: 0.5 }} />
-                          <p>Aucun historique disponible pour cette classe.</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="calendar-container">
-                  <div className="archive-card">
-                    <div className="cal-header">
-                      <span className="cal-month-year">
-                        <IconArchive /> Archives
-                      </span>
-                    </div>
-                    <div className="archive-stats">
-                      {initialClassHistory.length} Activité{initialClassHistory.length !== 1 ? 's' : ''} archivée{initialClassHistory.length !== 1 ? 's' : ''}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
-        );
-
-      case 'parcours':
-        return (
-          <>
-            <div className="action-bar">
-              <h2>📸 GALERIE PHOTOS & VIDEOS</h2>
-            </div>
-            <div className="glass-container">
-              <div className="main-layout">
-                <div className="cards-container">
-                  {galleryMedia.length > 0 ? (
-                    <div className="horizontal-scroller">
-                      <div className="cards-wrapper">
-                        {galleryMedia.map(media => (
-                          <div 
-                            key={media.id} 
-                            className="media-card"
-                            onClick={() => openMediaViewer(media)}
-                          >
-                            <div className="media-thumbnail">
-                              <img 
-                                src={media.type === 'video' ? media.thumbnail || media.url : media.url} 
-                                alt={media.title} 
-                              />
-                              {media.type === 'video' && (
-                                <div className="media-play-icon">
-                                  <IconPlay />
-                                </div>
-                              )}
-                              <div className="media-badge">
-                                {media.type === 'video' ? <IconVideo /> : <IconPhoto />}
-                                {media.type === 'video' ? 'Vidéo' : 'Photo'}
-                              </div>
-                            </div>
-                            <div className="media-info">
-                              <h4 className="media-title">{media.title}</h4>
-                              <p className="media-date">
-                                <IconCalendar style={{ width: '12px', height: '12px' }} />
-                                {new Date(media.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="empty-dialog">
-                        <div className="empty-dialog-icon">📸</div>
-                        <div className="empty-dialog-title">Galerie Vide</div>
-                        <div className="empty-dialog-message">
-                            Aucun média n'a été partagé pour le moment.
-                        </div>
-                    </div>
-                  )}
-                </div>
-                <div className="calendar-container">
-                  <div className="archive-card" style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)' }}>
-                    <div className="cal-header">
-                      <span className="cal-month-year">
-                        <IconRoadmap /> Médiathèque
-                      </span>
-                    </div>
-                    <div className="archive-stats">
-                      {galleryMedia.length} Médias disponibles
-                    </div>
-                    <div className="archive-stats" style={{ fontSize: '0.8rem', marginTop: '10px' }}>
-                      {galleryMedia.filter(m => m.type === 'photo').length} Photos • {galleryMedia.filter(m => m.type === 'video').length} Vidéos
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
-        );
-
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <>
-      <Head title="Programme et Activités" />
-      <style>{styles}</style>
-
-      <MediaViewerModal
-        isOpen={isMediaViewerOpen}
-        onClose={closeMediaViewer}
-        media={selectedMedia}
-      />
-
-      <div className="min-h-screen animate-fade-in-up" style={{ background: "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)", paddingBottom: '40px' }}>
-        <main style={{ padding: '0 15px' }}>
-          <div className="page-header-wrapper">
-            <Link href="/famille/dashboard" className="btn-back">
-              <IconArrowLeft /> Retour
-            </Link>
-            <div className="tabs-container-header">
-              <button 
-                className={`tab-btn-header ${activeTab === 'programmes' ? 'active' : ''}`}
-                onClick={() => setActiveTab('programmes')}
-              >
-                <IconActivity /> Programmes
-              </button>
-              <button 
-                className={`tab-btn-header ${activeTab === 'historique' ? 'active' : ''}`}
-                onClick={() => setActiveTab('historique')}
-              >
-                <IconHistory /> Historique
-              </button>
-              <button 
-                className={`tab-btn-header ${activeTab === 'parcours' ? 'active' : ''}`}
-                onClick={() => setActiveTab('parcours')}
-              >
-                <IconRoadmap /> Galerie
-              </button>
-            </div>
-          </div>
-
-          {renderContent()}
-        </main>
-      </div>
-    </>
-  );
+        </>
+    );
 }

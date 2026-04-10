@@ -454,7 +454,10 @@ export default function Inscriptions({
                                 enregistrés.
                             </p>
                             <Link
-                                href={`/responsable-famille/members/create?family_id=${family?.id}`}
+                                href={withBasePath(
+                                    "",
+                                    `/responsable-famille/members/create?family_id=${family?.id}`,
+                                )}
                                 className="inline-block px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                             >
                                 Inscrire un Membre

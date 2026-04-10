@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "@inertiajs/react";
+import { withBasePath } from "../../../Utils/urlHelper";
 import MariageForm from "../../Liturgie/forms/MariageForm";
 import BaptemeForm from "../../Liturgie/forms/BaptemeForm";
 import CommunionForm from "../../Liturgie/forms/CommunionForm";
@@ -15,9 +16,11 @@ export default function Form({
     routeBase = "/responsable-famille/liturgie",
     canSelectMember = true,
 }) {
+    const resolvedRouteBase = withBasePath("", routeBase);
+
     const commonProps = {
-        backHref: `${routeBase}/nouvelle`,
-        submitUrl: routeBase,
+        backHref: `${resolvedRouteBase}/nouvelle`,
+        submitUrl: resolvedRouteBase,
         actes,
         familyMembers,
         classes,
@@ -49,7 +52,7 @@ export default function Form({
                     Selectionnez d'abord un type de demande liturgique.
                 </p>
                 <Link
-                    href={`${routeBase}/nouvelle`}
+                    href={`${resolvedRouteBase}/nouvelle`}
                     className="inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
                 >
                     Aller a la selection

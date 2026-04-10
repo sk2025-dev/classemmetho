@@ -37,6 +37,7 @@ class LoginController extends Controller
         $request->validate([
             'identifiant' => ['required', 'string'],
             'password' => ['required', 'string'],
+            'redirect_to' => ['nullable', 'string', 'max:2048'],
         ], [
             'identifiant.required' => 'Veuillez entrer votre identifiant ou email.',
             'password.required' => 'Le mot de passe est requis.',
@@ -47,9 +48,9 @@ class LoginController extends Controller
 
         // Chercher par identifier OU email (incluant les soft-deleted)
         $user = User::withTrashed()
-                    ->where('identifier', $login)
-                    ->orWhere('email', $login)
-                    ->first();
+            ->where('identifier', $login)
+            ->orWhere('email', $login)
+            ->first();
 
         // Message générique pour éviter l'énumération d'utilisateurs
         $genericErrorMessage = 'Identifiant ou mot de passe incorrect.';
@@ -129,10 +130,20 @@ class LoginController extends Controller
             'responsable_famille' => 'responsable_famille.dashboard',
             'pasteur' => 'pasteur.dashboard',
             'membre_famille' => 'membre_famille.dashboard',
-            default => 'welcome',
+            'tresorier' => 'membre_famille.dashboard',
+            default => 'dashboard',
         };
 
         $redirectUrl = route($redirectRoute);
+        $requestedRedirect = trim((string) $request->input('redirect_to', ''));
+
+        if (
+            $requestedRedirect !== ''
+            && $this->isSafeLocalRedirect($requestedRedirect)
+            && $this->canUseCustomRedirect($user, $requestedRedirect)
+        ) {
+            $redirectUrl = $requestedRedirect;
+        }
 
         // Si c'est une requête JSON/AJAX (fetch depuis le login)
         if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
@@ -152,10 +163,30 @@ class LoginController extends Controller
         }
 
         // Redirection classique avec les données en session flash
-        return redirect()->route($redirectRoute)
+        return redirect()->to($redirectUrl)
             ->with('success', 'Bienvenue ' . $user->nom . '!')
             ->with('just_logged_in', true)
             ->with('user_welcome_name', $user->nom);
+    }
+
+    private function isSafeLocalRedirect(string $redirect): bool
+    {
+        if (str_starts_with($redirect, 'http://') || str_starts_with($redirect, 'https://') || str_starts_with($redirect, '//')) {
+            return false;
+        }
+
+        return str_starts_with($redirect, '/');
+    }
+
+    private function canUseCustomRedirect(User $user, string $redirect): bool
+    {
+        $normalized = mb_strtolower($redirect);
+
+        if (str_contains($normalized, '/membre-famille/tresorerie')) {
+            return in_array($user->role, ['membre_famille', 'tresorier'], true);
+        }
+
+        return true;
     }
 
     /**

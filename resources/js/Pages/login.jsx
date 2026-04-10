@@ -15,6 +15,7 @@ export default function Login() {
     const [showWelcomeLoader, setShowWelcomeLoader] = useState(false);
     const [welcomeUserName, setWelcomeUserName] = useState("");
     const [redirectUrl, setRedirectUrl] = useState("");
+    const [postLoginRedirect, setPostLoginRedirect] = useState("");
 
     const { data, setData } = useForm({
         identifiant: "",
@@ -29,6 +30,12 @@ export default function Login() {
                 loadingScreen.remove();
             }, 800);
         }
+    }, []);
+
+    useEffect(() => {
+        const query = new URLSearchParams(window.location.search);
+        const redirectTo = query.get("redirect_to") || "";
+        setPostLoginRedirect(redirectTo);
     }, []);
 
     const handleContinue = (e) => {
@@ -67,6 +74,7 @@ export default function Login() {
                 body: JSON.stringify({
                     identifiant: data.identifiant,
                     password: data.password,
+                    redirect_to: postLoginRedirect || undefined,
                 }),
             });
 

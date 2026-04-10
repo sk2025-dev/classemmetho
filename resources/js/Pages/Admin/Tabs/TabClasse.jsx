@@ -438,7 +438,9 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
         if (isOpen && member?.id) {
             const loadMemberData = async () => {
                 try {
-                    const response = await fetch(`/admin/membres/${member.id}`);
+                    const response = await fetch(
+                        withBasePath("", `/admin/membres/${member.id}`),
+                    );
                     if (response.ok) {
                         const freshData = await response.json();
                         setDisplayMember({
@@ -1243,7 +1245,11 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                             placeholder="ex: Jean"
                                         />
                                     </FormField>
-                                    <FormField label="Genre" icon={Users} required>
+                                    <FormField
+                                        label="Genre"
+                                        icon={Users}
+                                        required
+                                    >
                                         <Select2Single
                                             name="genre"
                                             value={formData.genre || ""}
@@ -1356,7 +1362,11 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                             placeholder="Sélectionner une fonction..."
                                         />
                                     </FormField>
-                                    <FormField label="Relation de Famille" icon={Users} required>
+                                    <FormField
+                                        label="Relation de Famille"
+                                        icon={Users}
+                                        required
+                                    >
                                         <Select2Single
                                             name="relation"
                                             value={formData.relation || ""}
@@ -1382,12 +1392,20 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                     Situation Matrimoniale
                                 </h3>
                                 <div className="space-y-4">
-                                    <FormField label="Statut Marital" icon={Heart} required>
+                                    <FormField
+                                        label="Statut Marital"
+                                        icon={Heart}
+                                        required
+                                    >
                                         <Select2Single
                                             name="statut_marital"
-                                            value={formData.statut_marital || ""}
+                                            value={
+                                                formData.statut_marital || ""
+                                            }
                                             onChange={handleChange}
-                                            options={MEMBER_MARITAL_STATUS_OPTIONS}
+                                            options={
+                                                MEMBER_MARITAL_STATUS_OPTIONS
+                                            }
                                             placeholder="Sélectionner..."
                                         />
                                     </FormField>

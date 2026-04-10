@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Head, usePage, router } from '@inertiajs/react';
-import axios from 'axios';
+import React, { useState, useEffect, useRef } from "react";
+import { Head, usePage, router } from "@inertiajs/react";
+import axios from "axios";
+import { withBasePath } from "../../Utils/urlHelper";
 
 // Configuration d'axios avec le token CSRF
-axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+axios.defaults.headers.common["X-CSRF-TOKEN"] = document
+    .querySelector('meta[name="csrf-token"]')
+    ?.getAttribute("content");
 
 // --- STYLES INTÉGRÉS (modern glassmorphism) ---
 const styles = `
@@ -616,210 +619,362 @@ const styles = `
 
 // --- ICONS ---
 const IconCalendar = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+        <line x1="16" y1="2" x2="16" y2="6"></line>
+        <line x1="8" y1="2" x2="8" y2="6"></line>
+        <line x1="3" y1="10" x2="21" y2="10"></line>
+    </svg>
 );
 const IconClock = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+    </svg>
 );
 const IconEdit = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+    </svg>
 );
 const IconArchive = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <polyline points="21 8 21 21 3 21 3 8"></polyline>
+        <rect x="1" y="3" width="22" height="5"></rect>
+        <line x1="10" y1="12" x2="14" y2="12"></line>
+    </svg>
 );
 const IconArrowLeft = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <path d="M19 12H5M12 19l-7-7 7-7" />
+    </svg>
 );
 
 // --- COMPOSANTS ---
 const MiniCalendar = () => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [events, setEvents] = useState([1, 11, 24]);
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [events, setEvents] = useState([1, 11, 24]);
 
-  const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+    const monthNames = [
+        "Janvier",
+        "Février",
+        "Mars",
+        "Avril",
+        "Mai",
+        "Juin",
+        "Juillet",
+        "Août",
+        "Septembre",
+        "Octobre",
+        "Novembre",
+        "Décembre",
+    ];
 
-  const goToPreviousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-  };
+    const goToPreviousMonth = () => {
+        setCurrentDate(
+            new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
+        );
+    };
 
-  const goToNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-  };
+    const goToNextMonth = () => {
+        setCurrentDate(
+            new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1),
+        );
+    };
 
-  const getDaysInMonth = (date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const days = [];
-    const startPadding = firstDay.getDay();
-    const padCount = (startPadding === 0 ? 6 : startPadding - 1);
-    for (let i = padCount; i > 0; i--) {
-      const d = new Date(year, month, -i + 1);
-      days.push({ date: d, isCurrentMonth: false });
-    }
-    for (let i = 1; i <= lastDay.getDate(); i++) {
-      days.push({ date: new Date(year, month, i), isCurrentMonth: true });
-    }
-    const remaining = 42 - days.length;
-    for (let i = 1; i <= remaining; i++) {
-      const d = new Date(year, month + 1, i);
-      days.push({ date: d, isCurrentMonth: false });
-    }
-    return days;
-  };
+    const getDaysInMonth = (date) => {
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const days = [];
+        const startPadding = firstDay.getDay();
+        const padCount = startPadding === 0 ? 6 : startPadding - 1;
+        for (let i = padCount; i > 0; i--) {
+            const d = new Date(year, month, -i + 1);
+            days.push({ date: d, isCurrentMonth: false });
+        }
+        for (let i = 1; i <= lastDay.getDate(); i++) {
+            days.push({ date: new Date(year, month, i), isCurrentMonth: true });
+        }
+        const remaining = 42 - days.length;
+        for (let i = 1; i <= remaining; i++) {
+            const d = new Date(year, month + 1, i);
+            days.push({ date: d, isCurrentMonth: false });
+        }
+        return days;
+    };
 
-  const daysOfWeek = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-  const days = getDaysInMonth(currentDate);
-  const today = new Date();
-  const isToday = (date) => date.toDateString() === today.toDateString();
+    const daysOfWeek = ["L", "M", "M", "J", "V", "S", "D"];
+    const days = getDaysInMonth(currentDate);
+    const today = new Date();
+    const isToday = (date) => date.toDateString() === today.toDateString();
 
-  return (
-    <div className="mini-calendar">
-      <div className="cal-header">
-        <button className="cal-nav-btn" onClick={goToPreviousMonth}>‹</button>
-        <span className="cal-month-year">{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</span>
-        <button className="cal-nav-btn" onClick={goToNextMonth}>›</button>
-      </div>
-      <div className="cal-grid">
-        {daysOfWeek.map(d => <div key={d} className="cal-day-label">{d}</div>)}
-        {days.map((day, idx) => (
-          <div
-            key={idx}
-            className={`cal-day ${!day.isCurrentMonth ? 'empty' : ''} ${isToday(day.date) ? 'today' : ''} ${events.includes(day.date.getDate()) && day.isCurrentMonth ? 'has-event' : ''}`}
-          >
-            {day.date.getDate()}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+    return (
+        <div className="mini-calendar">
+            <div className="cal-header">
+                <button className="cal-nav-btn" onClick={goToPreviousMonth}>
+                    ‹
+                </button>
+                <span className="cal-month-year">
+                    {monthNames[currentDate.getMonth()]}{" "}
+                    {currentDate.getFullYear()}
+                </span>
+                <button className="cal-nav-btn" onClick={goToNextMonth}>
+                    ›
+                </button>
+            </div>
+            <div className="cal-grid">
+                {daysOfWeek.map((d) => (
+                    <div key={d} className="cal-day-label">
+                        {d}
+                    </div>
+                ))}
+                {days.map((day, idx) => (
+                    <div
+                        key={idx}
+                        className={`cal-day ${!day.isCurrentMonth ? "empty" : ""} ${isToday(day.date) ? "today" : ""} ${events.includes(day.date.getDate()) && day.isCurrentMonth ? "has-event" : ""}`}
+                    >
+                        {day.date.getDate()}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
 };
 
 // --- PAGE PRINCIPALE ---
 export default function ProgrammesClasse() {
-  const { props } = usePage();
-  const {
-    initialClassList = [],
-    initialClassHistory = [],
-    classeNom = '',
-  } = props;
+    const { props } = usePage();
+    const {
+        initialClassList = [],
+        initialClassHistory = [],
+        classeNom = "",
+    } = props;
 
-  const handleGoBack = () => {
-    router.visit('/dashboard');
-  };
+    const handleGoBack = () => {
+        router.visit(withBasePath("", "/dashboard"));
+    };
 
-  // Composant de boîte de dialogue pour section vide
-  const EmptyDialog = () => {
-    return (
-      <div className="empty-dialog">
-        <div className="empty-dialog-icon">📋</div>
-        <div className="empty-dialog-title">Aucun programme</div>
-        <div className="empty-dialog-message">
-          Aucun programme d'activité n'est actuellement disponible pour votre classe.
-          <br />
-          Revenez plus tard pour découvrir les activités à venir.
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <>
-      <Head title={`Programmes - ${classeNom}`} />
-      <style>{styles}</style>
-
-      <div className="min-h-screen animate-fade-in-up" style={{ background: "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)", paddingBottom: '40px' }}>
-        <main style={{ padding: '0 15px' }}>
-          {/* Bouton Retour */}
-          <div style={{ display: 'flex', justifyContent: 'flex-start', margin: '20px 0' }}>
-            <button className="btn-back" onClick={handleGoBack}>
-              <IconArrowLeft /> Retour
-            </button>
-          </div>
-
-          {/* Titre avec le nom de la classe */}
-          <div className="action-bar" style={{ marginTop: 0 }}>
-            <h2>📘 Programmes d'activités - {classeNom}</h2>
-          </div>
-
-          {/* Activités à venir */}
-          <div className="glass-container">
-            <div className="layout-split-wrapper">
-              <div className="split-content">
-                <h3 style={{ fontSize: '1.2rem', fontWeight: '600', marginBottom: '1rem', color: '#1e293b' }}>🔥 Activités à venir</h3>
-                {initialClassList.length > 0 ? (
-                  <div className="special-grid">
-                    {initialClassList.map(event => (
-                      <div key={event.id} className="special-card">
-                        <div>
-                          <div className="special-header">
-                            <span className="special-date">{event.date}</span>
-                          </div>
-                          <h4 className="special-title">{event.title}</h4>
-                          <p className="special-desc">{event.desc}</p>
-                          {event.time && (
-                            <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                              ⏰ {event.time}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyDialog />
-                )}
-              </div>
-              <div className="split-sidebar">
-                <MiniCalendar />
-              </div>
-            </div>
-          </div>
-
-          {/* Historique */}
-          <div className="action-bar">
-            <h2>📜 HISTORIQUE DES PROGRAMMES</h2>
-          </div>
-          <div className="glass-container">
-            <div className="layout-split-wrapper">
-              <div className="split-content">
-                {initialClassHistory.length > 0 ? (
-                  <div className="special-grid">
-                    {initialClassHistory.map(item => (
-                      <div key={item.id} className="historical-card">
-                        <div>
-                          <div className="historical-header">
-                            <span className="historical-date">{item.date}</span>
-                          </div>
-                          <h4 className="historical-title">{item.title}</h4>
-                          <p className="historical-desc">{item.description}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af', width: '100%' }}>
-                    Aucun historique disponible.
-                  </div>
-                )}
-              </div>
-              <div className="split-sidebar">
-                <div className="archive-card">
-                  <div className="cal-header">
-                    <span className="cal-month-year">
-                      <IconArchive /> Archives
-                    </span>
-                  </div>
-                  <div className="archive-stats">
-                    {initialClassHistory.length} Activités archivées
-                  </div>
+    // Composant de boîte de dialogue pour section vide
+    const EmptyDialog = () => {
+        return (
+            <div className="empty-dialog">
+                <div className="empty-dialog-icon">📋</div>
+                <div className="empty-dialog-title">Aucun programme</div>
+                <div className="empty-dialog-message">
+                    Aucun programme d'activité n'est actuellement disponible
+                    pour votre classe.
+                    <br />
+                    Revenez plus tard pour découvrir les activités à venir.
                 </div>
-              </div>
             </div>
-          </div>
-        </main>
-      </div>
-    </>
-  );
+        );
+    };
+
+    return (
+        <>
+            <Head title={`Programmes - ${classeNom}`} />
+            <style>{styles}</style>
+
+            <div
+                className="min-h-screen animate-fade-in-up"
+                style={{
+                    background:
+                        "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
+                    paddingBottom: "40px",
+                }}
+            >
+                <main style={{ padding: "0 15px" }}>
+                    {/* Bouton Retour */}
+                    <div
+                        style={{
+                            display: "flex",
+                            justifyContent: "flex-start",
+                            margin: "20px 0",
+                        }}
+                    >
+                        <button className="btn-back" onClick={handleGoBack}>
+                            <IconArrowLeft /> Retour
+                        </button>
+                    </div>
+
+                    {/* Titre avec le nom de la classe */}
+                    <div className="action-bar" style={{ marginTop: 0 }}>
+                        <h2>📘 Programmes d'activités - {classeNom}</h2>
+                    </div>
+
+                    {/* Activités à venir */}
+                    <div className="glass-container">
+                        <div className="layout-split-wrapper">
+                            <div className="split-content">
+                                <h3
+                                    style={{
+                                        fontSize: "1.2rem",
+                                        fontWeight: "600",
+                                        marginBottom: "1rem",
+                                        color: "#1e293b",
+                                    }}
+                                >
+                                    🔥 Activités à venir
+                                </h3>
+                                {initialClassList.length > 0 ? (
+                                    <div className="special-grid">
+                                        {initialClassList.map((event) => (
+                                            <div
+                                                key={event.id}
+                                                className="special-card"
+                                            >
+                                                <div>
+                                                    <div className="special-header">
+                                                        <span className="special-date">
+                                                            {event.date}
+                                                        </span>
+                                                    </div>
+                                                    <h4 className="special-title">
+                                                        {event.title}
+                                                    </h4>
+                                                    <p className="special-desc">
+                                                        {event.desc}
+                                                    </p>
+                                                    {event.time && (
+                                                        <p
+                                                            style={{
+                                                                fontSize:
+                                                                    "0.85rem",
+                                                                color: "#6b7280",
+                                                                marginTop:
+                                                                    "0.5rem",
+                                                            }}
+                                                        >
+                                                            ⏰ {event.time}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <EmptyDialog />
+                                )}
+                            </div>
+                            <div className="split-sidebar">
+                                <MiniCalendar />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Historique */}
+                    <div className="action-bar">
+                        <h2>📜 HISTORIQUE DES PROGRAMMES</h2>
+                    </div>
+                    <div className="glass-container">
+                        <div className="layout-split-wrapper">
+                            <div className="split-content">
+                                {initialClassHistory.length > 0 ? (
+                                    <div className="special-grid">
+                                        {initialClassHistory.map((item) => (
+                                            <div
+                                                key={item.id}
+                                                className="historical-card"
+                                            >
+                                                <div>
+                                                    <div className="historical-header">
+                                                        <span className="historical-date">
+                                                            {item.date}
+                                                        </span>
+                                                    </div>
+                                                    <h4 className="historical-title">
+                                                        {item.title}
+                                                    </h4>
+                                                    <p className="historical-desc">
+                                                        {item.description}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div
+                                        style={{
+                                            padding: 40,
+                                            textAlign: "center",
+                                            color: "#9ca3af",
+                                            width: "100%",
+                                        }}
+                                    >
+                                        Aucun historique disponible.
+                                    </div>
+                                )}
+                            </div>
+                            <div className="split-sidebar">
+                                <div className="archive-card">
+                                    <div className="cal-header">
+                                        <span className="cal-month-year">
+                                            <IconArchive /> Archives
+                                        </span>
+                                    </div>
+                                    <div className="archive-stats">
+                                        {initialClassHistory.length} Activités
+                                        archivées
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </>
+    );
 }

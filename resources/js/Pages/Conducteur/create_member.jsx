@@ -1100,7 +1100,11 @@ export default function RegisterFamille({
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField label="TÃ©lÃ©phone" icon={Phone} required>
+                            <FormField
+                                label="TÃ©lÃ©phone"
+                                icon={Phone}
+                                required
+                            >
                                 <div className="flex">
                                     <span className="bg-gray-100 border border-gray-300 border-r-0 rounded-l-lg px-3 flex items-center text-gray-600">
                                         +225
@@ -1357,7 +1361,12 @@ export default function RegisterFamille({
                                     placeholder="SÃ©lectionner..."
                                 />
                             </FormField>
-                            <FormField label="Lien de parentÃ©" icon={Users} required hint="Relation avec la famille">
+                            <FormField
+                                label="Lien de parentÃ©"
+                                icon={Users}
+                                required
+                                hint="Relation avec la famille"
+                            >
                                 <Select2Single
                                     name="responsable_lien_parente"
                                     value={responsable.lienParente}
@@ -1411,7 +1420,11 @@ export default function RegisterFamille({
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-                            <FormField label="Statut Marital" icon={Heart} required>
+                            <FormField
+                                label="Statut Marital"
+                                icon={Heart}
+                                required
+                            >
                                 <Select2Single
                                     name="responsable_statut_marital"
                                     value={responsable.statutMarital}
@@ -1858,120 +1871,31 @@ export default function RegisterFamille({
                                     </div>
                                 </div>
 
-                            {/* IdentitÃ©: Nom, PrÃ©nom, Genre */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField label="Nom" icon={User} required>
-                                    <input
-                                        className={`${STYLES.input} uppercase`}
-                                        value={membreTemp.nom}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                nom: e.target.value,
-                                            })
-                                        }
-                                        placeholder="Nom de famille"
-                                    />
-                                    {errors["membre.nom"] && (
-                                        <p className="text-red-500 text-xs mt-1">
-                                            {errors["membre.nom"]}
-                                        </p>
-                                    )}
-                                </FormField>
-                                <FormField label="PrÃ©nom" icon={User} required>
-                                    <input
-                                        className={`${STYLES.input} capitalize`}
-                                        value={membreTemp.prenom}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                prenom: formatPrenom(
-                                                    e.target.value,
-                                                ),
-                                            })
-                                        }
-                                        placeholder="PrÃ©nom"
-                                    />
-                                    {errors["membre.prenom"] && (
-                                        <p className="text-red-500 text-xs mt-1">
-                                            {errors["membre.prenom"]}
-                                        </p>
-                                    )}
-                                </FormField>
-                            </div>
-
-                            {/* Genre et Date de naissance */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField label="Genre" icon={Users} required>
-                                    <Select2Single
-                                        name="membre_genre"
-                                        value={membreTemp.genre}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                genre: e.target.value,
-                                            })
-                                        }
-                                        options={GENDER_OPTIONS}
-                                        placeholder="SÃ©lectionner..."
-                                        hasError={Boolean(errors["membre.genre"])}
-                                    />
-                                    {errors["membre.genre"] && (
-                                        <p className="text-red-500 text-xs mt-1">
-                                            {errors["membre.genre"]}
-                                        </p>
-                                    )}
-                                </FormField>
-                                <FormField label="Date de naissance" icon={Calendar} required>
-                                    <input
-                                        type="date"
-                                        className={STYLES.input}
-                                        value={membreTemp.dateNaissance}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                dateNaissance: e.target.value,
-                                            })
-                                        }
-                                    />
-                                    {errors["membre.dateNaissance"] && (
-                                        <p className="text-red-500 text-xs mt-1">
-                                            {errors["membre.dateNaissance"]}
-                                        </p>
-                                    )}
-                                </FormField>
-                            </div>
-
-                            {/* Email et TÃ©lÃ©phone */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField label="Email" icon={Mail}>
-                                    <input
-                                        type="email"
-                                        className={STYLES.input}
-                                        value={membreTemp.email}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                email: e.target.value,
-                                            })
-                                        }
-                                        placeholder="ex: jean.dupont@email.com"
-                                    />
-                                    {errors["membre.email"] && (
-                                        <p className="text-red-500 text-xs mt-1">
-                                            {errors["membre.email"]}
-                                        </p>
-                                    )}
-                                </FormField>
-                                <FormField
-                                    label="TÃ©lÃ©phone"
-                                    icon={Phone}
-                                    hint="Ex: 0102030405 (optionnel)"
-                                >
-                                    <div className="flex">
-                                        <span className="bg-gray-100 border border-gray-300 border-r-0 rounded-l-lg px-3 flex items-center text-gray-600">
-                                            +225
-                                        </span>
+                                {/* IdentitÃ©: Nom, PrÃ©nom, Genre */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField label="Nom" icon={User} required>
+                                        <input
+                                            className={`${STYLES.input} uppercase`}
+                                            value={membreTemp.nom}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    nom: e.target.value,
+                                                })
+                                            }
+                                            placeholder="Nom de famille"
+                                        />
+                                        {errors["membre.nom"] && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {errors["membre.nom"]}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                    <FormField
+                                        label="PrÃ©nom"
+                                        icon={User}
+                                        required
+                                    >
                                         <input
                                             className={`${STYLES.input} capitalize`}
                                             value={membreTemp.prenom}
@@ -1985,130 +1909,272 @@ export default function RegisterFamille({
                                             }
                                             placeholder="PrÃ©nom"
                                         />
-                                    </div>
-                                    {errors["membre.telephone"] && (
-                                        <p className="text-red-500 text-xs mt-1">
-                                            {errors["membre.telephone"]}
-                                        </p>
-                                    )}
-                                </FormField>
-                            </div>
-                            {/* Fonction dans l'Ã©glise et vide */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField label="Fonction dans l'Ã©glise" icon={Users} hint="SÃ©lectionnez une fonction">
-                                    <Select2Fonction
-                                        value={selectedRolesResponsable}
-                                        onChange={(e) => setSelectedRolesResponsable(e.target.value)}
-                                        options={churchRoles}
-                                        placeholder="SÃ©lectionner des fonctions..."
-                                        />
-                                </FormField>
-                                <FormField label="Profession" icon={Briefcase} required>
-                                    <input
-                                        className={STYLES.input}
-                                        value={membreTemp.profession}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                profession: e.target.value,
-                                            })
-                                        }
-                                        placeholder="Ex: Enseignant, Infirmier..."
-                                    />
-                                    {errors["membre.profession"] && (
-                                        <p className="text-red-500 text-xs mt-1">
-                                            {errors["membre.profession"]}
-                                        </p>
-                                    )}
-                                </FormField>
-                            </div>
-                            {/* Lien de parentÃ© et Statut marital */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField label="Lien de parentÃ©" icon={Users} required hint="Relation avec le responsable">
-                                    <Select2Single
-                                        name="membre_relation"
-                                        value={membreTemp.relation}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                relation: e.target.value,
-                                            })
-                                        }
-                                        options={RELATION_OPTIONS}
-                                        placeholder="SÃ©lectionner un lien de parentÃ©"
-                                    />
-                                    {errors["membre.relation"] && (
-                                        <p className="text-red-500 text-xs mt-1">
-                                            {errors["membre.relation"]}
-                                        </p>
-                                    )}
-                                </FormField>
-                                <FormField label="Statut marital" icon={Heart} required>
-                                    <Select2Single
-                                        name="membre_statut_marital"
-                                        value={membreTemp.statutMarital}
-                                        onChange={(e) =>
-                                            setMembreTemp({
-                                                ...membreTemp,
-                                                statutMarital: e.target.value,
-                                            })
-                                        }
-                                        options={MARITAL_STATUS_OPTIONS}
-                                        placeholder="SÃ©lectionner..."
-                                        hasError={Boolean(errors["membre.statutMarital"])}
-                                    />
-                                    {errors["membre.statutMarital"] && (
-                                        <p className="text-red-500 text-xs mt-1">
-                                            {errors["membre.statutMarital"]}
-                                        </p>
-                                    )}
-                                </FormField>
-                            </div>
-
-                            {membreTemp.statutMarital === "marie" && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-gray-200">
-                                    <FormField label="Date du mariage" icon={Calendar} required>
-                                        <input
-                                            type="date"
-                                            className={STYLES.input}
-                                            value={membreTemp.dateMariage}
-                                            onChange={(e) =>
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    dateMariage: e.target.value,
-                                                })
-                                            }
-                                        />
-                                        {errors["membre.dateMariage"] && (
+                                        {errors["membre.prenom"] && (
                                             <p className="text-red-500 text-xs mt-1">
-                                                {errors["membre.dateMariage"]}
-                                            </p>
-                                        )}
-                                    </FormField>
-                                    <FormField
-                                        label="Lieu du mariage"
-                                        icon={Building}
-                                        required
-                                    >
-                                        <input
-                                            className={STYLES.input}
-                                            value={membreTemp.lieuMariage}
-                                            onChange={(e) =>
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    lieuMariage: e.target.value,
-                                                })
-                                            }
-                                            placeholder="Ville, Pays..."
-                                        />
-                                        {errors["membre.lieuMariage"] && (
-                                            <p className="text-red-500 text-xs mt-1">
-                                                {errors["membre.lieuMariage"]}
+                                                {errors["membre.prenom"]}
                                             </p>
                                         )}
                                     </FormField>
                                 </div>
-                            )}
+
+                                {/* Genre et Date de naissance */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                        label="Genre"
+                                        icon={Users}
+                                        required
+                                    >
+                                        <Select2Single
+                                            name="membre_genre"
+                                            value={membreTemp.genre}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    genre: e.target.value,
+                                                })
+                                            }
+                                            options={GENDER_OPTIONS}
+                                            placeholder="SÃ©lectionner..."
+                                            hasError={Boolean(
+                                                errors["membre.genre"],
+                                            )}
+                                        />
+                                        {errors["membre.genre"] && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {errors["membre.genre"]}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                    <FormField
+                                        label="Date de naissance"
+                                        icon={Calendar}
+                                        required
+                                    >
+                                        <input
+                                            type="date"
+                                            className={STYLES.input}
+                                            value={membreTemp.dateNaissance}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    dateNaissance:
+                                                        e.target.value,
+                                                })
+                                            }
+                                        />
+                                        {errors["membre.dateNaissance"] && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {errors["membre.dateNaissance"]}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                </div>
+
+                                {/* Email et TÃ©lÃ©phone */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField label="Email" icon={Mail}>
+                                        <input
+                                            type="email"
+                                            className={STYLES.input}
+                                            value={membreTemp.email}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    email: e.target.value,
+                                                })
+                                            }
+                                            placeholder="ex: jean.dupont@email.com"
+                                        />
+                                        {errors["membre.email"] && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {errors["membre.email"]}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                    <FormField
+                                        label="TÃ©lÃ©phone"
+                                        icon={Phone}
+                                        hint="Ex: 0102030405 (optionnel)"
+                                    >
+                                        <div className="flex">
+                                            <span className="bg-gray-100 border border-gray-300 border-r-0 rounded-l-lg px-3 flex items-center text-gray-600">
+                                                +225
+                                            </span>
+                                            <input
+                                                className={`${STYLES.input} capitalize`}
+                                                value={membreTemp.prenom}
+                                                onChange={(e) =>
+                                                    setMembreTemp({
+                                                        ...membreTemp,
+                                                        prenom: formatPrenom(
+                                                            e.target.value,
+                                                        ),
+                                                    })
+                                                }
+                                                placeholder="PrÃ©nom"
+                                            />
+                                        </div>
+                                        {errors["membre.telephone"] && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {errors["membre.telephone"]}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                </div>
+                                {/* Fonction dans l'Ã©glise et vide */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                        label="Fonction dans l'Ã©glise"
+                                        icon={Users}
+                                        hint="SÃ©lectionnez une fonction"
+                                    >
+                                        <Select2Fonction
+                                            value={selectedRolesResponsable}
+                                            onChange={(e) =>
+                                                setSelectedRolesResponsable(
+                                                    e.target.value,
+                                                )
+                                            }
+                                            options={churchRoles}
+                                            placeholder="SÃ©lectionner des fonctions..."
+                                        />
+                                    </FormField>
+                                    <FormField
+                                        label="Profession"
+                                        icon={Briefcase}
+                                        required
+                                    >
+                                        <input
+                                            className={STYLES.input}
+                                            value={membreTemp.profession}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    profession: e.target.value,
+                                                })
+                                            }
+                                            placeholder="Ex: Enseignant, Infirmier..."
+                                        />
+                                        {errors["membre.profession"] && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {errors["membre.profession"]}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                </div>
+                                {/* Lien de parentÃ© et Statut marital */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                        label="Lien de parentÃ©"
+                                        icon={Users}
+                                        required
+                                        hint="Relation avec le responsable"
+                                    >
+                                        <Select2Single
+                                            name="membre_relation"
+                                            value={membreTemp.relation}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    relation: e.target.value,
+                                                })
+                                            }
+                                            options={RELATION_OPTIONS}
+                                            placeholder="SÃ©lectionner un lien de parentÃ©"
+                                        />
+                                        {errors["membre.relation"] && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {errors["membre.relation"]}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                    <FormField
+                                        label="Statut marital"
+                                        icon={Heart}
+                                        required
+                                    >
+                                        <Select2Single
+                                            name="membre_statut_marital"
+                                            value={membreTemp.statutMarital}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    statutMarital:
+                                                        e.target.value,
+                                                })
+                                            }
+                                            options={MARITAL_STATUS_OPTIONS}
+                                            placeholder="SÃ©lectionner..."
+                                            hasError={Boolean(
+                                                errors["membre.statutMarital"],
+                                            )}
+                                        />
+                                        {errors["membre.statutMarital"] && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {errors["membre.statutMarital"]}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                </div>
+
+                                {membreTemp.statutMarital === "marie" && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-gray-200">
+                                        <FormField
+                                            label="Date du mariage"
+                                            icon={Calendar}
+                                            required
+                                        >
+                                            <input
+                                                type="date"
+                                                className={STYLES.input}
+                                                value={membreTemp.dateMariage}
+                                                onChange={(e) =>
+                                                    setMembreTemp({
+                                                        ...membreTemp,
+                                                        dateMariage:
+                                                            e.target.value,
+                                                    })
+                                                }
+                                            />
+                                            {errors["membre.dateMariage"] && (
+                                                <p className="text-red-500 text-xs mt-1">
+                                                    {
+                                                        errors[
+                                                            "membre.dateMariage"
+                                                        ]
+                                                    }
+                                                </p>
+                                            )}
+                                        </FormField>
+                                        <FormField
+                                            label="Lieu du mariage"
+                                            icon={Building}
+                                            required
+                                        >
+                                            <input
+                                                className={STYLES.input}
+                                                value={membreTemp.lieuMariage}
+                                                onChange={(e) =>
+                                                    setMembreTemp({
+                                                        ...membreTemp,
+                                                        lieuMariage:
+                                                            e.target.value,
+                                                    })
+                                                }
+                                                placeholder="Ville, Pays..."
+                                            />
+                                            {errors["membre.lieuMariage"] && (
+                                                <p className="text-red-500 text-xs mt-1">
+                                                    {
+                                                        errors[
+                                                            "membre.lieuMariage"
+                                                        ]
+                                                    }
+                                                </p>
+                                            )}
+                                        </FormField>
+                                    </div>
+                                )}
 
                                 {/* Email et TÃ©lÃ©phone */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2930,7 +2996,8 @@ export default function RegisterFamille({
                                                                 {m.statutMarital ===
                                                                     "marie" && (
                                                                     <div className="text-xs text-blue-600">
-                                                                        MariÃ© le{" "}
+                                                                        MariÃ©
+                                                                        le{" "}
                                                                         {
                                                                             m.dateMariage
                                                                         }{" "}

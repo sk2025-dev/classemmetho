@@ -22,7 +22,7 @@ use App\Http\Controllers\Pasteur\TresorerieController as PasteurTresorerieContro
 use App\Http\Controllers\MembreFamille\AnnuaireController as MembreFamilleAnnuaireController;
 use App\Http\Controllers\MembreFamille\DashboardController as MembreFamilleDashboardController;
 use App\Http\Controllers\MembreFamille\FinancesController as MembreFamilleFinancesController;
-use App\Http\Controllers\MembreFamille\ProgrammesActivitesController; 
+use App\Http\Controllers\MembreFamille\ProgrammesActivitesController;
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\Profile\ChangePasswordController;
 use App\Http\Controllers\Admin\AdministrationController;
@@ -31,7 +31,7 @@ use App\Http\Controllers\Admin\ClasseController;
 use App\Http\Controllers\Admin\FonctionController;
 use App\Http\Controllers\Admin\NotificationsController;
 use App\Http\Controllers\Admin\AnnonceController;
-use App\Http\Controllers\Admin\ProgrammesController; 
+use App\Http\Controllers\Admin\ProgrammesController;
 use App\Http\Controllers\Admin\TresorerieController as AdminTresorerieController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\LiturgieController as AdminLiturgieController;
@@ -62,6 +62,9 @@ Route::get('/sondages/public/{token}/repondre', [\App\Http\Controllers\Public\So
 Route::post('/sondages/public/{token}/reponses', [\App\Http\Controllers\Public\SondageController::class, 'storeResponse'])
     ->name('sondages.public.responses.store');
 
+Route::post('/dons/anonyme', [\App\Http\Controllers\Public\DonationController::class, 'storeAnonymous'])
+    ->name('public.dons.anonyme.store');
+
 // Pages d'authentification (Inertia)
 Route::get('/login', function () {
     return Inertia::render('login');
@@ -73,7 +76,7 @@ Route::post('/login', [\App\Http\Controllers\Auth\LoginController::class, 'login
 Route::middleware(['auth'])->group(function () {
     // Route de déconnexion
     Route::post('/logout', [\App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
-    
+
     // Profil utilisateur
     Route::get('/profile', [\App\Http\Controllers\Profile\ProfileController::class, 'show'])->name('profile.show');
     Route::post('/profile/update', [\App\Http\Controllers\Profile\ProfileController::class, 'update'])->name('profile.update');
@@ -96,6 +99,7 @@ Route::middleware(['auth'])->group(function () {
             case 'responsable_famille':
                 return redirect()->route('responsable_famille.dashboard');
             case 'membre_famille':
+            case 'tresorier':
                 return redirect()->route('membre_famille.dashboard');
             default:
                 return Inertia::render('Dashboard');
@@ -139,7 +143,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/inscriptions/{id}/approval-log', [\App\Http\Controllers\Admin\InscriptionApprovalController::class, 'approvalLog'])->name('admin.inscriptions.approval_log');
         Route::get('/admin/inscriptions/type-selection', [\App\Http\Controllers\Admin\InscriptionsController::class, 'typeSelection'])->name('admin.inscriptions.type-selection');
         Route::post('/admin/inscriptions/import-excel', [ExcelImportController::class, 'import'])->name('admin.inscriptions.import-excel');
-        
+
         // Routes pour créer inscriptions directement
         Route::get('/admin/inscriptions/famille/create', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'createFamilyForm'])->name('admin.inscriptions.famille.create');
         Route::get('/admin/inscriptions/conducteur/create', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'createConductorForm'])->name('admin.inscriptions.conducteur.create');
@@ -281,6 +285,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/conducteur/liturgie/{id}/certificat', [ConducteurLiturgieController::class, 'certificat'])->name('conducteur.liturgie.certificat');
         Route::get('/conducteur/liturgie/{id}/fiche-conducteur', [ConducteurLiturgieController::class, 'ficheConducteur'])->name('conducteur.liturgie.fiche_conducteur');
         Route::get('/conducteur/liturgie/{id}/fiche', [ConducteurLiturgieController::class, 'fiche'])->name('conducteur.liturgie.fiche');
+        Route::post('/conducteur/liturgie/fiche/envoyer', [ConducteurLiturgieController::class, 'envoyerFiche'])->name('conducteur.liturgie.fiche.envoyer');
 
         // Routes Annonces (Conducteur)
         Route::post('/conducteur/annonces', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'store'])->name('conducteur.annonces.store');
@@ -316,6 +321,8 @@ Route::middleware(['auth'])->group(function () {
             ->name('conducteur.tresorerie.paiements.store');
         Route::post('/conducteur/tresorerie/assign-tresorier', [ConducteurTresorerieController::class, 'assignTresorier'])
             ->name('conducteur.tresorerie.assign-tresorier');
+        Route::post('/conducteur/tresorerie/unassign-tresorier', [ConducteurTresorerieController::class, 'unassignTresorier'])
+            ->name('conducteur.tresorerie.unassign-tresorier');
 
         // ===== ROUTES PROGRAMMES CONDUCTEUR =====
         Route::get('/conducteur/programmes', [ProgrammesClasseController::class, 'index'])->name('conducteur.programmes');
@@ -358,7 +365,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/responsable-famille/liturgie/{id}/ceremonie', [ResponsableFamilleLiturgieController::class, 'updateCeremonie'])->name('responsable_famille.liturgie.ceremonie.update');
         Route::get('/responsable-famille/liturgie/{id}/certificat', [ResponsableFamilleLiturgieController::class, 'certificat'])->name('responsable_famille.liturgie.certificat');
         Route::get('/responsable-famille/liturgie/{id}/fiche', [ResponsableFamilleLiturgieController::class, 'fiche'])->name('responsable_famille.liturgie.fiche');
-        
+
         // Routes Annonces (ResponsableFamille)
         Route::get('/responsable-famille/annonces', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'index'])->name('responsable_famille.annonces.index');
         Route::get('/responsable-famille/annonces/create', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'create'])->name('responsable_famille.annonces.create');
@@ -396,7 +403,24 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/responsable-famille/galerie/add', [ProgrammeMembreController::class, 'addMedia'])->name('responsable-famille.galerie.add');
         Route::get('/responsable-famille/galerie', [ProgrammeMembreController::class, 'getGalleryMedia'])->name('responsable-famille.galerie');
         Route::delete('/responsable-famille/galerie/{id}', [ProgrammeMembreController::class, 'deleteMedia'])->name('responsable-famille.galerie.delete');
+    });
 
+    // Module Trésorerie de classe pour membre assigné Trésorier
+    Route::middleware('role:membre_famille')->group(function () {
+        Route::get('/tresorier/tresorerie', [ConducteurTresorerieController::class, 'index'])
+            ->name('tresorier.tresorerie.index');
+        Route::post('/tresorier/tresorerie/cotisations', [ConducteurTresorerieController::class, 'storeCotisation'])
+            ->name('tresorier.tresorerie.cotisations.store');
+        Route::get('/tresorier/tresorerie/cotisations/{cotisation}', [ConducteurTresorerieController::class, 'showCotisation'])
+            ->name('tresorier.tresorerie.cotisations.show');
+        Route::put('/tresorier/tresorerie/cotisations/{cotisation}', [ConducteurTresorerieController::class, 'updateCotisation'])
+            ->name('tresorier.tresorerie.cotisations.update');
+        Route::delete('/tresorier/tresorerie/cotisations/{cotisation}', [ConducteurTresorerieController::class, 'destroyCotisation'])
+            ->name('tresorier.tresorerie.cotisations.destroy');
+        Route::post('/tresorier/tresorerie/collectes', [ConducteurTresorerieController::class, 'storeCollecte'])
+            ->name('tresorier.tresorerie.collectes.store');
+        Route::post('/tresorier/tresorerie/paiements', [ConducteurTresorerieController::class, 'storePaiement'])
+            ->name('tresorier.tresorerie.paiements.store');
     });
 
     // Tableau de bord Pasteur

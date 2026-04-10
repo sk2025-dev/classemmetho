@@ -161,6 +161,20 @@ export default function Welcome() {
 
     const [isScrolled, setIsScrolled] = useState(false);
     const [activeSection, setActiveSection] = useState("home");
+    const [isDonModalOpen, setIsDonModalOpen] = useState(false);
+    const [isAnonymousFlow, setIsAnonymousFlow] = useState(false);
+    const [donLoading, setDonLoading] = useState(false);
+    const [donForm, setDonForm] = useState({
+        montant: "",
+        mode_paiement: "MOBILE_MONEY",
+        note: "",
+    });
+    const connectedDonRedirect = withBase(
+        "/membre-famille/tresorerie?tab=dons&openDonModal=1",
+    );
+    const loginWithDonationRedirect = withBase(
+        `/login?redirect_to=${encodeURIComponent(connectedDonRedirect)}`,
+    );
 
     const joinRef = useRef(null);
 
@@ -188,6 +202,72 @@ export default function Welcome() {
         window.addEventListener("scroll", handleScroll);
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
+
+    const csrf = () => {
+        const token = document.querySelector('meta[name="csrf-token"]');
+        return token ? token.getAttribute("content") : "";
+    };
+
+    const getCookie = (name) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) {
+            return parts.pop().split(";").shift();
+        }
+        return "";
+    };
+
+    const closeDonModal = () => {
+        setIsDonModalOpen(false);
+        setIsAnonymousFlow(false);
+        setDonForm({ montant: "", mode_paiement: "MOBILE_MONEY", note: "" });
+    };
+
+    const submitAnonymousDon = async () => {
+        const montant = Number(donForm.montant || 0);
+        if (montant < 100) {
+            alert("Le montant minimum est de 100 F CFA.");
+            return;
+        }
+
+        try {
+            setDonLoading(true);
+            const csrfToken = csrf();
+            const xsrfToken = decodeURIComponent(getCookie("XSRF-TOKEN") || "");
+
+            const response = await fetch(withBase("/dons/anonyme"), {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                    "X-CSRF-TOKEN": csrfToken,
+                    "X-XSRF-TOKEN": xsrfToken,
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+                credentials: "same-origin",
+                body: JSON.stringify({
+                    _token: csrfToken,
+                    montant,
+                    mode_paiement: donForm.mode_paiement,
+                    note: donForm.note || null,
+                }),
+            });
+
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(
+                    payload?.message || "Paiement anonyme impossible",
+                );
+            }
+
+            alert(payload?.message || "Don anonyme enregistre avec succes.");
+            closeDonModal();
+        } catch (error) {
+            alert(error.message || "Erreur pendant l'enregistrement du don.");
+        } finally {
+            setDonLoading(false);
+        }
+    };
 
     return (
         <div className="bg-slate-50 min-h-screen overflow-x-hidden">
@@ -248,6 +328,19 @@ export default function Welcome() {
                                 />
                             </span>
                         </button>
+
+                        <button
+                            onClick={() => setIsDonModalOpen(true)}
+                            className="group px-8 py-4 border-2 border-amber-400 text-amber-300 rounded-full font-bold text-lg transition-all hover:scale-105 hover:bg-amber-400/10"
+                        >
+                            <span className="flex items-center gap-2">
+                                Faire un don
+                                <ArrowRight
+                                    size={20}
+                                    className="group-hover:translate-x-1 transition-transform"
+                                />
+                            </span>
+                        </button>
                     </div>
                 </div>
 
@@ -255,6 +348,144 @@ export default function Welcome() {
                     <ArrowRight className="rotate-90 text-white/50 w-8 h-8" />
                 </div>
             </section>
+
+            {isDonModalOpen && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
+                    <div
+                        className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"
+                        onClick={closeDonModal}
+                    />
+                    <div className="relative z-10 w-full max-w-xl rounded-3xl bg-white p-6 md:p-8 shadow-2xl">
+                        <button
+                            onClick={closeDonModal}
+                            className="absolute right-4 top-4 rounded-full p-2 text-slate-500 hover:bg-slate-100"
+                            aria-label="Fermer"
+                        >
+                            <X size={18} />
+                        </button>
+
+                        <h3 className="text-2xl font-black text-slate-900 mb-2">
+                            Faire un don
+                        </h3>
+                        <p className="text-slate-600 mb-6">
+                            Choisissez votre mode de paiement: anonyme ou avec
+                            connexion.
+                        </p>
+
+                        {!isAnonymousFlow ? (
+                            <div className="grid sm:grid-cols-2 gap-4">
+                                <button
+                                    onClick={() => setIsAnonymousFlow(true)}
+                                    className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-left hover:bg-amber-100 transition-colors"
+                                >
+                                    <p className="font-bold text-slate-900 mb-1">
+                                        Paiement anonyme
+                                    </p>
+                                    <p className="text-sm text-slate-600">
+                                        Faire un don sans creer de compte.
+                                    </p>
+                                </button>
+
+                                <Link
+                                    href={loginWithDonationRedirect}
+                                    className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-left hover:bg-blue-100 transition-colors"
+                                >
+                                    <p className="font-bold text-slate-900 mb-1">
+                                        Paiement connecte
+                                    </p>
+                                    <p className="text-sm text-slate-600">
+                                        Se connecter pour payer et suivre
+                                        l'historique.
+                                    </p>
+                                </Link>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-sm font-semibold text-slate-700">
+                                        Montant (F CFA)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="100"
+                                        value={donForm.montant}
+                                        onChange={(e) =>
+                                            setDonForm((prev) => ({
+                                                ...prev,
+                                                montant: e.target.value,
+                                            }))
+                                        }
+                                        className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-amber-300"
+                                        placeholder="Ex: 5000"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-semibold text-slate-700">
+                                        Mode de paiement
+                                    </label>
+                                    <select
+                                        value={donForm.mode_paiement}
+                                        onChange={(e) =>
+                                            setDonForm((prev) => ({
+                                                ...prev,
+                                                mode_paiement: e.target.value,
+                                            }))
+                                        }
+                                        className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-amber-300"
+                                    >
+                                        <option value="MOBILE_MONEY">
+                                            Mobile Money
+                                        </option>
+                                        <option value="ESPECES">Especes</option>
+                                        <option value="VIREMENT">
+                                            Virement
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-semibold text-slate-700">
+                                        Note (optionnelle)
+                                    </label>
+                                    <textarea
+                                        rows={3}
+                                        value={donForm.note}
+                                        onChange={(e) =>
+                                            setDonForm((prev) => ({
+                                                ...prev,
+                                                note: e.target.value,
+                                            }))
+                                        }
+                                        className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-amber-300"
+                                        placeholder="Intention du don..."
+                                    />
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
+                                    <button
+                                        onClick={() =>
+                                            setIsAnonymousFlow(false)
+                                        }
+                                        className="px-5 py-3 rounded-xl border border-slate-200 font-semibold text-slate-700 hover:bg-slate-50"
+                                    >
+                                        Retour
+                                    </button>
+                                    <button
+                                        onClick={submitAnonymousDon}
+                                        disabled={donLoading}
+                                        className="px-5 py-3 rounded-xl bg-amber-500 text-white font-bold hover:bg-amber-600 disabled:opacity-60"
+                                    >
+                                        {donLoading
+                                            ? "Traitement..."
+                                            : "Payer en anonyme"}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             <section id="services" className="py-24 bg-slate-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -308,14 +539,6 @@ export default function Welcome() {
                                 );
                             })}
                         </div>
-                    </div>
-                </div>
-            </section>
-
-            <section id="contact" className="py-24 bg-white relative">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid lg:grid-cols-2 gap-16">
-                        <div></div>
                     </div>
                 </div>
             </section>

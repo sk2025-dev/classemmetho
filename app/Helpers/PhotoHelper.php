@@ -2,10 +2,29 @@
 
 namespace App\Helpers;
 
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class PhotoHelper
 {
+    private static function appBasePath(): string
+    {
+        $path = parse_url((string) config('app.url'), PHP_URL_PATH) ?: '';
+        if ($path === '/' || $path === null) {
+            return '';
+        }
+
+        return rtrim((string) $path, '/');
+    }
+
+    private static function toAppPath(string $path): string
+    {
+        $basePath = self::appBasePath();
+        $cleanPath = '/' . ltrim($path, '/');
+
+        return $basePath . $cleanPath;
+    }
+
     /**
      * Obtenir l'URL de la photo d'un utilisateur
      * Si une photo existe, retourner son URL
@@ -29,12 +48,12 @@ class PhotoHelper
 
             // Déjà un chemin web public
             if (str_starts_with($photoPath, '/storage/')) {
-                return $photoPath;
+                return self::toAppPath($photoPath);
             }
 
             // Chemin relatif "storage/..."
             if (str_starts_with($photoPath, 'storage/')) {
-                return '/' . $photoPath;
+                return self::toAppPath('/' . $photoPath);
             }
 
             // Nettoyer un éventuel préfixe "public/"
@@ -44,11 +63,11 @@ class PhotoHelper
 
             // Vérifier si le fichier existe dans le stockage public
             if (Storage::disk('public')->exists($normalizedPath)) {
-                return '/storage/' . ltrim($normalizedPath, '/');
+                return self::toAppPath('/storage/' . ltrim($normalizedPath, '/'));
             }
 
             // Fallback si le chemin existe mais pas en storage
-            return '/storage/' . ltrim($normalizedPath, '/');
+            return self::toAppPath('/storage/' . ltrim($normalizedPath, '/'));
         }
 
         // ✅ Générer un avatar avec initiales si pas de photo
@@ -119,7 +138,7 @@ class PhotoHelper
             }
             return true;
         } catch (\Exception $e) {
-            \Log::warning('Erreur lors de la suppression de la photo', [
+            Log::warning('Erreur lors de la suppression de la photo', [
                 'photo_path' => $photoPath,
                 'error' => $e->getMessage(),
             ]);

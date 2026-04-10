@@ -3389,7 +3389,7 @@ export default function ResponsableFamilleFinances({
                                 borderRadius: 14,
                                 padding: "18px 20px",
                                 boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-                                borderTop: `3px solid ${c.border}`,
+                                // borderTop: `3px solid ${c.border}`,
                             }}
                         >
                             <div
