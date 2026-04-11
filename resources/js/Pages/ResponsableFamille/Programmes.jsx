@@ -1,6 +1,6 @@
 // pages/Famille/Programmes.jsx
 import React, { useState } from "react";
-import { Head, usePage, router } from "@inertiajs/react";
+import { Head, Link, usePage, router } from "@inertiajs/react";
 import { withBasePath } from "../../Utils/urlHelper";
 
 // --- STYLES INTÉGRÉS (Identiques au design Conducteur) ---

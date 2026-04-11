@@ -15,14 +15,13 @@ use App\Http\Controllers\ResponsableFamille\DashboardController as ResponsableFa
 use App\Http\Controllers\ResponsableFamille\AnnuaireController as ResponsableFamilleAnnuaireController;
 use App\Http\Controllers\ResponsableFamille\InscriptionsController as ResponsableFamilleInscriptionsController;
 use App\Http\Controllers\ResponsableFamille\MemberController as ResponsableFamilleMemberController;
-use App\Http\Controllers\ResponsableFamille\ProgrammeMembreController;
 use App\Http\Controllers\Pasteur\AnnuaireController as PasteurAnnuaireController;
 use App\Http\Controllers\Pasteur\DashboardController as PasteurDashboardController;
 use App\Http\Controllers\Pasteur\TresorerieController as PasteurTresorerieController;
 use App\Http\Controllers\MembreFamille\AnnuaireController as MembreFamilleAnnuaireController;
 use App\Http\Controllers\MembreFamille\DashboardController as MembreFamilleDashboardController;
 use App\Http\Controllers\MembreFamille\FinancesController as MembreFamilleFinancesController;
-use App\Http\Controllers\MembreFamille\ProgrammesActivitesController;
+use App\Http\Controllers\MembreFamille\ProgrammesController as MembreProgrammesController;
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\Profile\ChangePasswordController;
 use App\Http\Controllers\Admin\AdministrationController;
@@ -317,6 +316,8 @@ Route::middleware(['auth'])->group(function () {
             ->name('conducteur.tresorerie.cotisations.destroy');
         Route::post('/conducteur/tresorerie/collectes', [ConducteurTresorerieController::class, 'storeCollecte'])
             ->name('conducteur.tresorerie.collectes.store');
+        Route::post('/conducteur/tresorerie/dons', [ConducteurTresorerieController::class, 'storeDon'])
+            ->name('conducteur.tresorerie.dons.store');
         Route::post('/conducteur/tresorerie/paiements', [ConducteurTresorerieController::class, 'storePaiement'])
             ->name('conducteur.tresorerie.paiements.store');
         Route::post('/conducteur/tresorerie/assign-tresorier', [ConducteurTresorerieController::class, 'assignTresorier'])
@@ -394,33 +395,27 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/responsable-famille/transfer', [\App\Http\Controllers\ResponsableFamille\TransferController::class, 'transfer'])->name('responsable_famille.transfer');
 
         // Props Inertia dans le contrôleur
-        Route::get('/responsable-famille/programmes', [ProgrammeMembreController::class, 'index'])->name('responsable_famille.programmes');
-        Route::post('/responsable-famille/programmes/agenda', [ProgrammeMembreController::class, 'storeAgenda'])->name('responsable_famille.programmes.agenda');
-        Route::post('/resposanble-famille/programmes/event', [ProgrammeMembreController::class, 'storeEvent'])->name('responsable_famille.programmes.event');
-        Route::get('/responsable-famille/programmes/events-by-month', [ProgrammeMembreController::class, 'getEventsByMonth'])->name('responsable-famille.programmes.events.by-month');
-        Route::get('/responsable-famille/programmes/history', [ProgrammeMembreController::class, 'historyProgrammes'])->name('responsable-famille.programmes.history');
+        Route::get('/responsable-famille/programmes', [MembreProgrammesController::class, 'index'])->name('responsable_famille.programmes');
+        Route::post('/responsable-famille/programmes/agenda', [MembreProgrammesController::class, 'storeAgenda'])->name('responsable_famille.programmes.agenda');
+        Route::post('/responsable-famille/programmes/event', [MembreProgrammesController::class, 'storeEvent'])->name('responsable_famille.programmes.event');
+        Route::get('/responsable-famille/programmes/events-by-month', [MembreProgrammesController::class, 'getEventsByMonth'])->name('responsable-famille.programmes.events.by-month');
+        Route::get('/responsable-famille/programmes/history', [MembreProgrammesController::class, 'historyProgrammes'])->name('responsable-famille.programmes.history');
         // Routes API pour le frontend (Calendrier, Galerie)
-        Route::post('/responsable-famille/galerie/add', [ProgrammeMembreController::class, 'addMedia'])->name('responsable-famille.galerie.add');
-        Route::get('/responsable-famille/galerie', [ProgrammeMembreController::class, 'getGalleryMedia'])->name('responsable-famille.galerie');
-        Route::delete('/responsable-famille/galerie/{id}', [ProgrammeMembreController::class, 'deleteMedia'])->name('responsable-famille.galerie.delete');
+        Route::post('/responsable-famille/galerie/add', [MembreProgrammesController::class, 'addMedia'])->name('responsable-famille.galerie.add');
+        Route::get('/responsable-famille/galerie', [MembreProgrammesController::class, 'getGalleryMedia'])->name('responsable-famille.galerie');
+        Route::delete('/responsable-famille/galerie/{id}', [MembreProgrammesController::class, 'deleteMedia'])->name('responsable-famille.galerie.delete');
     });
 
     // Module Trésorerie de classe pour membre assigné Trésorier
-    Route::middleware('role:membre_famille')->group(function () {
-        Route::get('/tresorier/tresorerie', [ConducteurTresorerieController::class, 'index'])
+    Route::middleware('role:membre_famille,tresorier')->group(function () {
+        Route::get('/tresorier/tresorerie', [ConducteurTresorerieController::class, 'indexTresorier'])
             ->name('tresorier.tresorerie.index');
-        Route::post('/tresorier/tresorerie/cotisations', [ConducteurTresorerieController::class, 'storeCotisation'])
-            ->name('tresorier.tresorerie.cotisations.store');
-        Route::get('/tresorier/tresorerie/cotisations/{cotisation}', [ConducteurTresorerieController::class, 'showCotisation'])
-            ->name('tresorier.tresorerie.cotisations.show');
-        Route::put('/tresorier/tresorerie/cotisations/{cotisation}', [ConducteurTresorerieController::class, 'updateCotisation'])
-            ->name('tresorier.tresorerie.cotisations.update');
-        Route::delete('/tresorier/tresorerie/cotisations/{cotisation}', [ConducteurTresorerieController::class, 'destroyCotisation'])
-            ->name('tresorier.tresorerie.cotisations.destroy');
-        Route::post('/tresorier/tresorerie/collectes', [ConducteurTresorerieController::class, 'storeCollecte'])
-            ->name('tresorier.tresorerie.collectes.store');
         Route::post('/tresorier/tresorerie/paiements', [ConducteurTresorerieController::class, 'storePaiement'])
             ->name('tresorier.tresorerie.paiements.store');
+        Route::post('/tresorier/tresorerie/dons', [ConducteurTresorerieController::class, 'storeDon'])
+            ->name('tresorier.tresorerie.dons.store');
+        Route::post('/tresorier/tresorerie/rappels', [ConducteurTresorerieController::class, 'storeRappelTresorier'])
+            ->name('tresorier.tresorerie.rappels.store');
     });
 
     // Tableau de bord Pasteur
@@ -507,9 +502,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/membre-famille/finances/paiement/{paiement}/verify', [MembreFamilleFinancesController::class, 'verifyPaiement'])
             ->name('membre_famille.finances.paiement.verify');
 
-        Route::get('/membre-famille/programmes', [ProgrammesActivitesController::class, 'index'])->name('membre_famille.programmes');
-        Route::post('/membre-famille/programmes/agenda', [ProgrammesActivitesController::class, 'storeAgenda'])->name('membre_famille.programmes.agenda');
-        Route::post('/membre-famille/programmes/event', [ProgrammesActivitesController::class, 'storeEvent'])->name('membre_famille.programmes.event');
+        Route::get('/membre-famille/programmes', [MembreProgrammesController::class, 'index'])->name('membre_famille.programmes');
+        Route::post('/membre-famille/programmes/agenda', [MembreProgrammesController::class, 'storeAgenda'])->name('membre_famille.programmes.agenda');
+        Route::post('/membre-famille/programmes/event', [MembreProgrammesController::class, 'storeEvent'])->name('membre_famille.programmes.event');
     });
 
     // Route pour changer le mot de passe

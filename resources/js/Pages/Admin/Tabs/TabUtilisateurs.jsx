@@ -1395,7 +1395,9 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                                 }
                                                 options={GENDER_OPTIONS}
                                                 placeholder="Sélectionner..."
-                                                hasError={Boolean(fieldErrors.genre)}
+                                                hasError={Boolean(
+                                                    fieldErrors.genre,
+                                                )}
                                             />
                                             {fieldErrors.genre && (
                                                 <p className="text-red-500 text-xs mt-1">
@@ -1601,9 +1603,13 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                                         e.target.value,
                                                     )
                                                 }
-                                                options={MEMBER_MARITAL_STATUS_OPTIONS}
+                                                options={
+                                                    MEMBER_MARITAL_STATUS_OPTIONS
+                                                }
                                                 placeholder="Sélectionner..."
-                                                hasError={Boolean(fieldErrors.statut_marital)}
+                                                hasError={Boolean(
+                                                    fieldErrors.statut_marital,
+                                                )}
                                             />
                                         </FormField>
 
@@ -2386,7 +2392,9 @@ const TabUtilisateurs = ({
                             <Select2Single
                                 name="statut_filter"
                                 value={statutFilter}
-                                onChange={(e) => setStatutFilter(e.target.value)}
+                                onChange={(e) =>
+                                    setStatutFilter(e.target.value)
+                                }
                                 options={STATUS_FILTER_OPTIONS}
                                 placeholder="Tous statuts"
                                 allowClearOption={false}
@@ -2422,7 +2430,9 @@ const TabUtilisateurs = ({
                             <Select2Single
                                 name="classe_filter"
                                 value={classeFilter}
-                                onChange={(e) => setClasseFilter(e.target.value)}
+                                onChange={(e) =>
+                                    setClasseFilter(e.target.value)
+                                }
                                 options={classeFilterOptions}
                                 placeholder="Toutes classes"
                                 noOptionsMessage="Aucune classe trouvee"

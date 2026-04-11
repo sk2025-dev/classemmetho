@@ -860,33 +860,60 @@ const Annuaire = ({
     const popupRef = useRef(null);
     const [actesLiturgiques, setActesLiturgiques] = useState([]);
     const [classMemberPages, setClassMemberPages] = useState({});
+    const hasMountedRef = useRef(false);
+
+    const buildQueryPayload = useCallback(
+        (overrides = {}) => ({
+            search: searchTerm,
+            classe: classeFilter,
+            famille: familleFilter,
+            profession: professionFilter,
+            role: roleFilter,
+            perPage: itemsPerPage,
+            view: currentView,
+            page: 1,
+            ...overrides,
+        }),
+        [
+            searchTerm,
+            classeFilter,
+            familleFilter,
+            professionFilter,
+            roleFilter,
+            itemsPerPage,
+            currentView,
+        ],
+    );
+
+    const isSameQueryAsCurrentUrl = useCallback((payload) => {
+        const current = new URLSearchParams(window.location.search || "");
+
+        return Object.entries(payload).every(([key, value]) => {
+            const normalized =
+                value === null || value === undefined ? "" : String(value);
+            return (current.get(key) || "") === normalized;
+        });
+    }, []);
 
     const applyFilters = useCallback(() => {
-        router.get(
-            window.location.pathname,
-            {
-                search: searchTerm,
-                classe: classeFilter,
-                famille: familleFilter,
-                profession: professionFilter,
-                role: roleFilter,
-                perPage: itemsPerPage,
-                view: currentView,
-                page: 1,
-            },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }, [
-        searchTerm,
-        classeFilter,
-        familleFilter,
-        professionFilter,
-        roleFilter,
-        itemsPerPage,
-        currentView,
-    ]);
+        const payload = buildQueryPayload();
+        if (isSameQueryAsCurrentUrl(payload)) {
+            return;
+        }
+
+        router.get(window.location.pathname, payload, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        });
+    }, [buildQueryPayload, isSameQueryAsCurrentUrl]);
 
     useEffect(() => {
+        if (!hasMountedRef.current) {
+            hasMountedRef.current = true;
+            return;
+        }
+
         const handler = setTimeout(() => {
             applyFilters();
         }, 100);

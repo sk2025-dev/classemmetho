@@ -23,7 +23,7 @@ $titreDocument = match ($typeKey) {
 'grace', 'remerciement', 'felicitations' => 'Demande d\'Action de Grâce',
 'mariage' => 'Annonce de Mariage',
 'bapteme' => 'Présentation de Baptême',
-default => 'Demande d'action de grace ',
+default => "Demande d'action de grace ",
 };
 
 $objet = match ($typeKey) {

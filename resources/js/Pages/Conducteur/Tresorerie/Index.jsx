@@ -667,6 +667,7 @@ export default function ConducteurTresorerie({
     paiementsRecents = [],
     paiementsParFamille = [],
     collectesClasse = [],
+    donsClasse = [],
     cotisationsCreees = [],
     cotisationsPaiement = [],
     fimecoSuivi = [],
@@ -683,10 +684,15 @@ export default function ConducteurTresorerie({
     const [modalCollecte, setModalCollecte] = useState(false);
     const [modalRappelGlobal, setModalRappelGlobal] = useState(false);
     const [modalTresorier, setModalTresorier] = useState(false);
+    const [modalVoirCotisation, setModalVoirCotisation] = useState(null);
+    const [modalEditCotisation, setModalEditCotisation] = useState(false);
+    const [modalDeleteCotisation, setModalDeleteCotisation] = useState(null);
+    const [modalDon, setModalDon] = useState(false);
+    const [toast, setToast] = useState(null);
     const [selectedMemberTresorier, setSelectedMemberTresorier] = useState("");
+    const [motifRetraitTresorier, setMotifRetraitTresorier] = useState("");
     const [newCotisation, setNewCotisation] = useState({
         nom: "",
-        montant: "",
         periodicite: "MENSUEL",
         target_scope: "INDIVIDUELLE",
         description: "",
@@ -695,15 +701,23 @@ export default function ConducteurTresorerie({
         date_echeance: "",
         late_after_days: 2,
         target_rules: [
-            { type: "GENRE", values: ["M"], amount: "", priority: 1 },
+            { target: "GENRE", option: "M", amount: "", priority: 1 },
         ],
     });
+    const [editCotisation, setEditCotisation] = useState(null);
     const [newCollecte, setNewCollecte] = useState({
         titre: "",
         objectif_montant: "",
         date_debut: "",
         date_fin: "",
         description: "",
+    });
+    const [newDon, setNewDon] = useState({
+        montant: "",
+        type: "LIBRE",
+        mode_paiement: "MOBILE_MONEY",
+        date_don: new Date().toISOString().slice(0, 10),
+        note: "",
     });
     const [paymentForm, setPaymentForm] = useState({
         user_id: "",
@@ -718,6 +732,7 @@ export default function ConducteurTresorerie({
     const [retardsPage, setRetardsPage] = useState(1);
     const [fimecoPage, setFimecoPage] = useState(1);
     const [famillesPage, setFamillesPage] = useState(1);
+    const [donsPage, setDonsPage] = useState(1);
 
     const csrf = () => {
         const t = document.querySelector('meta[name="csrf-token"]');
@@ -738,63 +753,81 @@ export default function ConducteurTresorerie({
             let d = "";
             try {
                 const b = await r.json();
-                d = b.message ? ` (${b.message})` : "";
+                const validationDetails = b?.errors
+                    ? Object.values(b.errors).flat().filter(Boolean).join(" | ")
+                    : "";
+                if (validationDetails) {
+                    d = ` (${validationDetails})`;
+                } else {
+                    d = b.message ? ` (${b.message})` : "";
+                }
             } catch {}
             throw new Error(`Action impossible${d}`);
         }
         return r.json();
     };
 
+    const showToast = (message, type = "success") => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3000);
+    };
+
+    const reloadWithToast = (message, type = "success") => {
+        showToast(message, type);
+        setTimeout(() => window.location.reload(), 700);
+    };
+
     const handleCreateCotisation = async () => {
-        const montant = Number(newCotisation.montant || 0);
         const rules = Array.isArray(newCotisation.target_rules)
             ? newCotisation.target_rules
-                  .flatMap((rule, index) => {
-                      const type = String(rule.type || "").toUpperCase();
+                  .map((rule, index) => {
+                      const target = String(
+                          rule.target || rule.type || "",
+                      ).toUpperCase();
+                      const option = String(
+                          rule.option ||
+                              (Array.isArray(rule.values)
+                                  ? rule.values[0]
+                                  : rule.value) ||
+                              "",
+                      )
+                          .toUpperCase()
+                          .trim();
                       const amount = Number(rule.amount || 0);
                       const priority = Number(rule.priority || index + 1);
 
-                      // Compat ancienne structure + nouvelle (multi-choix)
-                      const rawValues = Array.isArray(rule.values)
-                          ? rule.values
-                          : [rule.value];
-
-                      const values = rawValues
-                          .map((v) =>
-                              String(v || "")
-                                  .toUpperCase()
-                                  .trim(),
-                          )
-                          .filter(Boolean);
-
-                      if (type === "ENFANT") {
-                          return [
-                              {
-                                  type,
-                                  value: "MEMBRE_FAMILLE",
-                                  amount,
-                                  priority,
-                              },
-                          ];
+                      if (option === "ENFANT") {
+                          return {
+                              type: "ENFANT",
+                              value: "MEMBRE_FAMILLE",
+                              amount,
+                              priority,
+                          };
                       }
 
-                      return values.map((value) => ({
-                          type,
-                          value,
+                      return {
+                          type: target,
+                          value: option,
                           amount,
                           priority,
-                      }));
+                      };
                   })
+                  .filter((rule) => rule.type && rule.value)
                   .filter((rule) => rule.amount >= 100)
             : [];
 
+        const fallbackMontant =
+            rules.length > 0
+                ? Math.max(
+                      100,
+                      Math.min(
+                          ...rules.map((rule) => Number(rule.amount || 0)),
+                      ),
+                  )
+                : 100;
+
         if (!newCotisation.nom.trim()) {
             alert("Nom de cotisation requis.");
-            return;
-        }
-
-        if (montant < 100) {
-            alert("Montant de base requis (minimum 100).");
             return;
         }
 
@@ -803,7 +836,7 @@ export default function ConducteurTresorerie({
             rules.length === 0
         ) {
             alert(
-                "Ajoute au moins une règle de ciblage (genre, emploi ou enfant).\nChaque règle doit avoir un montant >= 100.",
+                "Ajoute au moins une règle de ciblage avec un montant >= 100.",
             );
             return;
         }
@@ -823,39 +856,114 @@ export default function ConducteurTresorerie({
         try {
             await postJson("/conducteur/tresorerie/cotisations", {
                 ...newCotisation,
-                montant,
+                montant: fallbackMontant,
                 late_after_days: Number(newCotisation.late_after_days || 2),
                 target_rules: rules,
             });
-            alert("Cotisation créée.");
+            reloadWithToast("Cotisation créée avec succès.");
             setModalCotisation(false);
-            window.location.reload();
         } catch (e) {
             alert(e.message);
         } finally {
             setLoading(false);
         }
     };
-    const handleUpdateCotisation = async (c) => {
-        const v = window.prompt(
-            `Nouveau montant pour "${c.nom}"`,
-            String(c.montant || 0),
-        );
-        if (!v) return;
-        const montant = Number(v);
-        if (isNaN(montant) || montant < 100) {
-            alert("Montant invalide.");
+    const handleUpdateCotisation = async () => {
+        if (!editCotisation?.id) return;
+
+        const rules = Array.isArray(editCotisation.target_rules)
+            ? editCotisation.target_rules
+                  .map((rule, index) => {
+                      const target = String(
+                          rule.target || rule.type || "",
+                      ).toUpperCase();
+                      const option = String(
+                          rule.option ||
+                              (Array.isArray(rule.values)
+                                  ? rule.values[0]
+                                  : rule.value) ||
+                              "",
+                      )
+                          .toUpperCase()
+                          .trim();
+                      const amount = Number(rule.amount || 0);
+                      const priority = Number(rule.priority || index + 1);
+
+                      if (option === "ENFANT") {
+                          return {
+                              type: "ENFANT",
+                              value: "MEMBRE_FAMILLE",
+                              amount,
+                              priority,
+                          };
+                      }
+
+                      return {
+                          type: target,
+                          value: option,
+                          amount,
+                          priority,
+                      };
+                  })
+                  .filter((rule) => rule.type && rule.value)
+                  .filter((rule) => rule.amount >= 100)
+            : [];
+
+        const fallbackMontant =
+            rules.length > 0
+                ? Math.max(
+                      100,
+                      Math.min(
+                          ...rules.map((rule) => Number(rule.amount || 0)),
+                      ),
+                  )
+                : 100;
+
+        if (!String(editCotisation.nom || "").trim()) {
+            alert("Nom de cotisation requis.");
             return;
         }
+
+        if (rules.length === 0) {
+            alert(
+                "Ajoute au moins une règle de ciblage avec un montant >= 100.",
+            );
+            return;
+        }
+
+        if (
+            editCotisation.date_fin &&
+            editCotisation.date_debut &&
+            editCotisation.date_fin < editCotisation.date_debut
+        ) {
+            alert(
+                "La date de fin doit être postérieure ou égale à la date de début.",
+            );
+            return;
+        }
+
         setLoading(true);
         try {
             await postJson(
-                `/conducteur/tresorerie/cotisations/${c.id}`,
-                { montant },
+                `/conducteur/tresorerie/cotisations/${editCotisation.id}`,
+                {
+                    nom: editCotisation.nom,
+                    periodicite: editCotisation.periodicite,
+                    description: editCotisation.description,
+                    date_debut: editCotisation.date_debut || null,
+                    date_fin: editCotisation.date_fin || null,
+                    late_after_days: Number(
+                        editCotisation.late_after_days || 2,
+                    ),
+                    target_scope: "INDIVIDUELLE",
+                    montant: fallbackMontant,
+                    target_rules: rules,
+                },
                 "PUT",
             );
-            alert("Mise à jour OK.");
-            window.location.reload();
+            reloadWithToast("Cotisation modifiée avec succès.");
+            setModalEditCotisation(false);
+            setEditCotisation(null);
         } catch (e) {
             alert(e.message);
         } finally {
@@ -863,7 +971,6 @@ export default function ConducteurTresorerie({
         }
     };
     const handleDeleteCotisation = async (c) => {
-        if (!window.confirm(`Supprimer "${c.nom}" ?`)) return;
         setLoading(true);
         try {
             await postJson(
@@ -871,8 +978,8 @@ export default function ConducteurTresorerie({
                 {},
                 "DELETE",
             );
-            alert("Supprimée.");
-            window.location.reload();
+            reloadWithToast("Cotisation supprimée avec succès.");
+            setModalDeleteCotisation(null);
         } catch (e) {
             alert(e.message);
         } finally {
@@ -891,9 +998,8 @@ export default function ConducteurTresorerie({
                 ...newCollecte,
                 objectif_montant: objectif,
             });
-            alert("Collecte créée.");
+            reloadWithToast("Collecte créée avec succès.");
             setModalCollecte(false);
-            window.location.reload();
         } catch (e) {
             alert(e.message);
         } finally {
@@ -916,9 +1022,33 @@ export default function ConducteurTresorerie({
                     : null,
                 montant,
             });
-            alert("Paiement enregistré.");
+            reloadWithToast("Paiement enregistré avec succès.");
             setModalPaiement(null);
-            window.location.reload();
+        } catch (e) {
+            alert(e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCreateDon = async () => {
+        const montant = Number(newDon.montant || 0);
+        if (montant < 100) {
+            alert("Montant de don invalide (minimum 100).");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await postJson("/conducteur/tresorerie/dons", {
+                montant,
+                type: newDon.type,
+                mode_paiement: newDon.mode_paiement,
+                date_don: newDon.date_don,
+                note: newDon.note,
+            });
+            reloadWithToast("Don enregistré avec succès.");
+            setModalDon(false);
         } catch (e) {
             alert(e.message);
         } finally {
@@ -999,20 +1129,38 @@ export default function ConducteurTresorerie({
         });
     };
 
-    const toggleRuleValue = (index, option) => {
+    const setRuleTarget = (index, target) => {
         setNewCotisation((prev) => {
             const next = [...(prev.target_rules || [])];
             const current = next[index] || {};
-            const currentValues = Array.isArray(current.values)
-                ? current.values
-                : [];
+            next[index] = {
+                ...current,
+                target,
+                option: target === "GENRE" ? "M" : "TRAVAILLEUR",
+            };
+            return { ...prev, target_rules: next };
+        });
+    };
 
-            const exists = currentValues.includes(option);
-            const updatedValues = exists
-                ? currentValues.filter((v) => v !== option)
-                : [...currentValues, option];
+    const setEditRule = (index, key, value) => {
+        setEditCotisation((prev) => {
+            if (!prev) return prev;
+            const next = [...(prev.target_rules || [])];
+            next[index] = { ...next[index], [key]: value };
+            return { ...prev, target_rules: next };
+        });
+    };
 
-            next[index] = { ...current, values: updatedValues };
+    const setEditRuleTarget = (index, target) => {
+        setEditCotisation((prev) => {
+            if (!prev) return prev;
+            const next = [...(prev.target_rules || [])];
+            const current = next[index] || {};
+            next[index] = {
+                ...current,
+                target,
+                option: target === "GENRE" ? "M" : "TRAVAILLEUR",
+            };
             return { ...prev, target_rules: next };
         });
     };
@@ -1023,13 +1171,102 @@ export default function ConducteurTresorerie({
             target_rules: [
                 ...(prev.target_rules || []),
                 {
-                    type: "GENRE",
-                    values: ["F"],
+                    target: "GENRE",
+                    option: "F",
                     amount: "",
                     priority: (prev.target_rules?.length || 0) + 1,
                 },
             ],
         }));
+    };
+
+    const addEditRule = () => {
+        setEditCotisation((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                target_rules: [
+                    ...(prev.target_rules || []),
+                    {
+                        target: "GENRE",
+                        option: "F",
+                        amount: "",
+                        priority: (prev.target_rules?.length || 0) + 1,
+                    },
+                ],
+            };
+        });
+    };
+
+    const targetLabel = (type) => {
+        const key = String(type || "").toUpperCase();
+        if (key === "GENRE") return "Genre";
+        if (key === "EMPLOI") return "Statut d'emploi";
+        if (key === "ENFANT") return "Enfant";
+        return "-";
+    };
+
+    const optionLabel = (type, value) => {
+        const t = String(type || "").toUpperCase();
+        const v = String(value || "").toUpperCase();
+
+        if (v === "ENFANT" || v === "MEMBRE_FAMILLE") return "Enfant";
+
+        if (t === "GENRE") {
+            if (v === "M") return "Homme";
+            if (v === "F") return "Femme";
+        }
+
+        if (t === "EMPLOI") {
+            if (v === "TRAVAILLEUR") return "Travailleur";
+            if (v === "RETRAITE") return "Retraité";
+            if (v === "SANS_EMPLOI") return "Sans emploi";
+        }
+
+        return value || "-";
+    };
+
+    const rulesForDisplay = (cotisation) => {
+        const rules = Array.isArray(cotisation?.target_rules)
+            ? cotisation.target_rules
+            : [];
+
+        return rules.flatMap((rule, index) => {
+            const type = String(rule?.type || rule?.target || "").toUpperCase();
+            const amount = Number(rule?.amount || 0);
+            const priority = Number(rule?.priority || index + 1);
+            const rawValues =
+                Array.isArray(rule?.values) && rule.values.length
+                    ? rule.values
+                    : [rule?.option ?? rule?.value];
+
+            return rawValues
+                .map((v) =>
+                    String(v || "")
+                        .toUpperCase()
+                        .trim(),
+                )
+                .filter(Boolean)
+                .map((value) => ({ type, value, amount, priority }));
+        });
+    };
+
+    const cotisationTargetSummary = (cotisation) => {
+        const rules = rulesForDisplay(cotisation);
+        if (rules.length === 0) return "-";
+
+        const hasGenre = rules.some((r) => r.type === "GENRE");
+        const hasEmploi = rules.some((r) => r.type === "EMPLOI");
+        const hasEnfant = rules.some(
+            (r) => r.type === "ENFANT" || r.value === "MEMBRE_FAMILLE",
+        );
+
+        const labels = [];
+        if (hasGenre) labels.push("Genre");
+        if (hasEmploi) labels.push("Statut d'emploi");
+        if (!hasGenre && !hasEmploi && hasEnfant) labels.push("Enfant");
+
+        return labels.join(" / ");
     };
 
     const removeRule = (index) => {
@@ -1039,6 +1276,53 @@ export default function ConducteurTresorerie({
                 (_, i) => i !== index,
             ),
         }));
+    };
+
+    const removeEditRule = (index) => {
+        setEditCotisation((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                target_rules: (prev.target_rules || []).filter(
+                    (_, i) => i !== index,
+                ),
+            };
+        });
+    };
+
+    const openEditCotisation = (c) => {
+        const normalizedRules = rulesForDisplay(c).map((r, index) => {
+            const option = r.type === "ENFANT" ? "ENFANT" : r.value;
+            const target = r.type === "ENFANT" ? "GENRE" : r.type;
+            return {
+                target,
+                option,
+                amount: String(r.amount || ""),
+                priority: Number(r.priority || index + 1),
+            };
+        });
+
+        setEditCotisation({
+            id: c.id,
+            nom: c.nom || "",
+            periodicite: c.periodicite || "MENSUEL",
+            description: c.description || "",
+            date_debut: c.date_debut || new Date().toISOString().slice(0, 10),
+            date_fin: c.date_fin || "",
+            late_after_days: Number(c.late_after_days || 2),
+            target_rules:
+                normalizedRules.length > 0
+                    ? normalizedRules
+                    : [
+                          {
+                              target: "GENRE",
+                              option: "M",
+                              amount: "",
+                              priority: 1,
+                          },
+                      ],
+        });
+        setModalEditCotisation(true);
     };
     const handleEnvoyerRappel = async (famille) => {
         const msg =
@@ -1050,7 +1334,7 @@ export default function ConducteurTresorerie({
                 famille_id: famille.id,
                 message: msg,
             });
-            alert(`Rappel envoyé à ${famille.nom}.`);
+            showToast(`Rappel envoyé à ${famille.nom}.`);
             setModalRappel(null);
             setRappelMsg("");
         } catch (e) {
@@ -1077,11 +1361,11 @@ export default function ConducteurTresorerie({
                 "/conducteur/tresorerie/assign-tresorier",
                 { user_id: selectedMemberTresorier },
             );
-            alert(response?.message || "Tresorier assigne avec succes!");
+            reloadWithToast(
+                response?.message || "Trésorier assigné avec succès.",
+            );
             setModalTresorier(false);
             setSelectedMemberTresorier("");
-            // Recharger la page pour voir les changements
-            window.location.reload();
         } catch (error) {
             alert(
                 "Erreur lors de l'assignation du tresorier: " + error.message,
@@ -1097,24 +1381,27 @@ export default function ConducteurTresorerie({
             return;
         }
 
-        const confirmRemove = window.confirm(
-            "Retirer la fonction de tresorier a ce membre ?",
-        );
-        if (!confirmRemove) return;
+        if (!String(motifRetraitTresorier || "").trim()) {
+            alert("Veuillez saisir le motif de retrait du tresorier.");
+            return;
+        }
 
         try {
             setLoading(true);
             const response = await postJson(
                 "/conducteur/tresorerie/unassign-tresorier",
-                { user_id: tresorierClasse.id },
+                {
+                    user_id: tresorierClasse.id,
+                    motif_retrait: motifRetraitTresorier,
+                },
             );
-            alert(
+            reloadWithToast(
                 response?.message ||
-                    "Fonction de tresorier retiree avec succes.",
+                    "Fonction de trésorier retirée avec succès.",
             );
             setModalTresorier(false);
             setSelectedMemberTresorier("");
-            window.location.reload();
+            setMotifRetraitTresorier("");
         } catch (error) {
             alert("Erreur lors du retrait du tresorier: " + error.message);
         } finally {
@@ -1151,6 +1438,8 @@ export default function ConducteurTresorerie({
     const retardsRows = paginate(famillesEnRetard, retardsPage, 10);
     const fimecoRows = paginate(fimecoSuivi, fimecoPage, 20);
     const famillesRows = paginate(famillesSuivi, famillesPage, 10);
+    const donsTotalPages = Math.max(1, Math.ceil(donsClasse.length / 10));
+    const donsRows = paginate(donsClasse, donsPage, 10);
 
     const latestByFamily = useMemo(() => {
         const map = new Map();
@@ -1176,7 +1465,7 @@ export default function ConducteurTresorerie({
         },
         { id: "familles", emoji: "👨‍👩‍👧‍👦", label: "Familles" },
         { id: "cotisations", emoji: "💰", label: "Cotisations" },
-        { id: "collectes", emoji: "🎯", label: "Collectes" },
+        { id: "dons", emoji: "🎁", label: "Dons" },
         { id: "fimeco", emoji: "📌", label: "FIMECO" },
     ];
 
@@ -1188,6 +1477,28 @@ export default function ConducteurTresorerie({
                 fontFamily: "'Outfit',system-ui,sans-serif",
             }}
         >
+            {toast && (
+                <div
+                    style={{
+                        position: "fixed",
+                        top: 18,
+                        right: 18,
+                        zIndex: 2000,
+                        background:
+                            toast.type === "success"
+                                ? "linear-gradient(135deg,#14532D,#15803D)"
+                                : "linear-gradient(135deg,#7F1D1D,#B91C1C)",
+                        color: "#fff",
+                        padding: "10px 14px",
+                        borderRadius: 10,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+                    }}
+                >
+                    {toast.message}
+                </div>
+            )}
             <Head title="Trésorerie Conducteur" />
 
             {/* HEADER */}
@@ -1293,8 +1604,7 @@ export default function ConducteurTresorerie({
                                     color: "rgba(255,255,255,0.65)",
                                 }}
                             >
-                                Suivi financier · Cotisations · Collectes ·
-                                FIMECO
+                                Suivi financier · Cotisations · Dons · FIMECO
                             </p>
                         </div>
                     </div>
@@ -1733,9 +2043,7 @@ export default function ConducteurTresorerie({
                                         <OutlineBtn
                                             color="purple"
                                             sm
-                                            onClick={() =>
-                                                setActiveTab("collectes")
-                                            }
+                                            onClick={() => setActiveTab("dons")}
                                         >
                                             Voir tout
                                         </OutlineBtn>
@@ -2206,33 +2514,20 @@ export default function ConducteurTresorerie({
                         <Table
                             heads={[
                                 { label: "Nom" },
-                                { label: "Montant", right: true },
                                 { label: "Périodicité" },
-                                { label: "Portée" },
+                                { label: "Début" },
+                                { label: "Fin" },
+                                { label: "Cible" },
                                 { label: "Statut" },
                                 { label: "Actions", center: true },
                             ]}
                             rows={cotisationsCreees.map((c, i) => (
                                 <Tr key={c.id || i}>
                                     <Td bold>{c.nom}</Td>
-                                    <Td right>
-                                        {Number(
-                                            c.montant || 0,
-                                        ).toLocaleString()}{" "}
-                                        F
-                                    </Td>
                                     <Td>{c.periodicite}</Td>
-                                    <Td>
-                                        <Pill
-                                            color={
-                                                c.target_scope === "FAMILLE"
-                                                    ? "teal"
-                                                    : "blue"
-                                            }
-                                        >
-                                            {c.target_scope}
-                                        </Pill>
-                                    </Td>
+                                    <Td>{c.date_debut || "-"}</Td>
+                                    <Td>{c.date_fin || "-"}</Td>
+                                    <Td>{cotisationTargetSummary(c)}</Td>
                                     <Td>
                                         <Pill
                                             color={
@@ -2255,9 +2550,7 @@ export default function ConducteurTresorerie({
                                             >
                                                 <button
                                                     onClick={() =>
-                                                        handleUpdateCotisation(
-                                                            c,
-                                                        )
+                                                        openEditCotisation(c)
                                                     }
                                                     style={{
                                                         background:
@@ -2275,7 +2568,7 @@ export default function ConducteurTresorerie({
                                                 </button>
                                                 <button
                                                     onClick={() =>
-                                                        handleDeleteCotisation(
+                                                        setModalDeleteCotisation(
                                                             c,
                                                         )
                                                     }
@@ -2292,6 +2585,26 @@ export default function ConducteurTresorerie({
                                                     }}
                                                 >
                                                     Supprimer
+                                                </button>
+                                                <button
+                                                    onClick={() =>
+                                                        setModalVoirCotisation(
+                                                            c,
+                                                        )
+                                                    }
+                                                    style={{
+                                                        background:
+                                                            "linear-gradient(135deg,#DBEAFE,#BFDBFE)",
+                                                        color: "#1E3A8A",
+                                                        border: "none",
+                                                        borderRadius: 7,
+                                                        padding: "4px 10px",
+                                                        fontSize: 10,
+                                                        fontWeight: 700,
+                                                        cursor: "pointer",
+                                                    }}
+                                                >
+                                                    Voir
                                                 </button>
                                             </div>
                                         ) : (
@@ -2312,8 +2625,8 @@ export default function ConducteurTresorerie({
                     </Card>
                 )}
 
-                {/* COLLECTES */}
-                {activeTab === "collectes" && (
+                {/* DONS */}
+                {activeTab === "dons" && (
                     <Card>
                         <SecTitle
                             accent="purple"
@@ -2322,64 +2635,51 @@ export default function ConducteurTresorerie({
                                     color="purple"
                                     icon={Plus}
                                     sm
-                                    onClick={() => setModalCollecte(true)}
+                                    onClick={() => setModalDon(true)}
                                 >
-                                    Nouvelle collecte
+                                    Faire un don
                                 </GradBtn>
                             }
                         >
-                            Collectes de la classe
+                            Dons de la classe
                         </SecTitle>
                         <Table
                             heads={[
-                                { label: "Titre" },
-                                { label: "Objectif", right: true },
-                                { label: "Collecté", right: true },
-                                { label: "Progression", center: true },
-                                { label: "Statut", center: true },
+                                { label: "Donateur" },
+                                { label: "Famille" },
+                                { label: "Type", center: true },
+                                { label: "Montant", right: true },
+                                { label: "Mode", center: true },
+                                { label: "Date", right: true },
                             ]}
-                            rows={collectesClasse.map((c, i) => {
-                                const pct = Math.min(100, c.progression || 0);
-                                return (
-                                    <Tr key={c.id || i}>
-                                        <Td bold>{c.nom}</Td>
-                                        <Td right>{fmt(c.objectif)}</Td>
-                                        <Td right bold color="green">
-                                            {fmt(c.collecte)}
-                                        </Td>
-                                        <Td center>
-                                            <div
-                                                style={{
-                                                    width: 90,
-                                                    margin: "0 auto",
-                                                }}
-                                            >
-                                                <ProgressBar
-                                                    value={pct}
-                                                    color="purple"
-                                                    showPct={false}
-                                                />
-                                                <p
-                                                    style={{
-                                                        fontSize: 9,
-                                                        textAlign: "center",
-                                                        color: "#888780",
-                                                        marginTop: 2,
-                                                    }}
-                                                >
-                                                    {pct}%
-                                                </p>
-                                            </div>
-                                        </Td>
-                                        <Td center>
-                                            <Pill color="purple">
-                                                {c.statut}
-                                            </Pill>
-                                        </Td>
-                                    </Tr>
-                                );
-                            })}
-                            empty="Aucune collecte créée."
+                            rows={donsRows.map((d, i) => (
+                                <Tr key={d.id || i}>
+                                    <Td bold>{d.donateur || "-"}</Td>
+                                    <Td>{d.famille || "-"}</Td>
+                                    <Td center>
+                                        <Pill
+                                            color={
+                                                d.type === "CAMPAGNE"
+                                                    ? "purple"
+                                                    : "teal"
+                                            }
+                                        >
+                                            {d.type}
+                                        </Pill>
+                                    </Td>
+                                    <Td right bold color="green">
+                                        {fmt(d.montant)}
+                                    </Td>
+                                    <Td center>{modePill(d.mode)}</Td>
+                                    <Td right>{d.date || "-"}</Td>
+                                </Tr>
+                            ))}
+                            empty="Aucun don enregistré dans votre classe."
+                        />
+                        <Pagination
+                            page={donsPage}
+                            total={donsTotalPages}
+                            onChange={setDonsPage}
                         />
                     </Card>
                 )}
@@ -2707,6 +3007,54 @@ export default function ConducteurTresorerie({
                 </div>
             </Modal>
 
+            <Modal
+                open={!!modalDeleteCotisation}
+                onClose={() => setModalDeleteCotisation(null)}
+                title="Confirmer la suppression"
+                width={460}
+            >
+                <div
+                    style={{
+                        background: "#FCEBEB",
+                        border: "1px solid #E24B4A40",
+                        borderRadius: 10,
+                        padding: "12px 14px",
+                        marginBottom: 16,
+                        fontSize: 12,
+                        color: "#791F1F",
+                    }}
+                >
+                    Cette action va supprimer la cotisation
+                    <strong> {modalDeleteCotisation?.nom || ""}</strong>. Cette
+                    opération est irréversible.
+                </div>
+                <div
+                    style={{
+                        display: "flex",
+                        gap: 10,
+                        justifyContent: "flex-end",
+                    }}
+                >
+                    <OutlineBtn
+                        color="gray"
+                        onClick={() => setModalDeleteCotisation(null)}
+                    >
+                        Annuler
+                    </OutlineBtn>
+                    <GradBtn
+                        color="red"
+                        icon={X}
+                        disabled={loading}
+                        loading={loading}
+                        onClick={() =>
+                            handleDeleteCotisation(modalDeleteCotisation)
+                        }
+                    >
+                        Supprimer
+                    </GradBtn>
+                </div>
+            </Modal>
+
             {/* PANNEAU RAPPEL */}
             <Modal
                 open={!!modalRappel}
@@ -2897,18 +3245,21 @@ export default function ConducteurTresorerie({
                         placeholder="Ex: FIMECO, Cotisation mensuelle…"
                         span2
                     />
-                    <FInput
-                        label="Montant de base (F CFA)"
-                        type="number"
-                        value={newCotisation.montant}
+                    <FSelect
+                        label="Périodicité"
+                        value={newCotisation.periodicite}
                         onChange={(e) =>
                             setNewCotisation((p) => ({
                                 ...p,
-                                montant: e.target.value,
+                                periodicite: e.target.value,
                             }))
                         }
-                        placeholder="Ex: 10000"
-                    />
+                    >
+                        <option value="MENSUEL">Mensuel</option>
+                        <option value="TRIMESTRIEL">Trimestriel</option>
+                        <option value="ANNUEL">Annuel</option>
+                        <option value="UNIQUE">Unique</option>
+                    </FSelect>
                     <FInput
                         label="Date de début"
                         type="date"
@@ -2993,204 +3344,52 @@ export default function ConducteurTresorerie({
                             }}
                         >
                             <select
-                                value={rule.type}
+                                value={rule.target || rule.type || "GENRE"}
                                 onChange={(e) => {
-                                    const nextType = e.target.value;
-                                    setRule(idx, "type", nextType);
-                                    if (nextType === "GENRE") {
-                                        setRule(idx, "values", ["M"]);
-                                    } else if (nextType === "EMPLOI") {
-                                        setRule(idx, "values", ["TRAVAILLEUR"]);
-                                    } else {
-                                        setRule(idx, "values", [
-                                            "MEMBRE_FAMILLE",
-                                        ]);
-                                    }
+                                    setRuleTarget(idx, e.target.value);
                                 }}
                                 style={{ ...inputStyle }}
                             >
-                                <option value="GENRE">Genre</option>
-                                <option value="EMPLOI">Statut d'emploi</option>
-                                <option value="ENFANT">
-                                    Enfant (membre_famille)
+                                <option value="GENRE">Ciblage: Genre</option>
+                                <option value="EMPLOI">
+                                    Ciblage: Statut d'emploi
                                 </option>
                             </select>
-                            <div
-                                style={{
-                                    ...inputStyle,
-                                    display: "flex",
-                                    flexWrap: "wrap",
-                                    gap: 8,
-                                    minHeight: 40,
-                                    alignItems: "center",
-                                }}
+                            <select
+                                value={
+                                    rule.option ||
+                                    (Array.isArray(rule.values)
+                                        ? rule.values[0]
+                                        : rule.value) ||
+                                    ""
+                                }
+                                onChange={(e) =>
+                                    setRule(idx, "option", e.target.value)
+                                }
+                                style={{ ...inputStyle }}
                             >
-                                {rule.type === "GENRE" && (
+                                {(rule.target || rule.type || "GENRE") ===
+                                "GENRE" ? (
                                     <>
-                                        <label
-                                            style={{
-                                                display: "flex",
-                                                gap: 5,
-                                                alignItems: "center",
-                                            }}
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={
-                                                    Array.isArray(
-                                                        rule.values,
-                                                    ) &&
-                                                    rule.values.includes("M")
-                                                }
-                                                onChange={() =>
-                                                    toggleRuleValue(idx, "M")
-                                                }
-                                            />
-                                            Homme
-                                        </label>
-                                        <label
-                                            style={{
-                                                display: "flex",
-                                                gap: 5,
-                                                alignItems: "center",
-                                            }}
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={
-                                                    Array.isArray(
-                                                        rule.values,
-                                                    ) &&
-                                                    rule.values.includes("F")
-                                                }
-                                                onChange={() =>
-                                                    toggleRuleValue(idx, "F")
-                                                }
-                                            />
-                                            Femme
-                                        </label>
+                                        <option value="M">Homme</option>
+                                        <option value="F">Femme</option>
+                                        <option value="ENFANT">Enfant</option>
                                     </>
-                                )}
-                                {rule.type === "EMPLOI" && (
+                                ) : (
                                     <>
-                                        <label
-                                            style={{
-                                                display: "flex",
-                                                gap: 5,
-                                                alignItems: "center",
-                                            }}
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={
-                                                    Array.isArray(
-                                                        rule.values,
-                                                    ) &&
-                                                    rule.values.includes(
-                                                        "TRAVAILLEUR",
-                                                    )
-                                                }
-                                                onChange={() =>
-                                                    toggleRuleValue(
-                                                        idx,
-                                                        "TRAVAILLEUR",
-                                                    )
-                                                }
-                                            />
+                                        <option value="TRAVAILLEUR">
                                             Travailleur
-                                        </label>
-                                        <label
-                                            style={{
-                                                display: "flex",
-                                                gap: 5,
-                                                alignItems: "center",
-                                            }}
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={
-                                                    Array.isArray(
-                                                        rule.values,
-                                                    ) &&
-                                                    rule.values.includes(
-                                                        "RETRAITE",
-                                                    )
-                                                }
-                                                onChange={() =>
-                                                    toggleRuleValue(
-                                                        idx,
-                                                        "RETRAITE",
-                                                    )
-                                                }
-                                            />
+                                        </option>
+                                        <option value="RETRAITE">
                                             Retraité
-                                        </label>
-                                        <label
-                                            style={{
-                                                display: "flex",
-                                                gap: 5,
-                                                alignItems: "center",
-                                            }}
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={
-                                                    Array.isArray(
-                                                        rule.values,
-                                                    ) &&
-                                                    rule.values.includes(
-                                                        "ETUDIANT",
-                                                    )
-                                                }
-                                                onChange={() =>
-                                                    toggleRuleValue(
-                                                        idx,
-                                                        "ETUDIANT",
-                                                    )
-                                                }
-                                            />
-                                            Étudiant
-                                        </label>
-                                        <label
-                                            style={{
-                                                display: "flex",
-                                                gap: 5,
-                                                alignItems: "center",
-                                            }}
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={
-                                                    Array.isArray(
-                                                        rule.values,
-                                                    ) &&
-                                                    rule.values.includes(
-                                                        "SANS_EMPLOI",
-                                                    )
-                                                }
-                                                onChange={() =>
-                                                    toggleRuleValue(
-                                                        idx,
-                                                        "SANS_EMPLOI",
-                                                    )
-                                                }
-                                            />
+                                        </option>
+                                        <option value="SANS_EMPLOI">
                                             Sans emploi
-                                        </label>
+                                        </option>
+                                        <option value="ENFANT">Enfant</option>
                                     </>
                                 )}
-                                {rule.type === "ENFANT" && (
-                                    <span
-                                        style={{
-                                            fontSize: 12,
-                                            color: "#374151",
-                                        }}
-                                    >
-                                        Membre famille (appliqué
-                                        automatiquement)
-                                    </span>
-                                )}
-                            </div>
+                            </select>
                             <input
                                 type="number"
                                 min="100"
@@ -3244,6 +3443,532 @@ export default function ConducteurTresorerie({
                         icon={Plus}
                     >
                         Créer la règle
+                    </GradBtn>
+                </div>
+            </Modal>
+
+            <Modal
+                open={!!modalVoirCotisation}
+                onClose={() => setModalVoirCotisation(null)}
+                title={`Récapitulatif cotisation — ${modalVoirCotisation?.nom || ""}`}
+            >
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: 10,
+                        marginBottom: 16,
+                    }}
+                >
+                    <div style={{ fontSize: 12, color: "#4B5563" }}>
+                        <strong>Nom:</strong> {modalVoirCotisation?.nom || "-"}
+                    </div>
+                    <div style={{ fontSize: 12, color: "#4B5563" }}>
+                        <strong>Périodicité:</strong>{" "}
+                        {modalVoirCotisation?.periodicite || "-"}
+                    </div>
+                    <div style={{ fontSize: 12, color: "#4B5563" }}>
+                        <strong>Date début:</strong>{" "}
+                        {modalVoirCotisation?.date_debut || "-"}
+                    </div>
+                    <div style={{ fontSize: 12, color: "#4B5563" }}>
+                        <strong>Date fin:</strong>{" "}
+                        {modalVoirCotisation?.date_fin || "-"}
+                    </div>
+                    <div style={{ fontSize: 12, color: "#4B5563" }}>
+                        <strong>Retard après:</strong> J+
+                        {Number(modalVoirCotisation?.late_after_days || 2)}
+                    </div>
+                    <div style={{ fontSize: 12, color: "#4B5563" }}>
+                        <strong>Cible:</strong>{" "}
+                        {cotisationTargetSummary(modalVoirCotisation)}
+                    </div>
+                </div>
+
+                {modalVoirCotisation?.description ? (
+                    <div
+                        style={{
+                            background: "#F9F8F5",
+                            border: "1px solid #E8E6DF",
+                            borderRadius: 10,
+                            padding: "10px 12px",
+                            fontSize: 12,
+                            color: "#44403C",
+                            marginBottom: 14,
+                        }}
+                    >
+                        <strong>Description:</strong>{" "}
+                        {modalVoirCotisation.description}
+                    </div>
+                ) : null}
+
+                <div
+                    style={{
+                        border: "1px solid #E8E6DF",
+                        borderRadius: 10,
+                        overflow: "hidden",
+                    }}
+                >
+                    <table
+                        style={{
+                            width: "100%",
+                            borderCollapse: "collapse",
+                            fontSize: 12,
+                        }}
+                    >
+                        <thead>
+                            <tr style={{ background: "#F3F4F6" }}>
+                                <th
+                                    style={{
+                                        padding: "10px 12px",
+                                        textAlign: "left",
+                                    }}
+                                >
+                                    Ciblage
+                                </th>
+                                <th
+                                    style={{
+                                        padding: "10px 12px",
+                                        textAlign: "left",
+                                    }}
+                                >
+                                    Option
+                                </th>
+                                <th
+                                    style={{
+                                        padding: "10px 12px",
+                                        textAlign: "right",
+                                    }}
+                                >
+                                    Montant
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rulesForDisplay(modalVoirCotisation).length ===
+                            0 ? (
+                                <tr>
+                                    <td
+                                        colSpan={3}
+                                        style={{
+                                            padding: "12px",
+                                            textAlign: "center",
+                                            color: "#9CA3AF",
+                                        }}
+                                    >
+                                        Aucune règle de ciblage.
+                                    </td>
+                                </tr>
+                            ) : (
+                                rulesForDisplay(modalVoirCotisation).map(
+                                    (rule, idx) => (
+                                        <tr
+                                            key={`${rule.type}-${rule.value}-${idx}`}
+                                        >
+                                            <td
+                                                style={{
+                                                    padding: "10px 12px",
+                                                    borderTop:
+                                                        "1px solid #F1EFE8",
+                                                }}
+                                            >
+                                                {targetLabel(rule.type)}
+                                            </td>
+                                            <td
+                                                style={{
+                                                    padding: "10px 12px",
+                                                    borderTop:
+                                                        "1px solid #F1EFE8",
+                                                }}
+                                            >
+                                                {optionLabel(
+                                                    rule.type,
+                                                    rule.value,
+                                                )}
+                                            </td>
+                                            <td
+                                                style={{
+                                                    padding: "10px 12px",
+                                                    borderTop:
+                                                        "1px solid #F1EFE8",
+                                                    textAlign: "right",
+                                                    fontWeight: 700,
+                                                }}
+                                            >
+                                                {fmt(rule.amount)}
+                                            </td>
+                                        </tr>
+                                    ),
+                                )
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div
+                    style={{
+                        display: "flex",
+                        justifyContent: "flex-end",
+                        marginTop: 14,
+                    }}
+                >
+                    <OutlineBtn
+                        color="gray"
+                        onClick={() => setModalVoirCotisation(null)}
+                    >
+                        Fermer
+                    </OutlineBtn>
+                </div>
+            </Modal>
+
+            <Modal
+                open={modalEditCotisation}
+                onClose={() => {
+                    setModalEditCotisation(false);
+                    setEditCotisation(null);
+                }}
+                title="Modifier la cotisation"
+            >
+                {editCotisation && (
+                    <>
+                        <FormGrid cols={2}>
+                            <FInput
+                                label="Nom de la cotisation"
+                                value={editCotisation.nom}
+                                onChange={(e) =>
+                                    setEditCotisation((p) => ({
+                                        ...p,
+                                        nom: e.target.value,
+                                    }))
+                                }
+                                span2
+                            />
+                            <FSelect
+                                label="Périodicité"
+                                value={editCotisation.periodicite}
+                                onChange={(e) =>
+                                    setEditCotisation((p) => ({
+                                        ...p,
+                                        periodicite: e.target.value,
+                                    }))
+                                }
+                            >
+                                <option value="MENSUEL">Mensuel</option>
+                                <option value="TRIMESTRIEL">Trimestriel</option>
+                                <option value="ANNUEL">Annuel</option>
+                                <option value="UNIQUE">Unique</option>
+                            </FSelect>
+                            <FInput
+                                label="Date de début"
+                                type="date"
+                                value={editCotisation.date_debut}
+                                onChange={(e) =>
+                                    setEditCotisation((p) => ({
+                                        ...p,
+                                        date_debut: e.target.value,
+                                    }))
+                                }
+                            />
+                            <FInput
+                                label="Date de fin"
+                                type="date"
+                                value={editCotisation.date_fin}
+                                onChange={(e) =>
+                                    setEditCotisation((p) => ({
+                                        ...p,
+                                        date_fin: e.target.value,
+                                    }))
+                                }
+                            />
+                            <FInput
+                                label="Retard après (jours)"
+                                type="number"
+                                value={editCotisation.late_after_days}
+                                onChange={(e) =>
+                                    setEditCotisation((p) => ({
+                                        ...p,
+                                        late_after_days: e.target.value,
+                                    }))
+                                }
+                                placeholder="2"
+                            />
+                            <FTextarea
+                                label="Description (optionnel)"
+                                value={editCotisation.description}
+                                onChange={(e) =>
+                                    setEditCotisation((p) => ({
+                                        ...p,
+                                        description: e.target.value,
+                                    }))
+                                }
+                                rows={3}
+                                span2
+                            />
+                        </FormGrid>
+
+                        <div
+                            style={{
+                                background: "#F9F8F5",
+                                border: "1px solid #E8E6DF",
+                                borderRadius: 12,
+                                padding: "12px 14px",
+                                marginBottom: 16,
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    marginBottom: 10,
+                                }}
+                            >
+                                <strong
+                                    style={{
+                                        fontSize: 13,
+                                        color: "#2C2C2A",
+                                    }}
+                                >
+                                    Ciblage et montants
+                                </strong>
+                                <OutlineBtn
+                                    color="amber"
+                                    sm
+                                    onClick={addEditRule}
+                                >
+                                    Ajouter une règle
+                                </OutlineBtn>
+                            </div>
+                            {(editCotisation.target_rules || []).map(
+                                (rule, idx) => (
+                                    <div
+                                        key={idx}
+                                        style={{
+                                            display: "grid",
+                                            gridTemplateColumns:
+                                                "1fr 1fr 1fr auto",
+                                            gap: 8,
+                                            marginBottom: 8,
+                                            alignItems: "center",
+                                        }}
+                                    >
+                                        <select
+                                            value={
+                                                rule.target ||
+                                                rule.type ||
+                                                "GENRE"
+                                            }
+                                            onChange={(e) => {
+                                                setEditRuleTarget(
+                                                    idx,
+                                                    e.target.value,
+                                                );
+                                            }}
+                                            style={{ ...inputStyle }}
+                                        >
+                                            <option value="GENRE">
+                                                Ciblage: Genre
+                                            </option>
+                                            <option value="EMPLOI">
+                                                Ciblage: Statut d'emploi
+                                            </option>
+                                        </select>
+                                        <select
+                                            value={
+                                                rule.option ||
+                                                (Array.isArray(rule.values)
+                                                    ? rule.values[0]
+                                                    : rule.value) ||
+                                                ""
+                                            }
+                                            onChange={(e) =>
+                                                setEditRule(
+                                                    idx,
+                                                    "option",
+                                                    e.target.value,
+                                                )
+                                            }
+                                            style={{ ...inputStyle }}
+                                        >
+                                            {(rule.target ||
+                                                rule.type ||
+                                                "GENRE") === "GENRE" ? (
+                                                <>
+                                                    <option value="M">
+                                                        Homme
+                                                    </option>
+                                                    <option value="F">
+                                                        Femme
+                                                    </option>
+                                                    <option value="ENFANT">
+                                                        Enfant
+                                                    </option>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <option value="TRAVAILLEUR">
+                                                        Travailleur
+                                                    </option>
+                                                    <option value="RETRAITE">
+                                                        Retraité
+                                                    </option>
+                                                    <option value="SANS_EMPLOI">
+                                                        Sans emploi
+                                                    </option>
+                                                    <option value="ENFANT">
+                                                        Enfant
+                                                    </option>
+                                                </>
+                                            )}
+                                        </select>
+                                        <input
+                                            type="number"
+                                            min="100"
+                                            value={rule.amount}
+                                            onChange={(e) =>
+                                                setEditRule(
+                                                    idx,
+                                                    "amount",
+                                                    e.target.value,
+                                                )
+                                            }
+                                            placeholder="Montant"
+                                            style={{ ...inputStyle }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => removeEditRule(idx)}
+                                            style={{
+                                                border: "none",
+                                                background: "#FCEBEB",
+                                                color: "#9F1239",
+                                                borderRadius: 8,
+                                                padding: "8px 10px",
+                                                cursor: "pointer",
+                                                fontWeight: 700,
+                                            }}
+                                        >
+                                            Retirer
+                                        </button>
+                                    </div>
+                                ),
+                            )}
+                        </div>
+
+                        <div
+                            style={{
+                                display: "flex",
+                                gap: 10,
+                                justifyContent: "flex-end",
+                            }}
+                        >
+                            <OutlineBtn
+                                color="gray"
+                                onClick={() => {
+                                    setModalEditCotisation(false);
+                                    setEditCotisation(null);
+                                }}
+                            >
+                                Annuler
+                            </OutlineBtn>
+                            <GradBtn
+                                onClick={handleUpdateCotisation}
+                                disabled={loading}
+                                loading={loading}
+                                color="amber"
+                                icon={Check}
+                            >
+                                Enregistrer
+                            </GradBtn>
+                        </div>
+                    </>
+                )}
+            </Modal>
+
+            <Modal
+                open={modalDon}
+                onClose={() => setModalDon(false)}
+                title="Faire un don"
+            >
+                <FormGrid cols={2}>
+                    <FSelect
+                        label="Type de don"
+                        value={newDon.type}
+                        onChange={(e) =>
+                            setNewDon((p) => ({
+                                ...p,
+                                type: e.target.value,
+                            }))
+                        }
+                    >
+                        <option value="LIBRE">Libre</option>
+                        <option value="CAMPAGNE">Campagne</option>
+                    </FSelect>
+                    <div />
+                    <FInput
+                        label="Montant (F CFA)"
+                        type="number"
+                        value={newDon.montant}
+                        onChange={(e) =>
+                            setNewDon((p) => ({
+                                ...p,
+                                montant: e.target.value,
+                            }))
+                        }
+                        placeholder="Ex: 5000"
+                    />
+                    <FSelect
+                        label="Mode de paiement"
+                        value={newDon.mode_paiement}
+                        onChange={(e) =>
+                            setNewDon((p) => ({
+                                ...p,
+                                mode_paiement: e.target.value,
+                            }))
+                        }
+                    >
+                        <option value="MOBILE_MONEY">Mobile Money</option>
+                        <option value="ESPECES">Espèces</option>
+                        <option value="VIREMENT">Virement</option>
+                    </FSelect>
+                    <FInput
+                        label="Date du don"
+                        type="date"
+                        value={newDon.date_don}
+                        onChange={(e) =>
+                            setNewDon((p) => ({
+                                ...p,
+                                date_don: e.target.value,
+                            }))
+                        }
+                    />
+                    <FInput
+                        label="Note"
+                        value={newDon.note}
+                        onChange={(e) =>
+                            setNewDon((p) => ({ ...p, note: e.target.value }))
+                        }
+                        placeholder="Observation..."
+                    />
+                </FormGrid>
+                <div
+                    style={{
+                        display: "flex",
+                        gap: 10,
+                        justifyContent: "flex-end",
+                    }}
+                >
+                    <OutlineBtn color="gray" onClick={() => setModalDon(false)}>
+                        Annuler
+                    </OutlineBtn>
+                    <GradBtn
+                        onClick={handleCreateDon}
+                        disabled={loading}
+                        loading={loading}
+                        color="purple"
+                        icon={Check}
+                    >
+                        Enregistrer le don
                     </GradBtn>
                 </div>
             </Modal>
@@ -3344,7 +4069,10 @@ export default function ConducteurTresorerie({
             {/* PANNEAU ASSIGNER TRESORIER */}
             <Modal
                 open={modalTresorier}
-                onClose={() => setModalTresorier(false)}
+                onClose={() => {
+                    setModalTresorier(false);
+                    setMotifRetraitTresorier("");
+                }}
                 title="Assigner un trésorier"
             >
                 <div
@@ -3408,12 +4136,23 @@ export default function ConducteurTresorerie({
                         fontSize: 11,
                         color: "#888780",
                         marginTop: 6,
-                        marginBottom: 20,
+                        marginBottom: 10,
                     }}
                 >
                     Seuls les membres actifs de votre classe peuvent être
                     assignés comme trésorier.
                 </p>
+                {tresorierClasse ? (
+                    <FTextarea
+                        label="Motif de retrait du trésorier"
+                        value={motifRetraitTresorier}
+                        onChange={(e) =>
+                            setMotifRetraitTresorier(e.target.value)
+                        }
+                        placeholder="Saisir le motif avant de retirer le trésorier..."
+                        rows={3}
+                    />
+                ) : null}
                 <div
                     style={{
                         display: "flex",
