@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Services\AuthenticationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -24,7 +23,7 @@ class LoginController extends Controller
 
     /**
      * Authentifier l'utilisateur et le connecter
-     * Accepte: email OU identifier
+     * Accepte: code membre
      */
     public function login(Request $request)
     {
@@ -35,36 +34,35 @@ class LoginController extends Controller
 
         // Validation
         $request->validate([
-            'identifiant' => ['required', 'string'],
+            'code_membre' => ['required', 'string'],
             'password' => ['required', 'string'],
             'redirect_to' => ['nullable', 'string', 'max:2048'],
         ], [
-            'identifiant.required' => 'Veuillez entrer votre identifiant ou email.',
+            'code_membre.required' => 'Veuillez entrer votre code membre.',
             'password.required' => 'Le mot de passe est requis.',
         ]);
 
-        $login = $request->input('identifiant');
+        $login = trim((string) $request->input('code_membre'));
         $password = $request->input('password');
 
-        // Chercher par identifier OU email (incluant les soft-deleted)
+        // Chercher par code membre (incluant les soft-deleted)
         $user = User::withTrashed()
-            ->where('identifier', $login)
-            ->orWhere('email', $login)
+            ->where('code_membre', $login)
             ->first();
 
-        // Message générique pour éviter l'énumération d'utilisateurs
-        $genericErrorMessage = 'Identifiant ou mot de passe incorrect.';
+        // Message generique pour eviter l'enumeration d'utilisateurs
+        $genericErrorMessage = 'Code membre ou mot de passe incorrect.';
 
         // Utilisateur non trouvé
         if (!$user) {
-            Log::warning('Login attempt with non-existent identifier/email', ['login' => $login]);
+            Log::warning('Login attempt with non-existent member code', ['code_membre' => $login]);
 
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json(['message' => $genericErrorMessage], 422);
             }
 
             throw ValidationException::withMessages([
-                'identifiant' => $genericErrorMessage,
+                'code_membre' => $genericErrorMessage,
             ]);
         }
 
@@ -77,7 +75,7 @@ class LoginController extends Controller
             }
 
             throw ValidationException::withMessages([
-                'identifiant' => $genericErrorMessage,
+                'code_membre' => $genericErrorMessage,
             ]);
         }
 
@@ -103,7 +101,7 @@ class LoginController extends Controller
             }
 
             throw ValidationException::withMessages([
-                'identifiant' => $genericErrorMessage,
+                'code_membre' => $genericErrorMessage,
             ]);
         }
 
@@ -116,6 +114,7 @@ class LoginController extends Controller
         // Logger la connexion
         Log::info('User logged in successfully', [
             'user_id' => $user->id,
+            'code_membre' => $user->code_membre,
             'identifier' => $user->identifier,
             'email' => $user->email,
         ]);
@@ -155,6 +154,7 @@ class LoginController extends Controller
                     'prenom' => $user->prenom,
                     'nom' => $user->nom,
                     'email' => $user->email,
+                    'code_membre' => $user->code_membre,
                     'identifier' => $user->identifier,
                     'role' => $user->role,
                 ],

@@ -150,7 +150,7 @@ const TabAnnuaire = ({
                                                     {member.full_name}
                                                 </div>
                                                 <div className="text-gray-500 text-xs">
-                                                    {member.identifiant}
+                                                    {member.code_membre || "-"}
                                                 </div>
                                             </div>
                                         </div>

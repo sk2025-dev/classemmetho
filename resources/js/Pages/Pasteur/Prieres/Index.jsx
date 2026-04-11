@@ -219,12 +219,6 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
             {
                 preserveScroll: true,
                 preserveState: true,
-                onSuccess: () => {
-                    router.reload({
-                        only: ["prayerRequests"],
-                        preserveScroll: true,
-                    });
-                },
                 onError: () => {
                     setRequests(normalizeRequests(prayerRequests));
                 },

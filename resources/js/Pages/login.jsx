@@ -18,7 +18,7 @@ export default function Login() {
     const [postLoginRedirect, setPostLoginRedirect] = useState("");
 
     const { data, setData } = useForm({
-        identifiant: "",
+        code_membre: "",
         password: "",
     });
     // Masquer le loader initial
@@ -40,7 +40,7 @@ export default function Login() {
 
     const handleContinue = (e) => {
         e.preventDefault();
-        if (data.identifiant.trim() !== "") {
+        if (data.code_membre.trim() !== "") {
             setStep(2);
             setErrorMessage("");
         }
@@ -56,7 +56,7 @@ export default function Login() {
         e.preventDefault();
 
         // Validation côté client
-        if (!data.identifiant.trim() || !data.password.trim()) {
+        if (!data.code_membre.trim() || !data.password.trim()) {
             return;
         }
 
@@ -72,7 +72,7 @@ export default function Login() {
                     "X-CSRF-TOKEN": csrf_token || "",
                 },
                 body: JSON.stringify({
-                    identifiant: data.identifiant,
+                    code_membre: data.code_membre,
                     password: data.password,
                     redirect_to: postLoginRedirect || undefined,
                 }),
@@ -171,7 +171,7 @@ export default function Login() {
                                     Connexion
                                 </h2>
                                 <p className="text-gray-600 mb-6">
-                                    Entrez votre identifiant
+                                    Entrez votre code membre
                                 </p>
                                 <form
                                     onSubmit={handleContinue}
@@ -179,18 +179,18 @@ export default function Login() {
                                 >
                                     <div className="text-left">
                                         <label className="block text-gray-700 font-medium mb-2">
-                                            Identifiant
+                                            Code membre
                                         </label>
                                         <input
                                             type="text"
-                                            value={data.identifiant}
+                                            value={data.code_membre}
                                             onChange={(e) =>
                                                 setData(
-                                                    "identifiant",
+                                                    "code_membre",
                                                     e.target.value,
                                                 )
                                             }
-                                            placeholder="Votre identifiant"
+                                            placeholder="Votre code membre"
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:outline-none"
                                             required
                                         />
@@ -214,12 +214,12 @@ export default function Login() {
                                 <p className="text-gray-600 mb-6">
                                     Bonjour,{" "}
                                     <span className="font-semibold">
-                                        {data.identifiant}
+                                        {data.code_membre}
                                     </span>
                                 </p>
 
                                 <div className="w-20 h-20 mx-auto flex items-center justify-center rounded-full bg-[#f5c542] text-[#1e2a78] text-3xl font-bold shadow-md mb-6">
-                                    {data.identifiant.charAt(0).toUpperCase()}
+                                    {data.code_membre.charAt(0).toUpperCase()}
                                 </div>
 
                                 <form

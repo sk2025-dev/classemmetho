@@ -41,7 +41,7 @@ class ResponsibleCredentials extends Mailable
     {
         return $this
             ->to($this->user->email)
-            ->subject('Vos identifiants de connexion et celle de vos membres')
+            ->subject('Vos codes membre de connexion et ceux de vos membres')
             ->view('emails.responsible-credentials')
             ->with([
                 'user' => $this->user,

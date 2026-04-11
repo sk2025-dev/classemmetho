@@ -260,7 +260,7 @@ class InscriptionProcessor
                 'channel' => 'email',
                 'to' => $user->email,
                 'subject' => 'Votre inscription a été acceptée',
-                'body' => "Identifiant: {$identifier}\nMot de passe: {$plainPassword}",
+                'body' => "Code membre: {$user->code_membre}\nMot de passe: {$plainPassword}",
                 'sent_at' => now(),
             ]);
         }

@@ -569,17 +569,17 @@ class ExcelImportController extends Controller
 
             if (class_exists(\App\Mail\SendCredentials::class)) {
                 \Illuminate\Support\Facades\Mail::to($user->email)->send(
-                    new \App\Mail\SendCredentials($user, $user->identifier, $user->plain_password)
+                    new \App\Mail\SendCredentials($user, $user->code_membre, $user->plain_password)
                 );
             } else {
                 \Illuminate\Support\Facades\Mail::raw(
-                    "Bienvenue!\n\nVoici vos identifiants de connexion:\n\n"
-                    . "Identifiant: " . $user->identifier . "\n"
+                    "Bienvenue!\n\nVoici vos informations de connexion:\n\n"
+                    . "Code membre: " . $user->code_membre . "\n"
                     . "Mot de passe: " . $user->plain_password . "\n\n"
                     . "Veuillez changer votre mot de passe après votre première connexion.",
                     function ($message) use ($user) {
                         $message->to($user->email)
-                                ->subject('Vos identifiants de connexion');
+                                ->subject('Votre code membre de connexion');
                     }
                 );
             }
