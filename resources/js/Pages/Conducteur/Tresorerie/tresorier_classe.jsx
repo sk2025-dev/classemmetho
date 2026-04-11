@@ -541,13 +541,34 @@ export default function TresorierClasse({
                 <div
                     style={{
                         display: "flex",
-                        justifyContent: "space-between",
+                        justifyContent: "flex-start",
                         alignItems: "center",
-                        gap: 10,
+                        gap: 12,
                         flexWrap: "wrap",
                     }}
                 >
-                    <div>
+                    <Link
+                        href={withBasePath("", "/dashboard")}
+                        style={{
+                            textDecoration: "none",
+                            border: "1px solid rgba(148,163,184,0.35)",
+                            borderRadius: 12,
+                            padding: "8px 12px",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            color: "#1F2937",
+                            background: "rgba(255,255,255,0.55)",
+                            backdropFilter: "blur(10px)",
+                            WebkitBackdropFilter: "blur(10px)",
+                            boxShadow: "0 8px 18px rgba(15,23,42,0.08)",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            whiteSpace: "nowrap",
+                        }}
+                    >
+                        Retour au dashboard
+                    </Link>
+                    <div style={{ minWidth: 260 }}>
                         <h1
                             style={{
                                 fontSize: 20,
@@ -562,20 +583,6 @@ export default function TresorierClasse({
                             du conducteur
                         </p>
                     </div>
-                    <Link
-                        href={withBasePath("", "/dashboard")}
-                        style={{
-                            textDecoration: "none",
-                            border: "1px solid #D1D5DB",
-                            borderRadius: 10,
-                            padding: "7px 10px",
-                            fontSize: 12,
-                            fontWeight: 700,
-                            color: "#374151",
-                        }}
-                    >
-                        Retour au dashboard
-                    </Link>
                 </div>
             </div>
 

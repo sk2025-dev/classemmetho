@@ -1448,6 +1448,23 @@ export default function ConducteurTresorerie({
         });
         return map;
     }, [paiementsParFamille]);
+    const cotisationsByFamily = useMemo(() => {
+        const map = new Map();
+        paiementsParFamille.forEach((p) => {
+            const familyName = p.famille || "Famille";
+            const current = map.get(familyName) || [];
+            const key = `${p.cotisation || "-"}|${p.cotisationStatut || "TERMINE"}`;
+            if (!current.some((item) => item.key === key)) {
+                current.push({
+                    key,
+                    nom: p.cotisation || "-",
+                    statut: p.cotisationStatut || "TERMINE",
+                });
+            }
+            map.set(familyName, current);
+        });
+        return map;
+    }, [paiementsParFamille]);
     const membersOfFamily = useMemo(() => {
         if (!modalMembresFamille?.nom) return [];
         return membresClasse.filter(
@@ -1455,15 +1472,66 @@ export default function ConducteurTresorerie({
         );
     }, [modalMembresFamille, membresClasse]);
 
+    const rapportTopFamilles = useMemo(() => {
+        return [...famillesSuivi]
+            .sort(
+                (a, b) => Number(b?.totalPaye || 0) - Number(a?.totalPaye || 0),
+            )
+            .slice(0, 8);
+    }, [famillesSuivi]);
+
+    const rapportCotisations = useMemo(() => {
+        return [...cotisationsCreees]
+            .map((c) => {
+                const raw = String(c?.statut || "").toUpperCase();
+                const statut =
+                    raw === "ACTIVE" || raw === "ACTIF" || raw === "EN COURS"
+                        ? "EN COURS"
+                        : "TERMINE";
+                return {
+                    id: c?.id,
+                    nom: c?.nom || "-",
+                    periodicite: c?.periodicite || "-",
+                    montant: Number(c?.montant || 0),
+                    statut,
+                };
+            })
+            .sort((a, b) => a.nom.localeCompare(b.nom));
+    }, [cotisationsCreees]);
+
+    const rapportStats = useMemo(() => {
+        const totalPaye = famillesSuivi.reduce(
+            (sum, f) => sum + Number(f?.totalPaye || 0),
+            0,
+        );
+        const totalReste = famillesSuivi.reduce(
+            (sum, f) => sum + Number(f?.totalDu || 0),
+            0,
+        );
+        const cotisationsEnCours = rapportCotisations.filter(
+            (c) => c.statut === "EN COURS",
+        ).length;
+        const cotisationsTerminees = rapportCotisations.filter(
+            (c) => c.statut === "TERMINE",
+        ).length;
+
+        return {
+            totalPaye,
+            totalReste,
+            cotisationsEnCours,
+            cotisationsTerminees,
+        };
+    }, [famillesSuivi, rapportCotisations]);
+
     const tabs = [
         { id: "dashboard", emoji: "📊", label: "Vue d'ensemble" },
+        { id: "rapports", emoji: "🧾", label: "Rapports" },
         {
             id: "retards",
             emoji: "🔴",
             label: " Rappels",
             badge: famillesEnRetard.length,
         },
-        { id: "familles", emoji: "👨‍👩‍👧‍👦", label: "Familles" },
         { id: "cotisations", emoji: "💰", label: "Cotisations" },
         { id: "dons", emoji: "🎁", label: "Dons" },
         { id: "fimeco", emoji: "📌", label: "FIMECO" },
@@ -2132,6 +2200,245 @@ export default function ConducteurTresorerie({
                     </div>
                 )}
 
+                {/* RAPPORTS */}
+                {activeTab === "rapports" && (
+                    <div
+                        style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 20,
+                        }}
+                    >
+                        <Card>
+                            <SecTitle
+                                accent="blue"
+                                right={
+                                    <div style={{ display: "flex", gap: 8 }}>
+                                        <OutlineBtn
+                                            color="blue"
+                                            icon={Download}
+                                            sm
+                                            onClick={() =>
+                                                handleExport("excel")
+                                            }
+                                        >
+                                            Excel
+                                        </OutlineBtn>
+                                        <OutlineBtn
+                                            color="blue"
+                                            icon={FileText}
+                                            sm
+                                            onClick={() => handleExport("pdf")}
+                                        >
+                                            PDF
+                                        </OutlineBtn>
+                                    </div>
+                                }
+                            >
+                                Rapports de la classe
+                            </SecTitle>
+                            <div
+                                style={{
+                                    display: "grid",
+                                    gridTemplateColumns:
+                                        "repeat(4,minmax(0,1fr))",
+                                    gap: 12,
+                                    marginTop: 12,
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        border: "1px solid #E5E7EB",
+                                        borderRadius: 12,
+                                        padding: "12px 14px",
+                                        background: "#F9FAFB",
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            fontSize: 11,
+                                            color: "#6B7280",
+                                        }}
+                                    >
+                                        Total payé
+                                    </div>
+                                    <div
+                                        style={{
+                                            fontWeight: 800,
+                                            marginTop: 4,
+                                        }}
+                                    >
+                                        {fmt(rapportStats.totalPaye)}
+                                    </div>
+                                </div>
+                                <div
+                                    style={{
+                                        border: "1px solid #E5E7EB",
+                                        borderRadius: 12,
+                                        padding: "12px 14px",
+                                        background: "#F9FAFB",
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            fontSize: 11,
+                                            color: "#6B7280",
+                                        }}
+                                    >
+                                        Total restant
+                                    </div>
+                                    <div
+                                        style={{
+                                            fontWeight: 800,
+                                            marginTop: 4,
+                                        }}
+                                    >
+                                        {fmt(rapportStats.totalReste)}
+                                    </div>
+                                </div>
+                                <div
+                                    style={{
+                                        border: "1px solid #E5E7EB",
+                                        borderRadius: 12,
+                                        padding: "12px 14px",
+                                        background: "#F9FAFB",
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            fontSize: 11,
+                                            color: "#6B7280",
+                                        }}
+                                    >
+                                        Cotisations en cours
+                                    </div>
+                                    <div
+                                        style={{
+                                            fontWeight: 800,
+                                            marginTop: 4,
+                                        }}
+                                    >
+                                        {rapportStats.cotisationsEnCours}
+                                    </div>
+                                </div>
+                                <div
+                                    style={{
+                                        border: "1px solid #E5E7EB",
+                                        borderRadius: 12,
+                                        padding: "12px 14px",
+                                        background: "#F9FAFB",
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            fontSize: 11,
+                                            color: "#6B7280",
+                                        }}
+                                    >
+                                        Cotisations terminées
+                                    </div>
+                                    <div
+                                        style={{
+                                            fontWeight: 800,
+                                            marginTop: 4,
+                                        }}
+                                    >
+                                        {rapportStats.cotisationsTerminees}
+                                    </div>
+                                </div>
+                            </div>
+                        </Card>
+
+                        <div
+                            style={{
+                                display: "grid",
+                                gridTemplateColumns: "1fr 1fr",
+                                gap: 16,
+                            }}
+                        >
+                            <Card>
+                                <SecTitle accent="teal">
+                                    Top familles (paiements)
+                                </SecTitle>
+                                <Table
+                                    heads={[
+                                        { label: "Famille" },
+                                        { label: "Payé", right: true },
+                                        { label: "Reste", right: true },
+                                        { label: "Statut", center: true },
+                                    ]}
+                                    rows={rapportTopFamilles.map((f) => (
+                                        <Tr key={f.id}>
+                                            <Td bold>{f.nom}</Td>
+                                            <Td right bold color="green">
+                                                {fmt(f.totalPaye)}
+                                            </Td>
+                                            <Td
+                                                right
+                                                bold
+                                                color={
+                                                    f.totalDu > 0
+                                                        ? "red"
+                                                        : "green"
+                                                }
+                                            >
+                                                {fmt(f.totalDu)}
+                                            </Td>
+                                            <Td center>
+                                                <Pill
+                                                    color={
+                                                        f.statut === "A JOUR"
+                                                            ? "teal"
+                                                            : "red"
+                                                    }
+                                                >
+                                                    {f.statut}
+                                                </Pill>
+                                            </Td>
+                                        </Tr>
+                                    ))}
+                                    empty="Aucune donnée de famille disponible."
+                                />
+                            </Card>
+
+                            <Card>
+                                <SecTitle accent="amber">
+                                    Cotisations de la classe
+                                </SecTitle>
+                                <Table
+                                    heads={[
+                                        { label: "Cotisation" },
+                                        { label: "Périodicité" },
+                                        { label: "Montant", right: true },
+                                        { label: "Statut", center: true },
+                                    ]}
+                                    rows={rapportCotisations.map((c, i) => (
+                                        <Tr key={c.id || i}>
+                                            <Td bold>{c.nom}</Td>
+                                            <Td>{c.periodicite}</Td>
+                                            <Td right bold color="teal">
+                                                {fmt(c.montant)}
+                                            </Td>
+                                            <Td center>
+                                                <Pill
+                                                    color={
+                                                        c.statut === "EN COURS"
+                                                            ? "amber"
+                                                            : "teal"
+                                                    }
+                                                >
+                                                    {c.statut}
+                                                </Pill>
+                                            </Td>
+                                        </Tr>
+                                    ))}
+                                    empty="Aucune cotisation à afficher."
+                                />
+                            </Card>
+                        </div>
+                    </div>
+                )}
+
                 {/* RETARDS */}
                 {activeTab === "retards" && (
                     <div
@@ -2396,11 +2703,73 @@ export default function ConducteurTresorerie({
                                               )
                                             : 0;
                                     const last = latestByFamily.get(f.nom);
+                                    const cotisations =
+                                        cotisationsByFamily.get(f.nom) || [];
                                     return (
                                         <Tr key={f.id}>
                                             <Td bold>{f.nom}</Td>
                                             <Td center>{f.membersCount}</Td>
-                                            <Td>{last?.cotisation || "—"}</Td>
+                                            <Td>
+                                                {cotisations.length === 0 ? (
+                                                    "—"
+                                                ) : (
+                                                    <div
+                                                        style={{
+                                                            display: "flex",
+                                                            flexDirection:
+                                                                "column",
+                                                            gap: 4,
+                                                        }}
+                                                    >
+                                                        {cotisations
+                                                            .slice(0, 2)
+                                                            .map((c) => (
+                                                                <div
+                                                                    key={c.key}
+                                                                    style={{
+                                                                        display:
+                                                                            "flex",
+                                                                        alignItems:
+                                                                            "center",
+                                                                        gap: 6,
+                                                                        flexWrap:
+                                                                            "wrap",
+                                                                    }}
+                                                                >
+                                                                    <span>
+                                                                        {c.nom}
+                                                                    </span>
+                                                                    <Pill
+                                                                        color={
+                                                                            c.statut ===
+                                                                            "EN COURS"
+                                                                                ? "amber"
+                                                                                : "teal"
+                                                                        }
+                                                                    >
+                                                                        {
+                                                                            c.statut
+                                                                        }
+                                                                    </Pill>
+                                                                </div>
+                                                            ))}
+                                                        {cotisations.length >
+                                                            2 && (
+                                                            <span
+                                                                style={{
+                                                                    fontSize: 11,
+                                                                    color: "#6B7280",
+                                                                }}
+                                                            >
+                                                                +
+                                                                {cotisations.length -
+                                                                    2}{" "}
+                                                                autres
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </Td>
                                             <Td>{last?.date || "—"}</Td>
                                             <Td center>
                                                 {last

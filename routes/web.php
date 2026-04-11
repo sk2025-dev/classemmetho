@@ -6,6 +6,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Conducteur\AnnuaireController as ConducteurAnnuaireController;
 use App\Http\Controllers\Conducteur\DashboardController as ConducteurDashboardController;
+use App\Http\Controllers\PresenceConducteurController;
 use App\Http\Controllers\Conducteur\InscriptionsController as ConducteurInscriptionsController;
 use App\Http\Controllers\Conducteur\TresorerieController as ConducteurTresorerieController;
 use App\Http\Controllers\Conducteur\RegisterMemberController as RegisterMemberController;
@@ -63,6 +64,8 @@ Route::post('/sondages/public/{token}/reponses', [\App\Http\Controllers\Public\S
 
 Route::post('/dons/anonyme', [\App\Http\Controllers\Public\DonationController::class, 'storeAnonymous'])
     ->name('public.dons.anonyme.store');
+Route::get('/dons/anonyme/verify', [\App\Http\Controllers\Public\DonationController::class, 'verifyAnonymous'])
+    ->name('public.dons.anonyme.verify');
 
 // Pages d'authentification (Inertia)
 Route::get('/login', function () {
@@ -135,6 +138,8 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
         Route::get('/admin/prieres', [\App\Http\Controllers\Admin\PrieresController::class, 'index'])->name('admin.prieres.index');
+        Route::get('/admin/presences', [\App\Http\Controllers\Admin\PresencesController::class, 'index'])->name('admin.presences.index');
+        Route::get('/admin/presences/export', [\App\Http\Controllers\Admin\PresencesController::class, 'export'])->name('admin.presences.export');
         Route::get('/admin/sondages', [\App\Http\Controllers\Admin\Sondage\SondageController::class, 'index'])->name('admin.sondages.index');
         Route::get('/admin/sondages/{id}/export', [\App\Http\Controllers\Admin\Sondage\SondageController::class, 'export'])->whereNumber('id')->name('admin.sondages.export');
         Route::get('/admin/sondages/{id}', [\App\Http\Controllers\Admin\Sondage\SondageController::class, 'show'])->whereNumber('id')->name('admin.sondages.show');
@@ -231,6 +236,10 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:conducteur')->group(function () {
         Route::get('/conducteur/annuaire', [ConducteurAnnuaireController::class, 'index'])->name('conducteur.annuaire.index');
         Route::get('/conducteur/dashboard', [ConducteurDashboardController::class, 'index'])->name('conducteur.dashboard');
+        Route::get('/conducteur/presences', [PresenceConducteurController::class, 'index'])->name('presences.index');
+        Route::post('/conducteur/presences/{activite}', [PresenceConducteurController::class, 'enregistrer'])
+            ->whereNumber('activite')
+            ->name('presences.enregistrer');
         Route::get('/conducteur/prieres', [\App\Http\Controllers\Conducteur\Prieres\PrieresController::class, 'index'])->name('conducteur.prieres.index');
         Route::post('/conducteur/prieres', [\App\Http\Controllers\Conducteur\Prieres\PrieresController::class, 'store'])->name('conducteur.prieres.store');
         Route::patch('/conducteur/prieres/{priere}/commentaire', [\App\Http\Controllers\Conducteur\Prieres\PrieresController::class, 'updateTestimony'])->name('conducteur.prieres.testimony');
@@ -344,6 +353,10 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:responsable_famille')->group(function () {
         Route::get('/responsable-famille/annuaire', [ResponsableFamilleAnnuaireController::class, 'index'])->name('responsable_famille.annuaire.index');
         Route::get('/responsable-famille/dashboard', [ResponsableFamilleDashboardController::class, 'index'])->name('responsable_famille.dashboard');
+        Route::get('/responsable-famille/presences', [\App\Http\Controllers\ResponsableFamille\PresencesController::class, 'index'])->name('responsable_famille.presences.index');
+        Route::post('/responsable-famille/presences/{activite}', [\App\Http\Controllers\ResponsableFamille\PresencesController::class, 'enregistrer'])
+            ->whereNumber('activite')
+            ->name('responsable_famille.presences.enregistrer');
         Route::get('/responsable-famille/prieres', [\App\Http\Controllers\ResponsableFamille\Prieres\PrieresController::class, 'index'])->name('responsable_famille.prieres.index');
         Route::post('/responsable-famille/prieres', [\App\Http\Controllers\ResponsableFamille\Prieres\PrieresController::class, 'store'])->name('responsable_famille.prieres.store');
         Route::patch('/responsable-famille/prieres/{priere}/commentaire', [\App\Http\Controllers\ResponsableFamille\Prieres\PrieresController::class, 'updateTestimony'])->name('responsable_famille.prieres.testimony');
@@ -425,6 +438,8 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:pasteur')->group(function () {
         Route::get('/pasteur/annuaire', [PasteurAnnuaireController::class, 'index'])->name('pasteur.annuaire.index');
         Route::get('/pasteur/dashboard', [PasteurDashboardController::class, 'index'])->name('pasteur.dashboard');
+        Route::get('/pasteur/presences', [\App\Http\Controllers\Pasteur\PresencesController::class, 'index'])->name('pasteur.presences.index');
+        Route::get('/pasteur/presences/export', [\App\Http\Controllers\Pasteur\PresencesController::class, 'export'])->name('pasteur.presences.export');
         Route::get('/pasteur/prieres', [\App\Http\Controllers\Pasteur\Prieres\PrieresController::class, 'index'])->name('pasteur.prieres.index');
         Route::patch('/pasteur/prieres/{priere}/status', [\App\Http\Controllers\Pasteur\Prieres\PrieresController::class, 'updateStatus'])->name('pasteur.prieres.status');
         Route::patch('/pasteur/prieres/{priere}/commentaire', [\App\Http\Controllers\Pasteur\Prieres\PrieresController::class, 'addComment'])->name('pasteur.prieres.comment');
@@ -471,6 +486,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['auth', 'role:membre_famille'])->group(function () {
         Route::get('/membre-famille/annuaire', [MembreFamilleAnnuaireController::class, 'index'])->name('membre_famille.annuaire.index');
         Route::get('/membre-famille/dashboard', [MembreFamilleDashboardController::class, 'index'])->name('membre_famille.dashboard');
+        Route::get('/membre-famille/presences', [\App\Http\Controllers\MembreFamille\PresencesController::class, 'index'])->name('membre_famille.presences.index');
         Route::get('/membre-famille/prieres', [\App\Http\Controllers\MembreFamille\Prieres\PrieresController::class, 'index'])->name('membre_famille.prieres.index');
         Route::post('/membre-famille/prieres', [\App\Http\Controllers\MembreFamille\Prieres\PrieresController::class, 'store'])->name('membre_famille.prieres.store');
         Route::patch('/membre-famille/prieres/{priere}/commentaire', [\App\Http\Controllers\MembreFamille\Prieres\PrieresController::class, 'updateTestimony'])->name('membre_famille.prieres.testimony');
