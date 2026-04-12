@@ -237,6 +237,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/conducteur/annuaire', [ConducteurAnnuaireController::class, 'index'])->name('conducteur.annuaire.index');
         Route::get('/conducteur/dashboard', [ConducteurDashboardController::class, 'index'])->name('conducteur.dashboard');
         Route::get('/conducteur/presences', [PresenceConducteurController::class, 'index'])->name('presences.index');
+        Route::get('/conducteur/presences/programmes-activites', [PresenceConducteurController::class, 'activitesProgramme'])
+            ->name('presences.programmes_activites');
+        Route::post('/conducteur/presences/programme/{event}', [PresenceConducteurController::class, 'enregistrerProgramme'])
+            ->whereNumber('event')
+            ->name('presences.enregistrer_programme');
         Route::post('/conducteur/presences/{activite}', [PresenceConducteurController::class, 'enregistrer'])
             ->whereNumber('activite')
             ->name('presences.enregistrer');

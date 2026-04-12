@@ -2523,8 +2523,8 @@ const MiniCalendar = ({ eventsDates = [] }) => {
                 </button>
             </div>
             <div className="cal-grid">
-                {daysOfWeek.map((d) => (
-                    <div key={d} className="cal-day-label">
+                {daysOfWeek.map((d, idx) => (
+                    <div key={`${d}-${idx}`} className="cal-day-label">
                         {d}
                     </div>
                 ))}
@@ -2548,8 +2548,6 @@ const EventPlannerModal = ({
     editingEvent = null,
     isLoading = false,
 }) => {
-    if (!isOpen) return null;
-
     const formatDateForInput = (dateStr) => {
         if (!dateStr) return "";
         if (dateStr.includes("/")) {
@@ -2614,6 +2612,8 @@ const EventPlannerModal = ({
     const modalTitle = editingEvent
         ? "Modifier le programme"
         : "Créer un programme d'activité";
+
+    if (!isOpen) return null;
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -3513,8 +3513,15 @@ export default function Programmes() {
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const scrollerRef = useRef(null);
 
-    // Tous les événements pour le sélecteur d'activité
-    const allEvents = [...initialClassList, ...initialClassHistory];
+    // Tous les événements pour le sélecteur d'activité (sans doublons)
+    const allEvents = [
+        ...new Map(
+            [...initialClassList, ...initialClassHistory].map((event) => [
+                event.id,
+                event,
+            ]),
+        ).values(),
+    ];
 
     const showToast = (message, type = "success") => {
         setToast({ message, type });
@@ -3525,11 +3532,15 @@ export default function Programmes() {
     };
 
     const getAllEventDates = () => {
-        const allEvents = [...initialClassList, ...initialClassHistory];
-        return allEvents.map((event) => {
-            const date = new Date(event.date);
-            return date.toISOString().split("T")[0];
-        });
+        const dates = allEvents
+            .map((event) => {
+                const date = new Date(event.date);
+                if (Number.isNaN(date.getTime())) return null;
+                return date.toISOString().split("T")[0];
+            })
+            .filter(Boolean);
+
+        return [...new Set(dates)];
     };
 
     const openEventModal = (event = null) => {
@@ -3725,44 +3736,41 @@ export default function Programmes() {
 
         setIsLoading(true);
 
-        if (eventId) {
-            router.put(
-                withBasePath("", `/conducteur/programmes/event/${eventId}`),
-                payload,
-                {
-                    onStart: () => setIsLoading(true),
-                    onFinish: () => setIsLoading(false),
-                    onSuccess: () => {
-                        closeEventModal();
-                        showToast("Événement modifié avec succès !", "success");
-                        router.reload();
-                    },
-                    onError: (errors) => {
-                        console.error("Erreur de modification", errors);
-                        showToast("Erreur lors de la modification", "error");
-                        setIsLoading(false);
-                    },
-                },
-            );
-        } else {
-            router.post(
-                withBasePath("", "/conducteur/programmes/event"),
-                payload,
-                {
-                    onStart: () => setIsLoading(true),
-                    onFinish: () => setIsLoading(false),
-                    onSuccess: () => {
-                        closeEventModal();
-                        showToast("Événement créé avec succès !", "success");
-                        router.reload();
-                    },
-                    onError: (errors) => {
-                        console.error("Erreur de validation", errors);
-                        showToast("Erreur lors de la création", "error");
-                        setIsLoading(false);
-                    },
-                },
-            );
+        try {
+            const endpoint = eventId
+                ? withBasePath("", `/conducteur/programmes/event/${eventId}`)
+                : withBasePath("", "/conducteur/programmes/event");
+
+            const response = eventId
+                ? await axios.put(endpoint, payload)
+                : await axios.post(endpoint, payload);
+
+            if (response?.data?.success) {
+                closeEventModal();
+                showToast(
+                    eventId
+                        ? "Événement modifié avec succès !"
+                        : "Événement créé avec succès !",
+                    "success",
+                );
+                router.reload();
+            } else {
+                showToast(
+                    response?.data?.message ||
+                        "Erreur lors de l'enregistrement",
+                    "error",
+                );
+            }
+        } catch (error) {
+            console.error("Erreur d'enregistrement", error);
+            const message =
+                error?.response?.data?.message ||
+                (eventId
+                    ? "Erreur lors de la modification"
+                    : "Erreur lors de la création");
+            showToast(message, "error");
+        } finally {
+            setIsLoading(false);
         }
     };
 

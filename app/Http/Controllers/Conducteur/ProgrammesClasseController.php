@@ -21,13 +21,13 @@ class ProgrammesClasseController extends Controller
     public function index()
     {
         $user = Auth::user();
-        
+
         $classe = $user->classe;
-        
+
         if (!$classe) {
             return redirect()->back()->with('error', 'Aucune classe associée à votre compte.');
         }
-        
+
         $evenementsActuels = SpecialEvent::where('is_parish', false)
             ->where('class_id', $classe->id)
             ->where('date', '>=', now()->startOfDay())
@@ -42,12 +42,12 @@ class ProgrammesClasseController extends Controller
             ->orderBy('time', 'desc')
             ->limit(10)
             ->get();
-        
+
         $galleryMedia = Media::where('class_id', $classe->id)
             ->with('specialEvent')
             ->orderBy('created_at', 'desc')
             ->get();
-        
+
         return Inertia::render('Conducteur/Programmes', [
             'initialClassList' => $evenementsActuels,
             'initialClassHistory' => $evenementsHistorique,
@@ -55,7 +55,7 @@ class ProgrammesClasseController extends Controller
             'galleryMedia' => $galleryMedia,
         ]);
     }
-    
+
     /**
      * Afficher tous les programmes de l'année en cours
      */
@@ -63,24 +63,24 @@ class ProgrammesClasseController extends Controller
     {
         $user = Auth::user();
         $classe = $user->classe;
-        
+
         if (!$classe) {
             return redirect()->back()->with('error', 'Aucune classe associée à votre compte.');
         }
-        
+
         $allProgrammes = SpecialEvent::where('is_parish', false)
             ->where('class_id', $classe->id)
             ->whereYear('date', now()->year)
             ->orderBy('date', 'asc')
             ->orderBy('time', 'asc')
             ->get();
-        
+
         return Inertia::render('Conducteur/AllProgrammes', [
             'allProgrammes' => $allProgrammes,
             'currentClass' => $classe,
         ]);
     }
-    
+
     /**
      * Afficher tout l'historique des programmes
      */
@@ -88,11 +88,11 @@ class ProgrammesClasseController extends Controller
     {
         $user = Auth::user();
         $classe = $user->classe;
-        
+
         if (!$classe) {
             return redirect()->back()->with('error', 'Aucune classe associée à votre compte.');
         }
-        
+
         $historyProgrammes = SpecialEvent::where('is_parish', false)
             ->where('class_id', $classe->id)
             ->where('date', '<', now()->startOfDay())
@@ -100,19 +100,19 @@ class ProgrammesClasseController extends Controller
             ->orderBy('date', 'desc')
             ->orderBy('time', 'desc')
             ->get();
-        
+
         $galleryMedia = Media::where('class_id', $classe->id)
             ->with('specialEvent')
             ->orderBy('created_at', 'desc')
             ->get();
-        
+
         return Inertia::render('Conducteur/HistoryProgrammes', [
             'historyProgrammes' => $historyProgrammes,
             'currentClass' => $classe,
             'galleryMedia' => $galleryMedia,
         ]);
     }
-    
+
     /**
      * Créer un événement (un seul)
      */
@@ -120,15 +120,12 @@ class ProgrammesClasseController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             $classe = $user->classe;
             if (!$classe) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Aucune classe associée à votre compte.'
-                ], 403);
+                return $this->errorResponse($request, 'Aucune classe associée à votre compte.', 403);
             }
-            
+
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
                 'date' => 'required|date',
@@ -138,7 +135,7 @@ class ProgrammesClasseController extends Controller
                 'famille_reception' => 'nullable|string|max:255',
                 'lieu' => 'nullable|string|max:500',
             ]);
-            
+
             $event = SpecialEvent::create([
                 'title' => $validated['title'],
                 'date' => $validated['date'],
@@ -151,36 +148,26 @@ class ProgrammesClasseController extends Controller
                 'created_by' => $user->id,
                 'is_parish' => false,
             ]);
-            
+
             Log::info('Événement créé avec succès', [
                 'event_id' => $event->id,
                 'user_id' => $user->id
             ]);
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Événement créé avec succès',
-                'event' => $event
+
+            return $this->successResponse($request, 'Événement créé avec succès', [
+                'event' => $event,
             ]);
-            
         } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur de validation',
-                'errors' => $e->errors()
-            ], 422);
+            return $this->validationErrorResponse($request, $e);
         } catch (\Exception $e) {
             Log::error('Erreur lors de la création', [
                 'error' => $e->getMessage()
             ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur: ' . $e->getMessage()
-            ], 500);
+
+            return $this->errorResponse($request, 'Erreur: ' . $e->getMessage(), 500);
         }
     }
-    
+
     /**
      * Créer plusieurs événements en une seule requête
      */
@@ -188,7 +175,7 @@ class ProgrammesClasseController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             $classe = $user->classe;
             if (!$classe) {
                 return response()->json([
@@ -196,7 +183,7 @@ class ProgrammesClasseController extends Controller
                     'message' => 'Aucune classe associée à votre compte.'
                 ], 403);
             }
-            
+
             $validated = $request->validate([
                 'activities' => 'required|array|min:1',
                 'activities.*.title' => 'required|string|max:255',
@@ -207,18 +194,18 @@ class ProgrammesClasseController extends Controller
                 'activities.*.famille_reception' => 'nullable|string|max:255',
                 'activities.*.lieu' => 'nullable|string|max:500',
             ]);
-            
+
             $activities = $validated['activities'];
             $createdCount = 0;
             $errors = [];
-            
+
             Log::info('Début création multiple', [
                 'user_id' => $user->id,
                 'total' => count($activities)
             ]);
-            
+
             DB::beginTransaction();
-            
+
             try {
                 foreach ($activities as $index => $activity) {
                     $eventDateTime = $activity['date'] . ' ' . ($activity['time'] ?? '00:00');
@@ -226,7 +213,7 @@ class ProgrammesClasseController extends Controller
                         $errors[] = "Activité " . ($index + 1) . ": La date ne peut pas être dans le passé";
                         continue;
                     }
-                    
+
                     $event = SpecialEvent::create([
                         'title' => $activity['title'],
                         'date' => $activity['date'],
@@ -239,10 +226,10 @@ class ProgrammesClasseController extends Controller
                         'created_by' => $user->id,
                         'is_parish' => false,
                     ]);
-                    
+
                     $createdCount++;
                 }
-                
+
                 if ($createdCount === 0 && count($errors) > 0) {
                     DB::rollBack();
                     return response()->json([
@@ -251,26 +238,24 @@ class ProgrammesClasseController extends Controller
                         'errors' => $errors
                     ], 400);
                 }
-                
+
                 DB::commit();
-                
+
                 $message = "{$createdCount} événement(s) créé(s) avec succès.";
                 if (count($errors) > 0) {
                     $message .= " " . count($errors) . " erreur(s).";
                 }
-                
+
                 return response()->json([
                     'success' => true,
                     'created_count' => $createdCount,
                     'message' => $message,
                     'errors' => $errors
                 ]);
-                
             } catch (\Exception $e) {
                 DB::rollBack();
                 throw $e;
             }
-            
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -281,14 +266,14 @@ class ProgrammesClasseController extends Controller
             Log::error('Erreur création multiple', [
                 'error' => $e->getMessage()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur: ' . $e->getMessage()
             ], 500);
         }
     }
-    
+
     /**
      * Mettre à jour un événement
      */
@@ -296,33 +281,24 @@ class ProgrammesClasseController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             $classe = $user->classe;
             if (!$classe) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Aucune classe associée'
-                ], 403);
+                return $this->errorResponse($request, 'Aucune classe associée', 403);
             }
-            
+
             $event = SpecialEvent::where('id', $id)
                 ->where('class_id', $classe->id)
                 ->first();
-            
+
             if (!$event) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Événement non trouvé'
-                ], 404);
+                return $this->errorResponse($request, 'Événement non trouvé', 404);
             }
-            
+
             if ($event->created_by !== $user->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Vous ne pouvez modifier que vos propres événements'
-                ], 403);
+                return $this->errorResponse($request, 'Vous ne pouvez modifier que vos propres événements', 403);
             }
-            
+
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
                 'date' => 'required|date',
@@ -332,34 +308,24 @@ class ProgrammesClasseController extends Controller
                 'famille_reception' => 'nullable|string|max:255',
                 'lieu' => 'nullable|string|max:500',
             ]);
-            
+
             $event->update($validated);
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Événement modifié avec succès',
-                'event' => $event
+
+            return $this->successResponse($request, 'Événement modifié avec succès', [
+                'event' => $event,
             ]);
-            
         } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur de validation',
-                'errors' => $e->errors()
-            ], 422);
+            return $this->validationErrorResponse($request, $e);
         } catch (\Exception $e) {
             Log::error('Erreur modification', [
                 'error' => $e->getMessage(),
                 'event_id' => $id
             ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur: ' . $e->getMessage()
-            ], 500);
+
+            return $this->errorResponse($request, 'Erreur: ' . $e->getMessage(), 500);
         }
     }
-    
+
     /**
      * Importer plusieurs événements
      */
@@ -367,7 +333,7 @@ class ProgrammesClasseController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             $classe = $user->classe;
             if (!$classe) {
                 return response()->json([
@@ -375,7 +341,7 @@ class ProgrammesClasseController extends Controller
                     'message' => 'Aucune classe associée'
                 ], 403);
             }
-            
+
             $validated = $request->validate([
                 'events' => 'required|array',
                 'events.*.title' => 'required|string|max:255',
@@ -386,13 +352,13 @@ class ProgrammesClasseController extends Controller
                 'events.*.famille_reception' => 'nullable|string|max:255',
                 'events.*.lieu' => 'nullable|string|max:500',
             ]);
-            
+
             $events = $validated['events'];
             $importedCount = 0;
             $errors = [];
-            
+
             DB::beginTransaction();
-            
+
             try {
                 foreach ($events as $index => $eventData) {
                     $eventDateTime = $eventData['date'] . ' ' . ($eventData['time'] ?? '00:00');
@@ -400,7 +366,7 @@ class ProgrammesClasseController extends Controller
                         $errors[] = "Ligne " . ($index + 2) . ": Date dans le passé";
                         continue;
                     }
-                    
+
                     SpecialEvent::create([
                         'title' => $eventData['title'],
                         'date' => $eventData['date'],
@@ -413,24 +379,22 @@ class ProgrammesClasseController extends Controller
                         'created_by' => $user->id,
                         'is_parish' => false,
                     ]);
-                    
+
                     $importedCount++;
                 }
-                
+
                 DB::commit();
-                
+
                 return response()->json([
                     'success' => true,
                     'imported_count' => $importedCount,
                     'message' => "{$importedCount} événement(s) importé(s)",
                     'errors' => $errors
                 ]);
-                
             } catch (\Exception $e) {
                 DB::rollBack();
                 throw $e;
             }
-            
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -444,56 +408,82 @@ class ProgrammesClasseController extends Controller
             ], 500);
         }
     }
-    
+
     /**
      * Supprimer un événement
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         try {
             $user = Auth::user();
-            
+
             $classe = $user->classe;
             if (!$classe) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Aucune classe associée'
-                ], 403);
+                return $this->errorResponse($request, 'Aucune classe associée', 403);
             }
-            
+
             $event = SpecialEvent::where('id', $id)
                 ->where('class_id', $classe->id)
                 ->first();
-            
+
             if (!$event) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Événement non trouvé'
-                ], 404);
+                return $this->errorResponse($request, 'Événement non trouvé', 404);
             }
-            
+
             if ($event->created_by !== $user->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Suppression non autorisée'
-                ], 403);
+                return $this->errorResponse($request, 'Suppression non autorisée', 403);
             }
-            
+
             $event->delete();
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Événement supprimé'
-            ]);
-            
+
+            return $this->successResponse($request, 'Événement supprimé');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur: ' . $e->getMessage()
-            ], 500);
+            return $this->errorResponse($request, 'Erreur: ' . $e->getMessage(), 500);
         }
     }
-    
+
+    private function isInertiaRequest(Request $request): bool
+    {
+        return $request->header('X-Inertia') === 'true';
+    }
+
+    private function successResponse(Request $request, string $message, array $data = [], int $status = 200)
+    {
+        if ($this->isInertiaRequest($request)) {
+            return redirect()->back()->with('success', $message);
+        }
+
+        return response()->json(array_merge([
+            'success' => true,
+            'message' => $message,
+        ], $data), $status);
+    }
+
+    private function errorResponse(Request $request, string $message, int $status = 400)
+    {
+        if ($this->isInertiaRequest($request)) {
+            return redirect()->back()->with('error', $message);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => $message,
+        ], $status);
+    }
+
+    private function validationErrorResponse(Request $request, ValidationException $e)
+    {
+        if ($this->isInertiaRequest($request)) {
+            return redirect()->back()->withErrors($e->errors())->withInput();
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur de validation',
+            'errors' => $e->errors(),
+        ], 422);
+    }
+
     /**
      * Ajouter un média (photos ou vidéos externes)
      */
@@ -502,14 +492,14 @@ class ProgrammesClasseController extends Controller
         try {
             $user = Auth::user();
             $classe = $user->classe;
-            
+
             if (!$classe) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Aucune classe associée'
                 ], 403);
             }
-            
+
             // Validation selon le type
             if ($request->type === 'video') {
                 $validated = $request->validate([
@@ -532,9 +522,9 @@ class ProgrammesClasseController extends Controller
                     'media.*' => 'file|mimes:jpg,jpeg,png|max:10240',
                 ]);
             }
-            
+
             $uploadedMedia = [];
-            
+
             if ($validated['type'] === 'video') {
                 // Pour les vidéos externes
                 $media = Media::create([
@@ -550,7 +540,7 @@ class ProgrammesClasseController extends Controller
                     'created_by' => $user->id,
                 ]);
                 $uploadedMedia[] = $media;
-                
+
                 Log::info('Vidéo externe ajoutée', [
                     'media_id' => $media->id,
                     'url' => $request->video_url
@@ -560,7 +550,7 @@ class ProgrammesClasseController extends Controller
                 foreach ($request->file('media') as $file) {
                     $filename = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
                     $path = $file->storeAs('media/' . $classe->id, $filename, 'public');
-                    
+
                     $media = Media::create([
                         'title' => $validated['title'],
                         'description' => $validated['description'] ?? null,
@@ -573,28 +563,27 @@ class ProgrammesClasseController extends Controller
                         'special_event_id' => $validated['special_event_id'] ?? null,
                         'created_by' => $user->id,
                     ]);
-                    
+
                     $uploadedMedia[] = $media;
                 }
-                
+
                 Log::info('Photo(s) ajoutée(s)', [
                     'count' => count($uploadedMedia),
                     'class_id' => $classe->id
                 ]);
             }
-            
+
             return response()->json([
                 'success' => true,
                 'message' => count($uploadedMedia) . ' média(s) ajouté(s)',
                 'media' => $uploadedMedia
             ]);
-            
         } catch (ValidationException $e) {
             Log::error('Erreur validation média', [
                 'errors' => $e->errors(),
                 'type' => $request->type
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur de validation',
@@ -605,14 +594,14 @@ class ProgrammesClasseController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur: ' . $e->getMessage()
             ], 500);
         }
     }
-    
+
     /**
      * Afficher le formulaire d'édition d'un média
      */
@@ -621,35 +610,34 @@ class ProgrammesClasseController extends Controller
         try {
             $user = Auth::user();
             $classe = $user->classe;
-            
+
             if (!$classe) {
                 return redirect()->back()->with('error', 'Aucune classe associée.');
             }
-            
+
             $media = Media::where('id', $id)
                 ->where('class_id', $classe->id)
                 ->first();
-            
+
             if (!$media) {
                 return redirect()->route('conducteur.programmes')->with('error', 'Média non trouvé.');
             }
-            
+
             $events = SpecialEvent::where('class_id', $classe->id)
                 ->orderBy('date', 'desc')
                 ->get();
-            
+
             return Inertia::render('Conducteur/EditMedia', [
                 'media' => $media,
                 'events' => $events,
                 'currentClass' => $classe,
             ]);
-            
         } catch (\Exception $e) {
             Log::error('Erreur édition média', ['error' => $e->getMessage()]);
             return redirect()->back()->with('error', 'Erreur: ' . $e->getMessage());
         }
     }
-    
+
     /**
      * Mettre à jour un média
      */
@@ -658,45 +646,44 @@ class ProgrammesClasseController extends Controller
         try {
             $user = Auth::user();
             $classe = $user->classe;
-            
+
             if (!$classe) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Aucune classe associée.'
                 ], 403);
             }
-            
+
             $media = Media::where('id', $id)
                 ->where('class_id', $classe->id)
                 ->first();
-            
+
             if (!$media) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Média non trouvé.'
                 ], 404);
             }
-            
+
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
                 'description' => 'nullable|string',
                 'date' => 'required|date',
                 'special_event_id' => 'nullable|exists:special_events,id',
             ]);
-            
+
             $media->update([
                 'title' => $validated['title'],
                 'description' => $validated['description'] ?? null,
                 'date' => $validated['date'],
                 'special_event_id' => $validated['special_event_id'] ?? null,
             ]);
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Média mis à jour avec succès.',
                 'media' => $media
             ]);
-            
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -711,7 +698,7 @@ class ProgrammesClasseController extends Controller
             ], 500);
         }
     }
-    
+
     /**
      * Supprimer un média
      */
@@ -720,43 +707,42 @@ class ProgrammesClasseController extends Controller
         try {
             $user = Auth::user();
             $classe = $user->classe;
-            
+
             if (!$classe) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Aucune classe associée'
                 ], 403);
             }
-            
+
             $media = Media::where('id', $id)
                 ->where('class_id', $classe->id)
                 ->first();
-            
+
             if (!$media) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Média non trouvé'
                 ], 404);
             }
-            
+
             // Supprimer le fichier uniquement pour les photos uploadées
             if ($media->type === 'photo' && $media->url && !str_contains($media->url, 'http')) {
                 $path = str_replace('/storage', '', $media->url);
                 Storage::disk('public')->delete($path);
             }
-            
+
             if ($media->thumbnail) {
                 $thumbnailPath = str_replace('/storage', '', $media->thumbnail);
                 Storage::disk('public')->delete($thumbnailPath);
             }
-            
+
             $media->delete();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Média supprimé'
             ]);
-            
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -764,7 +750,7 @@ class ProgrammesClasseController extends Controller
             ], 500);
         }
     }
-    
+
     /**
      * Récupérer les événements par mois
      */
@@ -773,14 +759,14 @@ class ProgrammesClasseController extends Controller
         try {
             $user = Auth::user();
             $classe = $user->classe;
-            
+
             if (!$classe) {
                 return response()->json(['message' => 'Aucune classe associée'], 403);
             }
-            
+
             $year = $request->get('year', now()->year);
             $month = $request->get('month', now()->month);
-            
+
             $events = SpecialEvent::where('class_id', $classe->id)
                 ->where('is_parish', false)
                 ->whereYear('date', $year)
@@ -788,19 +774,18 @@ class ProgrammesClasseController extends Controller
                 ->orderBy('date', 'asc')
                 ->orderBy('time', 'asc')
                 ->get();
-            
+
             return response()->json([
                 'success' => true,
                 'events' => $events
             ]);
-            
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Erreur de récupération'
             ], 500);
         }
     }
-    
+
     /**
      * Récupérer tous les médias
      */
@@ -809,24 +794,23 @@ class ProgrammesClasseController extends Controller
         try {
             $user = Auth::user();
             $classe = $user->classe;
-            
+
             if (!$classe) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Aucune classe associée'
                 ], 403);
             }
-            
+
             $media = Media::where('class_id', $classe->id)
                 ->with('specialEvent')
                 ->orderBy('created_at', 'desc')
                 ->get();
-            
+
             return response()->json([
                 'success' => true,
                 'media' => $media
             ]);
-            
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

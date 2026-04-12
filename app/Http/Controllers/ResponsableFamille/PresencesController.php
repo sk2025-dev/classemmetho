@@ -43,6 +43,7 @@ class PresencesController extends Controller
                     'id' => $activity->id,
                     'titre' => $activity->title,
                     'type' => $activity->type,
+                    'is_culte' => str_contains(mb_strtolower((string) $activity->type), 'culte'),
                     'date_heure_debut' => $dateTime,
                     'heure' => Carbon::parse($dateTime)->format('H\\hi'),
                 ];
@@ -85,56 +86,10 @@ class PresencesController extends Controller
 
     public function enregistrer(Request $request, PermanentActivity $activite): JsonResponse
     {
-        $user = Auth::user();
-
-        $family = Family::query()
-            ->where('responsable_id', $user->id)
-            ->with('users:id,family_id')
-            ->first();
-
-        abort_if(! $family, 403, 'Aucune famille associée à ce responsable.');
-        abort_if((bool) $activite->is_parish, 403, 'Activite invalide pour ce module.');
-
-        $allowedIds = $family->users->pluck('id')->map(fn($id) => (string) $id)->values()->all();
-
-        $validated = $request->validate([
-            'marquages' => ['required', 'array'],
-            'marquages.*' => ['nullable', 'in:present,absent,excuse'],
-            'notes' => ['nullable', 'array'],
-            'notes.*' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        foreach ($validated['marquages'] as $memberId => $status) {
-            if (! in_array((string) $memberId, $allowedIds, true)) {
-                continue;
-            }
-
-            if ($status === null) {
-                Presence::query()
-                    ->where('activite_id', $activite->id)
-                    ->where('membre_famille_id', $memberId)
-                    ->delete();
-                continue;
-            }
-
-            Presence::updateOrCreate(
-                [
-                    'activite_id' => $activite->id,
-                    'membre_famille_id' => $memberId,
-                ],
-                [
-                    'statut' => $status,
-                    'marquee_par' => $user->id,
-                    'marquee_le' => now(),
-                    'methode' => 'manuelle_famille',
-                    'notes' => $validated['notes'][$memberId] ?? null,
-                ]
-            );
-        }
-
         return response()->json([
-            'message' => 'Presences enregistrees avec succes.',
-        ]);
+            'success' => false,
+            'message' => 'Pointage reserve au conducteur de classe.',
+        ], 403);
     }
 
     private function dateHeureDebut(string $day, string $time): string

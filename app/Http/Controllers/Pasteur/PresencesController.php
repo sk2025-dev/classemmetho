@@ -172,7 +172,7 @@ class PresencesController extends Controller
 
         $activitesData = PermanentActivity::query()
             ->where('is_parish', false)
-            ->get(['id', 'title'])
+            ->get(['id', 'title', 'type'])
             ->map(function (PermanentActivity $activity) use ($activityMap) {
                 $stats = $activityMap->get($activity->id);
                 $present = (int) ($stats->presents ?? 0);
@@ -181,6 +181,8 @@ class PresencesController extends Controller
 
                 return [
                     'name' => $activity->title,
+                    'type' => $activity->type,
+                    'is_culte' => str_contains(mb_strtolower((string) $activity->type), 'culte'),
                     'pct' => $pct,
                     'present' => $present,
                     'total' => max($total, 1),

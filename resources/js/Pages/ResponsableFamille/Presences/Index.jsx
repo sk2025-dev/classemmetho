@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "@inertiajs/react";
 import { withBasePath } from "@/Utils/urlHelper";
 
 function countByStatus(records, status) {
@@ -564,7 +565,6 @@ function TabAbsences({ absences = [], famille }) {
 
 // ─── Composant principal ─────────────────────────────────────────────────────
 const TABS = [
-    { id: "marquer", label: "Marquer", icon: "☑️" },
     { id: "activites", label: "Activités", icon: "📅" },
     { id: "statistiques", label: "Statistiques", icon: "📊" },
     { id: "absences", label: "Absences", icon: "⚠️" },
@@ -583,10 +583,42 @@ export default function RespoFamilleDashboard(props) {
 
     const [activeTab, setActiveTab] = useState("historique");
     const [selectedEvt, setSelectedEvt] = useState(null);
+    const [eventKindFilter, setEventKindFilter] = useState("tous");
     const [selectedActiviteId, setSelectedActiviteId] = useState(
         activites[0]?.id ?? null,
     );
     const [saving, setSaving] = useState(false);
+    const dashboardHref =
+        typeof window.route === "function"
+            ? withBasePath(
+                  window.route("responsable_famille.dashboard"),
+                  "/responsable-famille/dashboard",
+              )
+            : withBasePath("", "/responsable-famille/dashboard");
+
+    const activitesAffichables = useMemo(() => {
+        if (eventKindFilter === "cultes") {
+            return activites.filter(
+                (a) =>
+                    Boolean(a.is_culte) ||
+                    String(a.type ?? "")
+                        .toLowerCase()
+                        .includes("culte"),
+            );
+        }
+
+        if (eventKindFilter === "activites") {
+            return activites.filter(
+                (a) =>
+                    !Boolean(a.is_culte) &&
+                    !String(a.type ?? "")
+                        .toLowerCase()
+                        .includes("culte"),
+            );
+        }
+
+        return activites;
+    }, [activites, eventKindFilter]);
 
     // Données Marquer (état présences en cours)
     const initialForSelected = useMemo(() => {
@@ -667,6 +699,12 @@ export default function RespoFamilleDashboard(props) {
     };
 
     const handleSelectActivite = (id) => {
+        if (!id) {
+            setSelectedActiviteId(null);
+            setPresences({});
+            return;
+        }
+
         setSelectedActiviteId(id);
         const refreshed = {};
         (famille.membres ?? []).forEach((m) => {
@@ -674,6 +712,20 @@ export default function RespoFamilleDashboard(props) {
         });
         setPresences(refreshed);
     };
+
+    useEffect(() => {
+        if (!activitesAffichables.length) {
+            handleSelectActivite(null);
+            return;
+        }
+
+        const stillVisible = activitesAffichables.some(
+            (a) => a.id === selectedActiviteId,
+        );
+        if (!stillVisible) {
+            handleSelectActivite(activitesAffichables[0].id);
+        }
+    }, [eventKindFilter, activitesAffichables, selectedActiviteId]);
 
     const handleSave = async () => {
         if (!selectedActiviteId) return;
@@ -739,23 +791,33 @@ export default function RespoFamilleDashboard(props) {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: 12,
                     borderBottom: "1px solid rgba(255,255,255,0.08)",
                 }}
             >
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                    <button
+                    <Link
+                        href={dashboardHref}
                         style={{
-                            background: "rgba(255,255,255,0.12)",
-                            border: "none",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            background: "rgba(255,255,255,0.14)",
+                            border: "1px solid rgba(255,255,255,0.24)",
                             color: "white",
-                            borderRadius: 8,
-                            padding: "8px 14px",
+                            borderRadius: 10,
+                            padding: "9px 14px",
                             fontSize: 13,
-                            cursor: "pointer",
+                            fontWeight: 600,
+                            textDecoration: "none",
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
                         }}
                     >
-                        ‹ Retour
-                    </button>
+                        <span aria-hidden="true">←</span>
+                        <span>Retour</span>
+                    </Link>
                     <div>
                         <div
                             style={{
@@ -772,26 +834,19 @@ export default function RespoFamilleDashboard(props) {
                         </div>
                     </div>
                 </div>
-                {activeTab === "marquer" && (
-                    <button
-                        style={{
-                            background: "#f6a821",
-                            color: "white",
-                            border: "none",
-                            borderRadius: 10,
-                            padding: "10px 22px",
-                            fontSize: 14,
-                            fontWeight: 700,
-                            cursor: "pointer",
-                        }}
-                        onClick={handleSave}
-                        disabled={saving}
-                    >
-                        {saving
-                            ? "Enregistrement..."
-                            : "Enregistrer les présences"}
-                    </button>
-                )}
+                <div
+                    style={{
+                        background: "rgba(255,255,255,0.12)",
+                        border: "1px solid rgba(255,255,255,0.25)",
+                        color: "white",
+                        borderRadius: 10,
+                        padding: "8px 12px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                    }}
+                >
+                    Pointage reserve au conducteur
+                </div>
             </div>
 
             {/* KPI Cards */}
@@ -953,6 +1008,46 @@ export default function RespoFamilleDashboard(props) {
                         >
                             Sélectionner une activité
                         </div>
+                        <div
+                            style={{
+                                display: "flex",
+                                gap: 8,
+                                marginBottom: 10,
+                                flexWrap: "wrap",
+                            }}
+                        >
+                            {[
+                                { key: "tous", label: "Tous" },
+                                { key: "activites", label: "Activités" },
+                                { key: "cultes", label: "Cultes" },
+                            ].map((item) => (
+                                <button
+                                    key={item.key}
+                                    onClick={() => setEventKindFilter(item.key)}
+                                    style={{
+                                        border:
+                                            eventKindFilter === item.key
+                                                ? "1px solid #2d2f8f"
+                                                : "1px solid #e0e0f0",
+                                        borderRadius: 20,
+                                        padding: "6px 12px",
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                        background:
+                                            eventKindFilter === item.key
+                                                ? "#eef0ff"
+                                                : "#fff",
+                                        color:
+                                            eventKindFilter === item.key
+                                                ? "#2d2f8f"
+                                                : "#667",
+                                    }}
+                                >
+                                    {item.label}
+                                </button>
+                            ))}
+                        </div>
                         <select
                             style={{
                                 width: "100%",
@@ -966,13 +1061,24 @@ export default function RespoFamilleDashboard(props) {
                             }}
                             value={selectedActiviteId ?? ""}
                             onChange={(e) =>
-                                handleSelectActivite(Number(e.target.value))
+                                handleSelectActivite(
+                                    e.target.value
+                                        ? Number(e.target.value)
+                                        : null,
+                                )
                             }
                         >
-                            {(activites ?? []).map((a) => (
+                            <option value="">Choisir une activité...</option>
+                            {(activitesAffichables ?? []).map((a) => (
                                 <option key={a.id} value={a.id}>
-                                    {a.titre} ·{" "}
-                                    {a.heure ?? toHour(a.date_heure_debut)}
+                                    {`${
+                                        Boolean(a.is_culte) ||
+                                        String(a.type ?? "")
+                                            .toLowerCase()
+                                            .includes("culte")
+                                            ? "[CULTE]"
+                                            : "[ACT]"
+                                    } ${a.titre} · ${a.heure ?? toHour(a.date_heure_debut)}`}
                                 </option>
                             ))}
                         </select>
@@ -1092,13 +1198,19 @@ export default function RespoFamilleDashboard(props) {
                                                 onClick={() =>
                                                     togglePresence(m.id, s)
                                                 }
+                                                disabled={!selectedActiviteId}
                                                 style={{
                                                     border: "none",
                                                     borderRadius: 20,
                                                     padding: "6px 14px",
                                                     fontSize: 12,
                                                     fontWeight: 600,
-                                                    cursor: "pointer",
+                                                    cursor: !selectedActiviteId
+                                                        ? "not-allowed"
+                                                        : "pointer",
+                                                    opacity: !selectedActiviteId
+                                                        ? 0.6
+                                                        : 1,
                                                     background: bg,
                                                     color,
                                                     transition: "all 0.15s",

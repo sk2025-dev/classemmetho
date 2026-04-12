@@ -16,7 +16,9 @@ function detectBasePathFromAssetUrls() {
         document.querySelector('link[href*="/build/assets/"]');
 
     const assetUrl =
-        assetElement?.getAttribute("src") || assetElement?.getAttribute("href") || "";
+        assetElement?.getAttribute("src") ||
+        assetElement?.getAttribute("href") ||
+        "";
 
     if (!assetUrl) {
         return "";
@@ -43,7 +45,9 @@ export function resolveBasePath(basePath = "") {
     }
 
     if (typeof window !== "undefined") {
-        const windowBasePath = normalizeBasePath(window.__APP_BASE_PATH__ || "");
+        const windowBasePath = normalizeBasePath(
+            window.__APP_BASE_PATH__ || "",
+        );
         if (windowBasePath) {
             return windowBasePath;
         }
@@ -67,4 +71,36 @@ export function withBasePath(basePath = "", path = "") {
 
     const cleanPath = `/${String(path).replace(/^\/+/, "")}`;
     return `${cleanBase}${cleanPath}`;
+}
+
+/**
+ * Ensure route URLs stay on the current host when APP_URL/Ziggy points elsewhere.
+ */
+export function localizeUrl(url = "", fallbackPath = "/", basePath = "") {
+    if (!url) {
+        return withBasePath(basePath, fallbackPath);
+    }
+
+    const value = String(url).trim();
+    if (!value) {
+        return withBasePath(basePath, fallbackPath);
+    }
+
+    if (/^https?:\/\//i.test(value)) {
+        try {
+            const parsed = new URL(value);
+
+            if (
+                typeof window !== "undefined" &&
+                parsed.origin !== window.location.origin
+            ) {
+                const pathWithQuery = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+                return withBasePath(basePath, pathWithQuery);
+            }
+        } catch {
+            return withBasePath(basePath, fallbackPath);
+        }
+    }
+
+    return value;
 }

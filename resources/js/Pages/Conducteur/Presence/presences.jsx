@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Head } from "@inertiajs/react";
 import AppLayout from "@/Layouts/AppLayout";
-import { withBasePath } from "@/Utils/urlHelper";
+import { localizeUrl, withBasePath } from "@/Utils/urlHelper";
 
 /**
  * Page Présences — Vue Conducteur de classe
@@ -23,6 +23,7 @@ export default function Presences({
     activite_active_id = null,
 }) {
     const [activeTab, setActiveTab] = useState("marquer");
+    const [eventKindFilter, setEventKindFilter] = useState("tous");
     const [selectedActiviteId, setSelectedActiviteId] = useState(
         activite_active_id ?? activites[0]?.id ?? null,
     );
@@ -30,13 +31,81 @@ export default function Presences({
     const [filterMembre, setFilterMembre] = useState("tous");
     const [searchQuery, setSearchQuery] = useState("");
     const [saving, setSaving] = useState(false);
-    const [saved, setSaved] = useState(false);
+    const [toast, setToast] = useState(null);
     const [notes, setNotes] = useState({});
+    const [programmeActivites, setProgrammeActivites] = useState([]);
+    const [loadingProgrammeActivites, setLoadingProgrammeActivites] =
+        useState(false);
 
     const activiteSelectionnee = activites.find(
         (a) => a.id === selectedActiviteId,
     );
+    const activitesAffichables = useMemo(() => {
+        if (eventKindFilter === "cultes") {
+            return activites.filter(
+                (a) =>
+                    Boolean(a.is_culte) ||
+                    String(a.type ?? "")
+                        .toLowerCase()
+                        .includes("culte"),
+            );
+        }
+
+        if (eventKindFilter === "activites") {
+            return activites.filter(
+                (a) =>
+                    !Boolean(a.is_culte) &&
+                    !String(a.type ?? "")
+                        .toLowerCase()
+                        .includes("culte"),
+            );
+        }
+
+        return activites;
+    }, [activites, eventKindFilter]);
     const marquagesActivite = marquages[selectedActiviteId] ?? {};
+    const activitesOnglet =
+        programmeActivites.length > 0 ? programmeActivites : activites;
+
+    useEffect(() => {
+        if (activeTab !== "activites") return;
+        if (loadingProgrammeActivites) return;
+
+        let isCancelled = false;
+
+        async function loadProgrammeActivites() {
+            setLoadingProgrammeActivites(true);
+            try {
+                const endpoint =
+                    typeof window.route === "function"
+                        ? localizeUrl(
+                              window.route("presences.programmes_activites"),
+                              "/conducteur/presences/programmes-activites",
+                          )
+                        : withBasePath(
+                              "",
+                              "/conducteur/presences/programmes-activites",
+                          );
+
+                const response = await window.axios.get(endpoint);
+                if (!isCancelled && response?.data?.success) {
+                    setProgrammeActivites(response.data.activites ?? []);
+                }
+            } catch (error) {
+                console.error("Erreur chargement activités programme", error);
+            } finally {
+                if (!isCancelled) {
+                    setLoadingProgrammeActivites(false);
+                }
+            }
+        }
+
+        loadProgrammeActivites();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [activeTab, loadingProgrammeActivites]);
 
     const membresFiltres = useMemo(() => {
         let list = membres;
@@ -73,6 +142,8 @@ export default function Presences({
             : 0;
 
     function setStatut(membreId, statut) {
+        if (!selectedActiviteId) return;
+
         setMarquages((prev) => {
             const curr = prev[selectedActiviteId]?.[membreId];
             return {
@@ -83,28 +154,40 @@ export default function Presences({
                 },
             };
         });
-        setSaved(false);
+    }
+
+    function showToast(message, type = "success") {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 2500);
     }
 
     async function handleSave() {
+        if (!selectedActiviteId) return;
+
         setSaving(true);
         try {
             const endpoint =
                 typeof window.route === "function"
-                    ? window.route("presences.enregistrer", selectedActiviteId)
+                    ? localizeUrl(
+                          window.route(
+                              "presences.enregistrer_programme",
+                              selectedActiviteId,
+                          ),
+                          `/conducteur/presences/programme/${selectedActiviteId}`,
+                      )
                     : withBasePath(
                           "",
-                          `/conducteur/presences/${selectedActiviteId}`,
+                          `/conducteur/presences/programme/${selectedActiviteId}`,
                       );
 
             await window.axios.post(endpoint, {
                 marquages: marquages[selectedActiviteId] ?? {},
                 notes: notes[selectedActiviteId] ?? {},
             });
-            setSaved(true);
-            setTimeout(() => setSaved(false), 3000);
+            showToast("Pointage effectué", "success");
         } catch (e) {
             console.error(e);
+            showToast("Erreur lors de l'enregistrement", "error");
         } finally {
             setSaving(false);
         }
@@ -132,6 +215,19 @@ export default function Presences({
         <AppLayout>
             <Head title="Gestion des présences" />
             <div style={S.page}>
+                {toast && (
+                    <div
+                        style={{
+                            ...S.toast,
+                            ...(toast.type === "success"
+                                ? S.toastSuccess
+                                : S.toastError),
+                        }}
+                    >
+                        {toast.message}
+                    </div>
+                )}
+
                 {/* ── En-tête ── */}
                 <div style={S.pageHeader}>
                     <div style={S.pageHeaderLeft}>
@@ -156,13 +252,11 @@ export default function Presences({
                             ...(saving ? S.btnDisabled : {}),
                         }}
                         onClick={handleSave}
-                        disabled={saving}
+                        disabled={saving || !selectedActiviteId}
                     >
                         {saving
                             ? "Enregistrement…"
-                            : saved
-                              ? "✓ Enregistré"
-                              : "Enregistrer les présences"}
+                            : "Enregistrer les présences"}
                     </button>
                 </div>
 
@@ -231,9 +325,71 @@ export default function Presences({
 
                 {/* ── Sélecteur activité ── */}
                 <div style={S.activiteSelector}>
-                    <span style={S.activiteSelectorLabel}>Activité :</span>
+                    <span style={S.activiteSelectorLabel}>Type :</span>
+                    <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                            style={{
+                                ...S.filterBtn,
+                                ...(eventKindFilter === "tous"
+                                    ? S.filterBtnActive
+                                    : {}),
+                            }}
+                            onClick={() => setEventKindFilter("tous")}
+                        >
+                            Tous
+                        </button>
+                        <button
+                            style={{
+                                ...S.filterBtn,
+                                ...(eventKindFilter === "activites"
+                                    ? S.filterBtnActive
+                                    : {}),
+                            }}
+                            onClick={() => setEventKindFilter("activites")}
+                        >
+                            Activités
+                        </button>
+                        <button
+                            style={{
+                                ...S.filterBtn,
+                                ...(eventKindFilter === "cultes"
+                                    ? S.filterBtnActive
+                                    : {}),
+                            }}
+                            onClick={() => setEventKindFilter("cultes")}
+                        >
+                            Cultes
+                        </button>
+                    </div>
+                    <span
+                        style={{ ...S.activiteSelectorLabel, marginLeft: 10 }}
+                    >
+                        Sélection :
+                    </span>
+                    <select
+                        value={selectedActiviteId ?? ""}
+                        onChange={(e) =>
+                            setSelectedActiviteId(
+                                e.target.value ? Number(e.target.value) : null,
+                            )
+                        }
+                        style={S.selectInput}
+                    >
+                        <option value="">Choisir une activité...</option>
+                        {activitesAffichables.map((a) => (
+                            <option key={a.id} value={a.id}>
+                                {Boolean(a.is_culte) ||
+                                String(a.type ?? "")
+                                    .toLowerCase()
+                                    .includes("culte")
+                                    ? "[CULTE] "
+                                    : "[ACT] "}
+                                {a.titre}
+                            </option>
+                        ))}
+                    </select>
                     <div style={S.activitePills}>
-                        {activites.map((a) => (
+                        {activitesAffichables.map((a) => (
                             <button
                                 key={a.id}
                                 style={{
@@ -279,6 +435,13 @@ export default function Presences({
                 {/* ════════════════ ONGLET : MARQUER ════════════════ */}
                 {activeTab === "marquer" && (
                     <div style={S.card}>
+                        {!selectedActiviteId && (
+                            <div style={S.selectionNotice}>
+                                Choisissez d'abord une activité ou un culte pour
+                                marquer les présences.
+                            </div>
+                        )}
+
                         <div style={S.tableHeader}>
                             <div>
                                 <p style={S.cardTitle}>
@@ -585,6 +748,7 @@ export default function Presences({
                                         ),
                                     }))
                                 }
+                                disabled={!selectedActiviteId}
                             >
                                 Tous présents
                             </button>
@@ -596,6 +760,7 @@ export default function Presences({
                                         [selectedActiviteId]: {},
                                     }))
                                 }
+                                disabled={!selectedActiviteId}
                             >
                                 Réinitialiser
                             </button>
@@ -606,13 +771,9 @@ export default function Presences({
                                     ...(saving ? S.btnDisabled : {}),
                                 }}
                                 onClick={handleSave}
-                                disabled={saving}
+                                disabled={saving || !selectedActiviteId}
                             >
-                                {saving
-                                    ? "Enregistrement…"
-                                    : saved
-                                      ? "✓ Enregistré"
-                                      : "Enregistrer"}
+                                {saving ? "Enregistrement…" : "Enregistrer"}
                             </button>
                         </div>
                     </div>
@@ -622,6 +783,11 @@ export default function Presences({
                 {activeTab === "activites" && (
                     <div style={S.card}>
                         <p style={S.cardTitle}>Activités de la classe</p>
+                        {loadingProgrammeActivites && (
+                            <p style={{ ...S.cardSub, marginTop: 8 }}>
+                                Chargement des activités du programme...
+                            </p>
+                        )}
                         <div
                             style={{
                                 display: "flex",
@@ -630,7 +796,7 @@ export default function Presences({
                                 marginTop: 16,
                             }}
                         >
-                            {activites.map((a) => (
+                            {activitesOnglet.map((a) => (
                                 <div
                                     key={a.id}
                                     style={S.activiteRow}
@@ -695,6 +861,20 @@ export default function Presences({
                                         >
                                             {typeIcon(a.type)} {a.type} ·{" "}
                                             {formatHeure(a.date_heure_debut)}
+                                            {a.source === "programme" && (
+                                                <span
+                                                    style={{
+                                                        marginLeft: 8,
+                                                        background: "#e8eaf6",
+                                                        color: "#1a237e",
+                                                        fontSize: 10,
+                                                        padding: "2px 7px",
+                                                        borderRadius: 10,
+                                                    }}
+                                                >
+                                                    Depuis Programmes
+                                                </span>
+                                            )}
                                             {a.presence_obligatoire && (
                                                 <span
                                                     style={{
@@ -712,9 +892,24 @@ export default function Presences({
                                         </p>
                                     </div>
                                     <StatutBadge statut={a.statut} />
-                                    <span style={{ color: "#bbb" }}>›</span>
+                                    <span style={{ color: "#bbb" }}>
+                                        {a.source === "programme" ? "•" : "›"}
+                                    </span>
                                 </div>
                             ))}
+                            {!loadingProgrammeActivites &&
+                                activitesOnglet.length === 0 && (
+                                    <p
+                                        style={{
+                                            color: "#888",
+                                            textAlign: "center",
+                                            padding: "16px 0",
+                                        }}
+                                    >
+                                        Aucune activité créée dans le module
+                                        Programmes pour le moment.
+                                    </p>
+                                )}
                         </div>
                     </div>
                 )}
@@ -1198,6 +1393,24 @@ const FILTRES = [
 
 const S = {
     page: { padding: "24px", minHeight: "100vh" },
+    toast: {
+        position: "fixed",
+        top: 18,
+        right: 18,
+        zIndex: 2000,
+        color: "white",
+        borderRadius: 10,
+        padding: "10px 14px",
+        fontSize: 13,
+        fontWeight: 500,
+        boxShadow: "0 8px 20px rgba(0,0,0,0.2)",
+    },
+    toastSuccess: {
+        background: "linear-gradient(135deg, #2e7d32, #43a047)",
+    },
+    toastError: {
+        background: "linear-gradient(135deg, #c62828, #e53935)",
+    },
     pageHeader: {
         display: "flex",
         alignItems: "flex-start",
@@ -1292,6 +1505,15 @@ const S = {
         fontSize: 13,
         whiteSpace: "nowrap",
     },
+    selectInput: {
+        border: "1px solid #d7dbeb",
+        borderRadius: 10,
+        padding: "8px 10px",
+        fontSize: 13,
+        minWidth: 280,
+        background: "#fff",
+        color: "#1f2937",
+    },
     activitePills: { display: "flex", gap: 8, flexWrap: "wrap" },
     activitePill: {
         background: "rgba(255,255,255,0.12)",
@@ -1340,6 +1562,15 @@ const S = {
         borderRadius: 14,
         padding: "20px 24px",
         marginBottom: 20,
+    },
+    selectionNotice: {
+        background: "#fff8e1",
+        color: "#8d6e63",
+        border: "1px solid #ffe0b2",
+        borderRadius: 10,
+        padding: "10px 12px",
+        fontSize: 12,
+        marginBottom: 12,
     },
     tableHeader: {
         display: "flex",

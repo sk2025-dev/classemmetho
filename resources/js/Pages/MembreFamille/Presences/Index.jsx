@@ -173,38 +173,65 @@ function HistoriqueRow({ activite, date, classe, statut }) {
 // ─── Composant principal ─────────────────────────────────────────────────────
 export default function MembreFamilleView({ membre = {}, historique = [] }) {
     const [showAll, setShowAll] = useState(false);
+    const [activityKindFilter, setActivityKindFilter] = useState("tous");
+
+    const historiqueFiltree = useMemo(() => {
+        if (activityKindFilter === "cultes") {
+            return historique.filter(
+                (h) =>
+                    Boolean(h.is_culte) ||
+                    String(h.type ?? "")
+                        .toLowerCase()
+                        .includes("culte"),
+            );
+        }
+
+        if (activityKindFilter === "activites") {
+            return historique.filter(
+                (h) =>
+                    !Boolean(h.is_culte) &&
+                    !String(h.type ?? "")
+                        .toLowerCase()
+                        .includes("culte"),
+            );
+        }
+
+        return historique;
+    }, [historique, activityKindFilter]);
 
     const nbPresents = useMemo(
-        () => historique.filter((h) => h.statut === "present").length,
-        [historique],
+        () => historiqueFiltree.filter((h) => h.statut === "present").length,
+        [historiqueFiltree],
     );
     const nbAbsents = useMemo(
-        () => historique.filter((h) => h.statut === "absent").length,
-        [historique],
+        () => historiqueFiltree.filter((h) => h.statut === "absent").length,
+        [historiqueFiltree],
     );
     const nbExcuses = useMemo(
-        () => historique.filter((h) => h.statut === "excuse").length,
-        [historique],
+        () => historiqueFiltree.filter((h) => h.statut === "excuse").length,
+        [historiqueFiltree],
     );
     const taux = useMemo(() => {
-        if (historique.length === 0) return 0;
-        return Math.round((nbPresents / historique.length) * 100);
-    }, [historique.length, nbPresents]);
+        if (historiqueFiltree.length === 0) return 0;
+        return Math.round((nbPresents / historiqueFiltree.length) * 100);
+    }, [historiqueFiltree.length, nbPresents]);
 
     const currentMonth = new Date().getMonth() + 1;
     const ceMonthTot = useMemo(
-        () => historique.filter((h) => h.mois === currentMonth).length,
-        [historique, currentMonth],
+        () => historiqueFiltree.filter((h) => h.mois === currentMonth).length,
+        [historiqueFiltree, currentMonth],
     );
     const ceMonthPres = useMemo(
         () =>
-            historique.filter(
+            historiqueFiltree.filter(
                 (h) => h.mois === currentMonth && h.statut === "present",
             ).length,
-        [historique, currentMonth],
+        [historiqueFiltree, currentMonth],
     );
 
-    const displayed = showAll ? historique : historique.slice(0, 5);
+    const displayed = showAll
+        ? historiqueFiltree
+        : historiqueFiltree.slice(0, 5);
 
     return (
         <div
@@ -413,6 +440,50 @@ export default function MembreFamilleView({ membre = {}, historique = [] }) {
                 ))}
             </div>
 
+            <div
+                style={{
+                    display: "flex",
+                    gap: 8,
+                    padding: "14px 24px 0",
+                    flexWrap: "wrap",
+                }}
+            >
+                {[
+                    { key: "tous", label: "Tous" },
+                    { key: "activites", label: "Activités" },
+                    { key: "cultes", label: "Cultes" },
+                ].map((item) => (
+                    <button
+                        key={item.key}
+                        onClick={() => {
+                            setActivityKindFilter(item.key);
+                            setShowAll(false);
+                        }}
+                        style={{
+                            border:
+                                activityKindFilter === item.key
+                                    ? "1px solid #ffffff"
+                                    : "1px solid rgba(255,255,255,0.25)",
+                            borderRadius: 20,
+                            padding: "6px 14px",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            background:
+                                activityKindFilter === item.key
+                                    ? "rgba(255,255,255,0.95)"
+                                    : "rgba(255,255,255,0.12)",
+                            color:
+                                activityKindFilter === item.key
+                                    ? "#1e2070"
+                                    : "white",
+                        }}
+                    >
+                        {item.label}
+                    </button>
+                ))}
+            </div>
+
             {/* Historique récent */}
             <div
                 style={{
@@ -434,7 +505,7 @@ export default function MembreFamilleView({ membre = {}, historique = [] }) {
                     Mon historique récent
                 </div>
                 <div style={{ fontSize: 12, color: "#aaa", marginBottom: 16 }}>
-                    {historique.length} activités enregistrées
+                    {historiqueFiltree.length} activités enregistrées
                 </div>
 
                 {displayed.map((h) => (
@@ -442,7 +513,7 @@ export default function MembreFamilleView({ membre = {}, historique = [] }) {
                         key={h.id}
                         activite={h.activite}
                         date={h.date}
-                        classe={membre.classe}
+                        classe={h.is_culte ? "Culte" : membre.classe}
                         statut={h.statut}
                     />
                 ))}
@@ -488,7 +559,7 @@ export default function MembreFamilleView({ membre = {}, historique = [] }) {
                         </span>
                         {showAll
                             ? "Voir moins"
-                            : `Voir tout (${historique.length})`}
+                            : `Voir tout (${historiqueFiltree.length})`}
                     </button>
                 </div>
             </div>

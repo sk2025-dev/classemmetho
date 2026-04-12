@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\PermanentActivity;
 use App\Models\Presence;
+use App\Models\SpecialEvent;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 class PresenceConducteurController extends Controller
@@ -23,21 +25,29 @@ class PresenceConducteurController extends Controller
 
         abort_if(! $classe, 403, "Aucune classe associée à ce conducteur.");
 
-        // Activités de la classe (toutes les activités non-paroissiales)
-        $activites = PermanentActivity::query()
+        // Activites source unique: evenements crees dans Programmes (special_events)
+        $activites = SpecialEvent::query()
+            ->where('class_id', $classe->id)
             ->where('is_parish', false)
-            ->get()
-            ->map(function (PermanentActivity $activite) {
+            ->orderByDesc('date')
+            ->orderByDesc('time')
+            ->get(['id', 'title', 'date', 'time', 'lieu'])
+            ->map(function (SpecialEvent $event) {
+                $dateHeure = $this->resolveSpecialEventDateTime($event);
+                $titre = (string) $event->title;
+                $isCulte = str_contains(mb_strtolower($titre), 'culte');
+
                 return [
-                    'id' => $activite->id,
-                    'titre' => $activite->title,
-                    'type' => $activite->type,
-                    'date_heure_debut' => $this->dateHeureDebut($activite->day, $activite->time),
-                    'statut' => 'planifiee',
+                    'id' => $event->id,
+                    'titre' => $titre,
+                    'type' => $isCulte ? 'culte' : 'activite',
+                    'is_culte' => $isCulte,
+                    'date_heure_debut' => $dateHeure,
+                    'statut' => Carbon::parse($dateHeure)->isPast() ? 'terminee' : 'planifiee',
                     'presence_obligatoire' => true,
+                    'source' => 'programme',
                 ];
             })
-            ->sortByDesc('date_heure_debut')
             ->values();
 
         // Membres de la classe
@@ -54,12 +64,16 @@ class PresenceConducteurController extends Controller
             ]);
 
         // Présences existantes indexées [activite_id][membre_id] = statut
-        $presencesBrutes = Presence::whereIn('activite_id', $activites->pluck('id'))
-            ->get(['activite_id', 'membre_famille_id', 'statut']);   // ajoute 'statut' à ta table si besoin
+        $hasSpecialEventColumn = Schema::hasColumn('presences', 'special_event_id');
+
+        $presencesBrutes = $hasSpecialEventColumn
+            ? Presence::whereIn('special_event_id', $activites->pluck('id'))
+            ->get(['special_event_id', 'membre_famille_id', 'statut'])
+            : collect();
 
         $presences = [];
         foreach ($presencesBrutes as $p) {
-            $presences[$p->activite_id][$p->membre_famille_id] = $p->statut ?? 'present';
+            $presences[$p->special_event_id][$p->membre_famille_id] = $p->statut ?? 'present';
         }
 
         // Activité en cours ou la plus récente
@@ -109,6 +123,102 @@ class PresenceConducteurController extends Controller
                 'taux_moyen'             => $tauxMoyen,
             ],
         ]);
+    }
+
+    /**
+     * Retourne les activités créées dans le module Programmes du conducteur.
+     * Route : GET /conducteur/presences/programmes-activites
+     */
+    public function activitesProgramme(Request $request)
+    {
+        $conducteur = Auth::user()->load('classe');
+        $classe = $conducteur->classe;
+
+        abort_if(! $classe, 403, "Aucune classe associée à ce conducteur.");
+
+        $items = SpecialEvent::query()
+            ->where('class_id', $classe->id)
+            ->where('is_parish', false)
+            ->orderByDesc('date')
+            ->orderByDesc('time')
+            ->get(['id', 'title', 'date', 'time', 'lieu'])
+            ->map(function (SpecialEvent $event) {
+                $dateHeure = $this->resolveSpecialEventDateTime($event);
+                $title = (string) ($event->title ?? 'Activite');
+                $isCulte = str_contains(mb_strtolower($title), 'culte');
+
+                return [
+                    'id' => $event->id,
+                    'titre' => $title,
+                    'type' => $isCulte ? 'culte' : 'activite',
+                    'is_culte' => $isCulte,
+                    'date_heure_debut' => $dateHeure,
+                    'statut' => Carbon::parse($dateHeure)->isPast() ? 'terminee' : 'planifiee',
+                    'presence_obligatoire' => true,
+                    'source' => 'programme',
+                    'lieu' => $event->lieu,
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'activites' => $items,
+        ]);
+    }
+
+    /**
+     * Enregistre les presences pour une activite issue du module Programmes.
+     * Route : POST /conducteur/presences/programme/{event}
+     */
+    public function enregistrerProgramme(Request $request, SpecialEvent $event)
+    {
+        $conducteur = Auth::user()->load('classe');
+        $classe = $conducteur->classe;
+
+        abort_if(! $classe, 403, 'Aucune classe associee a ce conducteur.');
+        abort_if((int) $event->class_id !== (int) $classe->id, 403, 'Activite hors de votre classe.');
+        abort_if((bool) $event->is_parish, 403, 'Activite invalide pour ce module.');
+
+        if (! Schema::hasColumn('presences', 'special_event_id')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Migration requise: colonne special_event_id absente.',
+            ], 500);
+        }
+
+        $request->validate([
+            'marquages' => ['required', 'array'],
+            'marquages.*' => ['nullable', 'in:present,absent,excuse'],
+            'notes' => ['nullable', 'array'],
+            'notes.*' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        foreach ($request->marquages as $membreId => $statut) {
+            if ($statut === null) {
+                Presence::where('special_event_id', $event->id)
+                    ->where('membre_famille_id', $membreId)
+                    ->delete();
+                continue;
+            }
+
+            Presence::updateOrCreate(
+                [
+                    'special_event_id' => $event->id,
+                    'membre_famille_id' => $membreId,
+                ],
+                [
+                    'activite_id' => null,
+                    'statut' => $statut,
+                    'marquee_par' => Auth::id(),
+                    'marquee_le' => now(),
+                    'methode' => 'manuelle_programme',
+                    'notes' => $request->notes[$membreId] ?? null,
+                ]
+            );
+        }
+
+        return response()->json(['message' => 'Presences enregistrees avec succes.']);
     }
 
     /**
@@ -209,6 +319,20 @@ class PresenceConducteurController extends Controller
 
         if ($date->lt($today->copy()->subDay())) {
             $date->addWeek();
+        }
+
+        return $date->toDateTimeString();
+    }
+
+    private function resolveSpecialEventDateTime(SpecialEvent $event): string
+    {
+        $date = Carbon::parse($event->date);
+
+        if (! empty($event->time)) {
+            $time = Carbon::parse($event->time);
+            $date->setTime($time->hour, $time->minute, $time->second);
+        } else {
+            $date->setTime(0, 0, 0);
         }
 
         return $date->toDateTimeString();

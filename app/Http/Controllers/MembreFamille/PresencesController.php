@@ -18,7 +18,7 @@ class PresencesController extends Controller
 
         $historique = Presence::query()
             ->where('membre_famille_id', $user->id)
-            ->with('activite:id,title,day,time')
+            ->with('activite:id,title,type,day,time')
             ->orderByDesc('marquee_le')
             ->orderByDesc('updated_at')
             ->limit(120)
@@ -38,6 +38,8 @@ class PresencesController extends Controller
                 return [
                     'id' => $presence->id,
                     'activite' => $presence->activite?->title ?? 'Activite',
+                    'type' => $presence->activite?->type,
+                    'is_culte' => str_contains(mb_strtolower((string) ($presence->activite?->type ?? '')), 'culte'),
                     'date' => $d->locale('fr')->translatedFormat('d M'),
                     'mois' => (int) $d->month,
                     'statut' => $presence->statut ?? 'present',

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\PermanentActivity;
+use App\Models\SpecialEvent;
 use App\Models\User;
 
 class Presence extends Model
@@ -13,6 +14,7 @@ class Presence extends Model
 
     protected $fillable = [
         'activite_id',
+        'special_event_id',
         'membre_famille_id',
         'statut',
         'marquee_par',
@@ -28,6 +30,11 @@ class Presence extends Model
     public function activite()
     {
         return $this->belongsTo(PermanentActivity::class, 'activite_id');
+    }
+
+    public function specialEvent()
+    {
+        return $this->belongsTo(SpecialEvent::class, 'special_event_id');
     }
 
     public function membre()
