@@ -15,17 +15,29 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Remplir les données de référence
-        $this->call([
-            AdminSeeder::class,
-            VillesSeeder::class,
-            ClassesSeeder::class,
-            FonctionSeeder::class,
-            TresorerieSeeder::class,
-            SondageDemoSeeder::class,
-        ]);
+        $seedReferenceData = filter_var(env('SEED_REFERENCE_DATA', false), FILTER_VALIDATE_BOOL);
+        $seedDemoData = filter_var(env('SEED_DEMO_DATA', false), FILTER_VALIDATE_BOOL);
 
+        if ($seedReferenceData) {
+            $this->call([
+                AdminSeeder::class,
+                VillesSeeder::class,
+                ClassesSeeder::class,
+                FonctionSeeder::class,
+            ]);
+            $this->command->info('Données de référence seedées.');
+        }
 
-        $this->command->info('Base de données remplie avec succès!');
+        if ($seedDemoData) {
+            $this->call([
+                TresorerieSeeder::class,
+                SondageDemoSeeder::class,
+            ]);
+            $this->command->info('Données de démo seedées.');
+        }
+
+        if (!$seedReferenceData && !$seedDemoData) {
+            $this->command->info('Aucune donnée seedée (mode données réelles).');
+        }
     }
 }

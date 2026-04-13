@@ -19,6 +19,7 @@ import {
     Gift,
 } from "lucide-react";
 import { getMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 export default function ShowMember({ member, family, auth }) {
     const photoUrl = useMemo(() => getMemberPhotoUrl(member), [member]);
@@ -160,7 +161,10 @@ export default function ShowMember({ member, family, auth }) {
                 {/* Header avec bouton retour */}
                 <div className="mb-8 flex justify-between items-center">
                     <Link
-                        href={`/responsable-famille/inscriptions`}
+                        href={withBasePath(
+                            "",
+                            "/responsable-famille/inscriptions",
+                        )}
                         className="inline-flex items-center gap-2 text-white/90 hover:text-white bg-white/10 hover:bg-white/20 backdrop-blur-md px-5 py-2.5 rounded-full transition-all text-sm font-semibold border border-white/10"
                     >
                         <ArrowLeft className="w-4 h-4" />
@@ -219,7 +223,10 @@ export default function ShowMember({ member, family, auth }) {
 
                                 <div className="pt-4 flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                                     <Link
-                                        href={`/responsable-famille/inscriptions?family_id=${family.id}`}
+                                        href={withBasePath(
+                                            "",
+                                            `/responsable-famille/inscriptions?family_id=${family.id}`,
+                                        )}
                                         className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-white/20 hover:bg-white/30 text-white border border-white/30 font-bold rounded-xl transition-all backdrop-blur-sm"
                                     >
                                         <ArrowLeft className="w-4 h-4" />

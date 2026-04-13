@@ -13,33 +13,38 @@ class DashboardController extends Controller
 {
     public function __construct(
         private readonly SondageService $sondageService,
-    ) {
-    }
+    ) {}
 
     public function index()
     {
         $user = Auth::user();
-        $user->loadMissing('family', 'classe');
+        $user->loadMissing('family', 'classe', 'fonction');
+        $isClassTresorier = in_array(
+            mb_strtolower(trim((string) ($user->fonction?->nom ?? ''))),
+            ['trésorier', 'tresorier'],
+            true,
+        );
         $surveyBadgeCount = $user
             ? $this->sondageService
-                ->getVisibleSondagesForUser($user)
-                ->filter(fn (array $survey) => ($survey['statut'] ?? null) === 'Actif' && !($survey['aDejaRepondu'] ?? false))
-                ->count()
+            ->getVisibleSondagesForUser($user)
+            ->filter(fn(array $survey) => ($survey['statut'] ?? null) === 'Actif' && !($survey['aDejaRepondu'] ?? false))
+            ->count()
             : 0;
         $prayerBadgeCount = $user
             ? Priere::query()
-                ->where('user_id', $user->id)
-                ->where(function ($query) {
-                    $query->whereIn('statut', ['Transmise', 'En priere', 'Exaucement partage'])
-                        ->orWhereNotNull('vue_le')
-                        ->orWhereNotNull('prise_en_priere_le')
-                        ->orWhereNotNull('exaucee_le');
-                })
-                ->count()
+            ->where('user_id', $user->id)
+            ->where(function ($query) {
+                $query->whereIn('statut', ['Transmise', 'En priere', 'Exaucement partage'])
+                    ->orWhereNotNull('vue_le')
+                    ->orWhereNotNull('prise_en_priere_le')
+                    ->orWhereNotNull('exaucee_le');
+            })
+            ->count()
             : 0;
 
         return Inertia::render('MembreFamille/Dashboard', [
             'role' => $user->role,
+            'isClassTresorier' => $isClassTresorier,
             'surveyBadgeCount' => $surveyBadgeCount,
             'prayerBadgeCount' => $prayerBadgeCount,
             'familyName' => $user->family?->nom,

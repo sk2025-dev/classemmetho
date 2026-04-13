@@ -17,10 +17,14 @@ use Inertia\Inertia;
 
 class FinancesController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
         $family = $user->family;
+        $allowedTabs = ['fimeco', 'cotisations', 'paiement', 'dons', 'historique'];
+        $requestedTab = (string) $request->query('tab', 'fimeco');
+        $initialTab = in_array($requestedTab, $allowedTabs, true) ? $requestedTab : 'fimeco';
+        $openDonModal = $request->boolean('openDonModal');
 
         if (!$family) {
             return Inertia::render('MembreFamille/Finances/Index', [
@@ -29,6 +33,8 @@ class FinancesController extends Controller
                 'historiquePaiements' => [],
                 'donsFamille' => [],
                 'campagnesActives' => [],
+                'initialTab' => $initialTab,
+                'openDonModal' => $openDonModal,
             ]);
         }
 
@@ -43,8 +49,12 @@ class FinancesController extends Controller
                 'historiquePaiements' => [],
                 'donsFamille' => [],
                 'campagnesActives' => [],
+                'initialTab' => $initialTab,
+                'openDonModal' => $openDonModal,
             ]);
         }
+
+        $classeId = $family->classe_id ?? $user->classe_id;
 
         $cotisationsBase = Cotisation::query()
             ->where('statut', Cotisation::STATUT_ACTIVE)
@@ -53,9 +63,11 @@ class FinancesController extends Controller
                     ->orWhere('target_scope', Cotisation::TARGET_SCOPE_FAMILLE)
                     ->orWhere('target_scope', Cotisation::TARGET_SCOPE_INDIVIDUELLE);
             })
-            ->where(function ($query) use ($family) {
-                $query->whereNull('classe_id')
-                    ->orWhere('classe_id', $family->classe_id);
+            ->where(function ($query) use ($classeId) {
+                $query->whereNull('classe_id');
+                if ($classeId) {
+                    $query->orWhere('classe_id', $classeId);
+                }
             })
             ->orderBy('nom')
             ->get();
@@ -176,6 +188,8 @@ class FinancesController extends Controller
             'historiquePaiements' => $historiquePaiements,
             'donsFamille' => $donsFamille,
             'campagnesActives' => $campagnesActives,
+            'initialTab' => $initialTab,
+            'openDonModal' => $openDonModal,
         ]);
     }
 

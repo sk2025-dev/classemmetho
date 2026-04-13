@@ -13,6 +13,8 @@ use App\Services\ActeLiturgiqueService;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -359,13 +361,44 @@ class LiturgieController extends Controller
         if (in_array($typeActe, $typesFiche, true)) {
             $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
             $methoDataUri = $this->buildImageDataUri(public_path('images/metho.jpg'));
-            $view = $typeActe === 'naissance' ? 'pdf.fiche-naissance' : 'pdf.fiche-demande';
+            $conducteurSignatureDataUri = null;
+            if ($acte->conducteur?->signature_path && Storage::disk('public')->exists($acte->conducteur->signature_path)) {
+                $conducteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->conducteur->signature_path));
+            }
+            $pasteurSignatureDataUri = null;
+            if ($acte->pasteur?->signature_path && Storage::disk('public')->exists($acte->pasteur->signature_path)) {
+                $pasteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->pasteur->signature_path));
+            }
+            $view = $typeActe === 'naissance'
+                ? 'pdf.fiche-naissance'
+                : ($typeActe === 'deces' ? 'pdf.fiche-deces' : 'pdf.fiche-demande');
 
-            $pdf = Pdf::loadView($view, [
-                'acte' => $acte,
-                'logoDataUri' => $logoDataUri,
-                'methoDataUri' => $methoDataUri,
-            ])->setPaper('a4', 'portrait');
+            try {
+                $pdf = Pdf::loadView($view, [
+                    'acte' => $acte,
+                    'logoDataUri' => $logoDataUri,
+                    'methoDataUri' => $methoDataUri,
+                    'conducteurSignatureDataUri' => $conducteurSignatureDataUri,
+                    'pasteurSignatureDataUri' => $pasteurSignatureDataUri,
+                ])->setPaper('a4', 'portrait');
+            } catch (\Throwable $e) {
+                Log::error('Pdf fiche generation failed', [
+                    'acte_id' => $acte->id,
+                    'view' => $view,
+                    'type_acte' => $typeActe,
+                    'error_message' => $e->getMessage(),
+                    'error_file' => $e->getFile(),
+                    'error_line' => $e->getLine(),
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'view' => $view,
+                    'acte_id' => $acte->id,
+                ], 500);
+            }
 
             $filename = 'fiche-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
 
@@ -400,15 +433,34 @@ class LiturgieController extends Controller
         $scanDataUri = $this->buildImageDataUri(public_path('images/scan.png'))
             ?? $this->buildImageDataUri(public_path('images/image.png'));
 
-        $pdf = Pdf::loadView('pdf.acte-liturgique-certificat', [
-            'acte' => $acte,
-            'signaturePath' => $signaturePath,
-            'signatureName' => $signatureName,
-            'signatureRole' => $signatureRole,
-            'qrDataUri' => $qrDataUri,
-            'logoDataUri' => $logoDataUri,
-            'scanDataUri' => $scanDataUri,
-        ])->setPaper('a4', 'landscape');
+        try {
+            $pdf = Pdf::loadView('pdf.acte-liturgique-certificat', [
+                'acte' => $acte,
+                'signaturePath' => $signaturePath,
+                'signatureName' => $signatureName,
+                'signatureRole' => $signatureRole,
+                'qrDataUri' => $qrDataUri,
+                'logoDataUri' => $logoDataUri,
+                'scanDataUri' => $scanDataUri,
+            ])->setPaper('a4', 'landscape');
+        } catch (\Throwable $e) {
+            Log::error('Pdf certificat generation failed', [
+                'acte_id' => $acte->id,
+                'view' => 'pdf.acte-liturgique-certificat',
+                'type_acte' => $typeActe,
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'view' => 'pdf.acte-liturgique-certificat',
+                'acte_id' => $acte->id,
+            ], 500);
+        }
 
         $filename = 'certificat-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
 
@@ -447,13 +499,33 @@ class LiturgieController extends Controller
 
             $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
 
-            $pdf = Pdf::loadView('pdf.fiche-acte-conducteur', [
-                'actes' => $actes,
-                'logoDataUri' => $logoDataUri,
-                'generatedBy' => $actes->first()->conducteur ?? $actes->first()->classe?->conducteur,
-                'generatedAt' => $actes->first()->updated_at ?? now(),
-                'documentLabel' => 'Fiche recue du conducteur',
-            ])->setPaper('a4', 'portrait');
+            try {
+                $pdf = Pdf::loadView('pdf.fiche-acte-conducteur', [
+                    'actes' => $actes,
+                    'logoDataUri' => $logoDataUri,
+                    'generatedBy' => $actes->first()->conducteur ?? $actes->first()->classe?->conducteur,
+                    'generatedAt' => $actes->first()->updated_at ?? now(),
+                    'documentLabel' => 'Fiche recue du conducteur',
+                ])->setPaper('a4', 'portrait');
+            } catch (\Throwable $e) {
+                $firstActe = $actes->first();
+                Log::error('Pdf fiche-acte-conducteur generation failed', [
+                    'acte_id' => $firstActe->id,
+                    'view' => 'pdf.fiche-acte-conducteur',
+                    'actes_count' => $actes->count(),
+                    'error_message' => $e->getMessage(),
+                    'error_file' => $e->getFile(),
+                    'error_line' => $e->getLine(),
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'view' => 'pdf.fiche-acte-conducteur',
+                    'acte_id' => $firstActe->id,
+                ], 500);
+            }
 
             $filename = 'fiche-conducteur-' . ($actes->first()->reference ?: ('acte-' . $actes->first()->id)) . '.pdf';
 
@@ -503,8 +575,27 @@ class LiturgieController extends Controller
             $pdfData['methoDataUri'] = $this->buildImageDataUri(public_path('images/metho.jpg'));
         }
 
-        $pdf = Pdf::loadView($view, $pdfData)
-            ->setPaper('a4', 'portrait');
+        try {
+            $pdf = Pdf::loadView($view, $pdfData)
+                ->setPaper('a4', 'portrait');
+        } catch (\Throwable $e) {
+            Log::error('Pdf fiche-conducteur (single acte) generation failed', [
+                'acte_id' => $acte->id,
+                'view' => $view,
+                'type_acte' => $typeActe,
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'view' => $view,
+                'acte_id' => $acte->id,
+            ], 500);
+        }
 
         $filename = 'fiche-conducteur-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
 
@@ -555,12 +646,32 @@ class LiturgieController extends Controller
 
             $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
 
-            $pdf = Pdf::loadView('pdf.fiche-pasteur_mariage', [
-                'actes' => $actes,
-                'logoDataUri' => $logoDataUri,
-                'documentLabel' => 'Fiche finale des mariages',
-                'generatedAt' => now(),
-            ])->setPaper('a4', 'portrait');
+            try {
+                $pdf = Pdf::loadView('pdf.fiche-pasteur_mariage', [
+                    'actes' => $actes,
+                    'logoDataUri' => $logoDataUri,
+                    'documentLabel' => 'Fiche finale des mariages',
+                    'generatedAt' => now(),
+                ])->setPaper('a4', 'portrait');
+            } catch (\Throwable $e) {
+                $firstActe = $actes->first();
+                Log::error('Pdf fiche-pasteur_mariage generation failed', [
+                    'acte_id' => $firstActe->id,
+                    'view' => 'pdf.fiche-pasteur_mariage',
+                    'actes_count' => $actes->count(),
+                    'error_message' => $e->getMessage(),
+                    'error_file' => $e->getFile(),
+                    'error_line' => $e->getLine(),
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'view' => 'pdf.fiche-pasteur_mariage',
+                    'acte_id' => $firstActe->id,
+                ], 500);
+            }
 
             $filename = 'fiche-pasteur-mariage-' . now()->format('Ymd-His') . '.pdf';
 
@@ -600,12 +711,31 @@ class LiturgieController extends Controller
             ? 'pdf.fiche-naissance'
             : ($typeActe === 'deces' ? 'pdf.fiche-deces' : 'pdf.fiche-demande');
 
-        $pdf = Pdf::loadView($view, [
-            'acte' => $acte,
-            'logoDataUri' => $logoDataUri,
-            'conducteurSignatureDataUri' => $conducteurSignatureDataUri,
-            'pasteurSignatureDataUri' => $pasteurSignatureDataUri,
-        ])->setPaper('a4', 'portrait');
+        try {
+            $pdf = Pdf::loadView($view, [
+                'acte' => $acte,
+                'logoDataUri' => $logoDataUri,
+                'conducteurSignatureDataUri' => $conducteurSignatureDataUri,
+                'pasteurSignatureDataUri' => $pasteurSignatureDataUri,
+            ])->setPaper('a4', 'portrait');
+        } catch (\Throwable $e) {
+            Log::error('Pdf fiche (pasteur) generation failed', [
+                'acte_id' => $acte->id,
+                'view' => $view,
+                'type_acte' => $typeActe,
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'view' => $view,
+                'acte_id' => $acte->id,
+            ], 500);
+        }
 
         $filename = 'fiche-pasteur-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
 
@@ -619,10 +749,10 @@ class LiturgieController extends Controller
     public function envoyerFiche(Request $request)
     {
         $payload = $request->validate([
-            'destinataire' => ['nullable', 'email'],
+            'destinataire' => ['required', 'email'],
             'subject' => ['nullable', 'string', 'max:255'],
             'message' => ['nullable', 'string', 'max:2000'],
-            'ids' => ['nullable', 'array'],
+            'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['integer'],
         ]);
 
@@ -633,8 +763,7 @@ class LiturgieController extends Controller
         );
 
         $query = ActeLiturgique::with(['membre', 'classe', 'family', 'historiques.acteur'])
-            ->where('type_acte', ActeLiturgique::TYPE_MARIAGE)
-            ->whereIn('statut', ['VALIDEE', 'PUBLIEE']);
+            ->where('type_acte', ActeLiturgique::TYPE_MARIAGE);
 
         if (!empty($acteIds)) {
             $query->whereIn('id', $acteIds);
@@ -642,7 +771,33 @@ class LiturgieController extends Controller
 
         $actes = $query->get()->filter(function (ActeLiturgique $acte) {
             $details = (array) ($acte->details ?? []);
-            return empty($details['fiche_pasteur_envoyee']);
+            $statut = strtoupper(trim((string) ($acte->statut ?? '')));
+            $ceremonyStatut = strtoupper(trim((string) ($details['ceremonie_statut'] ?? '')));
+            $ficheSentFlag = $details['fiche_pasteur_envoyee'] ?? null;
+
+            $isFicheMarkedAsSent = false;
+            if ($ficheSentFlag === true || $ficheSentFlag === 1) {
+                $isFicheMarkedAsSent = true;
+            } elseif (is_string($ficheSentFlag)) {
+                $normalizedSentFlag = strtolower(trim($ficheSentFlag));
+                $isFicheMarkedAsSent = in_array($normalizedSentFlag, ['1', 'true'], true);
+            }
+
+            $globallyEligible = in_array($statut, [
+                'VALIDEE',
+                'PUBLIEE',
+                'ARCHIVEE',
+                'CELEBRE',
+                'TERMINE',
+            ], true);
+
+            $ceremonyEligible = in_array($ceremonyStatut, [
+                'CEREMONIE_VALIDEE_PAR_PASTEUR',
+                'CEREMONIE_VALIDE_PAR_PASTEUR',
+            ], true);
+
+            return ($globallyEligible || $ceremonyEligible)
+                && !$isFicheMarkedAsSent;
         })->values();
 
         if ($actes->isEmpty()) {
@@ -650,6 +805,59 @@ class LiturgieController extends Controller
                 'success' => false,
                 'message' => 'Aucune fiche en attente d’envoi.',
             ], 422);
+        }
+
+        $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
+
+        try {
+            $pdf = Pdf::loadView('pdf.fiche-pasteur_mariage', [
+                'actes' => $actes,
+                'logoDataUri' => $logoDataUri,
+                'documentLabel' => 'Fiche finale des mariages',
+                'generatedAt' => now(),
+            ])->setPaper('a4', 'portrait');
+        } catch (\Throwable $e) {
+            Log::error('Echec generation PDF fiche finale (pasteur)', [
+                'acte_ids' => $actes->pluck('id')->toArray(),
+                'destinataire' => $payload['destinataire'] ?? null,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Impossible de generer la fiche PDF pour le moment.',
+            ], 500);
+        }
+
+        $filename = 'fiche-finale-mariages-pasteur-' . now()->format('Ymd-His') . '.pdf';
+        $mailSubject = trim((string) ($payload['subject'] ?? '')) ?: 'Fiche finale des mariages';
+        $mailMessage = trim((string) ($payload['message'] ?? ''))
+            ?: "Bonjour,\n\nVeuillez trouver en piece jointe la fiche finale des mariages.\n\nBien cordialement.";
+
+        try {
+            Mail::raw($mailMessage, function ($message) use ($payload, $mailSubject, $pdf, $filename) {
+                $message
+                    ->to($payload['destinataire'])
+                    ->subject($mailSubject)
+                    ->attachData($pdf->output(), $filename, [
+                        'mime' => 'application/pdf',
+                    ]);
+            });
+        } catch (\Throwable $e) {
+            Log::error('Echec envoi email fiche finale (pasteur)', [
+                'acte_ids' => $actes->pluck('id')->toArray(),
+                'destinataire' => $payload['destinataire'] ?? null,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Impossible d\'envoyer l\'email pour le moment.',
+            ], 500);
         }
 
         $actes->each(function (ActeLiturgique $acte) use ($payload, $user) {
@@ -667,7 +875,7 @@ class LiturgieController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'La fiche a été marquée comme envoyée.',
+            'message' => 'La fiche finale a ete envoyee par email.',
             'actes' => $updatedActes,
         ]);
     }

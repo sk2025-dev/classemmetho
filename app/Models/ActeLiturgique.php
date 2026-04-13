@@ -80,6 +80,16 @@ class ActeLiturgique extends Model
     public const STATUT_PUBLIEE = 'PUBLIEE';
     public const STATUT_ARCHIVEE = 'ARCHIVEE';
 
+    public const STATUTS_BLOQUANT_NOUVELLE_DEMANDE = [
+        self::STATUT_Soumise,
+        self::STATUT_EN_ATTENTE_CONDUCTEUR,
+        self::STATUT_TRANSMISE_AU_PASTEUR,
+        self::STATUT_VALIDEE,
+        self::STATUT_PUBLIEE,
+        self::STATUT_CELEBRE,
+        self::STATUT_TERMINE,
+    ];
+
     // Méthodes pour vérifier le type
     public function isAnnonce(): bool
     {
@@ -239,5 +249,9 @@ class ActeLiturgique extends Model
             self::STATUT_PUBLIEE => 'Publiée',
             self::STATUT_ARCHIVEE => 'Archivée',
         ];
+    }
+    public static function statutsBloquantNouvelleDemande(): array
+    {
+        return self::STATUTS_BLOQUANT_NOUVELLE_DEMANDE;
     }
 }

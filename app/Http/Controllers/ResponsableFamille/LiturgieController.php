@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class LiturgieController extends Controller
@@ -109,19 +110,28 @@ class LiturgieController extends Controller
             ], 422);
         }
 
-        // Prevent duplicate submissions: if the same family member has an active
-        // request of the same type (any statut except ARCHIVEE), reject the new one.
+        // Block only requests that are still active/finalized.
+        // Refused requests may be resubmitted by the family.
         if ($targetMemberId > 0 && !empty($payload['type_acte'])) {
-            $already = ActeLiturgique::query()
+            $existingActe = ActeLiturgique::query()
                 ->where('membre_id', $targetMemberId)
                 ->where('type_acte', $payload['type_acte'])
-                // any statut except archived
-                ->where('statut', '!=', 'ARCHIVEE')
-                ->exists();
-            if ($already) {
+                ->whereIn('statut', ActeLiturgique::statutsBloquantNouvelleDemande())
+                ->latest('id')
+                ->first();
+
+            if ($existingActe) {
+                $message = in_array($existingActe->statut, [
+                    ActeLiturgique::STATUT_Soumise,
+                    ActeLiturgique::STATUT_EN_ATTENTE_CONDUCTEUR,
+                    ActeLiturgique::STATUT_TRANSMISE_AU_PASTEUR,
+                ], true)
+                    ? 'Une demande de ' . str_replace('_', ' ', $payload['type_acte']) . ' est deja en cours de traitement pour ce membre.'
+                    : 'Une demande de ' . str_replace('_', ' ', $payload['type_acte']) . ' existe deja pour ce membre.';
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Vous avez deja soumis une demande de ' . str_replace('_', ' ', $payload['type_acte']) . '.',
+                    'message' => $message,
                 ], 422);
             }
         }
@@ -182,7 +192,7 @@ class LiturgieController extends Controller
 
         if (in_array($typeActe, $typesFiche, true)) {
             $validFicheStatuses = $typeActe === 'naissance'
-                ? ['SOUMISE', 'EN_ATTENTE_CONDUCTEUR', 'TRANSMISE_AU_PASTEUR', 'VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE']
+                ? ['VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE']
                 : ['VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'];
 
             if (!in_array($acte->statut, $validFicheStatuses, true)) {
@@ -208,16 +218,36 @@ class LiturgieController extends Controller
                 $pasteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->pasteur->signature_path));
             }
 
-            $pdf = Pdf::loadView($view, [
-                'acte' => $acte,
-                'logoDataUri' => $logoDataUri,
-                'methoDataUri' => $methoDataUri,
-                'conducteurSignatureDataUri' => $conducteurSignatureDataUri,
-                'pasteurSignatureDataUri' => $pasteurSignatureDataUri,
-            ])->setPaper('a4', 'portrait');
+            try {
+                $pdf = Pdf::loadView($view, [
+                    'acte' => $acte,
+                    'logoDataUri' => $logoDataUri,
+                    'methoDataUri' => $methoDataUri,
+                    'conducteurSignatureDataUri' => $conducteurSignatureDataUri,
+                    'pasteurSignatureDataUri' => $pasteurSignatureDataUri,
+                ])->setPaper('a4', 'portrait');
 
-            $filename = 'fiche-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
-            return $this->respondWithPdf($pdf, $filename, $preview);
+                $filename = 'fiche-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
+                return $this->respondWithPdf($pdf, $filename, $preview);
+            } catch (\Throwable $e) {
+                Log::error('Echec generation fiche responsable-famille', [
+                    'acte_id' => $acte->id,
+                    'type_acte' => $typeActe,
+                    'view' => $view,
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]);
+
+                return response()->json([
+                    'error' => 'Erreur generation fiche',
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'view' => $view,
+                    'acte_id' => $acte->id,
+                ], 500);
+            }
         }
 
         if (!in_array($typeActe, $typesCertificat, true)) {
@@ -252,18 +282,38 @@ class LiturgieController extends Controller
         $scanDataUri = $this->buildImageDataUri(public_path('images/scan.png'))
             ?? $this->buildImageDataUri(public_path('images/image.png'));
 
-        $pdf = Pdf::loadView('pdf.acte-liturgique-certificat', [
-            'acte' => $acte,
-            'signaturePath' => $signaturePath,
-            'signatureName' => $signatureName,
-            'signatureRole' => $signatureRole,
-            'qrDataUri' => $qrDataUri,
-            'logoDataUri' => $logoDataUri,
-            'scanDataUri' => $scanDataUri,
-        ])->setPaper('a4', 'landscape');
+        try {
+            $pdf = Pdf::loadView('pdf.acte-liturgique-certificat', [
+                'acte' => $acte,
+                'signaturePath' => $signaturePath,
+                'signatureName' => $signatureName,
+                'signatureRole' => $signatureRole,
+                'qrDataUri' => $qrDataUri,
+                'logoDataUri' => $logoDataUri,
+                'scanDataUri' => $scanDataUri,
+            ])->setPaper('a4', 'landscape');
 
-        $filename = 'certificat-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
-        return $this->respondWithPdf($pdf, $filename, $preview);
+            $filename = 'certificat-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
+            return $this->respondWithPdf($pdf, $filename, $preview);
+        } catch (\Throwable $e) {
+            Log::error('Echec generation certificat responsable-famille', [
+                'acte_id' => $acte->id,
+                'type_acte' => $typeActe,
+                'view' => 'pdf.acte-liturgique-certificat',
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return response()->json([
+                'error' => 'Erreur generation certificat',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'view' => 'pdf.acte-liturgique-certificat',
+                'acte_id' => $acte->id,
+            ], 500);
+        }
     }
 
     public function updateCeremonie(Request $request, int $id)
@@ -319,8 +369,21 @@ class LiturgieController extends Controller
             'date_souhaitee' => ['required', 'date'],
             'ceremonie_creneau' => ['required', 'string', 'in:matin,apres_midi'],
             'lieu_ceremonie' => ['required', 'string', 'max:255'],
-            'temoins' => ['required', 'string', 'max:1000'],
+            'temoin_homme' => ['required', 'string', 'max:255'],
+            'temoin_femme' => ['required', 'string', 'max:255'],
+            'temoins' => ['nullable', 'string', 'max:1000'],
         ]);
+
+        $temoinHomme = trim((string) $payload['temoin_homme']);
+        $temoinFemme = trim((string) $payload['temoin_femme']);
+        $detailsTemoins = trim((string) ($payload['temoins'] ?? ''));
+
+        if ($temoinHomme === '' || $temoinFemme === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Veuillez renseigner le témoin femme et le témoin homme.',
+            ], 422);
+        }
 
         $conflict = ActeLiturgique::where('type_acte', $acte->type_acte)
             ->where('id', '<>', $acte->id)
@@ -341,7 +404,11 @@ class LiturgieController extends Controller
 
         $details = (array) ($acte->details ?? []);
         $details['lieu_ceremonie'] = $payload['lieu_ceremonie'];
-        $details['temoins'] = $payload['temoins'];
+        $details['temoin_homme'] = $temoinHomme;
+        $details['temoin_femme'] = $temoinFemme;
+        $details['temoins'] = $detailsTemoins !== ''
+            ? $detailsTemoins
+            : 'Témoin femme: ' . $temoinFemme . ' | Témoin homme: ' . $temoinHomme;
         $details['ceremonie_creneau'] = $payload['ceremonie_creneau'];
         $details['ceremonie_statut'] = 'CEREMONIE_SOUMISE_AU_CONDUCTEUR';
         $details['ceremonie_soumise_at'] = now()->toISOString();
@@ -395,33 +462,54 @@ class LiturgieController extends Controller
             })
             ->findOrFail($id);
 
-        // PDF disponible après transmission au pasteur ou validation pour les fiches naissance/décès
+        // PDF disponible après validation finale du pasteur pour les fiches naissance/décès
         $typeActe = strtolower((string) $acte->type_acte);
         if ($typeActe === 'naissance') {
-            if (!in_array($acte->statut, ['SOUMISE', 'EN_ATTENTE_CONDUCTEUR', 'TRANSMISE_AU_PASTEUR', 'VALIDEE', 'PUBLIEE', 'ARCHIVEE'], true)) {
-                abort(403, 'La fiche PDF est disponible après transmission au pasteur.');
+            if (!in_array($acte->statut, ['VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'], true)) {
+                abort(403, 'La fiche PDF est disponible apres validation finale du pasteur.');
             }
         } elseif ($typeActe === 'deces') {
-            if (!in_array($acte->statut, ['VALIDEE', 'PUBLIEE', 'ARCHIVEE'], true)) {
+            if (!in_array($acte->statut, ['VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'], true)) {
                 abort(403, 'La fiche PDF est disponible après validation du pasteur.');
             }
-        } elseif (!in_array($acte->statut, ['VALIDEE', 'PUBLIEE', 'ARCHIVEE'], true)) {
+        } elseif (!in_array($acte->statut, ['VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'], true)) {
             abort(403, 'La fiche PDF est disponible après validation du pasteur.');
         }
 
         $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
-        $view = $acte->type_acte === 'naissance'
+        $typeActe = strtolower((string) $acte->type_acte);
+        $view = $typeActe === 'naissance'
             ? 'pdf.fiche-naissance'
-            : ($acte->type_acte === 'deces' ? 'pdf.fiche-deces' : 'pdf.fiche-demande');
+            : ($typeActe === 'deces' ? 'pdf.fiche-deces' : 'pdf.fiche-demande');
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($view, [
-            'acte' => $acte,
-            'logoDataUri' => $logoDataUri,
-        ])
-            ->setPaper('a4', 'portrait');
+        try {
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($view, [
+                'acte' => $acte,
+                'logoDataUri' => $logoDataUri,
+            ])
+                ->setPaper('a4', 'portrait');
 
-        $prefix = $acte->type_acte === 'priere' ? 'Priere' : 'Acte';
-        return $pdf->download("{$prefix}_{$acte->reference}.pdf");
+            $prefix = $acte->type_acte === 'priere' ? 'Priere' : 'Acte';
+            return $pdf->download("{$prefix}_{$acte->reference}.pdf");
+        } catch (\Throwable $e) {
+            Log::error('Echec generation fiche responsable-famille (simple)', [
+                'acte_id' => $acte->id,
+                'type_acte' => $typeActe,
+                'view' => $view,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return response()->json([
+                'error' => 'Erreur generation fiche',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'view' => $view,
+                'acte_id' => $acte->id,
+            ], 500);
+        }
     }
 
     private function buildQrDataUri(string $payload): ?string

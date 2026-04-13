@@ -19,11 +19,10 @@ use App\Http\Controllers\ResponsableFamille\ProgrammeMembreController;
 use App\Http\Controllers\Pasteur\AnnuaireController as PasteurAnnuaireController;
 use App\Http\Controllers\Pasteur\DashboardController as PasteurDashboardController;
 use App\Http\Controllers\Pasteur\TresorerieController as PasteurTresorerieController;
-use App\Http\Controllers\Pasteur\ProgrammesPasteurController;
 use App\Http\Controllers\MembreFamille\AnnuaireController as MembreFamilleAnnuaireController;
 use App\Http\Controllers\MembreFamille\DashboardController as MembreFamilleDashboardController;
 use App\Http\Controllers\MembreFamille\FinancesController as MembreFamilleFinancesController;
-use App\Http\Controllers\MembreFamille\ProgrammesController; 
+use App\Http\Controllers\MembreFamille\ProgrammesActivitesController;
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\Profile\ChangePasswordController;
 use App\Http\Controllers\Admin\AdministrationController;
@@ -32,7 +31,7 @@ use App\Http\Controllers\Admin\ClasseController;
 use App\Http\Controllers\Admin\FonctionController;
 use App\Http\Controllers\Admin\NotificationsController;
 use App\Http\Controllers\Admin\AnnonceController;
-use App\Http\Controllers\Admin\AnnuaireController;
+use App\Http\Controllers\Admin\ProgrammesController;
 use App\Http\Controllers\Admin\TresorerieController as AdminTresorerieController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\LiturgieController as AdminLiturgieController;
@@ -63,6 +62,9 @@ Route::get('/sondages/public/{token}/repondre', [\App\Http\Controllers\Public\So
 Route::post('/sondages/public/{token}/reponses', [\App\Http\Controllers\Public\SondageController::class, 'storeResponse'])
     ->name('sondages.public.responses.store');
 
+Route::post('/dons/anonyme', [\App\Http\Controllers\Public\DonationController::class, 'storeAnonymous'])
+    ->name('public.dons.anonyme.store');
+
 // Pages d'authentification (Inertia)
 Route::get('/login', function () {
     return Inertia::render('login');
@@ -74,7 +76,7 @@ Route::post('/login', [\App\Http\Controllers\Auth\LoginController::class, 'login
 Route::middleware(['auth'])->group(function () {
     // Route de déconnexion
     Route::post('/logout', [\App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
-    
+
     // Profil utilisateur
     Route::get('/profile', [\App\Http\Controllers\Profile\ProfileController::class, 'show'])->name('profile.show');
     Route::post('/profile/update', [\App\Http\Controllers\Profile\ProfileController::class, 'update'])->name('profile.update');
@@ -97,6 +99,7 @@ Route::middleware(['auth'])->group(function () {
             case 'responsable_famille':
                 return redirect()->route('responsable_famille.dashboard');
             case 'membre_famille':
+            case 'tresorier':
                 return redirect()->route('membre_famille.dashboard');
             default:
                 return Inertia::render('Dashboard');
@@ -140,7 +143,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/inscriptions/{id}/approval-log', [\App\Http\Controllers\Admin\InscriptionApprovalController::class, 'approvalLog'])->name('admin.inscriptions.approval_log');
         Route::get('/admin/inscriptions/type-selection', [\App\Http\Controllers\Admin\InscriptionsController::class, 'typeSelection'])->name('admin.inscriptions.type-selection');
         Route::post('/admin/inscriptions/import-excel', [ExcelImportController::class, 'import'])->name('admin.inscriptions.import-excel');
-        
+
         // Routes pour créer inscriptions directement
         Route::get('/admin/inscriptions/famille/create', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'createFamilyForm'])->name('admin.inscriptions.famille.create');
         Route::get('/admin/inscriptions/conducteur/create', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'createConductorForm'])->name('admin.inscriptions.conducteur.create');
@@ -219,9 +222,10 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/status/{id}/{type}', [AdministrationController::class, 'updateStatus'])
             ->name('admin.updateStatus');
 
-          // ===== ROUTES PROGRAMMES PASTEUR =====
-        Route::get('/admin/programmes', [ProgrammesPasteurController::class, 'index'])->name('admin.programmes');
-        Route::get('/admin/programmes/classe/{id}', [ProgrammesPasteurController::class, 'getClassProgrammes'])->name('admin.programmes.classe');
+        // ===== PROGRAMMES =====
+        Route::get('/admin/programmes', [ProgrammesController::class, 'index'])->name('admin.programmes');
+        Route::post('/admin/programmes/agenda', [ProgrammesController::class, 'storeAgenda'])->name('admin.programmes.agenda');
+        Route::post('/admin/programmes/event', [ProgrammesController::class, 'storeEvent'])->name('admin.programmes.event');
     });
 
     // Tableau de bord Conducteur
@@ -231,7 +235,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/conducteur/prieres', [\App\Http\Controllers\Conducteur\Prieres\PrieresController::class, 'index'])->name('conducteur.prieres.index');
         Route::post('/conducteur/prieres', [\App\Http\Controllers\Conducteur\Prieres\PrieresController::class, 'store'])->name('conducteur.prieres.store');
         Route::patch('/conducteur/prieres/{priere}/commentaire', [\App\Http\Controllers\Conducteur\Prieres\PrieresController::class, 'updateTestimony'])->name('conducteur.prieres.testimony');
+        Route::patch('/conducteur/prieres/{priere}/status', [\App\Http\Controllers\Conducteur\Prieres\PrieresController::class, 'updateStatus'])->name('conducteur.prieres.status');
         Route::patch('/conducteur/prieres/{priere}/exaucee', [\App\Http\Controllers\Conducteur\Prieres\PrieresController::class, 'markFulfilled'])->name('conducteur.prieres.fulfilled');
+        Route::patch('/conducteur/prieres/{priere}/non-exaucee', [\App\Http\Controllers\Conducteur\Prieres\PrieresController::class, 'markUnfulfilled'])->name('conducteur.prieres.unfulfilled');
         Route::get('/conducteur/sondages', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'index'])->name('conducteur.sondages.index');
         Route::get('/conducteur/sondages/create', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'create'])->name('conducteur.sondages.create');
         Route::get('/conducteur/sondages/{id}/edit', [\App\Http\Controllers\Conducteur\Sondage\SondageController::class, 'edit'])->whereNumber('id')->name('conducteur.sondages.edit');
@@ -281,6 +287,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/conducteur/liturgie/{id}/certificat', [ConducteurLiturgieController::class, 'certificat'])->name('conducteur.liturgie.certificat');
         Route::get('/conducteur/liturgie/{id}/fiche-conducteur', [ConducteurLiturgieController::class, 'ficheConducteur'])->name('conducteur.liturgie.fiche_conducteur');
         Route::get('/conducteur/liturgie/{id}/fiche', [ConducteurLiturgieController::class, 'fiche'])->name('conducteur.liturgie.fiche');
+        Route::post('/conducteur/liturgie/fiche/envoyer', [ConducteurLiturgieController::class, 'envoyerFiche'])->name('conducteur.liturgie.fiche.envoyer');
 
         // Routes Annonces (Conducteur)
         Route::post('/conducteur/annonces', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'store'])->name('conducteur.annonces.store');
@@ -290,12 +297,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/conducteur/annonces/{id}/transmettre', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'transmettreAuPasteur'])->name('conducteur.annonces.transmettre');
         Route::post('/conducteur/annonces/{id}/rejeter', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'rejeter'])->name('conducteur.annonces.rejeter');
 
-        // Routes pour les demandes de transfert (creation + validation conducteur)
-        Route::get('/conducteur/transferts', [\App\Http\Controllers\Conducteur\TransferWorkflowController::class, 'index'])->name('conducteur.transferts.index');
-        Route::post('/conducteur/transferts', [\App\Http\Controllers\Conducteur\TransferWorkflowController::class, 'store'])->name('conducteur.transferts.store');
-        Route::post('/conducteur/transferts/{id}/approve-source', [\App\Http\Controllers\Conducteur\TransferWorkflowController::class, 'approveAsSource'])->name('conducteur.transferts.approve_source');
-        Route::post('/conducteur/transferts/{id}/approve-accueil', [\App\Http\Controllers\Conducteur\TransferWorkflowController::class, 'approveAsAccueil'])->name('conducteur.transferts.approve_accueil');
-        Route::post('/conducteur/transferts/{id}/refuse', [\App\Http\Controllers\Conducteur\TransferWorkflowController::class, 'refuse'])->name('conducteur.transferts.refuse');
+        // Routes pour les demandes de transfert (validation par conducteur)
+        Route::get('/conducteur/transferts', [\App\Http\Controllers\Conducteur\TransferController::class, 'index'])->name('conducteur.transferts.index');
+        Route::post('/conducteur/transferts/{id}/approve-source', [\App\Http\Controllers\Conducteur\TransferController::class, 'approveAsSource'])->name('conducteur.transferts.approve_source');
+        Route::post('/conducteur/transferts/{id}/approve-accueil', [\App\Http\Controllers\Conducteur\TransferController::class, 'approveAsAccueil'])->name('conducteur.transferts.approve_accueil');
+        Route::post('/conducteur/transferts/{id}/refuse', [\App\Http\Controllers\Conducteur\TransferController::class, 'refuse'])->name('conducteur.transferts.refuse');
         Route::post('/conducteur/annonces/{id}/publier', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'publier'])->name('conducteur.annonces.publier');
         Route::post('/conducteur/annonces/{id}/archiver', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'archiver'])->name('conducteur.annonces.archiver');
         Route::get('/conducteur/annonces/{id}/fiche', [\App\Http\Controllers\Conducteur\AnnonceController::class, 'fiche'])->name('conducteur.annonces.fiche');
@@ -317,12 +323,13 @@ Route::middleware(['auth'])->group(function () {
             ->name('conducteur.tresorerie.paiements.store');
         Route::post('/conducteur/tresorerie/assign-tresorier', [ConducteurTresorerieController::class, 'assignTresorier'])
             ->name('conducteur.tresorerie.assign-tresorier');
+        Route::post('/conducteur/tresorerie/unassign-tresorier', [ConducteurTresorerieController::class, 'unassignTresorier'])
+            ->name('conducteur.tresorerie.unassign-tresorier');
 
         // ===== ROUTES PROGRAMMES CONDUCTEUR =====
         Route::get('/conducteur/programmes', [ProgrammesClasseController::class, 'index'])->name('conducteur.programmes');
         Route::get('/conducteur/programmes/all', [ProgrammesClasseController::class, 'allProgrammes'])->name('conducteur.programmes.all');
         Route::post('/conducteur/programmes/event', [ProgrammesClasseController::class, 'storeEvent'])->name('conducteur.programmes.event');
-        Route::post('/conducteur/programmes/events-multiple', [ProgrammesClasseController::class, 'storeMultipleEvents'])->name('conducteur.programmes.events-multiple');
         Route::put('/conducteur/programmes/event/{id}', [ProgrammesClasseController::class, 'updateEvent'])->name('conducteur.programmes.event.update');
         Route::delete('/conducteur/programmes/event/{id}', [ProgrammesClasseController::class, 'destroy'])->name('conducteur.programmes.event.destroy');
         Route::post('/conducteur/programmes/import-events', [ProgrammesClasseController::class, 'importEvents'])->name('conducteur.programmes.import');
@@ -332,9 +339,6 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/conducteur/galerie/add', [ProgrammesClasseController::class, 'addMedia'])->name('conducteur.galerie.add');
         Route::get('/conducteur/galerie', [ProgrammesClasseController::class, 'getGalleryMedia'])->name('conducteur.galerie');
         Route::delete('/conducteur/galerie/{id}', [ProgrammesClasseController::class, 'deleteMedia'])->name('conducteur.galerie.delete');
-        Route::get('/conducteur/galerie/edit/{id}', [ProgrammesClasseController::class, 'editMedia'])->name('galerie.edit');
-        Route::put('/conducteur/galerie/update/{id}', [ProgrammesClasseController::class, 'updateMedia'])->name('galerie.update');
-        Route::put('/conducteur/galerie/set-featured/{id}', [ProgrammesClasseController::class, 'setFeaturedMedia']);
     });
 
     // Tableau de bord Responsable de Famille
@@ -344,7 +348,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/responsable-famille/prieres', [\App\Http\Controllers\ResponsableFamille\Prieres\PrieresController::class, 'index'])->name('responsable_famille.prieres.index');
         Route::post('/responsable-famille/prieres', [\App\Http\Controllers\ResponsableFamille\Prieres\PrieresController::class, 'store'])->name('responsable_famille.prieres.store');
         Route::patch('/responsable-famille/prieres/{priere}/commentaire', [\App\Http\Controllers\ResponsableFamille\Prieres\PrieresController::class, 'updateTestimony'])->name('responsable_famille.prieres.testimony');
+        Route::patch('/responsable-famille/prieres/{priere}/status', [\App\Http\Controllers\ResponsableFamille\Prieres\PrieresController::class, 'updateStatus'])->name('responsable_famille.prieres.status');
         Route::patch('/responsable-famille/prieres/{priere}/exaucee', [\App\Http\Controllers\ResponsableFamille\Prieres\PrieresController::class, 'markFulfilled'])->name('responsable_famille.prieres.fulfilled');
+        Route::patch('/responsable-famille/prieres/{priere}/non-exaucee', [\App\Http\Controllers\ResponsableFamille\Prieres\PrieresController::class, 'markUnfulfilled'])->name('responsable_famille.prieres.unfulfilled');
         Route::get('/responsable-famille/sondages', [\App\Http\Controllers\ResponsableFamille\Sondage\SondageController::class, 'index'])->name('responsable_famille.sondages.index');
         Route::get('/responsable-famille/sondages/{id}', [\App\Http\Controllers\ResponsableFamille\Sondage\SondageController::class, 'show'])->name('responsable_famille.sondages.show');
         Route::post('/responsable-famille/sondages/{id}/reponses', [\App\Http\Controllers\ResponsableFamille\Sondage\SondageController::class, 'storeResponse'])->name('responsable_famille.sondages.responses.store');
@@ -363,7 +369,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/responsable-famille/liturgie/{id}/ceremonie', [ResponsableFamilleLiturgieController::class, 'updateCeremonie'])->name('responsable_famille.liturgie.ceremonie.update');
         Route::get('/responsable-famille/liturgie/{id}/certificat', [ResponsableFamilleLiturgieController::class, 'certificat'])->name('responsable_famille.liturgie.certificat');
         Route::get('/responsable-famille/liturgie/{id}/fiche', [ResponsableFamilleLiturgieController::class, 'fiche'])->name('responsable_famille.liturgie.fiche');
-        
+
         // Routes Annonces (ResponsableFamille)
         Route::get('/responsable-famille/annonces', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'index'])->name('responsable_famille.annonces.index');
         Route::get('/responsable-famille/annonces/create', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'create'])->name('responsable_famille.annonces.create');
@@ -391,17 +397,34 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/responsable-famille/transferts', [\App\Http\Controllers\ResponsableFamille\TransferController::class, 'store'])->name('responsable_famille.transferts.store');
         Route::post('/responsable-famille/transfer', [\App\Http\Controllers\ResponsableFamille\TransferController::class, 'transfer'])->name('responsable_famille.transfer');
 
-        // ===== ROUTES PROGRAMMES RESPONSABLE FAMILLE (LECTURE SEULE) =====
-        Route::get('/responsable-famille/programmes', [ProgrammesController::class, 'index'])->name('responsable_famille.programmes');
-        Route::get('/responsable-famille/programmes/all', [ProgrammesController::class, 'allProgrammes'])->name('responsable_famille.programmes.all');
-        Route::get('/responsable-famille/programmes/history', [ProgrammesController::class, 'historyProgrammes'])->name('responsable_famille.programmes.history');
-        
-        // Routes API pour les données (lecture seule)
-        Route::get('/responsable-famille/api/events/by-month', [ProgrammesController::class, 'getEventsByMonth'])->name('responsable_famille.api.events.by-month');
-        Route::get('/responsable-famille/api/events/{id}', [ProgrammesController::class, 'showEvent'])->name('responsable_famille.api.events.show');
-        Route::get('/responsable-famille/api/gallery/media', [ProgrammesController::class, 'getGalleryMedia'])->name('responsable_famille.api.gallery.index');
-        Route::get('/responsable-famille/api/gallery/media/{id}', [ProgrammesController::class, 'showMedia'])->name('responsable_famille.api.gallery.show');
-        Route::get('/responsable-famille/api/events/{eventId}/media', [ProgrammesController::class, 'getMediaByEvent'])->name('responsable_famille.api.events.media');
+        // Props Inertia dans le contrôleur
+        Route::get('/responsable-famille/programmes', [ProgrammeMembreController::class, 'index'])->name('responsable_famille.programmes');
+        Route::post('/responsable-famille/programmes/agenda', [ProgrammeMembreController::class, 'storeAgenda'])->name('responsable_famille.programmes.agenda');
+        Route::post('/resposanble-famille/programmes/event', [ProgrammeMembreController::class, 'storeEvent'])->name('responsable_famille.programmes.event');
+        Route::get('/responsable-famille/programmes/events-by-month', [ProgrammeMembreController::class, 'getEventsByMonth'])->name('responsable-famille.programmes.events.by-month');
+        Route::get('/responsable-famille/programmes/history', [ProgrammeMembreController::class, 'historyProgrammes'])->name('responsable-famille.programmes.history');
+        // Routes API pour le frontend (Calendrier, Galerie)
+        Route::post('/responsable-famille/galerie/add', [ProgrammeMembreController::class, 'addMedia'])->name('responsable-famille.galerie.add');
+        Route::get('/responsable-famille/galerie', [ProgrammeMembreController::class, 'getGalleryMedia'])->name('responsable-famille.galerie');
+        Route::delete('/responsable-famille/galerie/{id}', [ProgrammeMembreController::class, 'deleteMedia'])->name('responsable-famille.galerie.delete');
+    });
+
+    // Module Trésorerie de classe pour membre assigné Trésorier
+    Route::middleware('role:membre_famille')->group(function () {
+        Route::get('/tresorier/tresorerie', [ConducteurTresorerieController::class, 'index'])
+            ->name('tresorier.tresorerie.index');
+        Route::post('/tresorier/tresorerie/cotisations', [ConducteurTresorerieController::class, 'storeCotisation'])
+            ->name('tresorier.tresorerie.cotisations.store');
+        Route::get('/tresorier/tresorerie/cotisations/{cotisation}', [ConducteurTresorerieController::class, 'showCotisation'])
+            ->name('tresorier.tresorerie.cotisations.show');
+        Route::put('/tresorier/tresorerie/cotisations/{cotisation}', [ConducteurTresorerieController::class, 'updateCotisation'])
+            ->name('tresorier.tresorerie.cotisations.update');
+        Route::delete('/tresorier/tresorerie/cotisations/{cotisation}', [ConducteurTresorerieController::class, 'destroyCotisation'])
+            ->name('tresorier.tresorerie.cotisations.destroy');
+        Route::post('/tresorier/tresorerie/collectes', [ConducteurTresorerieController::class, 'storeCollecte'])
+            ->name('tresorier.tresorerie.collectes.store');
+        Route::post('/tresorier/tresorerie/paiements', [ConducteurTresorerieController::class, 'storePaiement'])
+            ->name('tresorier.tresorerie.paiements.store');
     });
 
     // Tableau de bord Pasteur
@@ -451,10 +474,6 @@ Route::middleware(['auth'])->group(function () {
         // Routes module Trésorerie (Pasteur)
         Route::get('/pasteur/tresorerie', [PasteurTresorerieController::class, 'index'])
             ->name('pasteur.tresorerie.index');
-
-            // ===== ROUTES PROGRAMMES PASTEUR =====
-        Route::get('/pasteur/programmes', [ProgrammesPasteurController::class, 'index'])->name('pasteur.programmes');
-        Route::get('/pasteur/programmes/classe/{id}', [ProgrammesPasteurController::class, 'getClassProgrammes'])->name('pasteur.programmes.classe');
     });
 
     // Tableau de bord Membre de Famille
@@ -464,7 +483,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/membre-famille/prieres', [\App\Http\Controllers\MembreFamille\Prieres\PrieresController::class, 'index'])->name('membre_famille.prieres.index');
         Route::post('/membre-famille/prieres', [\App\Http\Controllers\MembreFamille\Prieres\PrieresController::class, 'store'])->name('membre_famille.prieres.store');
         Route::patch('/membre-famille/prieres/{priere}/commentaire', [\App\Http\Controllers\MembreFamille\Prieres\PrieresController::class, 'updateTestimony'])->name('membre_famille.prieres.testimony');
+        Route::patch('/membre-famille/prieres/{priere}/status', [\App\Http\Controllers\MembreFamille\Prieres\PrieresController::class, 'updateStatus'])->name('membre_famille.prieres.status');
         Route::patch('/membre-famille/prieres/{priere}/exaucee', [\App\Http\Controllers\MembreFamille\Prieres\PrieresController::class, 'markFulfilled'])->name('membre_famille.prieres.fulfilled');
+        Route::patch('/membre-famille/prieres/{priere}/non-exaucee', [\App\Http\Controllers\MembreFamille\Prieres\PrieresController::class, 'markUnfulfilled'])->name('membre_famille.prieres.unfulfilled');
         Route::get('/membre-famille/sondages', [\App\Http\Controllers\MembreFamille\Sondage\SondageController::class, 'index'])->name('membre_famille.sondages.index');
         Route::get('/membre-famille/sondages/{id}', [\App\Http\Controllers\MembreFamille\Sondage\SondageController::class, 'show'])->whereNumber('id')->name('membre_famille.sondages.show');
         Route::post('/membre-famille/sondages/{id}/reponses', [\App\Http\Controllers\MembreFamille\Sondage\SondageController::class, 'storeResponse'])->whereNumber('id')->name('membre_famille.sondages.responses.store');
@@ -492,17 +513,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/membre-famille/finances/paiement/{paiement}/verify', [MembreFamilleFinancesController::class, 'verifyPaiement'])
             ->name('membre_famille.finances.paiement.verify');
 
-        // ===== ROUTES PROGRAMMES MEMBRE (LECTURE SEULE) =====
-        Route::get('/membre-famille/programmes', [ProgrammesController::class, 'index'])->name('membre_famille.programmes');
-        Route::get('/membre-famille/programmes/all', [ProgrammesController::class, 'allProgrammes'])->name('membre_famille.programmes.all');
-        Route::get('/membre-famille/programmes/history', [ProgrammesController::class, 'historyProgrammes'])->name('membre_famille.programmes.history');
-        
-        // Routes API pour les données (lecture seule)
-        Route::get('/membre-famille/api/events/by-month', [ProgrammesController::class, 'getEventsByMonth'])->name('membre_famille.api.events.by-month');
-        Route::get('/membre-famille/api/events/{id}', [ProgrammesController::class, 'showEvent'])->name('membre_famille.api.events.show');
-        Route::get('/membre-famille/api/gallery/media', [ProgrammesController::class, 'getGalleryMedia'])->name('membre_famille.api.gallery.index');
-        Route::get('/membre-famille/api/gallery/media/{id}', [ProgrammesController::class, 'showMedia'])->name('membre_famille.api.gallery.show');
-        Route::get('/membre-famille/api/events/{eventId}/media', [ProgrammesController::class, 'getMediaByEvent'])->name('membre_famille.api.events.media');
+        Route::get('/membre-famille/programmes', [ProgrammesActivitesController::class, 'index'])->name('membre_famille.programmes');
+        Route::post('/membre-famille/programmes/agenda', [ProgrammesActivitesController::class, 'storeAgenda'])->name('membre_famille.programmes.agenda');
+        Route::post('/membre-famille/programmes/event', [ProgrammesActivitesController::class, 'storeEvent'])->name('membre_famille.programmes.event');
     });
 
     // Route pour changer le mot de passe

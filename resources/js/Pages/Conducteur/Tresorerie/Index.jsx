@@ -120,12 +120,20 @@ const GradBtn = ({
     );
 };
 
-const OutlineBtn = ({ onClick, color = "teal", children, icon: Icon, sm }) => {
+const OutlineBtn = ({
+    onClick,
+    color = "teal",
+    children,
+    icon: Icon,
+    sm,
+    disabled,
+}) => {
     const c = C[color] || C.teal;
     const [h, setH] = useState(false);
     return (
         <button
             onClick={onClick}
+            disabled={disabled}
             onMouseEnter={() => setH(true)}
             onMouseLeave={() => setH(false)}
             style={{
@@ -135,11 +143,12 @@ const OutlineBtn = ({ onClick, color = "teal", children, icon: Icon, sm }) => {
                 padding: sm ? "5px 11px" : "8px 16px",
                 borderRadius: 9,
                 border: `1.5px solid ${c.light}`,
-                background: h ? c.pale : "transparent",
+                background: h && !disabled ? c.pale : "transparent",
                 color: c.mid,
                 fontWeight: 700,
                 fontSize: sm ? 11 : 12,
-                cursor: "pointer",
+                cursor: disabled ? "not-allowed" : "pointer",
+                opacity: disabled ? 0.65 : 1,
                 transition: "background .15s",
                 fontFamily: "inherit",
             }}
@@ -662,6 +671,7 @@ export default function ConducteurTresorerie({
     cotisationsPaiement = [],
     fimecoSuivi = [],
     membresClasse = [],
+    tresorierClasse = null,
     notificationsFinancieres = [],
 }) {
     const [activeTab, setActiveTab] = useState("dashboard");
@@ -684,7 +694,9 @@ export default function ConducteurTresorerie({
         date_fin: "",
         date_echeance: "",
         late_after_days: 2,
-        target_rules: [{ type: "GENRE", value: "M", amount: "", priority: 1 }],
+        target_rules: [
+            { type: "GENRE", values: ["M"], amount: "", priority: 1 },
+        ],
     });
     const [newCollecte, setNewCollecte] = useState({
         titre: "",
@@ -737,12 +749,42 @@ export default function ConducteurTresorerie({
         const montant = Number(newCotisation.montant || 0);
         const rules = Array.isArray(newCotisation.target_rules)
             ? newCotisation.target_rules
-                  .map((rule, index) => ({
-                      type: String(rule.type || "").toUpperCase(),
-                      value: String(rule.value || "").toUpperCase(),
-                      amount: Number(rule.amount || 0),
-                      priority: Number(rule.priority || index + 1),
-                  }))
+                  .flatMap((rule, index) => {
+                      const type = String(rule.type || "").toUpperCase();
+                      const amount = Number(rule.amount || 0);
+                      const priority = Number(rule.priority || index + 1);
+
+                      // Compat ancienne structure + nouvelle (multi-choix)
+                      const rawValues = Array.isArray(rule.values)
+                          ? rule.values
+                          : [rule.value];
+
+                      const values = rawValues
+                          .map((v) =>
+                              String(v || "")
+                                  .toUpperCase()
+                                  .trim(),
+                          )
+                          .filter(Boolean);
+
+                      if (type === "ENFANT") {
+                          return [
+                              {
+                                  type,
+                                  value: "MEMBRE_FAMILLE",
+                                  amount,
+                                  priority,
+                              },
+                          ];
+                      }
+
+                      return values.map((value) => ({
+                          type,
+                          value,
+                          amount,
+                          priority,
+                      }));
+                  })
                   .filter((rule) => rule.amount >= 100)
             : [];
 
@@ -751,10 +793,8 @@ export default function ConducteurTresorerie({
             return;
         }
 
-        if (newCotisation.target_scope === "FAMILLE" && montant < 100) {
-            alert(
-                "Montant familial requis (minimum 100).\nPour un ciblage par personne, utilisez la portée Individuelle.",
-            );
+        if (montant < 100) {
+            alert("Montant de base requis (minimum 100).");
             return;
         }
 
@@ -959,6 +999,24 @@ export default function ConducteurTresorerie({
         });
     };
 
+    const toggleRuleValue = (index, option) => {
+        setNewCotisation((prev) => {
+            const next = [...(prev.target_rules || [])];
+            const current = next[index] || {};
+            const currentValues = Array.isArray(current.values)
+                ? current.values
+                : [];
+
+            const exists = currentValues.includes(option);
+            const updatedValues = exists
+                ? currentValues.filter((v) => v !== option)
+                : [...currentValues, option];
+
+            next[index] = { ...current, values: updatedValues };
+            return { ...prev, target_rules: next };
+        });
+    };
+
     const addRule = () => {
         setNewCotisation((prev) => ({
             ...prev,
@@ -966,7 +1024,7 @@ export default function ConducteurTresorerie({
                 ...(prev.target_rules || []),
                 {
                     type: "GENRE",
-                    value: "F",
+                    values: ["F"],
                     amount: "",
                     priority: (prev.target_rules?.length || 0) + 1,
                 },
@@ -1002,7 +1060,10 @@ export default function ConducteurTresorerie({
         }
     };
     const handleExport = (format) =>
-        window.open(`/conducteur/tresorerie/export?format=${format}`, "_blank");
+        window.open(
+            withBasePath("", `/conducteur/tresorerie/export?format=${format}`),
+            "_blank",
+        );
 
     const handleAssignTresorier = async () => {
         if (!selectedMemberTresorier) {
@@ -1016,7 +1077,7 @@ export default function ConducteurTresorerie({
                 "/conducteur/tresorerie/assign-tresorier",
                 { user_id: selectedMemberTresorier },
             );
-            alert("Tresorier assigne avec succes!");
+            alert(response?.message || "Tresorier assigne avec succes!");
             setModalTresorier(false);
             setSelectedMemberTresorier("");
             // Recharger la page pour voir les changements
@@ -1025,6 +1086,37 @@ export default function ConducteurTresorerie({
             alert(
                 "Erreur lors de l'assignation du tresorier: " + error.message,
             );
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUnassignTresorier = async () => {
+        if (!tresorierClasse?.id) {
+            alert("Aucun tresorier n'est actuellement assigne.");
+            return;
+        }
+
+        const confirmRemove = window.confirm(
+            "Retirer la fonction de tresorier a ce membre ?",
+        );
+        if (!confirmRemove) return;
+
+        try {
+            setLoading(true);
+            const response = await postJson(
+                "/conducteur/tresorerie/unassign-tresorier",
+                { user_id: tresorierClasse.id },
+            );
+            alert(
+                response?.message ||
+                    "Fonction de tresorier retiree avec succes.",
+            );
+            setModalTresorier(false);
+            setSelectedMemberTresorier("");
+            window.location.reload();
+        } catch (error) {
+            alert("Erreur lors du retrait du tresorier: " + error.message);
         } finally {
             setLoading(false);
         }
@@ -2817,35 +2909,6 @@ export default function ConducteurTresorerie({
                         }
                         placeholder="Ex: 10000"
                     />
-                    <FSelect
-                        label="Périodicité"
-                        value={newCotisation.periodicite}
-                        onChange={(e) =>
-                            setNewCotisation((p) => ({
-                                ...p,
-                                periodicite: e.target.value,
-                            }))
-                        }
-                    >
-                        <option value="HEBDOMADAIRE">Hebdomadaire</option>
-                        <option value="MENSUEL">Mensuel</option>
-                        <option value="TRIMESTRIEL">Trimestriel</option>
-                        <option value="ANNUEL">Annuel</option>
-                        <option value="UNIQUE">Unique</option>
-                    </FSelect>
-                    <FSelect
-                        label="Portée"
-                        value={newCotisation.target_scope}
-                        onChange={(e) =>
-                            setNewCotisation((p) => ({
-                                ...p,
-                                target_scope: e.target.value,
-                            }))
-                        }
-                    >
-                        <option value="FAMILLE">Familiale</option>
-                        <option value="INDIVIDUELLE">Individuelle</option>
-                    </FSelect>
                     <FInput
                         label="Date de début"
                         type="date"
@@ -2865,17 +2928,6 @@ export default function ConducteurTresorerie({
                             setNewCotisation((p) => ({
                                 ...p,
                                 date_fin: e.target.value,
-                            }))
-                        }
-                    />
-                    <FInput
-                        label="Date d'échéance"
-                        type="date"
-                        value={newCotisation.date_echeance}
-                        onChange={(e) =>
-                            setNewCotisation((p) => ({
-                                ...p,
-                                date_echeance: e.target.value,
                             }))
                         }
                     />
@@ -2942,9 +2994,19 @@ export default function ConducteurTresorerie({
                         >
                             <select
                                 value={rule.type}
-                                onChange={(e) =>
-                                    setRule(idx, "type", e.target.value)
-                                }
+                                onChange={(e) => {
+                                    const nextType = e.target.value;
+                                    setRule(idx, "type", nextType);
+                                    if (nextType === "GENRE") {
+                                        setRule(idx, "values", ["M"]);
+                                    } else if (nextType === "EMPLOI") {
+                                        setRule(idx, "values", ["TRAVAILLEUR"]);
+                                    } else {
+                                        setRule(idx, "values", [
+                                            "MEMBRE_FAMILLE",
+                                        ]);
+                                    }
+                                }}
                                 style={{ ...inputStyle }}
                             >
                                 <option value="GENRE">Genre</option>
@@ -2953,42 +3015,182 @@ export default function ConducteurTresorerie({
                                     Enfant (membre_famille)
                                 </option>
                             </select>
-                            <select
-                                value={rule.value}
-                                onChange={(e) =>
-                                    setRule(idx, "value", e.target.value)
-                                }
-                                style={{ ...inputStyle }}
-                                disabled={rule.type === "ENFANT"}
+                            <div
+                                style={{
+                                    ...inputStyle,
+                                    display: "flex",
+                                    flexWrap: "wrap",
+                                    gap: 8,
+                                    minHeight: 40,
+                                    alignItems: "center",
+                                }}
                             >
                                 {rule.type === "GENRE" && (
                                     <>
-                                        <option value="M">Homme</option>
-                                        <option value="F">Femme</option>
+                                        <label
+                                            style={{
+                                                display: "flex",
+                                                gap: 5,
+                                                alignItems: "center",
+                                            }}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={
+                                                    Array.isArray(
+                                                        rule.values,
+                                                    ) &&
+                                                    rule.values.includes("M")
+                                                }
+                                                onChange={() =>
+                                                    toggleRuleValue(idx, "M")
+                                                }
+                                            />
+                                            Homme
+                                        </label>
+                                        <label
+                                            style={{
+                                                display: "flex",
+                                                gap: 5,
+                                                alignItems: "center",
+                                            }}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={
+                                                    Array.isArray(
+                                                        rule.values,
+                                                    ) &&
+                                                    rule.values.includes("F")
+                                                }
+                                                onChange={() =>
+                                                    toggleRuleValue(idx, "F")
+                                                }
+                                            />
+                                            Femme
+                                        </label>
                                     </>
                                 )}
                                 {rule.type === "EMPLOI" && (
                                     <>
-                                        <option value="TRAVAILLEUR">
-                                            TRAVAILLEUR
-                                        </option>
-                                        <option value="RETRAITE">
-                                            RETRAITE
-                                        </option>
-                                        <option value="ETUDIANT">
-                                            ETUDIANT
-                                        </option>
-                                        <option value="SANS_EMPLOI">
-                                            SANS_EMPLOI
-                                        </option>
+                                        <label
+                                            style={{
+                                                display: "flex",
+                                                gap: 5,
+                                                alignItems: "center",
+                                            }}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={
+                                                    Array.isArray(
+                                                        rule.values,
+                                                    ) &&
+                                                    rule.values.includes(
+                                                        "TRAVAILLEUR",
+                                                    )
+                                                }
+                                                onChange={() =>
+                                                    toggleRuleValue(
+                                                        idx,
+                                                        "TRAVAILLEUR",
+                                                    )
+                                                }
+                                            />
+                                            Travailleur
+                                        </label>
+                                        <label
+                                            style={{
+                                                display: "flex",
+                                                gap: 5,
+                                                alignItems: "center",
+                                            }}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={
+                                                    Array.isArray(
+                                                        rule.values,
+                                                    ) &&
+                                                    rule.values.includes(
+                                                        "RETRAITE",
+                                                    )
+                                                }
+                                                onChange={() =>
+                                                    toggleRuleValue(
+                                                        idx,
+                                                        "RETRAITE",
+                                                    )
+                                                }
+                                            />
+                                            Retraité
+                                        </label>
+                                        <label
+                                            style={{
+                                                display: "flex",
+                                                gap: 5,
+                                                alignItems: "center",
+                                            }}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={
+                                                    Array.isArray(
+                                                        rule.values,
+                                                    ) &&
+                                                    rule.values.includes(
+                                                        "ETUDIANT",
+                                                    )
+                                                }
+                                                onChange={() =>
+                                                    toggleRuleValue(
+                                                        idx,
+                                                        "ETUDIANT",
+                                                    )
+                                                }
+                                            />
+                                            Étudiant
+                                        </label>
+                                        <label
+                                            style={{
+                                                display: "flex",
+                                                gap: 5,
+                                                alignItems: "center",
+                                            }}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={
+                                                    Array.isArray(
+                                                        rule.values,
+                                                    ) &&
+                                                    rule.values.includes(
+                                                        "SANS_EMPLOI",
+                                                    )
+                                                }
+                                                onChange={() =>
+                                                    toggleRuleValue(
+                                                        idx,
+                                                        "SANS_EMPLOI",
+                                                    )
+                                                }
+                                            />
+                                            Sans emploi
+                                        </label>
                                     </>
                                 )}
                                 {rule.type === "ENFANT" && (
-                                    <option value="MEMBRE_FAMILLE">
-                                        Membre famille
-                                    </option>
+                                    <span
+                                        style={{
+                                            fontSize: 12,
+                                            color: "#374151",
+                                        }}
+                                    >
+                                        Membre famille (appliqué
+                                        automatiquement)
+                                    </span>
                                 )}
-                            </select>
+                            </div>
                             <input
                                 type="number"
                                 min="100"
@@ -3179,11 +3381,28 @@ export default function ConducteurTresorerie({
                             .filter((m) => m.role === "membre_famille")
                             .map((m) => (
                                 <option key={m.id} value={m.id}>
-                                    {m.prenom} {m.nom} ({m.famille})
+                                    {m.nom} ({m.famille})
                                 </option>
                             ))}
                     </select>
                 </FW>
+                <div
+                    style={{
+                        marginTop: 8,
+                        marginBottom: 14,
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        border: "1px solid #E5E7EB",
+                        background: "#F9FAFB",
+                        fontSize: 12,
+                        color: "#374151",
+                    }}
+                >
+                    <strong>Trésorier actuel:</strong>{" "}
+                    {tresorierClasse
+                        ? `${tresorierClasse.nom} (${tresorierClasse.famille})`
+                        : "Aucun"}
+                </div>
                 <p
                     style={{
                         fontSize: 11,
@@ -3208,6 +3427,15 @@ export default function ConducteurTresorerie({
                     >
                         Annuler
                     </OutlineBtn>
+                    {tresorierClasse ? (
+                        <OutlineBtn
+                            color="red"
+                            onClick={handleUnassignTresorier}
+                            disabled={loading}
+                        >
+                            Retirer le trésorier
+                        </OutlineBtn>
+                    ) : null}
                     <GradBtn
                         onClick={handleAssignTresorier}
                         disabled={loading}

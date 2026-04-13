@@ -3,9 +3,16 @@
  * Utilisé par app.jsx, AppLayout.jsx et LoadingScreen.jsx
  */
 
-import { withBasePath } from "./urlHelper";
+const getPublicLogoUrl = () => {
+    const basePath =
+        typeof window !== "undefined" && window.__APP_BASE_PATH__
+            ? String(window.__APP_BASE_PATH__).replace(/\/+$/, "")
+            : "";
 
-const LOGO_URL = withBasePath("", "/images/image.png");
+    return `${basePath}/images/image.png`;
+};
+
+const LOGO_URL = getPublicLogoUrl();
 
 // Précharger l'image dès que possible
 if (typeof window !== "undefined") {

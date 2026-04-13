@@ -192,7 +192,7 @@ class AdministrationController extends Controller
                     ?? $m->family?->ville?->nom
                     ?? ($m->family?->ville_id ? ('Ville ID: ' . $m->family->ville_id) : null),
                 'famille' => $m->family?->nom,
-'code_famille' => $m->family?->code_famille,
+                'code_famille' => $m->family?->code_famille,
                 'code_membre' => $m->code_membre,
 
                 // === CHAMPS SUPPLÉMENTAIRES POUR LA MODIFICATION ===
@@ -470,7 +470,7 @@ class AdministrationController extends Controller
         ];
 
         if ($request->hasFile('photo')) {
-            $userData['photo_path'] = $request->file('photo')->store('members', 'public');
+            $userData['photo_path'] = $request->file('photo')->store('photos/users', 'public');
         }
 
         User::create($userData);
@@ -500,7 +500,7 @@ class AdministrationController extends Controller
             if ($user->photo_path) {
                 Storage::disk('public')->delete($user->photo_path);
             }
-            $user->photo_path = $request->file('photo')->store('members', 'public');
+            $user->photo_path = $request->file('photo')->store('photos/users', 'public');
         }
 
         $user->save();

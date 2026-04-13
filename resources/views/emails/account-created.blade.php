@@ -66,10 +66,10 @@
             <p><strong>Classe :</strong> {{ $classe->nom ?? $classe }}</p>
             @endif
 
-            <p>Voici vos identifiants de connexion :</p>
+            <p>Voici vos informations de connexion :</p>
 
             <div class="credentials">
-                <p><span class="label">Identifiant :</span> {{ $identifier }}</p>
+                <p><span class="label">Code membre :</span> {{ $user->code_membre ?? $identifier }}</p>
                 <p><span class="label">Mot de passe :</span> {{ $password }}</p>
             </div>
 
@@ -78,13 +78,13 @@
 
             <p><strong>Veuillez :</strong></p>
             <ul>
-                <li>Vous connecter avec ces identifiants</li>
+                <li>Vous connecter avec votre code membre et ce mot de passe</li>
                 <li>Modifier votre mot de passe lors de la première connexion</li>
                 <li>Conserver cet email en lieu sûr</li>
             </ul>
 
             <p style="background: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin: 20px 0;">
-                <strong>⚠️ Sécurité :</strong> Ne partagez jamais vos identifiants. Notre équipe ne vous les demandera jamais par email.
+                <strong>⚠️ Sécurité :</strong> Ne partagez jamais votre code membre ni votre mot de passe. Notre équipe ne vous les demandera jamais par email.
             </p>
 
             <p>Bienvenue parmi nous!<br>L'équipe ClasseMéthO Jubilé</p>

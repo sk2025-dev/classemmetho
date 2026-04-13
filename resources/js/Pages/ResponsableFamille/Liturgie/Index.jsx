@@ -18,22 +18,10 @@ const FAMILY_PER_PAGE = 6;
 const ANN_PER_PAGE = 2;
 const ANNONCE_TYPES = [
     {
-        value: "priere",
-        label: "Demande de prière",
-        emoji: "🙏",
-        color: "violet",
-    },
-    {
         value: "grace",
         label: "Action de grâce / Remerciement",
         emoji: "🙌",
         color: "amber",
-    },
-    {
-        value: "deces",
-        label: "Avis de décès / Assistance deuil",
-        emoji: "⚰️",
-        color: "slate",
     },
     {
         value: "generale",
@@ -153,7 +141,8 @@ export default function Index({
         date_souhaitee: "",
         ceremonie_creneau: "",
         lieu_ceremonie: "",
-        temoins: "",
+        temoin_homme: "",
+        temoin_femme: "",
     });
     const [detailTab, setDetailTab] = useState("infos");
     const [page, setPage] = useState(1);
@@ -262,9 +251,40 @@ export default function Index({
         () => detailRows.filter((row) => CELEBRATION_FIELDS.includes(row.key)),
         [detailRows],
     );
+    const HIDDEN_ALL_CONTENT_ACTE_TYPES = new Set(["confirmation"]);
+    const isHiddenInAllContentsActesFilter = (...types) =>
+        types.some((type) =>
+            HIDDEN_ALL_CONTENT_ACTE_TYPES.has(
+                String(type || "")
+                    .trim()
+                    .toLowerCase(),
+            ),
+        );
+    const ALLOWED_ANNONCE_TYPES = new Set(["grace", "generale"]);
+    const isAllowedAnnonceType = (...types) =>
+        types.some((type) =>
+            ALLOWED_ANNONCE_TYPES.has(
+                String(type || "")
+                    .trim()
+                    .toLowerCase(),
+            ),
+        );
+    const annoncesForTab = useMemo(
+        () =>
+            annonces.filter((a) =>
+                isAllowedAnnonceType(a.type_annonce, a.type_acte),
+            ),
+        [annonces],
+    );
     const filterNeedle = searchTerm.trim().toLowerCase();
     const filteredActes = useMemo(() => {
         let result = [...acteRequests];
+
+        if (quickFilter === "all") {
+            result = result.filter(
+                (a) => !isHiddenInAllContentsActesFilter(a.type_acte),
+            );
+        }
 
         if (quickFilter === "mes_demandes") {
             result = result.filter((a) => !isAnnonceRecord(a));
@@ -315,7 +335,7 @@ export default function Index({
         (memberPage - 1) * FAMILY_PER_PAGE,
         memberPage * FAMILY_PER_PAGE,
     );
-    const annoncesEnCours = annonces.filter(
+    const annoncesEnCours = annoncesForTab.filter(
         (a) =>
             !VALID.includes(
                 String(a.statut || "")
@@ -329,7 +349,8 @@ export default function Index({
 
     /* ── computed annonces filtrées ── */
     const annFiltered = useMemo(() => {
-        let result = [...annonces];
+        let result = [...annoncesForTab];
+
         if (annFilter === "en_cours") {
             result = result.filter((a) =>
                 IN_PROGRESS.includes(
@@ -387,7 +408,7 @@ export default function Index({
                     .includes(filterNeedle),
             ),
         );
-    }, [annonces, annFilter, quickFilter, filterNeedle]);
+    }, [annoncesForTab, annFilter, quickFilter, filterNeedle]);
     const annTotalPages = Math.max(
         1,
         Math.ceil(annFiltered.length / ANN_PER_PAGE),
@@ -400,29 +421,29 @@ export default function Index({
     /* ── stats annonces ── */
     const annStats = useMemo(
         () => ({
-            total: annonces.length,
-            enCours: annonces.filter((a) =>
+            total: annoncesForTab.length,
+            enCours: annoncesForTab.filter((a) =>
                 IN_PROGRESS.includes(
                     String(a.statut || "")
                         .trim()
                         .toUpperCase(),
                 ),
             ).length,
-            validees: annonces.filter((a) =>
+            validees: annoncesForTab.filter((a) =>
                 VALID.includes(
                     String(a.statut || "")
                         .trim()
                         .toUpperCase(),
                 ),
             ).length,
-            refusees: annonces.filter((a) =>
+            refusees: annoncesForTab.filter((a) =>
                 String(a.statut || "")
                     .trim()
                     .toUpperCase()
                     .startsWith("REFUSEE"),
             ).length,
         }),
-        [annonces],
+        [annoncesForTab],
     );
 
     /* ── helpers ── */
@@ -501,7 +522,9 @@ export default function Index({
                 : "",
             ceremonie_creneau: acte?.details?.ceremonie_creneau || "",
             lieu_ceremonie: acte?.details?.lieu_ceremonie || "",
-            temoins: acte?.details?.temoins || "",
+            temoin_homme:
+                acte?.details?.temoin_homme || acte?.details?.temoins || "",
+            temoin_femme: acte?.details?.temoin_femme || "",
         });
     };
     const closeCeremonyModal = () => {
@@ -515,14 +538,18 @@ export default function Index({
             !ceremonyForm.date_souhaitee ||
             !ceremonyForm.ceremonie_creneau ||
             !ceremonyForm.lieu_ceremonie.trim() ||
-            !ceremonyForm.temoins.trim()
+            !ceremonyForm.temoin_homme.trim() ||
+            !ceremonyForm.temoin_femme.trim()
         ) {
             notify(
-                "Renseignez la date, le créneau, le lieu de la cérémonie et les témoins.",
+                "Renseignez la date, le créneau, le lieu de la cérémonie ainsi que les deux témoins.",
                 "error",
             );
             return;
         }
+
+        const temoinHomme = ceremonyForm.temoin_homme.trim();
+        const temoinFemme = ceremonyForm.temoin_femme.trim();
 
         try {
             setCeremonyProcessing(true);
@@ -532,7 +559,9 @@ export default function Index({
                     date_souhaitee: ceremonyForm.date_souhaitee,
                     ceremonie_creneau: ceremonyForm.ceremonie_creneau,
                     lieu_ceremonie: ceremonyForm.lieu_ceremonie.trim(),
-                    temoins: ceremonyForm.temoins.trim(),
+                    temoin_homme: temoinHomme,
+                    temoin_femme: temoinFemme,
+                    temoins: `Témoin femme: ${temoinFemme} | Témoin homme: ${temoinHomme}`,
                 },
             );
             const updatedActe = res.data?.acte;
@@ -734,14 +763,10 @@ export default function Index({
                                 <option value="premiere_communion">
                                     🍞 Première Communion
                                 </option>
-                                <option value="confirmation">
-                                    ✝️ Confirmation
-                                </option>
                                 <option value="naissance">👶 Naissance</option>
                                 <option value="deces">🕯️ Décès</option>
                             </optgroup>
                             <optgroup label="Annonces">
-                                <option value="priere">🙏 Prière</option>
                                 <option value="grace">
                                     🙌 Action de grâce
                                 </option>
@@ -888,9 +913,6 @@ export default function Index({
                                         String(acte.type_acte).toLowerCase() ===
                                         "naissance"
                                             ? [
-                                                  "SOUMISE",
-                                                  "EN_ATTENTE_CONDUCTEUR",
-                                                  "TRANSMISE_AU_PASTEUR",
                                                   "VALIDEE",
                                                   "PUBLIEE",
                                                   "ARCHIVEE",
@@ -1101,7 +1123,7 @@ export default function Index({
                                                         title={
                                                             canSeeFiche
                                                                 ? "Voir la fiche"
-                                                                : "La fiche sera disponible après validation de la demande."
+                                                                : "La fiche sera disponible après validation finale du pasteur."
                                                         }
                                                         onClick={() =>
                                                             canSeeFiche &&
@@ -1882,37 +1904,6 @@ export default function Index({
                                         })}
                                     </div>
                                 </div>
-
-                                {/* CTA rapide */}
-                                <div
-                                    className="ann-side-cta"
-                                    onClick={openAnnonce}
-                                >
-                                    <div className="ann-side-cta-icon">📢</div>
-                                    <div className="ann-side-cta-text">
-                                        <div className="ann-side-cta-title">
-                                            Nouvelle annonce
-                                        </div>
-                                        <div className="ann-side-cta-sub">
-                                            Partager avec la paroisse
-                                        </div>
-                                    </div>
-                                    <svg
-                                        width="14"
-                                        height="14"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        strokeWidth="2.5"
-                                        style={{ color: "#A090D8" }}
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                </div>
                             </aside>
                         </div>
                     </div>
@@ -2274,7 +2265,10 @@ export default function Index({
                                 <iframe
                                     title="Aperçu certificat"
                                     className="pdf-frame"
-                                    src={`/responsable-famille/liturgie/${previewActe.id}/certificat?preview=1`}
+                                    src={withBasePath(
+                                        "",
+                                        `/responsable-famille/liturgie/${previewActe.id}/certificat?preview=1`,
+                                    )}
                                 />
                             </div>
                         </div>
@@ -2291,7 +2285,10 @@ export default function Index({
                                 className="btn-msubmit"
                                 onClick={() =>
                                     window.open(
-                                        `/responsable-famille/liturgie/${previewActe.id}/certificat`,
+                                        withBasePath(
+                                            "",
+                                            `/responsable-famille/liturgie/${previewActe.id}/certificat`,
+                                        ),
                                         "_blank",
                                     )
                                 }
@@ -2354,11 +2351,9 @@ export default function Index({
                                         <option value="">
                                             Sélectionner un créneau
                                         </option>
-                                        <option value="matin">
-                                            Matin 09h-10h
-                                        </option>
+                                        <option value="matin">Matin</option>
                                         <option value="apres_midi">
-                                            Après-midi 15h-16h
+                                            Après-midi
                                         </option>
                                     </select>
                                 </Field>
@@ -2377,20 +2372,36 @@ export default function Index({
                                     />
                                 </Field>
                             </div>
-                            <Field label="Témoins" required>
-                                <textarea
-                                    className="ann-textarea"
-                                    rows={4}
-                                    placeholder="Renseignez les témoins du mariage"
-                                    value={ceremonyForm.temoins}
-                                    onChange={(e) =>
-                                        setCeremonyForm((prev) => ({
-                                            ...prev,
-                                            temoins: e.target.value,
-                                        }))
-                                    }
-                                />
-                            </Field>
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <Field label="Témoin femme" required>
+                                    <input
+                                        type="text"
+                                        className="ann-input"
+                                        placeholder="Nom du témoin femme"
+                                        value={ceremonyForm.temoin_femme}
+                                        onChange={(e) =>
+                                            setCeremonyForm((prev) => ({
+                                                ...prev,
+                                                temoin_femme: e.target.value,
+                                            }))
+                                        }
+                                    />
+                                </Field>
+                                <Field label="Témoin homme" required>
+                                    <input
+                                        type="text"
+                                        className="ann-input"
+                                        placeholder="Nom du témoin homme"
+                                        value={ceremonyForm.temoin_homme}
+                                        onChange={(e) =>
+                                            setCeremonyForm((prev) => ({
+                                                ...prev,
+                                                temoin_homme: e.target.value,
+                                            }))
+                                        }
+                                    />
+                                </Field>
+                            </div>
                         </div>
                         <div className="modal-foot">
                             <button
@@ -2994,9 +3005,7 @@ function Kpi({ tone, tag, value, label, clickable, onClick }) {
 /* ════════ HELPERS ════════ */
 function getPlaceholder(type) {
     const p = {
-        priere: "Ex : Nous sollicitons les prières de la communauté pour la guérison de…",
         grace: "Ex : La famille Kouassi rend grâce à Dieu pour la naissance de…",
-        deces: "Ex : La famille a la douleur de vous annoncer le rappel à Dieu de…",
         generale: "Rédigez votre annonce à destination de l'assemblée…",
     };
     return p[type] || "Rédigez votre message…";
@@ -3285,6 +3294,8 @@ const DETAIL_LABELS = {
     date: "Date de l'acte",
     lieu: "Lieu",
     lieu_ceremonie: "Lieu de la cérémonie",
+    temoin_homme: "Témoin homme",
+    temoin_femme: "Témoin femme",
     temoins: "Témoins",
     ceremonie_statut: "Validation de la cérémonie",
     ceremonie_soumise_at: "Date de soumission de la cérémonie",
@@ -3310,7 +3321,8 @@ const DETAIL_LABELS = {
 
 const CELEBRATION_FIELDS = [
     "lieu_ceremonie",
-    "temoins",
+    "temoin_femme",
+    "temoin_homme",
     "ceremonie_creneau",
     "ceremonie_statut",
     "ceremonie_soumise_at",

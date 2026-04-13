@@ -1,13 +1,21 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Link, usePage, router } from '@inertiajs/react';
-import { withBasePath } from "../../Utils/urlHelper";
-import Select2Single from "../../Components/Select2Single";
+import React, { useState, useMemo, useEffect } from "react";
+import { usePage, router } from "@inertiajs/react";
 import {
-  CheckCircle, Clock, XCircle,
-  ArrowLeft,
-  Eye, Plus, User, UsersRound, Inbox, Search, X, Info, MapPin,
-  Layers
-} from 'lucide-react';
+    CheckCircle,
+    Clock,
+    XCircle,
+    Eye,
+    Plus,
+    User,
+    UsersRound,
+    Inbox,
+    Search,
+    X,
+    Info,
+    MapPin,
+    Layers,
+} from "lucide-react";
+import { withBasePath } from "../../Utils/urlHelper";
 
 const fontStyle = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=DM+Mono:wght@400;500&display=swap');
@@ -129,836 +137,2228 @@ const fontStyle = `
 // STATUS BADGE
 // ─────────────────────────────────────────
 const StatusBadge = ({ status }) => {
-  const configs = {
-    'SOUMISE':            { label: 'Soumise',         bg: '#EFF6FF', color: '#1D4ED8', dot: '#3B82F6' },
-    'EN_ATTENTE_SOURCE':  { label: 'Attente Source',  bg: '#FFFBEB', color: '#92400E', dot: '#F59E0B' },
-    'VALIDEE_SOURCE':     { label: 'Validée Source',  bg: '#F0F4FF', color: '#3730A3', dot: '#6366F1' },
-    'EN_ATTENTE_ACCUEIL': { label: 'Attente Accueil', bg: '#ECFEFF', color: '#155E75', dot: '#06B6D4' },
-    'VALIDEE_ACCUEIL':    { label: 'Terminé',         bg: '#F0FDF4', color: '#14532D', dot: '#22C55E' },
-    'TERMINEE':           { label: 'Terminé',         bg: '#F0FDF4', color: '#14532D', dot: '#22C55E' },
-    'REFUSEE':            { label: 'Refusé',          bg: '#FFF1F2', color: '#9F1239', dot: '#F43F5E' },
-  };
-  const c = configs[status] || { label: status, bg: '#F9FAFB', color: '#374151', dot: '#9CA3AF' };
-  return (
-    <span className="status-pill" style={{ background: c.bg, color: c.color }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: c.dot, display: 'inline-block', marginRight: 6, flexShrink: 0 }} />
-      {c.label}
-    </span>
-  );
+    const configs = {
+        SOUMISE: {
+            label: "Soumise",
+            bg: "#EFF6FF",
+            color: "#1D4ED8",
+            dot: "#3B82F6",
+        },
+        EN_ATTENTE_SOURCE: {
+            label: "Attente Source",
+            bg: "#FFFBEB",
+            color: "#92400E",
+            dot: "#F59E0B",
+        },
+        VALIDEE_SOURCE: {
+            label: "Validée Source",
+            bg: "#F0F4FF",
+            color: "#3730A3",
+            dot: "#6366F1",
+        },
+        EN_ATTENTE_ACCUEIL: {
+            label: "Attente Accueil",
+            bg: "#ECFEFF",
+            color: "#155E75",
+            dot: "#06B6D4",
+        },
+        VALIDEE_ACCUEIL: {
+            label: "Terminé",
+            bg: "#F0FDF4",
+            color: "#14532D",
+            dot: "#22C55E",
+        },
+        TERMINEE: {
+            label: "Terminé",
+            bg: "#F0FDF4",
+            color: "#14532D",
+            dot: "#22C55E",
+        },
+        REFUSEE: {
+            label: "Refusé",
+            bg: "#FFF1F2",
+            color: "#9F1239",
+            dot: "#F43F5E",
+        },
+    };
+    const c = configs[status] || {
+        label: status,
+        bg: "#F9FAFB",
+        color: "#374151",
+        dot: "#9CA3AF",
+    };
+    return (
+        <span
+            className="status-pill"
+            style={{ background: c.bg, color: c.color }}
+        >
+            <span
+                style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: c.dot,
+                    display: "inline-block",
+                    marginRight: 6,
+                    flexShrink: 0,
+                }}
+            />
+            {c.label}
+        </span>
+    );
 };
 
 // ─────────────────────────────────────────
 // STEP PROGRESS BAR — 3 étapes horizontales
 // ─────────────────────────────────────────
 const StepProgressBar = ({ status }) => {
-  const isRefused = status === 'REFUSEE';
-  const steps = [
-    { label: 'Soumis',             doneFrom: 0 },
-    { label: 'Validation Source',  doneFrom: 2 },
-    { label: 'Validation Accueil', doneFrom: 4 },
-  ];
-  const order = ['SOUMISE','EN_ATTENTE_SOURCE','VALIDEE_SOURCE','EN_ATTENTE_ACCUEIL','VALIDEE_ACCUEIL','TERMINEE'];
-  const currentIdx = order.indexOf(status);
+    const isRefused = status === "REFUSEE";
+    const steps = [
+        { label: "Soumis", doneFrom: 0 },
+        { label: "Validation Source", doneFrom: 2 },
+        { label: "Validation Accueil", doneFrom: 4 },
+    ];
+    const order = [
+        "SOUMISE",
+        "EN_ATTENTE_SOURCE",
+        "VALIDEE_SOURCE",
+        "EN_ATTENTE_ACCUEIL",
+        "VALIDEE_ACCUEIL",
+        "TERMINEE",
+    ];
+    const currentIdx = order.indexOf(status);
 
-  return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 0, padding: '2px 0 0' }}>
-      {steps.map((step, i) => {
-        const done   = !isRefused && currentIdx >= step.doneFrom;
-        const active = !isRefused && !done && currentIdx >= step.doneFrom - 1;
-        const isLast = i === steps.length - 1;
+    return (
+        <div
+            style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 0,
+                padding: "2px 0 0",
+            }}
+        >
+            {steps.map((step, i) => {
+                const done = !isRefused && currentIdx >= step.doneFrom;
+                const active =
+                    !isRefused && !done && currentIdx >= step.doneFrom - 1;
+                const isLast = i === steps.length - 1;
 
-        const dotColor  = isRefused ? '#ef4444' : done ? '#22c55e' : active ? '#f97316' : '#d1d5db';
-        const labelColor = done ? '#15803d' : active ? '#ea580c' : '#9ca3af';
-        const lineColor  = isRefused ? '#fca5a5' : (done && !isLast) ? '#22c55e' : '#e5e7eb';
+                const dotColor = isRefused
+                    ? "#ef4444"
+                    : done
+                      ? "#22c55e"
+                      : active
+                        ? "#f97316"
+                        : "#d1d5db";
+                const labelColor = done
+                    ? "#15803d"
+                    : active
+                      ? "#ea580c"
+                      : "#9ca3af";
+                const lineColor = isRefused
+                    ? "#fca5a5"
+                    : done && !isLast
+                      ? "#22c55e"
+                      : "#e5e7eb";
 
-        return (
-          <React.Fragment key={step.label}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-              {/* Dot avec halo */}
-              <div style={{ position: 'relative', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {(done || active) && (
-                  <div style={{
-                    position: 'absolute', width: 28, height: 28, borderRadius: '50%',
-                    background: done ? 'rgba(34,197,94,0.12)' : 'rgba(249,115,22,0.12)',
-                  }} />
-                )}
-                <div style={{
-                  width: 12, height: 12, borderRadius: '50%', position: 'relative', zIndex: 1,
-                  background: dotColor,
-                  boxShadow: done ? '0 0 0 2px rgba(34,197,94,0.3)' : active ? '0 0 0 2px rgba(249,115,22,0.3)' : 'none',
-                }}>
-                  {done && (
-                    <svg style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }} width="7" height="7" viewBox="0 0 8 8" fill="none">
-                      <path d="M1.5 4l2 2 3-3" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  )}
-                </div>
-              </div>
-              {/* Label */}
-              <span style={{ fontSize: 9, fontWeight: 700, color: labelColor, textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
-                {step.label}
-              </span>
-            </div>
-            {!isLast && (
-              <div style={{ flex: 1, height: 1.5, background: lineColor, marginTop: 8, marginBottom: 18, marginLeft: 4, marginRight: 4, borderRadius: 2, transition: 'background 0.4s ease' }} />
-            )}
-          </React.Fragment>
-        );
-      })}
-    </div>
-  );
+                return (
+                    <React.Fragment key={step.label}>
+                        <div
+                            style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                gap: 5,
+                                flexShrink: 0,
+                            }}
+                        >
+                            {/* Dot avec halo */}
+                            <div
+                                style={{
+                                    position: "relative",
+                                    width: 18,
+                                    height: 18,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                }}
+                            >
+                                {(done || active) && (
+                                    <div
+                                        style={{
+                                            position: "absolute",
+                                            width: 28,
+                                            height: 28,
+                                            borderRadius: "50%",
+                                            background: done
+                                                ? "rgba(34,197,94,0.12)"
+                                                : "rgba(249,115,22,0.12)",
+                                        }}
+                                    />
+                                )}
+                                <div
+                                    style={{
+                                        width: 12,
+                                        height: 12,
+                                        borderRadius: "50%",
+                                        position: "relative",
+                                        zIndex: 1,
+                                        background: dotColor,
+                                        boxShadow: done
+                                            ? "0 0 0 2px rgba(34,197,94,0.3)"
+                                            : active
+                                              ? "0 0 0 2px rgba(249,115,22,0.3)"
+                                              : "none",
+                                    }}
+                                >
+                                    {done && (
+                                        <svg
+                                            style={{
+                                                position: "absolute",
+                                                top: "50%",
+                                                left: "50%",
+                                                transform:
+                                                    "translate(-50%,-50%)",
+                                            }}
+                                            width="7"
+                                            height="7"
+                                            viewBox="0 0 8 8"
+                                            fill="none"
+                                        >
+                                            <path
+                                                d="M1.5 4l2 2 3-3"
+                                                stroke="#fff"
+                                                strokeWidth="1.4"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                            />
+                                        </svg>
+                                    )}
+                                </div>
+                            </div>
+                            {/* Label */}
+                            <span
+                                style={{
+                                    fontSize: 9,
+                                    fontWeight: 700,
+                                    color: labelColor,
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.04em",
+                                    whiteSpace: "nowrap",
+                                }}
+                            >
+                                {step.label}
+                            </span>
+                        </div>
+                        {!isLast && (
+                            <div
+                                style={{
+                                    flex: 1,
+                                    height: 1.5,
+                                    background: lineColor,
+                                    marginTop: 8,
+                                    marginBottom: 18,
+                                    marginLeft: 4,
+                                    marginRight: 4,
+                                    borderRadius: 2,
+                                    transition: "background 0.4s ease",
+                                }}
+                            />
+                        )}
+                    </React.Fragment>
+                );
+            })}
+        </div>
+    );
 };
 
 // ─────────────────────────────────────────
 // TRANSFER CARD — redesign éditorial premium
 // ─────────────────────────────────────────
 const TransferCard = ({ t, onClick, delay = 0 }) => {
-  const isRefused = t.status === 'REFUSEE';
-  const isDone    = ['TERMINEE', 'VALIDEE_ACCUEIL'].includes(t.status);
-  const isFamily  = !t.member && !!t.family;
+    const isRefused = t.status === "REFUSEE";
+    const isDone = ["TERMINEE", "VALIDEE_ACCUEIL"].includes(t.status);
+    const isFamily = !t.member && !!t.family;
 
-  // Palette dynamique selon statut
-  const palette = isRefused
-    ? { accent: '#ef4444', accentLight: '#fff1f2', accentMid: '#fca5a5', accentText: '#991b1b', gradFrom: '#fef2f2', gradTo: '#fff' }
-    : isDone
-    ? { accent: '#22c55e', accentLight: '#f0fdf4', accentMid: '#86efac', accentText: '#14532d', gradFrom: '#f0fdf4', gradTo: '#fff' }
-    : { accent: '#f97316', accentLight: '#fff7ed', accentMid: '#fed7aa', accentText: '#9a3412', gradFrom: '#fff7ed', gradTo: '#fff' };
+    // Palette dynamique selon statut
+    const palette = isRefused
+        ? {
+              accent: "#ef4444",
+              accentLight: "#fff1f2",
+              accentMid: "#fca5a5",
+              accentText: "#991b1b",
+              gradFrom: "#fef2f2",
+              gradTo: "#fff",
+          }
+        : isDone
+          ? {
+                accent: "#22c55e",
+                accentLight: "#f0fdf4",
+                accentMid: "#86efac",
+                accentText: "#14532d",
+                gradFrom: "#f0fdf4",
+                gradTo: "#fff",
+            }
+          : {
+                accent: "#f97316",
+                accentLight: "#fff7ed",
+                accentMid: "#fed7aa",
+                accentText: "#9a3412",
+                gradFrom: "#fff7ed",
+                gradTo: "#fff",
+            };
 
-  const name    = t.member?.name || t.family?.name || '—';
-  const initial = isFamily ? null : name.charAt(0).toUpperCase();
+    const name = t.member?.name || t.family?.name || "—";
+    const initial = isFamily ? null : name.charAt(0).toUpperCase();
 
-  return (
-    <div
-      className="transfer-card card-enter cursor-pointer overflow-hidden"
-      style={{ animationDelay: `${delay}ms` }}
-      onClick={onClick}
-    >
-      {/* ── Header avec fond dégradé coloré ── */}
-      <div style={{
-        background: `linear-gradient(135deg, ${palette.gradFrom} 0%, ${palette.gradTo} 100%)`,
-        borderBottom: `1px solid ${palette.accentMid}44`,
-        padding: '18px 20px 16px',
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
-        {/* Cercle décoratif en arrière-plan */}
-        <div style={{
-          position: 'absolute', top: -24, right: -24,
-          width: 88, height: 88, borderRadius: '50%',
-          background: palette.accent, opacity: 0.07,
-          pointerEvents: 'none',
-        }} />
-        <div style={{
-          position: 'absolute', top: 8, right: 8,
-          width: 40, height: 40, borderRadius: '50%',
-          background: palette.accent, opacity: 0.05,
-          pointerEvents: 'none',
-        }} />
+    return (
+        <div
+            className="transfer-card card-enter cursor-pointer overflow-hidden"
+            style={{ animationDelay: `${delay}ms` }}
+            onClick={onClick}
+        >
+            {/* ── Header avec fond dégradé coloré ── */}
+            <div
+                style={{
+                    background: `linear-gradient(135deg, ${palette.gradFrom} 0%, ${palette.gradTo} 100%)`,
+                    borderBottom: `1px solid ${palette.accentMid}44`,
+                    padding: "18px 20px 16px",
+                    position: "relative",
+                    overflow: "hidden",
+                }}
+            >
+                {/* Cercle décoratif en arrière-plan */}
+                <div
+                    style={{
+                        position: "absolute",
+                        top: -24,
+                        right: -24,
+                        width: 88,
+                        height: 88,
+                        borderRadius: "50%",
+                        background: palette.accent,
+                        opacity: 0.07,
+                        pointerEvents: "none",
+                    }}
+                />
+                <div
+                    style={{
+                        position: "absolute",
+                        top: 8,
+                        right: 8,
+                        width: 40,
+                        height: 40,
+                        borderRadius: "50%",
+                        background: palette.accent,
+                        opacity: 0.05,
+                        pointerEvents: "none",
+                    }}
+                />
 
-        {/* Ligne colorée gauche */}
-        <div style={{
-          position: 'absolute', left: 0, top: 0, bottom: 0,
-          width: 3,
-          background: `linear-gradient(180deg, ${palette.accent}, ${palette.accent}66)`,
-          borderRadius: '0 2px 2px 0',
-        }} />
+                {/* Ligne colorée gauche */}
+                <div
+                    style={{
+                        position: "absolute",
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: 3,
+                        background: `linear-gradient(180deg, ${palette.accent}, ${palette.accent}66)`,
+                        borderRadius: "0 2px 2px 0",
+                    }}
+                />
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingLeft: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {/* Avatar grand format */}
-            <div style={{
-              width: 44, height: 44, borderRadius: 12, flexShrink: 0,
-              background: palette.accent,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 17, fontWeight: 800, color: '#fff',
-              boxShadow: `0 4px 12px ${palette.accent}50`,
-              letterSpacing: '-0.02em',
-            }}>
-              {isFamily ? <UsersRound style={{ width: 20, height: 20 }} /> : initial}
+                <div
+                    style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        paddingLeft: 8,
+                    }}
+                >
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 12,
+                        }}
+                    >
+                        {/* Avatar grand format */}
+                        <div
+                            style={{
+                                width: 44,
+                                height: 44,
+                                borderRadius: 12,
+                                flexShrink: 0,
+                                background: palette.accent,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 17,
+                                fontWeight: 800,
+                                color: "#fff",
+                                boxShadow: `0 4px 12px ${palette.accent}50`,
+                                letterSpacing: "-0.02em",
+                            }}
+                        >
+                            {isFamily ? (
+                                <UsersRound style={{ width: 20, height: 20 }} />
+                            ) : (
+                                initial
+                            )}
+                        </div>
+                        <div>
+                            <p
+                                style={{
+                                    fontWeight: 800,
+                                    color: "#0f172a",
+                                    fontSize: 15.5,
+                                    lineHeight: 1.2,
+                                    marginBottom: 3,
+                                }}
+                            >
+                                {name}
+                            </p>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                }}
+                            >
+                                <span
+                                    style={{
+                                        fontSize: 10,
+                                        fontWeight: 700,
+                                        color: palette.accentText,
+                                        background: palette.accentLight,
+                                        border: `1px solid ${palette.accentMid}`,
+                                        borderRadius: 20,
+                                        padding: "1px 7px",
+                                        letterSpacing: "0.03em",
+                                        textTransform: "uppercase",
+                                    }}
+                                >
+                                    {isFamily ? "Famille" : "Membre"}
+                                </span>
+                                <span
+                                    style={{
+                                        fontSize: 10.5,
+                                        color: "#94a3b8",
+                                        fontFamily: "DM Mono, monospace",
+                                        letterSpacing: "0.04em",
+                                    }}
+                                >
+                                    {t.reference ||
+                                        `TRF-${String(t.id).padStart(4, "0")}`}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <StatusBadge status={t.status} />
+                </div>
             </div>
-            <div>
-              <p style={{ fontWeight: 800, color: '#0f172a', fontSize: 15.5, lineHeight: 1.2, marginBottom: 3 }}>
-                {name}
-              </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{
-                  fontSize: 10, fontWeight: 700, color: palette.accentText,
-                  background: palette.accentLight, border: `1px solid ${palette.accentMid}`,
-                  borderRadius: 20, padding: '1px 7px', letterSpacing: '0.03em', textTransform: 'uppercase',
-                }}>
-                  {isFamily ? 'Famille' : 'Membre'}
-                </span>
-                <span style={{ fontSize: 10.5, color: '#94a3b8', fontFamily: 'DM Mono, monospace', letterSpacing: '0.04em' }}>
-                  {t.reference || `TRF-${String(t.id).padStart(4, '0')}`}
-                </span>
-              </div>
+
+            {/* ── Corps de la carte ── */}
+            <div style={{ padding: "14px 20px 16px" }}>
+                {/* ── Trajet : Source → Destination ── */}
+                <div style={{ marginBottom: 14 }}>
+                    <p
+                        style={{
+                            fontSize: 9.5,
+                            fontWeight: 700,
+                            color: "#94a3b8",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.08em",
+                            marginBottom: 8,
+                        }}
+                    >
+                        Trajet de transfert
+                    </p>
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                        }}
+                    >
+                        {/* Classe source */}
+                        <div
+                            style={{
+                                flex: 1,
+                                minWidth: 0,
+                                background: "#f8fafc",
+                                border: "1px solid #e2e8f0",
+                                borderRadius: 8,
+                                padding: "7px 10px",
+                            }}
+                        >
+                            <p
+                                style={{
+                                    fontSize: 9,
+                                    fontWeight: 700,
+                                    color: "#94a3b8",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.06em",
+                                    marginBottom: 2,
+                                }}
+                            >
+                                Depuis
+                            </p>
+                            <p
+                                style={{
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    color: "#475569",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    margin: 0,
+                                }}
+                            >
+                                {t.classe_source?.nom || "—"}
+                            </p>
+                        </div>
+
+                        {/* Flèche centrale */}
+                        <div
+                            style={{
+                                width: 28,
+                                height: 28,
+                                flexShrink: 0,
+                                background: palette.accent,
+                                borderRadius: "50%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                boxShadow: `0 2px 8px ${palette.accent}40`,
+                            }}
+                        >
+                            <svg
+                                width="13"
+                                height="13"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                            >
+                                <path
+                                    d="M3 8h10M9 4l4 4-4 4"
+                                    stroke="#fff"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            </svg>
+                        </div>
+
+                        {/* Classe cible */}
+                        <div
+                            style={{
+                                flex: 1,
+                                minWidth: 0,
+                                background: palette.accentLight,
+                                border: `1px solid ${palette.accentMid}`,
+                                borderRadius: 8,
+                                padding: "7px 10px",
+                            }}
+                        >
+                            <p
+                                style={{
+                                    fontSize: 9,
+                                    fontWeight: 700,
+                                    color: palette.accent,
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.06em",
+                                    marginBottom: 2,
+                                }}
+                            >
+                                Vers
+                            </p>
+                            <p
+                                style={{
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    color: palette.accentText,
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    margin: 0,
+                                }}
+                            >
+                                {t.external_destination ||
+                                    t.classe_cible?.nom ||
+                                    "—"}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Motif si présent */}
+                    {t.reason && (
+                        <div
+                            style={{
+                                marginTop: 8,
+                                background: "#fafafa",
+                                border: "1px dashed #e2e8f0",
+                                borderRadius: 7,
+                                padding: "7px 10px",
+                                display: "flex",
+                                gap: 7,
+                                alignItems: "flex-start",
+                            }}
+                        >
+                            <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                                style={{ flexShrink: 0, marginTop: 1 }}
+                            >
+                                <path
+                                    d="M8 2a6 6 0 100 12A6 6 0 008 2zm0 4v4m0 2h.01"
+                                    stroke="#94a3b8"
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                />
+                            </svg>
+                            <p
+                                style={{
+                                    fontSize: 11.5,
+                                    color: "#64748b",
+                                    fontStyle: "italic",
+                                    lineHeight: 1.4,
+                                    margin: 0,
+                                    overflow: "hidden",
+                                    display: "-webkit-box",
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: "vertical",
+                                }}
+                            >
+                                {t.reason}
+                            </p>
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Séparateur dégradé ── */}
+                <div
+                    style={{
+                        height: 1,
+                        background:
+                            "linear-gradient(90deg, transparent, #e2e8f0 30%, #e2e8f0 70%, transparent)",
+                        marginBottom: 14,
+                    }}
+                />
+
+                {/* ── Progression ── */}
+                <div style={{ marginBottom: 14 }}>
+                    <p
+                        style={{
+                            fontSize: 9.5,
+                            fontWeight: 700,
+                            color: "#94a3b8",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.08em",
+                            marginBottom: 10,
+                        }}
+                    >
+                        Progression
+                    </p>
+                    <StepProgressBar status={t.status} />
+                </div>
+
+                {/* ── Footer ── */}
+                <div
+                    style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        paddingTop: 10,
+                        borderTop: "1px solid #f1f5f9",
+                    }}
+                >
+                    {t.created_at ? (
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 5,
+                            }}
+                        >
+                            <Clock
+                                style={{
+                                    width: 11,
+                                    height: 11,
+                                    color: "#cbd5e1",
+                                }}
+                            />
+                            <span
+                                style={{
+                                    fontSize: 10.5,
+                                    color: "#94a3b8",
+                                    fontFamily: "DM Mono, monospace",
+                                }}
+                            >
+                                {t.created_at}
+                            </span>
+                        </div>
+                    ) : (
+                        <div />
+                    )}
+
+                    <span
+                        className="card-action-hint"
+                        style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: palette.accent,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                            background: palette.accentLight,
+                            borderRadius: 20,
+                            padding: "3px 10px",
+                            border: `1px solid ${palette.accentMid}`,
+                        }}
+                    >
+                        <Eye style={{ width: 11, height: 11 }} />
+                        Voir détails
+                    </span>
+                </div>
             </div>
-          </div>
-          <StatusBadge status={t.status} />
         </div>
-      </div>
-
-      {/* ── Corps de la carte ── */}
-      <div style={{ padding: '14px 20px 16px' }}>
-
-        {/* ── Trajet : Source → Destination ── */}
-        <div style={{ marginBottom: 14 }}>
-          <p style={{ fontSize: 9.5, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-            Trajet de transfert
-          </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {/* Classe source */}
-            <div style={{
-              flex: 1, minWidth: 0,
-              background: '#f8fafc', border: '1px solid #e2e8f0',
-              borderRadius: 8, padding: '7px 10px',
-            }}>
-              <p style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Depuis</p>
-              <p style={{ fontSize: 12, fontWeight: 600, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
-                {t.classe_source?.nom || '—'}
-              </p>
-            </div>
-
-            {/* Flèche centrale */}
-            <div style={{
-              width: 28, height: 28, flexShrink: 0,
-              background: palette.accent,
-              borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: `0 2px 8px ${palette.accent}40`,
-            }}>
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                <path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-
-            {/* Classe cible */}
-            <div style={{
-              flex: 1, minWidth: 0,
-              background: palette.accentLight, border: `1px solid ${palette.accentMid}`,
-              borderRadius: 8, padding: '7px 10px',
-            }}>
-              <p style={{ fontSize: 9, fontWeight: 700, color: palette.accent, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Vers</p>
-               <p style={{ fontSize: 12, fontWeight: 700, color: palette.accentText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
-                 {t.external_destination || t.classe_cible?.nom || '—'}
-               </p>
-            </div>
-          </div>
-
-          {/* Motif si présent */}
-          {t.reason && (
-            <div style={{
-              marginTop: 8,
-              background: '#fafafa', border: '1px dashed #e2e8f0',
-              borderRadius: 7, padding: '7px 10px',
-              display: 'flex', gap: 7, alignItems: 'flex-start',
-            }}>
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
-                <path d="M8 2a6 6 0 100 12A6 6 0 008 2zm0 4v4m0 2h.01" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-              <p style={{ fontSize: 11.5, color: '#64748b', fontStyle: 'italic', lineHeight: 1.4, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                {t.reason}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* ── Séparateur dégradé ── */}
-        <div style={{
-          height: 1,
-          background: 'linear-gradient(90deg, transparent, #e2e8f0 30%, #e2e8f0 70%, transparent)',
-          marginBottom: 14,
-        }} />
-
-        {/* ── Progression ── */}
-        <div style={{ marginBottom: 14 }}>
-          <p style={{ fontSize: 9.5, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-            Progression
-          </p>
-          <StepProgressBar status={t.status} />
-        </div>
-
-        {/* ── Footer ── */}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          paddingTop: 10, borderTop: '1px solid #f1f5f9',
-        }}>
-          {t.created_at ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <Clock style={{ width: 11, height: 11, color: '#cbd5e1' }} />
-              <span style={{ fontSize: 10.5, color: '#94a3b8', fontFamily: 'DM Mono, monospace' }}>{t.created_at}</span>
-            </div>
-          ) : <div />}
-
-          <span className="card-action-hint" style={{
-            fontSize: 11, fontWeight: 700, color: palette.accent,
-            display: 'flex', alignItems: 'center', gap: 4,
-            background: palette.accentLight, borderRadius: 20,
-            padding: '3px 10px', border: `1px solid ${palette.accentMid}`,
-          }}>
-            <Eye style={{ width: 11, height: 11 }} />
-            Voir détails
-          </span>
-        </div>
-
-      </div>
-    </div>
-  );
+    );
 };
 
 // ─────────────────────────────────────────
 // TIMELINE (modal détails)
 // ─────────────────────────────────────────
 const TransferTimeline = ({ transfer }) => {
-  const isRefused   = transfer.status === 'REFUSEE';
-  const statusOrder = ['SOUMISE','EN_ATTENTE_SOURCE','VALIDEE_SOURCE','EN_ATTENTE_ACCUEIL','VALIDEE_ACCUEIL','TERMINEE'];
-  const currentIndex = statusOrder.indexOf(transfer.status);
-  const steps = [
-    { label: 'Soumission',         date: transfer.created_at,          person: transfer.member?.name || transfer.family?.name || '—', done: currentIndex >= 0, active: currentIndex === 0 || currentIndex === 1 },
-    { label: 'Validation Source',  date: transfer.validated_source_at,  person: transfer.validated_source_by,  done: currentIndex >= 2, active: currentIndex === 2 || currentIndex === 3 },
-    { label: isRefused ? 'Refusé' : 'Validation Accueil', date: transfer.validated_accueil_at, person: transfer.validated_accueil_by, done: currentIndex >= 4, active: currentIndex === 4 || currentIndex === 5, refused: isRefused },
-  ];
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-      {steps.map((step, i) => {
-        const isLast = i === steps.length - 1;
-        let dotClass = 'tl-idle';
-        if (step.refused) dotClass = 'tl-refused';
-        else if (step.done)   dotClass = 'tl-done';
-        else if (step.active) dotClass = 'tl-active';
-        return (
-          <div key={i} style={{ display: 'flex', gap: 12 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div className={`${dotClass}`} style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid', flexShrink: 0, marginTop: 2 }} />
-              {!isLast && <div style={{ width: 1, flex: 1, minHeight: 28, marginTop: 4, background: step.done ? '#22c55e' : '#e5e7eb' }} />}
-            </div>
-            <div style={{ paddingBottom: 16 }}>
-              <p style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.3, color: step.refused ? '#dc2626' : step.done || step.active ? '#111' : '#9ca3af', margin: 0 }}>{step.label}</p>
-              {step.date   && <p style={{ fontSize: 11.5, color: '#9ca3af', marginTop: 2 }}>{step.date}</p>}
-              {step.person && <p style={{ fontSize: 11.5, color: '#9ca3af' }}>par {step.person}</p>}
-              {!step.date && !step.done && !step.refused && <p style={{ fontSize: 11.5, color: '#bbb', fontStyle: 'italic', marginTop: 2 }}>En attente…</p>}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
+    const isRefused = transfer.status === "REFUSEE";
+    const statusOrder = [
+        "SOUMISE",
+        "EN_ATTENTE_SOURCE",
+        "VALIDEE_SOURCE",
+        "EN_ATTENTE_ACCUEIL",
+        "VALIDEE_ACCUEIL",
+        "TERMINEE",
+    ];
+    const currentIndex = statusOrder.indexOf(transfer.status);
+    const steps = [
+        {
+            label: "Soumission",
+            date: transfer.created_at,
+            person: transfer.member?.name || transfer.family?.name || "—",
+            done: currentIndex >= 0,
+            active: currentIndex === 0 || currentIndex === 1,
+        },
+        {
+            label: "Validation Source",
+            date: transfer.validated_source_at,
+            person: transfer.validated_source_by,
+            done: currentIndex >= 2,
+            active: currentIndex === 2 || currentIndex === 3,
+        },
+        {
+            label: isRefused ? "Refusé" : "Validation Accueil",
+            date: transfer.validated_accueil_at,
+            person: transfer.validated_accueil_by,
+            done: currentIndex >= 4,
+            active: currentIndex === 4 || currentIndex === 5,
+            refused: isRefused,
+        },
+    ];
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            {steps.map((step, i) => {
+                const isLast = i === steps.length - 1;
+                let dotClass = "tl-idle";
+                if (step.refused) dotClass = "tl-refused";
+                else if (step.done) dotClass = "tl-done";
+                else if (step.active) dotClass = "tl-active";
+                return (
+                    <div key={i} style={{ display: "flex", gap: 12 }}>
+                        <div
+                            style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                            }}
+                        >
+                            <div
+                                className={`${dotClass}`}
+                                style={{
+                                    width: 14,
+                                    height: 14,
+                                    borderRadius: "50%",
+                                    border: "2px solid",
+                                    flexShrink: 0,
+                                    marginTop: 2,
+                                }}
+                            />
+                            {!isLast && (
+                                <div
+                                    style={{
+                                        width: 1,
+                                        flex: 1,
+                                        minHeight: 28,
+                                        marginTop: 4,
+                                        background: step.done
+                                            ? "#22c55e"
+                                            : "#e5e7eb",
+                                    }}
+                                />
+                            )}
+                        </div>
+                        <div style={{ paddingBottom: 16 }}>
+                            <p
+                                style={{
+                                    fontSize: 13.5,
+                                    fontWeight: 600,
+                                    lineHeight: 1.3,
+                                    color: step.refused
+                                        ? "#dc2626"
+                                        : step.done || step.active
+                                          ? "#111"
+                                          : "#9ca3af",
+                                    margin: 0,
+                                }}
+                            >
+                                {step.label}
+                            </p>
+                            {step.date && (
+                                <p
+                                    style={{
+                                        fontSize: 11.5,
+                                        color: "#9ca3af",
+                                        marginTop: 2,
+                                    }}
+                                >
+                                    {step.date}
+                                </p>
+                            )}
+                            {step.person && (
+                                <p style={{ fontSize: 11.5, color: "#9ca3af" }}>
+                                    par {step.person}
+                                </p>
+                            )}
+                            {!step.date && !step.done && !step.refused && (
+                                <p
+                                    style={{
+                                        fontSize: 11.5,
+                                        color: "#bbb",
+                                        fontStyle: "italic",
+                                        marginTop: 2,
+                                    }}
+                                >
+                                    En attente…
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
 };
 
 // ─────────────────────────────────────────
 // STAT CARD (blanc)
 // ─────────────────────────────────────────
-const StatCard = ({ icon: Icon, label, value, iconBg, iconColor, delay = 0 }) => (
-  <div className="stat-card card-enter" style={{ padding: '18px 20px', animationDelay: `${delay}ms` }}>
-    <div style={{ marginBottom: 14 }}>
-      <div style={{ background: iconBg, borderRadius: 10, padding: 9, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Icon style={{ width: 17, height: 17, color: iconColor }} />
-      </div>
+const StatCard = ({
+    icon: Icon,
+    label,
+    value,
+    iconBg,
+    iconColor,
+    delay = 0,
+}) => (
+    <div
+        className="stat-card card-enter"
+        style={{ padding: "18px 20px", animationDelay: `${delay}ms` }}
+    >
+        <div style={{ marginBottom: 14 }}>
+            <div
+                style={{
+                    background: iconBg,
+                    borderRadius: 10,
+                    padding: 9,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                }}
+            >
+                <Icon style={{ width: 17, height: 17, color: iconColor }} />
+            </div>
+        </div>
+        <p
+            style={{
+                fontSize: 30,
+                fontWeight: 700,
+                color: "#111",
+                lineHeight: 1,
+                marginBottom: 5,
+            }}
+        >
+            {value}
+        </p>
+        <p
+            style={{
+                fontSize: 11.5,
+                fontWeight: 600,
+                color: "#999",
+                textTransform: "uppercase",
+                letterSpacing: "0.07em",
+            }}
+        >
+            {label}
+        </p>
     </div>
-    <p style={{ fontSize: 30, fontWeight: 700, color: '#111', lineHeight: 1, marginBottom: 5 }}>{value}</p>
-    <p style={{ fontSize: 11.5, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</p>
-  </div>
 );
 
 // ─────────────────────────────────────────
 // STEP DOTS (modal création)
 // ─────────────────────────────────────────
 const StepDots = ({ current, total }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', marginTop: 12 }}>
-    {Array.from({ length: total }).map((_, i) => (
-      <div key={i} style={{
-        borderRadius: 100, height: 4,
-        width: i + 1 === current ? 20 : 8,
-        background: i + 1 <= current ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)',
-        transition: 'all 0.3s ease',
-      }} />
-    ))}
-  </div>
+    <div
+        style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            justifyContent: "center",
+            marginTop: 12,
+        }}
+    >
+        {Array.from({ length: total }).map((_, i) => (
+            <div
+                key={i}
+                style={{
+                    borderRadius: 100,
+                    height: 4,
+                    width: i + 1 === current ? 20 : 8,
+                    background:
+                        i + 1 <= current
+                            ? "rgba(255,255,255,0.9)"
+                            : "rgba(255,255,255,0.3)",
+                    transition: "all 0.3s ease",
+                }}
+            />
+        ))}
+    </div>
 );
 
 // ─────────────────────────────────────────
 // MAIN
 // ─────────────────────────────────────────
-export default function Index({ transfers = [], classes = [], family = {}, members = [] }) {
-  const { flash } = usePage().props;
-  const [notification, setNotification] = useState(null);
+export default function Index({
+    transfers = [],
+    classes = [],
+    family = {},
+    members = [],
+}) {
+    const { flash } = usePage().props;
+    const [notification, setNotification] = useState(null);
 
-  useEffect(() => {
-    if (flash?.success) {
-      setNotification({ type: 'success', message: flash.success });
-      const t = setTimeout(() => setNotification(null), 4000);
-      return () => clearTimeout(t);
-    }
-    if (flash?.error) {
-      setNotification({ type: 'error', message: flash.error });
-      const t = setTimeout(() => setNotification(null), 4000);
-      return () => clearTimeout(t);
-    }
-  }, [flash]);
+    useEffect(() => {
+        if (flash?.success) {
+            setNotification({ type: "success", message: flash.success });
+            const t = setTimeout(() => setNotification(null), 4000);
+            return () => clearTimeout(t);
+        }
+        if (flash?.error) {
+            setNotification({ type: "error", message: flash.error });
+            const t = setTimeout(() => setNotification(null), 4000);
+            return () => clearTimeout(t);
+        }
+    }, [flash]);
 
-  const [searchTerm,       setSearchTerm]       = useState('');
-  const [statusFilter,     setStatusFilter]     = useState('');
-  const [selectedTransfer, setSelectedTransfer] = useState(null);
-  const [isModalOpen,      setIsModalOpen]      = useState(false);
-  const [modalStep,        setModalStep]        = useState(1);
-  const [formData,         setFormData]         = useState({
-    type: 'member',
-    member_id: '',
-    target_class_id: '',
-    reason: '',
-    destination_city: '',
-    destination_country: '',
-    destination_note: '',
-  });
-  const [processing,       setProcessing]       = useState(false);
-
-  const statusFilterOptions = [
-    { value: '', label: 'Tous les statuts' },
-    { value: 'SOUMISE', label: 'Soumise' },
-    { value: 'VALIDEE_SOURCE', label: 'Validee Source' },
-    { value: 'TERMINEE', label: 'Terminee' },
-    { value: 'REFUSEE', label: 'Refusee' },
-  ];
-
-  const memberOptions = [
-    { value: '', label: 'Selectionner un membre...' },
-    ...members.map((m) => ({ value: String(m.id), label: `${m.nom} ${m.prenom}` })),
-  ];
-
-  const classOptions = [
-    { value: '', label: 'Selectionner une classe...' },
-    ...classes.map((c) => ({ value: String(c.id), label: c.nom })),
-  ];
-
-  const stats = useMemo(() => ({
-    total:     transfers.length,
-    pending:   transfers.filter(t => ['SOUMISE','EN_ATTENTE_SOURCE','EN_ATTENTE_ACCUEIL'].includes(t.status)).length,
-    completed: transfers.filter(t => ['VALIDEE_ACCUEIL','TERMINEE'].includes(t.status)).length,
-    rejected:  transfers.filter(t => t.status === 'REFUSEE').length,
-  }), [transfers]);
-
-  const filteredTransfers = transfers.filter(t => {
-    const matchSearch = !searchTerm ||
-      t.member?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.family?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchStatus = !statusFilter || t.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
-
-  const resetModal = () => {
-    setIsModalOpen(false);
-    setModalStep(1);
-    setFormData({
-      type: 'member',
-      member_id: '',
-      target_class_id: '',
-      reason: '',
-      destination_city: '',
-      destination_country: '',
-      destination_note: '',
+    const [searchTerm, setSearchTerm] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
+    const [selectedTransfer, setSelectedTransfer] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalStep, setModalStep] = useState(1);
+    const [formData, setFormData] = useState({
+        type: "member",
+        member_id: "",
+        target_class_id: "",
+        reason: "",
+        destination_city: "",
+        destination_country: "",
+        destination_note: "",
     });
-  };
+    const [processing, setProcessing] = useState(false);
 
-  const handleNextStep = () => {
-    if (modalStep === 1 && !formData.type) return;
-    if (modalStep === 2) {
-      if (formData.type === 'member' && !formData.member_id) return;
-      if (formData.type === 'external') {
-        if (!formData.destination_city || !formData.destination_country) return;
-      } else {
-        if (!formData.target_class_id) return;
-      }
-    }
-    setModalStep(s => s + 1);
-  };
+    const stats = useMemo(
+        () => ({
+            total: transfers.length,
+            pending: transfers.filter((t) =>
+                ["SOUMISE", "EN_ATTENTE_SOURCE", "EN_ATTENTE_ACCUEIL"].includes(
+                    t.status,
+                ),
+            ).length,
+            completed: transfers.filter((t) =>
+                ["VALIDEE_ACCUEIL", "TERMINEE"].includes(t.status),
+            ).length,
+            rejected: transfers.filter((t) => t.status === "REFUSEE").length,
+        }),
+        [transfers],
+    );
 
-  const handleSubmit = () => {
-    setProcessing(true);
-    router.post(withBasePath("", '/responsable-famille/transferts'), {
-      type: formData.type,
-      user_id: formData.type === 'member' ? parseInt(formData.member_id) : null,
-      target_class_id: formData.type === 'external' ? null : parseInt(formData.target_class_id),
-      destination_city: formData.type === 'external' ? formData.destination_city : null,
-      destination_country: formData.type === 'external' ? formData.destination_country : null,
-      destination_note: formData.type === 'external' ? formData.destination_note || null : null,
-      reason: formData.reason || null,
-    }, {
-      onFinish: () => { setProcessing(false); resetModal(); },
+    const filteredTransfers = transfers.filter((t) => {
+        const matchSearch =
+            !searchTerm ||
+            t.member?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            t.family?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchStatus = !statusFilter || t.status === statusFilter;
+        return matchSearch && matchStatus;
     });
-  };
 
-  return (
-    <>
-      <style>{fontStyle}</style>
+    const resetModal = () => {
+        setIsModalOpen(false);
+        setModalStep(1);
+        setFormData({
+            type: "member",
+            member_id: "",
+            target_class_id: "",
+            reason: "",
+            destination_city: "",
+            destination_country: "",
+            destination_note: "",
+        });
+    };
 
-      <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)' }}>
+    const handleNextStep = () => {
+        if (modalStep === 1 && !formData.type) return;
+        if (modalStep === 2) {
+            if (formData.type === "member" && !formData.member_id) return;
+            if (formData.type === "external") {
+                if (!formData.destination_city || !formData.destination_country)
+                    return;
+            } else {
+                if (!formData.target_class_id) return;
+            }
+        }
+        setModalStep((s) => s + 1);
+    };
 
-        {/* Toast */}
-        {notification && (
-          <div className="toast-enter" style={{
-            position: 'fixed', top: 20, right: 20, zIndex: 200,
-            padding: '12px 20px', borderRadius: 12,
-            background: notification.type === 'success' ? '#16a34a' : '#dc2626',
-            color: '#fff', fontWeight: 600, fontSize: 14,
-            display: 'flex', alignItems: 'center', gap: 10,
-            boxShadow: '0 8px 30px rgba(0,0,0,0.2)',
-          }}>
-            {notification.type === 'success' ? <CheckCircle size={16} /> : <XCircle size={16} />}
-            {notification.message}
-          </div>
-        )}
+    const handleSubmit = () => {
+        setProcessing(true);
+        router.post(
+            withBasePath("", "/responsable-famille/transferts"),
+            {
+                type: formData.type,
+                user_id:
+                    formData.type === "member"
+                        ? parseInt(formData.member_id)
+                        : null,
+                target_class_id:
+                    formData.type === "external"
+                        ? null
+                        : parseInt(formData.target_class_id),
+                destination_city:
+                    formData.type === "external"
+                        ? formData.destination_city
+                        : null,
+                destination_country:
+                    formData.type === "external"
+                        ? formData.destination_country
+                        : null,
+                destination_note:
+                    formData.type === "external"
+                        ? formData.destination_note || null
+                        : null,
+                reason: formData.reason || null,
+            },
+            {
+                onFinish: () => {
+                    setProcessing(false);
+                    resetModal();
+                },
+            },
+        );
+    };
 
-        <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto', padding: '32px clamp(12px, 2vw, 24px) 40px', boxSizing: 'border-box' }}>
+    return (
+        <>
+            <style>{fontStyle}</style>
 
-          <div className="card-enter" style={{ marginBottom: 18 }}>
-            <Link
-              href={withBasePath("", "/responsable-famille/inscriptions")}
-              className="inline-flex items-center gap-2 text-white/90 hover:text-white bg-white/10 hover:bg-white/20 backdrop-blur-md px-5 py-2.5 rounded-full transition-all text-sm font-semibold border border-white/10"
+            <div
+                className="min-h-screen"
+                style={{
+                    background:
+                        "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
+                }}
             >
-              <ArrowLeft className="w-4 h-4" />
-              Retour aux inscriptions
-            </Link>
-          </div>
+                {/* Toast */}
+                {notification && (
+                    <div
+                        className="toast-enter"
+                        style={{
+                            position: "fixed",
+                            top: 20,
+                            right: 20,
+                            zIndex: 200,
+                            padding: "12px 20px",
+                            borderRadius: 12,
+                            background:
+                                notification.type === "success"
+                                    ? "#16a34a"
+                                    : "#dc2626",
+                            color: "#fff",
+                            fontWeight: 600,
+                            fontSize: 14,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            boxShadow: "0 8px 30px rgba(0,0,0,0.2)",
+                        }}
+                    >
+                        {notification.type === "success" ? (
+                            <CheckCircle size={16} />
+                        ) : (
+                            <XCircle size={16} />
+                        )}
+                        {notification.message}
+                    </div>
+                )}
 
-          {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 36 }}>
-            <div className="card-enter">
-              <p style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
-                Gestion des demandes
-              </p>
-              <h1 style={{ fontSize: 34, fontWeight: 700, color: '#fff', lineHeight: 1.1, marginBottom: 6 }}>
-                Transferts de Classe
-              </h1>
-              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)' }}>
-                Suivi des demandes · Validation en 3 étapes
-              </p>
-            </div>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="btn-primary card-enter"
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 20px', fontSize: 14, border: 'none', cursor: 'pointer', animationDelay: '100ms' }}
-            >
-              <Plus size={16} />
-              Nouvelle Demande
-            </button>
-          </div>
-
-          {/* Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 28 }}>
-            <StatCard icon={Layers}      label="Total"    value={stats.total}     iconBg="#EDE9FE" iconColor="#7C3AED" delay={0}   />
-            <StatCard icon={Clock}       label="En cours" value={stats.pending}   iconBg="#FEF3C7" iconColor="#D97706" delay={60}  />
-            <StatCard icon={CheckCircle} label="Validés"  value={stats.completed} iconBg="#DCFCE7" iconColor="#16A34A" delay={120} />
-            <StatCard icon={XCircle}     label="Refusés"  value={stats.rejected}  iconBg="#FEE2E2" iconColor="#DC2626" delay={180} />
-          </div>
-
-          {/* Barre de recherche */}
-          {transfers.length > 0 && (
-            <div className="filter-bar card-enter" style={{ padding: '14px 18px', marginBottom: 24, animationDelay: '200ms' }}>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ position: 'relative', flex: '1 1 320px', minWidth: 0 }}>
-                  <Search style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', width: 15, height: 15, color: '#f97316' }} />
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="Rechercher un membre ou une famille…"
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    style={{ width: '100%', paddingLeft: 40, paddingRight: 16, paddingTop: 10, paddingBottom: 10, fontSize: 13.5, color: '#111', boxSizing: 'border-box' }}
-                  />
-                </div>
-                <select
-                  className="input-field"
-                  value={statusFilter}
-                  onChange={e => setStatusFilter(e.target.value)}
-                  style={{ padding: '10px 14px', fontSize: 13.5, color: '#333', cursor: 'pointer', fontWeight: 500, minWidth: 180, flex: '0 1 220px', width: '100%', maxWidth: 240 }}
+                <div
+                    style={{
+                        maxWidth: 1200,
+                        margin: "0 auto",
+                        padding: "40px 24px",
+                    }}
                 >
-                  <option value="">Tous les statuts</option>
-                  <option value="SOUMISE">Soumise</option>
-                  <option value="VALIDEE_SOURCE">Validée Source</option>
-                  <option value="TERMINEE">Terminée</option>
-                  <option value="REFUSEE">Refusée</option>
-                </select>
-              </div>
-            </div>
-          )}
-
-          {/* Contenu */}
-          {filteredTransfers.length === 0 ? (
-            <div className="empty-state card-enter" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 20px' }}>
-              <div style={{ background: '#f5f5f5', borderRadius: 16, padding: 20, marginBottom: 20 }}>
-                <Inbox style={{ width: 32, height: 32, color: '#bbb' }} />
-              </div>
-              <p style={{ fontSize: 18, fontWeight: 700, color: '#111', marginBottom: 6 }}>Aucune demande de transfert</p>
-              <p style={{ fontSize: 13, color: '#999', marginBottom: 24 }}>Commencez par créer votre première demande.</p>
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="btn-primary"
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', fontSize: 14, border: 'none', cursor: 'pointer' }}
-              >
-                <Plus size={16} />
-                Créer une demande
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
-              {filteredTransfers.map((t, i) => (
-                <TransferCard key={t.id} t={t} onClick={() => setSelectedTransfer(t)} delay={i * 40} />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── MODAL CRÉATION ── */}
-      {isModalOpen && (
-        <div
-          className="modal-backdrop"
-          style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
-          onClick={resetModal}
-        >
-          <div className="modal-box modal-enter" style={{ width: '100%', maxWidth: 480 }} onClick={e => e.stopPropagation()}>
-
-            {/* Header modal */}
-            <div style={{ background: 'linear-gradient(135deg, #f97316, #ea580c)', padding: '24px 28px 20px' }}>
-              <p style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
-                Étape {modalStep} sur 3
-              </p>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: '#fff', margin: 0 }}>Nouvelle Demande</h2>
-              <StepDots current={modalStep} total={3} />
-            </div>
-
-            {/* Body modal */}
-            <div style={{ padding: '24px 28px', minHeight: 200 }}>
-              {modalStep === 1 && (
-                <div>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: '#555', marginBottom: 16 }}>Qui concerne ce transfert ?</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                     {[
-                       { value: 'member', label: 'Un Membre',       icon: User,       desc: "Transfert individuel d'un membre" },
-                       { value: 'family', label: 'Toute la Famille', icon: UsersRound, desc: 'Transfert groupé de la famille' },
-                       { value: 'external', label: 'Hors communauté', icon: MapPin, desc: 'Sortie vers une autre ville ou pays' },
-                     ].map(opt => (
-                       <div
-                         key={opt.value}
-                         className={`step-option ${formData.type === opt.value ? 'selected' : ''}`}
-                         style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px' }}
-                         onClick={() => setFormData({
-                           ...formData,
-                           type: opt.value,
-                           member_id: '',
-                           target_class_id: '',
-                           destination_city: '',
-                           destination_country: '',
-                           destination_note: '',
-                         })}
-                       >
-                        <div style={{ background: formData.type === opt.value ? '#fff7ed' : '#f5f5f5', borderRadius: 10, padding: 8 }}>
-                          <opt.icon style={{ width: 18, height: 18, color: formData.type === opt.value ? '#f97316' : '#9ca3af' }} />
+                    {/* Header */}
+                    <div
+                        style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "flex-start",
+                            marginBottom: 36,
+                        }}
+                    >
+                        <div className="card-enter">
+                            <p
+                                style={{
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    color: "rgba(255,255,255,0.55)",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.1em",
+                                    marginBottom: 6,
+                                }}
+                            >
+                                Gestion des demandes
+                            </p>
+                            <h1
+                                style={{
+                                    fontSize: 34,
+                                    fontWeight: 700,
+                                    color: "#fff",
+                                    lineHeight: 1.1,
+                                    marginBottom: 6,
+                                }}
+                            >
+                                Transferts de Classe
+                            </h1>
+                            <p
+                                style={{
+                                    fontSize: 14,
+                                    color: "rgba(255,255,255,0.6)",
+                                }}
+                            >
+                                Suivi des demandes · Validation en 3 étapes
+                            </p>
                         </div>
-                        <div>
-                          <p style={{ fontWeight: 600, fontSize: 14, margin: 0, color: 'inherit' }}>{opt.label}</p>
-                          <p style={{ fontSize: 12, color: '#999', margin: 0 }}>{opt.desc}</p>
+                        <button
+                            onClick={() => setIsModalOpen(true)}
+                            className="btn-primary card-enter"
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                padding: "11px 20px",
+                                fontSize: 14,
+                                border: "none",
+                                cursor: "pointer",
+                                animationDelay: "100ms",
+                            }}
+                        >
+                            <Plus size={16} />
+                            Nouvelle Demande
+                        </button>
+                    </div>
+
+                    {/* Stats */}
+                    <div
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(4, 1fr)",
+                            gap: 16,
+                            marginBottom: 28,
+                        }}
+                    >
+                        <StatCard
+                            icon={Layers}
+                            label="Total"
+                            value={stats.total}
+                            iconBg="#EDE9FE"
+                            iconColor="#7C3AED"
+                            delay={0}
+                        />
+                        <StatCard
+                            icon={Clock}
+                            label="En cours"
+                            value={stats.pending}
+                            iconBg="#FEF3C7"
+                            iconColor="#D97706"
+                            delay={60}
+                        />
+                        <StatCard
+                            icon={CheckCircle}
+                            label="Validés"
+                            value={stats.completed}
+                            iconBg="#DCFCE7"
+                            iconColor="#16A34A"
+                            delay={120}
+                        />
+                        <StatCard
+                            icon={XCircle}
+                            label="Refusés"
+                            value={stats.rejected}
+                            iconBg="#FEE2E2"
+                            iconColor="#DC2626"
+                            delay={180}
+                        />
+                    </div>
+
+                    {/* Barre de recherche */}
+                    {transfers.length > 0 && (
+                        <div
+                            className="filter-bar card-enter"
+                            style={{
+                                padding: "14px 18px",
+                                marginBottom: 24,
+                                animationDelay: "200ms",
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: "flex",
+                                    gap: 10,
+                                    alignItems: "center",
+                                }}
+                            >
+                                <div style={{ position: "relative", flex: 1 }}>
+                                    <Search
+                                        style={{
+                                            position: "absolute",
+                                            left: 13,
+                                            top: "50%",
+                                            transform: "translateY(-50%)",
+                                            width: 15,
+                                            height: 15,
+                                            color: "#f97316",
+                                        }}
+                                    />
+                                    <input
+                                        type="text"
+                                        className="input-field"
+                                        placeholder="Rechercher un membre ou une famille…"
+                                        value={searchTerm}
+                                        onChange={(e) =>
+                                            setSearchTerm(e.target.value)
+                                        }
+                                        style={{
+                                            width: "100%",
+                                            paddingLeft: 40,
+                                            paddingRight: 16,
+                                            paddingTop: 10,
+                                            paddingBottom: 10,
+                                            fontSize: 13.5,
+                                            color: "#111",
+                                            boxSizing: "border-box",
+                                        }}
+                                    />
+                                </div>
+                                <select
+                                    className="input-field"
+                                    value={statusFilter}
+                                    onChange={(e) =>
+                                        setStatusFilter(e.target.value)
+                                    }
+                                    style={{
+                                        padding: "10px 14px",
+                                        fontSize: 13.5,
+                                        color: "#333",
+                                        cursor: "pointer",
+                                        fontWeight: 500,
+                                        minWidth: 160,
+                                    }}
+                                >
+                                    <option value="">Tous les statuts</option>
+                                    <option value="SOUMISE">Soumise</option>
+                                    <option value="VALIDEE_SOURCE">
+                                        Validée Source
+                                    </option>
+                                    <option value="TERMINEE">Terminée</option>
+                                    <option value="REFUSEE">Refusée</option>
+                                </select>
+                            </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                  {formData.type === 'member' && (
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: '#eff6ff', border: '1px solid #dbeafe', borderRadius: 10, padding: '12px 14px', marginTop: 16 }}>
-                      <Info style={{ width: 15, height: 15, color: '#3b82f6', flexShrink: 0, marginTop: 1 }} />
-                      <p style={{ fontSize: 12, color: '#1e40af', margin: 0, lineHeight: 1.5 }}>
-                        Une fois finalisé, le membre deviendra responsable de sa nouvelle famille.
-                      </p>
-                    </div>
-                  )}
+                    )}
+
+                    {/* Contenu */}
+                    {filteredTransfers.length === 0 ? (
+                        <div
+                            className="empty-state card-enter"
+                            style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                padding: "80px 20px",
+                            }}
+                        >
+                            <div
+                                style={{
+                                    background: "#f5f5f5",
+                                    borderRadius: 16,
+                                    padding: 20,
+                                    marginBottom: 20,
+                                }}
+                            >
+                                <Inbox
+                                    style={{
+                                        width: 32,
+                                        height: 32,
+                                        color: "#bbb",
+                                    }}
+                                />
+                            </div>
+                            <p
+                                style={{
+                                    fontSize: 18,
+                                    fontWeight: 700,
+                                    color: "#111",
+                                    marginBottom: 6,
+                                }}
+                            >
+                                Aucune demande de transfert
+                            </p>
+                            <p
+                                style={{
+                                    fontSize: 13,
+                                    color: "#999",
+                                    marginBottom: 24,
+                                }}
+                            >
+                                Commencez par créer votre première demande.
+                            </p>
+                            <button
+                                onClick={() => setIsModalOpen(true)}
+                                className="btn-primary"
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    padding: "10px 20px",
+                                    fontSize: 14,
+                                    border: "none",
+                                    cursor: "pointer",
+                                }}
+                            >
+                                <Plus size={16} />
+                                Créer une demande
+                            </button>
+                        </div>
+                    ) : (
+                        <div
+                            style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(3, 1fr)",
+                                gap: 18,
+                            }}
+                        >
+                            {filteredTransfers.map((t, i) => (
+                                <TransferCard
+                                    key={t.id}
+                                    t={t}
+                                    onClick={() => setSelectedTransfer(t)}
+                                    delay={i * 40}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
-              )}
-
-              {modalStep === 2 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {formData.type === 'member' && (
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Membre</label>
-                      <select
-                        value={formData.member_id}
-                        onChange={e => setFormData({ ...formData, member_id: e.target.value })}
-                        className="input-field"
-                        style={{ width: '100%', padding: '10px 14px', fontSize: 13, color: '#111' }}
-                      >
-                        <option value="">Sélectionner un membre…</option>
-                        {members.map(m => <option key={m.id} value={m.id}>{m.nom} {m.prenom}</option>)}
-                      </select>
-                    </div>
-                  )}
-
-                  {formData.type !== 'external' ? (
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Classe cible</label>
-                      <select
-                        value={formData.target_class_id}
-                        onChange={e => setFormData({ ...formData, target_class_id: e.target.value })}
-                        className="input-field"
-                        style={{ width: '100%', padding: '10px 14px', fontSize: 13, color: '#111' }}
-                      >
-                        <option value="">Sélectionner une classe…</option>
-                        {classes.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-                      </select>
-                    </div>
-                  ) : (
-                    <>
-                      <div>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Ville de destination</label>
-                        <input
-                          type="text"
-                          value={formData.destination_city}
-                          onChange={e => setFormData({ ...formData, destination_city: e.target.value })}
-                          className="input-field"
-                          placeholder="Ex: Abidjan"
-                          style={{ width: '100%', padding: '10px 14px', fontSize: 13, color: '#111', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Pays de destination</label>
-                        <input
-                          type="text"
-                          value={formData.destination_country}
-                          onChange={e => setFormData({ ...formData, destination_country: e.target.value })}
-                          className="input-field"
-                          placeholder="Ex: Sénégal"
-                          style={{ width: '100%', padding: '10px 14px', fontSize: 13, color: '#111', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Détails complémentaires</label>
-                        <textarea
-                          value={formData.destination_note}
-                          onChange={e => setFormData({ ...formData, destination_note: e.target.value })}
-                          rows={2}
-                          className="input-field"
-                          placeholder="Optionnel : précisez l'église d'accueil, contact, etc."
-                          style={{ width: '100%', padding: '10px 14px', fontSize: 13, color: '#111', resize: 'none', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
-                      Motif <span style={{ color: '#bbb', fontWeight: 400, textTransform: 'none' }}>(optionnel)</span>
-                    </label>
-                    <textarea
-                      value={formData.reason}
-                      onChange={e => setFormData({ ...formData, reason: e.target.value })}
-                      rows={3}
-                      className="input-field"
-                      placeholder="Expliquez la raison du transfert…"
-                      style={{ width: '100%', padding: '10px 14px', fontSize: 13, color: '#111', resize: 'none', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {modalStep === 3 && (
-                <div>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>Récapitulatif</p>
-                  <div style={{ background: '#f9f9f9', border: '1px solid #ebebeb', borderRadius: 12, overflow: 'hidden' }}>
-                      {[
-                        { key: 'Type', val: formData.type === 'member' ? 'Membre' : (formData.type === 'external' ? 'Hors communauté' : 'Famille') },
-                        ...(formData.type === 'member' ? [{
-                          key: 'Membre',
-                          val: (() => { const m = members.find(m => String(m.id) === formData.member_id); return m ? `${m.nom} ${m.prenom}` : '—'; })()
-                        }] : []),
-                        formData.type === 'external'
-                          ? { key: 'Destination', val: formData.destination_city ? `${formData.destination_city}${formData.destination_country ? ` • ${formData.destination_country}` : ''}` : '—' }
-                          : { key: 'Classe cible', val: classes.find(c => String(c.id) === formData.target_class_id)?.nom || '—' },
-                        ...(formData.destination_note ? [{ key: 'Détails', val: formData.destination_note }] : []),
-                        ...(formData.reason ? [{ key: 'Motif', val: formData.reason }] : []),
-                      ].map((row, i, arr) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '11px 16px', borderBottom: i < arr.length - 1 ? '1px solid #ebebeb' : 'none' }}>
-                        <span style={{ fontSize: 13, color: '#999' }}>{row.key}</span>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: '#111', textAlign: 'right', maxWidth: '60%' }}>{row.val}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <p style={{ fontSize: 11, color: '#bbb', marginTop: 14, lineHeight: 1.6 }}>
-                    Votre demande sera validée par le conducteur source, puis par le conducteur d'accueil.
-                  </p>
-                </div>
-              )}
             </div>
 
-            {/* Footer modal */}
-            <div style={{ padding: '16px 28px', borderTop: '1px solid #f0f0f0', background: '#fafafa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <button
-                onClick={() => modalStep > 1 ? setModalStep(modalStep - 1) : resetModal()}
-                style={{ fontSize: 13, fontWeight: 500, color: '#777', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 4px' }}
-              >
-                {modalStep > 1 ? '← Retour' : 'Annuler'}
-              </button>
-              {modalStep < 3 ? (
-                <button onClick={handleNextStep} className="btn-primary" style={{ padding: '9px 20px', fontSize: 13, border: 'none', cursor: 'pointer' }}>
-                  Continuer →
-                </button>
-              ) : (
-                <button onClick={handleSubmit} disabled={processing} className="btn-confirm" style={{ padding: '9px 20px', fontSize: 13, border: 'none', cursor: 'pointer' }}>
-                  {processing ? 'Envoi…' : '✓ Confirmer'}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL DÉTAILS ── */}
-      {selectedTransfer && (
-        <div
-          className="modal-backdrop"
-          style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
-          onClick={() => setSelectedTransfer(null)}
-        >
-          <div className="modal-box modal-enter" style={{ width: '100%', maxWidth: 440 }} onClick={e => e.stopPropagation()}>
-            <div style={{ padding: '22px 24px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <p className="mono" style={{ fontSize: 11, color: '#bbb', letterSpacing: '0.06em', marginBottom: 4 }}>
-                  {selectedTransfer.reference || `TRF-${String(selectedTransfer.id).padStart(4, '0')}`}
-                </p>
-                <h2 style={{ fontSize: 17, fontWeight: 700, color: '#111', margin: 0 }}>
-                  {selectedTransfer.member?.name || selectedTransfer.family?.name}
-                </h2>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <StatusBadge status={selectedTransfer.status} />
-                <button
-                  onClick={() => setSelectedTransfer(null)}
-                  style={{ background: '#f5f5f5', border: 'none', borderRadius: 8, padding: 7, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            {/* ── MODAL CRÉATION ── */}
+            {isModalOpen && (
+                <div
+                    className="modal-backdrop"
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        zIndex: 50,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: 16,
+                    }}
+                    onClick={resetModal}
                 >
-                  <X style={{ width: 14, height: 14, color: '#666' }} />
-                </button>
-              </div>
-            </div>
+                    <div
+                        className="modal-box modal-enter"
+                        style={{ width: "100%", maxWidth: 480 }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header modal */}
+                        <div
+                            style={{
+                                background:
+                                    "linear-gradient(135deg, #f97316, #ea580c)",
+                                padding: "24px 28px 20px",
+                            }}
+                        >
+                            <p
+                                style={{
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    color: "rgba(255,255,255,0.65)",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.1em",
+                                    marginBottom: 4,
+                                }}
+                            >
+                                Étape {modalStep} sur 3
+                            </p>
+                            <h2
+                                style={{
+                                    fontSize: 20,
+                                    fontWeight: 700,
+                                    color: "#fff",
+                                    margin: 0,
+                                }}
+                            >
+                                Nouvelle Demande
+                            </h2>
+                            <StepDots current={modalStep} total={3} />
+                        </div>
 
-            <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <div style={{ background: '#f9f9f9', border: '1px solid #ebebeb', borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {[
-                  { label: 'Source',      value: selectedTransfer.classe_source?.nom, color: '#555' },
-                  { label: 'Destination', value: selectedTransfer.external_destination || selectedTransfer.classe_cible?.nom || '—',  color: '#ea580c', bold: true },
-                  ...(selectedTransfer.destination_note ? [{ label: 'Détails', value: selectedTransfer.destination_note, color: '#777' }] : []),
-                  ...(selectedTransfer.reason ? [{ label: 'Motif', value: selectedTransfer.reason, color: '#777', italic: true }] : []),
-                ].map((row, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: 12, color: '#bbb', width: 72, flexShrink: 0, paddingTop: 1 }}>{row.label}</span>
-                    <span style={{ fontSize: 13, color: row.color, fontWeight: row.bold ? 700 : 500, fontStyle: row.italic ? 'italic' : 'normal' }}>{row.value || '—'}</span>
-                  </div>
-                ))}
-              </div>
+                        {/* Body modal */}
+                        <div style={{ padding: "24px 28px", minHeight: 200 }}>
+                            {modalStep === 1 && (
+                                <div>
+                                    <p
+                                        style={{
+                                            fontSize: 13,
+                                            fontWeight: 600,
+                                            color: "#555",
+                                            marginBottom: 16,
+                                        }}
+                                    >
+                                        Qui concerne ce transfert ?
+                                    </p>
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            gap: 10,
+                                        }}
+                                    >
+                                        {[
+                                            {
+                                                value: "member",
+                                                label: "Un Membre",
+                                                icon: User,
+                                                desc: "Transfert individuel d'un membre",
+                                            },
+                                            {
+                                                value: "family",
+                                                label: "Toute la Famille",
+                                                icon: UsersRound,
+                                                desc: "Transfert groupé de la famille",
+                                            },
+                                            {
+                                                value: "external",
+                                                label: "Hors communauté",
+                                                icon: MapPin,
+                                                desc: "Sortie vers une autre ville ou pays",
+                                            },
+                                        ].map((opt) => (
+                                            <div
+                                                key={opt.value}
+                                                className={`step-option ${formData.type === opt.value ? "selected" : ""}`}
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 14,
+                                                    padding: "14px 16px",
+                                                }}
+                                                onClick={() =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        type: opt.value,
+                                                        member_id: "",
+                                                        target_class_id: "",
+                                                        destination_city: "",
+                                                        destination_country: "",
+                                                        destination_note: "",
+                                                    })
+                                                }
+                                            >
+                                                <div
+                                                    style={{
+                                                        background:
+                                                            formData.type ===
+                                                            opt.value
+                                                                ? "#fff7ed"
+                                                                : "#f5f5f5",
+                                                        borderRadius: 10,
+                                                        padding: 8,
+                                                    }}
+                                                >
+                                                    <opt.icon
+                                                        style={{
+                                                            width: 18,
+                                                            height: 18,
+                                                            color:
+                                                                formData.type ===
+                                                                opt.value
+                                                                    ? "#f97316"
+                                                                    : "#9ca3af",
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <p
+                                                        style={{
+                                                            fontWeight: 600,
+                                                            fontSize: 14,
+                                                            margin: 0,
+                                                            color: "inherit",
+                                                        }}
+                                                    >
+                                                        {opt.label}
+                                                    </p>
+                                                    <p
+                                                        style={{
+                                                            fontSize: 12,
+                                                            color: "#999",
+                                                            margin: 0,
+                                                        }}
+                                                    >
+                                                        {opt.desc}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {formData.type === "member" && (
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "flex-start",
+                                                gap: 10,
+                                                background: "#eff6ff",
+                                                border: "1px solid #dbeafe",
+                                                borderRadius: 10,
+                                                padding: "12px 14px",
+                                                marginTop: 16,
+                                            }}
+                                        >
+                                            <Info
+                                                style={{
+                                                    width: 15,
+                                                    height: 15,
+                                                    color: "#3b82f6",
+                                                    flexShrink: 0,
+                                                    marginTop: 1,
+                                                }}
+                                            />
+                                            <p
+                                                style={{
+                                                    fontSize: 12,
+                                                    color: "#1e40af",
+                                                    margin: 0,
+                                                    lineHeight: 1.5,
+                                                }}
+                                            >
+                                                Une fois finalisé, le membre
+                                                deviendra responsable de sa
+                                                nouvelle famille.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
-              <div>
-                <p style={{ fontSize: 11, fontWeight: 600, color: '#bbb', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>Progression</p>
-                <TransferTimeline transfer={selectedTransfer} />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
+                            {modalStep === 2 && (
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        gap: 16,
+                                    }}
+                                >
+                                    {formData.type === "member" && (
+                                        <div>
+                                            <label
+                                                style={{
+                                                    display: "block",
+                                                    fontSize: 12,
+                                                    fontWeight: 600,
+                                                    color: "#555",
+                                                    textTransform: "uppercase",
+                                                    letterSpacing: "0.06em",
+                                                    marginBottom: 8,
+                                                }}
+                                            >
+                                                Membre
+                                            </label>
+                                            <select
+                                                value={formData.member_id}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        member_id:
+                                                            e.target.value,
+                                                    })
+                                                }
+                                                className="input-field"
+                                                style={{
+                                                    width: "100%",
+                                                    padding: "10px 14px",
+                                                    fontSize: 13,
+                                                    color: "#111",
+                                                }}
+                                            >
+                                                <option value="">
+                                                    Sélectionner un membre…
+                                                </option>
+                                                {members.map((m) => (
+                                                    <option
+                                                        key={m.id}
+                                                        value={m.id}
+                                                    >
+                                                        {m.nom} {m.prenom}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    {formData.type !== "external" ? (
+                                        <div>
+                                            <label
+                                                style={{
+                                                    display: "block",
+                                                    fontSize: 12,
+                                                    fontWeight: 600,
+                                                    color: "#555",
+                                                    textTransform: "uppercase",
+                                                    letterSpacing: "0.06em",
+                                                    marginBottom: 8,
+                                                }}
+                                            >
+                                                Classe cible
+                                            </label>
+                                            <select
+                                                value={formData.target_class_id}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        target_class_id:
+                                                            e.target.value,
+                                                    })
+                                                }
+                                                className="input-field"
+                                                style={{
+                                                    width: "100%",
+                                                    padding: "10px 14px",
+                                                    fontSize: 13,
+                                                    color: "#111",
+                                                }}
+                                            >
+                                                <option value="">
+                                                    Sélectionner une classe…
+                                                </option>
+                                                {classes.map((c) => (
+                                                    <option
+                                                        key={c.id}
+                                                        value={c.id}
+                                                    >
+                                                        {c.nom}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div>
+                                                <label
+                                                    style={{
+                                                        display: "block",
+                                                        fontSize: 12,
+                                                        fontWeight: 600,
+                                                        color: "#555",
+                                                        textTransform:
+                                                            "uppercase",
+                                                        letterSpacing: "0.06em",
+                                                        marginBottom: 8,
+                                                    }}
+                                                >
+                                                    Ville de destination
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={
+                                                        formData.destination_city
+                                                    }
+                                                    onChange={(e) =>
+                                                        setFormData({
+                                                            ...formData,
+                                                            destination_city:
+                                                                e.target.value,
+                                                        })
+                                                    }
+                                                    className="input-field"
+                                                    placeholder="Ex: Abidjan"
+                                                    style={{
+                                                        width: "100%",
+                                                        padding: "10px 14px",
+                                                        fontSize: 13,
+                                                        color: "#111",
+                                                        boxSizing: "border-box",
+                                                    }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label
+                                                    style={{
+                                                        display: "block",
+                                                        fontSize: 12,
+                                                        fontWeight: 600,
+                                                        color: "#555",
+                                                        textTransform:
+                                                            "uppercase",
+                                                        letterSpacing: "0.06em",
+                                                        marginBottom: 8,
+                                                    }}
+                                                >
+                                                    Pays de destination
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={
+                                                        formData.destination_country
+                                                    }
+                                                    onChange={(e) =>
+                                                        setFormData({
+                                                            ...formData,
+                                                            destination_country:
+                                                                e.target.value,
+                                                        })
+                                                    }
+                                                    className="input-field"
+                                                    placeholder="Ex: Sénégal"
+                                                    style={{
+                                                        width: "100%",
+                                                        padding: "10px 14px",
+                                                        fontSize: 13,
+                                                        color: "#111",
+                                                        boxSizing: "border-box",
+                                                    }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label
+                                                    style={{
+                                                        display: "block",
+                                                        fontSize: 12,
+                                                        fontWeight: 600,
+                                                        color: "#555",
+                                                        textTransform:
+                                                            "uppercase",
+                                                        letterSpacing: "0.06em",
+                                                        marginBottom: 8,
+                                                    }}
+                                                >
+                                                    Détails complémentaires
+                                                </label>
+                                                <textarea
+                                                    value={
+                                                        formData.destination_note
+                                                    }
+                                                    onChange={(e) =>
+                                                        setFormData({
+                                                            ...formData,
+                                                            destination_note:
+                                                                e.target.value,
+                                                        })
+                                                    }
+                                                    rows={2}
+                                                    className="input-field"
+                                                    placeholder="Optionnel : précisez l'église d'accueil, contact, etc."
+                                                    style={{
+                                                        width: "100%",
+                                                        padding: "10px 14px",
+                                                        fontSize: 13,
+                                                        color: "#111",
+                                                        resize: "none",
+                                                        boxSizing: "border-box",
+                                                    }}
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+
+                                    <div>
+                                        <label
+                                            style={{
+                                                display: "block",
+                                                fontSize: 12,
+                                                fontWeight: 600,
+                                                color: "#555",
+                                                textTransform: "uppercase",
+                                                letterSpacing: "0.06em",
+                                                marginBottom: 8,
+                                            }}
+                                        >
+                                            Motif{" "}
+                                            <span
+                                                style={{
+                                                    color: "#bbb",
+                                                    fontWeight: 400,
+                                                    textTransform: "none",
+                                                }}
+                                            >
+                                                (optionnel)
+                                            </span>
+                                        </label>
+                                        <textarea
+                                            value={formData.reason}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    reason: e.target.value,
+                                                })
+                                            }
+                                            rows={3}
+                                            className="input-field"
+                                            placeholder="Expliquez la raison du transfert…"
+                                            style={{
+                                                width: "100%",
+                                                padding: "10px 14px",
+                                                fontSize: 13,
+                                                color: "#111",
+                                                resize: "none",
+                                                boxSizing: "border-box",
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {modalStep === 3 && (
+                                <div>
+                                    <p
+                                        style={{
+                                            fontSize: 12,
+                                            fontWeight: 600,
+                                            color: "#555",
+                                            textTransform: "uppercase",
+                                            letterSpacing: "0.06em",
+                                            marginBottom: 14,
+                                        }}
+                                    >
+                                        Récapitulatif
+                                    </p>
+                                    <div
+                                        style={{
+                                            background: "#f9f9f9",
+                                            border: "1px solid #ebebeb",
+                                            borderRadius: 12,
+                                            overflow: "hidden",
+                                        }}
+                                    >
+                                        {[
+                                            {
+                                                key: "Type",
+                                                val:
+                                                    formData.type === "member"
+                                                        ? "Membre"
+                                                        : formData.type ===
+                                                            "external"
+                                                          ? "Hors communauté"
+                                                          : "Famille",
+                                            },
+                                            ...(formData.type === "member"
+                                                ? [
+                                                      {
+                                                          key: "Membre",
+                                                          val: (() => {
+                                                              const m =
+                                                                  members.find(
+                                                                      (m) =>
+                                                                          String(
+                                                                              m.id,
+                                                                          ) ===
+                                                                          formData.member_id,
+                                                                  );
+                                                              return m
+                                                                  ? `${m.nom} ${m.prenom}`
+                                                                  : "—";
+                                                          })(),
+                                                      },
+                                                  ]
+                                                : []),
+                                            formData.type === "external"
+                                                ? {
+                                                      key: "Destination",
+                                                      val: formData.destination_city
+                                                          ? `${formData.destination_city}${formData.destination_country ? ` • ${formData.destination_country}` : ""}`
+                                                          : "—",
+                                                  }
+                                                : {
+                                                      key: "Classe cible",
+                                                      val:
+                                                          classes.find(
+                                                              (c) =>
+                                                                  String(
+                                                                      c.id,
+                                                                  ) ===
+                                                                  formData.target_class_id,
+                                                          )?.nom || "—",
+                                                  },
+                                            ...(formData.destination_note
+                                                ? [
+                                                      {
+                                                          key: "Détails",
+                                                          val: formData.destination_note,
+                                                      },
+                                                  ]
+                                                : []),
+                                            ...(formData.reason
+                                                ? [
+                                                      {
+                                                          key: "Motif",
+                                                          val: formData.reason,
+                                                      },
+                                                  ]
+                                                : []),
+                                        ].map((row, i, arr) => (
+                                            <div
+                                                key={i}
+                                                style={{
+                                                    display: "flex",
+                                                    justifyContent:
+                                                        "space-between",
+                                                    alignItems: "flex-start",
+                                                    padding: "11px 16px",
+                                                    borderBottom:
+                                                        i < arr.length - 1
+                                                            ? "1px solid #ebebeb"
+                                                            : "none",
+                                                }}
+                                            >
+                                                <span
+                                                    style={{
+                                                        fontSize: 13,
+                                                        color: "#999",
+                                                    }}
+                                                >
+                                                    {row.key}
+                                                </span>
+                                                <span
+                                                    style={{
+                                                        fontSize: 13,
+                                                        fontWeight: 600,
+                                                        color: "#111",
+                                                        textAlign: "right",
+                                                        maxWidth: "60%",
+                                                    }}
+                                                >
+                                                    {row.val}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <p
+                                        style={{
+                                            fontSize: 11,
+                                            color: "#bbb",
+                                            marginTop: 14,
+                                            lineHeight: 1.6,
+                                        }}
+                                    >
+                                        Votre demande sera validée par le
+                                        conducteur source, puis par le
+                                        conducteur d'accueil.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer modal */}
+                        <div
+                            style={{
+                                padding: "16px 28px",
+                                borderTop: "1px solid #f0f0f0",
+                                background: "#fafafa",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                            }}
+                        >
+                            <button
+                                onClick={() =>
+                                    modalStep > 1
+                                        ? setModalStep(modalStep - 1)
+                                        : resetModal()
+                                }
+                                style={{
+                                    fontSize: 13,
+                                    fontWeight: 500,
+                                    color: "#777",
+                                    background: "none",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    padding: "6px 4px",
+                                }}
+                            >
+                                {modalStep > 1 ? "← Retour" : "Annuler"}
+                            </button>
+                            {modalStep < 3 ? (
+                                <button
+                                    onClick={handleNextStep}
+                                    className="btn-primary"
+                                    style={{
+                                        padding: "9px 20px",
+                                        fontSize: 13,
+                                        border: "none",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    Continuer →
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={processing}
+                                    className="btn-confirm"
+                                    style={{
+                                        padding: "9px 20px",
+                                        fontSize: 13,
+                                        border: "none",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    {processing ? "Envoi…" : "✓ Confirmer"}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── MODAL DÉTAILS ── */}
+            {selectedTransfer && (
+                <div
+                    className="modal-backdrop"
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        zIndex: 50,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: 16,
+                    }}
+                    onClick={() => setSelectedTransfer(null)}
+                >
+                    <div
+                        className="modal-box modal-enter"
+                        style={{ width: "100%", maxWidth: 440 }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div
+                            style={{
+                                padding: "22px 24px 20px",
+                                borderBottom: "1px solid #f0f0f0",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "flex-start",
+                            }}
+                        >
+                            <div>
+                                <p
+                                    className="mono"
+                                    style={{
+                                        fontSize: 11,
+                                        color: "#bbb",
+                                        letterSpacing: "0.06em",
+                                        marginBottom: 4,
+                                    }}
+                                >
+                                    {selectedTransfer.reference ||
+                                        `TRF-${String(selectedTransfer.id).padStart(4, "0")}`}
+                                </p>
+                                <h2
+                                    style={{
+                                        fontSize: 17,
+                                        fontWeight: 700,
+                                        color: "#111",
+                                        margin: 0,
+                                    }}
+                                >
+                                    {selectedTransfer.member?.name ||
+                                        selectedTransfer.family?.name}
+                                </h2>
+                            </div>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 10,
+                                }}
+                            >
+                                <StatusBadge status={selectedTransfer.status} />
+                                <button
+                                    onClick={() => setSelectedTransfer(null)}
+                                    style={{
+                                        background: "#f5f5f5",
+                                        border: "none",
+                                        borderRadius: 8,
+                                        padding: 7,
+                                        cursor: "pointer",
+                                        display: "flex",
+                                        alignItems: "center",
+                                    }}
+                                >
+                                    <X
+                                        style={{
+                                            width: 14,
+                                            height: 14,
+                                            color: "#666",
+                                        }}
+                                    />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div
+                            style={{
+                                padding: "20px 24px",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 20,
+                            }}
+                        >
+                            <div
+                                style={{
+                                    background: "#f9f9f9",
+                                    border: "1px solid #ebebeb",
+                                    borderRadius: 12,
+                                    padding: "14px 16px",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 10,
+                                }}
+                            >
+                                {[
+                                    {
+                                        label: "Source",
+                                        value: selectedTransfer.classe_source
+                                            ?.nom,
+                                        color: "#555",
+                                    },
+                                    {
+                                        label: "Destination",
+                                        value:
+                                            selectedTransfer.external_destination ||
+                                            selectedTransfer.classe_cible
+                                                ?.nom ||
+                                            "—",
+                                        color: "#ea580c",
+                                        bold: true,
+                                    },
+                                    ...(selectedTransfer.destination_note
+                                        ? [
+                                              {
+                                                  label: "Détails",
+                                                  value: selectedTransfer.destination_note,
+                                                  color: "#777",
+                                              },
+                                          ]
+                                        : []),
+                                    ...(selectedTransfer.reason
+                                        ? [
+                                              {
+                                                  label: "Motif",
+                                                  value: selectedTransfer.reason,
+                                                  color: "#777",
+                                                  italic: true,
+                                              },
+                                          ]
+                                        : []),
+                                ].map((row, i) => (
+                                    <div
+                                        key={i}
+                                        style={{
+                                            display: "flex",
+                                            gap: 12,
+                                            alignItems: "flex-start",
+                                        }}
+                                    >
+                                        <span
+                                            style={{
+                                                fontSize: 12,
+                                                color: "#bbb",
+                                                width: 72,
+                                                flexShrink: 0,
+                                                paddingTop: 1,
+                                            }}
+                                        >
+                                            {row.label}
+                                        </span>
+                                        <span
+                                            style={{
+                                                fontSize: 13,
+                                                color: row.color,
+                                                fontWeight: row.bold
+                                                    ? 700
+                                                    : 500,
+                                                fontStyle: row.italic
+                                                    ? "italic"
+                                                    : "normal",
+                                            }}
+                                        >
+                                            {row.value || "—"}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div>
+                                <p
+                                    style={{
+                                        fontSize: 11,
+                                        fontWeight: 600,
+                                        color: "#bbb",
+                                        textTransform: "uppercase",
+                                        letterSpacing: "0.08em",
+                                        marginBottom: 14,
+                                    }}
+                                >
+                                    Progression
+                                </p>
+                                <TransferTimeline transfer={selectedTransfer} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
+    );
 }

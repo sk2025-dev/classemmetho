@@ -25,12 +25,12 @@
 
             <p>Votre inscription a été acceptée et votre compte a été créé avec succès!</p>
 
-            <p><strong>Voici vos identifiants de connexion :</strong></p>
+            <p><strong>Voici vos informations de connexion :</strong></p>
 
             <div class="credentials">
                 <div class="credential-row">
-                    <span class="label">Identifiant :</span>
-                    <span class="value">{{ $identifier }}</span>
+                    <span class="label">Code membre :</span>
+                    <span class="value">{{ $user->code_membre ?? $identifier }}</span>
                 </div>
                 <div class="credential-row">
                     <span class="label">Mot de passe temporaire :</span>
@@ -45,7 +45,7 @@
             <p><strong>Étapes à suivre :</strong></p>
             <ol>
                 <li>Accédez au formulaire de connexion</li>
-                <li>Entrez votre <strong>identifiant</strong> et votre <strong>mot de passe temporaire</strong></li>
+                <li>Entrez votre <strong>code membre</strong> et votre <strong>mot de passe temporaire</strong></li>
                 <li>Après la première connexion, vous serez invité à créer un nouveau mot de passe</li>
                 <li>Utilisez ce nouveau mot de passe pour les connexions futures</li>
             </ol>
@@ -53,8 +53,8 @@
             <div class="warning">
                 <strong>⚠️ Informations de Sécurité :</strong>
                 <ul style="margin: 10px 0; padding-left: 20px;">
-                    <li>Ne partagez jamais vos identifiants avec quiconque</li>
-                    <li>Notre équipe ne vous demandera jamais vos identifiants par email</li>
+                    <li>Ne partagez jamais votre code membre ni votre mot de passe avec quiconque</li>
+                    <li>Notre équipe ne vous demandera jamais votre code membre ou votre mot de passe par email</li>
                     <li>Changez votre mot de passe lors de la première connexion</li>
                     <li>Utilisez un mot de passe fort (au moins 8 caractères)</li>
                 </ul>

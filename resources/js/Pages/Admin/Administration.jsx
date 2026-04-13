@@ -86,16 +86,20 @@ export default function AdminPage({
     };
 
     const handleUpdateClass = (updatedClass) => {
-        router.put(withBasePath("", `/admin/classes/${updatedClass.id}`), updatedClass, {
-            onSuccess: () => {
-                toast.success("Classe mise à jour avec succès");
-                router.reload({ only: ["availableClasses"] });
+        router.put(
+            withBasePath("", `/admin/classes/${updatedClass.id}`),
+            updatedClass,
+            {
+                onSuccess: () => {
+                    toast.success("Classe mise à jour avec succès");
+                    router.reload({ only: ["availableClasses"] });
+                },
+                onError: (errors) => {
+                    console.error("Erreur modification classe:", errors);
+                    toast.error("Erreur lors de la modification de la classe");
+                },
             },
-            onError: (errors) => {
-                console.error("Erreur modification classe:", errors);
-                toast.error("Erreur lors de la modification de la classe");
-            },
-        });
+        );
     };
 
     const handleDeleteClass = (classe) => {
@@ -171,7 +175,10 @@ export default function AdminPage({
         const textAction = newStatus === "inactive" ? "désactiver" : "activer";
 
         router.patch(
-            `/admin/classes/${selectedClasseForToggle.id}/status`,
+            withBasePath(
+                "",
+                `/admin/classes/${selectedClasseForToggle.id}/status`,
+            ),
             { status: newStatus },
             {
                 onSuccess: () => {
@@ -181,12 +188,15 @@ export default function AdminPage({
                     setShowToggleClasseModal(false);
                     setSelectedClasseForToggle(null);
                     setTimeout(() => {
-                        router.visit("/admin/administration", {
-                            method: "get",
-                            replace: true,
-                            preserveScroll: false,
-                            preserveState: false,
-                        });
+                        router.visit(
+                            withBasePath("", "/admin/administration"),
+                            {
+                                method: "get",
+                                replace: true,
+                                preserveScroll: false,
+                                preserveState: false,
+                            },
+                        );
                     }, 500);
                 },
                 onError: (errors) => {
@@ -203,14 +213,18 @@ export default function AdminPage({
 
     // Membres
     const handleUpdateMember = (updatedMember) => {
-        router.put(withBasePath("", `/admin/membres/${updatedMember.id}`), updatedMember, {
-            preserveScroll: true,
-            onSuccess: () => toast.success("Membre modifié avec succès"),
-            onError: (errors) => {
-                console.error("Erreur modification membre:", errors);
-                toast.error("Erreur lors de la modification du membre");
+        router.put(
+            withBasePath("", `/admin/membres/${updatedMember.id}`),
+            updatedMember,
+            {
+                preserveScroll: true,
+                onSuccess: () => toast.success("Membre modifié avec succès"),
+                onError: (errors) => {
+                    console.error("Erreur modification membre:", errors);
+                    toast.error("Erreur lors de la modification du membre");
+                },
             },
-        });
+        );
     };
 
     const handleDeleteMember = (member) => {
@@ -307,16 +321,22 @@ export default function AdminPage({
     };
 
     const handleUpdateFonction = (updatedFonction) => {
-        router.put(withBasePath("", `/admin/fonctions/${updatedFonction.id}`), updatedFonction, {
-            onSuccess: () => {
-                toast.success("Fonction mise à jour avec succès");
-                router.reload({ only: ["availableFonctions"] });
+        router.put(
+            withBasePath("", `/admin/fonctions/${updatedFonction.id}`),
+            updatedFonction,
+            {
+                onSuccess: () => {
+                    toast.success("Fonction mise à jour avec succès");
+                    router.reload({ only: ["availableFonctions"] });
+                },
+                onError: (errors) => {
+                    console.error("Erreur modification fonction:", errors);
+                    toast.error(
+                        "Erreur lors de la modification de la fonction",
+                    );
+                },
             },
-            onError: (errors) => {
-                console.error("Erreur modification fonction:", errors);
-                toast.error("Erreur lors de la modification de la fonction");
-            },
-        });
+        );
     };
 
     const handleDeleteFonction = (item) => {

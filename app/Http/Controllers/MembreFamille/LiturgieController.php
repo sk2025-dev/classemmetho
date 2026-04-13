@@ -12,6 +12,7 @@ use App\Services\ActeLiturgiqueService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Inertia\Inertia;
 
@@ -143,7 +144,7 @@ class LiturgieController extends Controller
             $existingActe = ActeLiturgique::query()
                 ->where('membre_id', $user->id)
                 ->where('type_acte', $payload['type_acte'])
-                ->where('statut', '!=', 'ARCHIVEE')
+                ->whereIn('statut', ActeLiturgique::statutsBloquantNouvelleDemande())
                 ->latest('id')
                 ->first();
 
@@ -161,7 +162,13 @@ class LiturgieController extends Controller
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'Une demande de ce type existe deja pour votre profil.',
+                    'message' => in_array($existingActe->statut, [
+                        ActeLiturgique::STATUT_Soumise,
+                        ActeLiturgique::STATUT_EN_ATTENTE_CONDUCTEUR,
+                        ActeLiturgique::STATUT_TRANSMISE_AU_PASTEUR,
+                    ], true)
+                        ? 'Une demande de ce type est deja en cours de traitement pour votre profil.'
+                        : 'Une demande de ce type existe deja pour votre profil.',
                 ], 422);
             }
         }
@@ -212,14 +219,34 @@ class LiturgieController extends Controller
             $methoDataUri = $this->buildImageDataUri(public_path('images/metho.jpg'));
             $view = $typeActe === 'naissance' ? 'pdf.fiche-naissance' : 'pdf.fiche-demande';
 
-            $pdf = Pdf::loadView($view, [
-                'acte' => $acte,
-                'logoDataUri' => $logoDataUri,
-                'methoDataUri' => $methoDataUri,
-            ])->setPaper('a4', 'portrait');
+            try {
+                $pdf = Pdf::loadView($view, [
+                    'acte' => $acte,
+                    'logoDataUri' => $logoDataUri,
+                    'methoDataUri' => $methoDataUri,
+                ])->setPaper('a4', 'portrait');
 
-            $filename = 'fiche-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
-            return $pdf->download($filename);
+                $filename = 'fiche-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
+                return $pdf->download($filename);
+            } catch (\Throwable $e) {
+                Log::error('Echec generation fiche membre-famille', [
+                    'acte_id' => $acte->id,
+                    'type_acte' => $typeActe,
+                    'view' => $view,
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]);
+
+                return response()->json([
+                    'error' => 'Erreur generation fiche',
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'view' => $view,
+                    'acte_id' => $acte->id,
+                ], 500);
+            }
         }
 
         if (!in_array($typeActe, $typesCertificat, true)) {
@@ -250,19 +277,39 @@ class LiturgieController extends Controller
         $scanDataUri = $this->buildImageDataUri(public_path('images/scan.png'))
             ?? $this->buildImageDataUri(public_path('images/image.png'));
 
-        $pdf = Pdf::loadView('pdf.acte-liturgique-certificat', [
-            'acte' => $acte,
-            'signaturePath' => $signaturePath,
-            'signatureName' => $signatureName,
-            'signatureRole' => $signatureRole,
-            'qrDataUri' => $qrDataUri,
-            'logoDataUri' => $logoDataUri,
-            'scanDataUri' => $scanDataUri,
-        ])->setPaper('a4', 'landscape');
+        try {
+            $pdf = Pdf::loadView('pdf.acte-liturgique-certificat', [
+                'acte' => $acte,
+                'signaturePath' => $signaturePath,
+                'signatureName' => $signatureName,
+                'signatureRole' => $signatureRole,
+                'qrDataUri' => $qrDataUri,
+                'logoDataUri' => $logoDataUri,
+                'scanDataUri' => $scanDataUri,
+            ])->setPaper('a4', 'landscape');
 
-        $filename = 'certificat-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
+            $filename = 'certificat-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
 
-        return $pdf->download($filename);
+            return $pdf->download($filename);
+        } catch (\Throwable $e) {
+            Log::error('Echec generation certificat membre-famille', [
+                'acte_id' => $acte->id,
+                'type_acte' => $typeActe,
+                'view' => 'pdf.acte-liturgique-certificat',
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return response()->json([
+                'error' => 'Erreur generation certificat',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'view' => 'pdf.acte-liturgique-certificat',
+                'acte_id' => $acte->id,
+            ], 500);
+        }
     }
 
     private function buildQrDataUri(string $payload): ?string

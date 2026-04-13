@@ -27,8 +27,8 @@ class PhotoUploadController extends Controller
             // Générer un nom unique SANS auth()->id() car l'utilisateur n'existe pas encore
             $filename = 'profile_' . Str::random(16) . '.' . $file->getClientOriginalExtension();
 
-            // Stocker l'image dans storage/app/public/profiles
-            $path = $file->storeAs('profiles', $filename, 'public');
+            // Stocker l'image dans storage/app/public/photos/users
+            $path = $file->storeAs('photos/users', $filename, 'public');
 
             // Retourner l'URL relative (pas d'URL absolue pour éviter les problèmes de domaine)
             $photoUrl = '/storage/' . ltrim($path, '/');
@@ -63,8 +63,8 @@ class PhotoUploadController extends Controller
             // Générer un nom unique
             $filename = 'profile_' . Auth::id() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
 
-            // Stocker l'image dans storage/app/public/profiles
-            $path = $file->storeAs('profiles', $filename, 'public');
+            // Stocker l'image dans storage/app/public/photos/users
+            $path = $file->storeAs('photos/users', $filename, 'public');
 
             // Retourner l'URL relative (pas d'URL absolue pour éviter les problèmes de domaine)
             $photoUrl = '/storage/' . ltrim($path, '/');

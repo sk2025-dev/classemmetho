@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Campagne;
 use App\Models\Cotisation;
 use App\Models\Family;
+use App\Models\Fonction;
 use App\Models\NotificationFinanciere;
 use App\Models\Paiement;
 use App\Models\User;
@@ -22,6 +23,10 @@ class TresorerieController extends Controller
     public function index()
     {
         $user = Auth::user();
+
+        if (!$this->canManageClassTreasury($user)) {
+            abort(403, 'Accès non autorisé au module trésorerie de classe.');
+        }
 
         $className = $user->classe?->nom ?? 'Classe non definie';
         $classeId = $user->classe_id;
@@ -49,6 +54,7 @@ class TresorerieController extends Controller
                 'cotisationsCreees' => [],
                 'fimecoSuivi' => [],
                 'membresClasse' => [],
+                'tresorierClasse' => null,
                 'notificationsFinancieres' => [],
             ]);
         }
@@ -229,10 +235,16 @@ class TresorerieController extends Controller
         $membresClasse = User::query()
             ->where('classe_id', $classeId)
             ->whereIn('role', ['membre_famille', 'responsable_famille'])
-            ->with('family:id,nom')
+            ->with(['family:id,nom', 'fonction:id,nom'])
             ->orderBy('nom')
             ->orderBy('prenom')
             ->get();
+
+        $tresorierClasse = $membresClasse->first(function (User $member) {
+            $fonctionNom = mb_strtolower(trim((string) ($member->fonction?->nom ?? '')));
+
+            return in_array($fonctionNom, ['trésorier', 'tresorier'], true);
+        });
 
         $cotisationsIndividuelles = Cotisation::query()
             ->where('statut', Cotisation::STATUT_ACTIVE)
@@ -256,12 +268,14 @@ class TresorerieController extends Controller
         $membresClasseData = $membresClasse->map(function (User $member) use ($paiementsByMember, $cotisationIndividuelleTotal) {
             $paid = (int) ($paiementsByMember[$member->id] ?? 0);
             $due = max(0, $cotisationIndividuelleTotal - $paid);
+            $fonctionNom = mb_strtolower(trim((string) ($member->fonction?->nom ?? '')));
 
             return [
                 'id' => $member->id,
                 'nom' => trim(($member->prenom ?? '') . ' ' . ($member->nom ?? '')),
                 'famille' => $member->family?->nom ?? 'Sans famille',
                 'role' => $member->role,
+                'is_tresorier' => in_array($fonctionNom, ['trésorier', 'tresorier'], true),
                 'genre' => $member->genre,
                 'employment_status' => $member->employment_status,
                 'statut' => $due === 0 ? 'A JOUR' : 'EN ATTENTE',
@@ -343,6 +357,11 @@ class TresorerieController extends Controller
             'cotisationsCreees' => $cotisationsCreees,
             'cotisationsPaiement' => $cotisationsPaiement,
             'membresClasse' => $membresClasseData,
+            'tresorierClasse' => $tresorierClasse ? [
+                'id' => $tresorierClasse->id,
+                'nom' => trim(($tresorierClasse->prenom ?? '') . ' ' . ($tresorierClasse->nom ?? '')),
+                'famille' => $tresorierClasse->family?->nom ?? 'Sans famille',
+            ] : null,
             'fimecoSuivi' => $fimecoSuivi,
             'notificationsFinancieres' => $notificationsFinancieres,
         ]);
@@ -351,6 +370,10 @@ class TresorerieController extends Controller
     public function storeCotisation(Request $request): JsonResponse
     {
         $user = Auth::user();
+
+        if (!$this->canManageClassTreasury($user)) {
+            return response()->json(['message' => 'Accès non autorisé au module trésorerie de classe.'], 403);
+        }
 
         if (!$user->classe_id) {
             return response()->json(['message' => 'Conducteur sans classe associee.'], 422);
@@ -446,6 +469,10 @@ class TresorerieController extends Controller
     {
         $user = Auth::user();
 
+        if (!$this->canManageClassTreasury($user)) {
+            return response()->json(['message' => 'Accès non autorisé au module trésorerie de classe.'], 403);
+        }
+
         if ($cotisation->classe_id !== $user->classe_id || $cotisation->created_by !== $user->id) {
             return response()->json(['message' => 'Cotisation non modifiable.'], 403);
         }
@@ -521,6 +548,10 @@ class TresorerieController extends Controller
     {
         $user = Auth::user();
 
+        if (!$this->canManageClassTreasury($user)) {
+            return response()->json(['message' => 'Accès non autorisé au module trésorerie de classe.'], 403);
+        }
+
         if ($cotisation->classe_id !== $user->classe_id || $cotisation->created_by !== $user->id) {
             return response()->json(['message' => 'Cotisation non supprimable.'], 403);
         }
@@ -535,6 +566,10 @@ class TresorerieController extends Controller
     public function showCotisation(Cotisation $cotisation): JsonResponse
     {
         $user = Auth::user();
+
+        if (!$this->canManageClassTreasury($user)) {
+            return response()->json(['message' => 'Accès non autorisé au module trésorerie de classe.'], 403);
+        }
 
         if ($cotisation->classe_id !== $user->classe_id) {
             return response()->json(['message' => 'Acces refuse.'], 403);
@@ -563,6 +598,10 @@ class TresorerieController extends Controller
     public function storeCollecte(Request $request): JsonResponse
     {
         $user = Auth::user();
+
+        if (!$this->canManageClassTreasury($user)) {
+            return response()->json(['message' => 'Accès non autorisé au module trésorerie de classe.'], 403);
+        }
 
         if (!$user->classe_id) {
             return response()->json(['message' => 'Conducteur sans classe associee.'], 422);
@@ -595,6 +634,10 @@ class TresorerieController extends Controller
     public function storePaiement(Request $request): JsonResponse
     {
         $user = Auth::user();
+
+        if (!$this->canManageClassTreasury($user)) {
+            return response()->json(['message' => 'Accès non autorisé au module trésorerie de classe.'], 403);
+        }
 
         $validated = $request->validate([
             'user_id' => ['required', 'exists:users,id'],
@@ -690,6 +733,10 @@ class TresorerieController extends Controller
     {
         $user = Auth::user();
 
+        if ($user->role !== 'conducteur') {
+            return response()->json(['message' => 'Seul le conducteur peut assigner un trésorier.'], 403);
+        }
+
         if (!$user->classe_id) {
             return response()->json(['message' => 'Conducteur sans classe associee.'], 422);
         }
@@ -705,13 +752,36 @@ class TresorerieController extends Controller
             return response()->json(['message' => 'Ce membre n\'est pas dans votre classe.'], 403);
         }
 
-        // Vérifier que le membre a un rôle membre_famille
-        if ($member->role !== 'membre_famille') {
+        // Vérifier que le membre est un membre de famille (compatibilité anciens comptes tresorier)
+        if (!in_array($member->role, ['membre_famille', 'tresorier'], true)) {
             return response()->json(['message' => 'Seul un membre de famille peut devenir tresorier.'], 422);
         }
 
-        // Assigner le rôle tresorier
-        $member->update(['role' => 'tresorier']);
+        $tresorierFonction = Fonction::query()
+            ->whereRaw('LOWER(nom) = ?', ['trésorier'])
+            ->orWhereRaw('LOWER(nom) = ?', ['tresorier'])
+            ->first();
+
+        if (!$tresorierFonction) {
+            $tresorierFonction = Fonction::query()->create([
+                'nom' => 'Trésorier',
+                'description' => 'Responsable des finances de la classe',
+            ]);
+        }
+
+        // Une seule fonction Trésorier active par classe.
+        User::query()
+            ->where('classe_id', $user->classe_id)
+            ->where('fonction_id', $tresorierFonction->id)
+            ->where('id', '!=', $member->id)
+            ->update(['fonction_id' => null]);
+
+        // Assigner la fonction trésorier tout en conservant le rôle membre_famille.
+        $member->update([
+            'role' => 'membre_famille',
+            'fonction_id' => $tresorierFonction->id,
+        ]);
+        $member->load('fonction');
 
         return response()->json([
             'message' => 'Tresorier assigne avec succes.',
@@ -720,7 +790,79 @@ class TresorerieController extends Controller
                 'nom' => $member->nom,
                 'prenom' => $member->prenom,
                 'role' => $member->role,
+                'fonction' => $member->fonction?->nom,
             ],
         ], 200);
+    }
+
+    public function unassignTresorier(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if ($user->role !== 'conducteur') {
+            return response()->json(['message' => 'Seul le conducteur peut retirer le trésorier.'], 403);
+        }
+
+        if (!$user->classe_id) {
+            return response()->json(['message' => 'Conducteur sans classe associee.'], 422);
+        }
+
+        $validated = $request->validate([
+            'user_id' => ['nullable', 'exists:users,id'],
+        ]);
+
+        $tresorierFonction = Fonction::query()
+            ->whereRaw('LOWER(nom) = ?', ['trésorier'])
+            ->orWhereRaw('LOWER(nom) = ?', ['tresorier'])
+            ->first();
+
+        if (!$tresorierFonction) {
+            return response()->json(['message' => 'Aucun tresorier assigne pour cette classe.'], 422);
+        }
+
+        $query = User::query()
+            ->where('classe_id', $user->classe_id)
+            ->where('fonction_id', $tresorierFonction->id);
+
+        if (!empty($validated['user_id'])) {
+            $query->where('id', $validated['user_id']);
+        }
+
+        $member = $query->first();
+
+        if (!$member) {
+            return response()->json(['message' => 'Aucun tresorier correspondant trouve dans votre classe.'], 404);
+        }
+
+        $member->update(['fonction_id' => null]);
+
+        return response()->json([
+            'message' => 'Fonction de tresorier retiree avec succes.',
+            'data' => [
+                'id' => $member->id,
+                'nom' => $member->nom,
+                'prenom' => $member->prenom,
+                'role' => $member->role,
+            ],
+        ], 200);
+    }
+
+    private function canManageClassTreasury(User $user): bool
+    {
+        if (!$user->classe_id) {
+            return false;
+        }
+
+        if ($user->role === 'conducteur') {
+            return true;
+        }
+
+        if (!in_array($user->role, ['membre_famille', 'tresorier'], true)) {
+            return false;
+        }
+
+        $fonctionNom = mb_strtolower(trim((string) ($user->fonction?->nom ?? '')));
+
+        return in_array($fonctionNom, ['trésorier', 'tresorier'], true);
     }
 }

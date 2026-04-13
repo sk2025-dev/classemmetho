@@ -124,7 +124,7 @@ class MemberController extends Controller
         // Handle photo upload
         $photoPath = null;
         if ($request->hasFile('photo') && $request->file('photo')->isValid()) {
-            $photoPath = $request->file('photo')->store('profiles', 'public');
+            $photoPath = $request->file('photo')->store('photos/users', 'public');
         } elseif (is_string($request->input('photo')) && !empty($request->input('photo'))) {
             $photoPath = $this->resolvePhotoPathFromInput($request->input('photo'));
         }
@@ -275,7 +275,7 @@ class MemberController extends Controller
 
         // Handle photo upload
         if ($request->hasFile('photo') && $request->file('photo')->isValid()) {
-            $photoPath = $request->file('photo')->store('profiles', 'public');
+            $photoPath = $request->file('photo')->store('photos/users', 'public');
             $validated['photo_path'] = $photoPath;
         } elseif (is_string($request->input('photo')) && !empty($request->input('photo'))) {
             $validated['photo_path'] = $this->resolvePhotoPathFromInput($request->input('photo'));
