@@ -50,6 +50,22 @@ Route::get('/', function () {
     return Inertia::render('Welcome');
 });
 
+Route::get('/paiement', function () {
+    return Inertia::render('Payment/Index');
+})->name('payment.index');
+
+Route::get('/paiement/succes', function () {
+    return Inertia::render('Payment/Success', [
+        'transaction' => request()->query('transaction'),
+    ]);
+})->name('payment.success');
+
+Route::get('/paiement/echec', function () {
+    return Inertia::render('Payment/Failed', [
+        'transaction' => request()->query('transaction'),
+    ]);
+})->name('payment.failed');
+
 Route::get('/certificat/verification/{reference}', [VerificationCertificatController::class, 'show'])
     ->name('certificat.verification');
 

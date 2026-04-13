@@ -22,6 +22,10 @@ window.GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
  * (sauf sur la page de login et après une redirection du welcome loader)
  */
 const showInitialLoadingScreen = () => {
+    if (document.getElementById("initialLoadingScreen")) {
+        return;
+    }
+
     // Ne pas afficher le loader sur la page de login
     const normalizedPath = window.location.pathname.replace(/\/+$/, "") || "/";
     if (normalizedPath.endsWith("/login")) {
@@ -155,7 +159,11 @@ const hideNavigationLoader = () => {
 };
 
 const shouldShowNavigationLoader = (visit) => {
-    if (!visit || window.isWelcomeLoaderActive || window.isGoodbyeLoaderActive) {
+    if (
+        !visit ||
+        window.isWelcomeLoaderActive ||
+        window.isGoodbyeLoaderActive
+    ) {
         return false;
     }
 

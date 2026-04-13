@@ -21,17 +21,6 @@ export default function Login() {
         identifiant: "",
         password: "",
     });
-    // Masquer le loader initial
-    useEffect(() => {
-        const loadingScreen = document.getElementById("initialLoadingScreen");
-        if (loadingScreen) {
-            loadingScreen.style.animation = "fadeOut 0.8s ease-out forwards";
-            setTimeout(() => {
-                loadingScreen.remove();
-            }, 800);
-        }
-    }, []);
-
     useEffect(() => {
         const query = new URLSearchParams(window.location.search);
         const redirectTo = query.get("redirect_to") || "";
