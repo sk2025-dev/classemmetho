@@ -418,13 +418,23 @@ const styles = `
     margin-bottom: 1rem;
 }
 
+/* Style pour la date du carrousel - taille agrandie */
 .carousel-simple-date {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    font-size: 0.7rem;
-    color: #9ca3af;
+    gap: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #4b5563;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.carousel-simple-date svg {
+    width: 18px;
+    height: 18px;
 }
 
 .carousel-simple-nav {
@@ -1426,10 +1436,13 @@ const IconPhoto = () => (<svg xmlns="http://www.w3.org/2000/svg" width="14" heig
 const IconVideo = () => (<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>);
 const IconChevronLeft = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>);
 const IconChevronRight = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>);
+const IconStar = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>);
 
 // --- FONCTION DE FORMATAGE DE DATE CORRIGÉE ---
 const getLocalDateString = (date) => {
+  if (!date) return '';
   const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
@@ -1437,7 +1450,9 @@ const getLocalDateString = (date) => {
 };
 
 const formatDateFrench = (dateString) => {
+  if (!dateString) return '';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
   const day = date.getDate();
   const month = date.toLocaleString('fr-FR', { month: 'long' });
   const year = date.getFullYear();
@@ -1458,8 +1473,8 @@ const isDateInPastMonth = (dateString) => {
   return date < now;
 };
 
-// --- CAROUSEL COMPONENT ---
-const HeroCarousel = ({ mediaImages }) => {
+// --- CAROUSEL COMPONENT MODIFIÉ AVEC IMAGES DES 4 DERNIÈRES ACTIVITÉS ---
+const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const autoPlayIntervalRef = useRef(null);
@@ -1470,13 +1485,42 @@ const HeroCarousel = ({ mediaImages }) => {
     { id: 3, image: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&h=500&fit=crop', title: 'Galerie', description: 'Revivez les moments forts', date: new Date().toISOString() },
   ];
 
-  const slides = mediaImages?.length > 0 ? mediaImages.slice(0, 5).map(media => ({
-    id: media.id,
-    image: media.type === 'video' ? (media.thumbnail || 'https://placehold.co/400x300/2563eb/white?text=Vid%C3%A9o') : media.url,
-    title: media.title || 'Activité',
-    description: media.description || 'Moment de partage',
-    date: media.date,
-  })) : defaultSlides;
+  const getActivityImage = (activityId) => {
+    if (!mediaImages) return null;
+    const activityPhotos = mediaImages.filter(media => media.special_event_id === activityId && media.type === 'photo');
+    if (activityPhotos.length > 0) {
+      const firstPhoto = activityPhotos[0];
+      return firstPhoto.url;
+    }
+    return null;
+  };
+
+  const slides = useMemo(() => {
+    if (!pastEvents || pastEvents.length === 0) return defaultSlides;
+    
+    const sortedPastEvents = [...pastEvents]
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, 4);
+    
+    if (sortedPastEvents.length === 0) return defaultSlides;
+    
+    const activitySlides = [];
+    for (const activity of sortedPastEvents) {
+      const activityImage = getActivityImage(activity.id);
+      if (activityImage) {
+        activitySlides.push({
+          id: activity.id,
+          image: activityImage,
+          title: activity.title,
+          description: activity.lieu || activity.orateur 
+            ? `${activity.lieu || ''} ${activity.orateur ? '· ' + activity.orateur : ''}` 
+            : 'Moment de partage',
+          date: activity.date,
+        });
+      }
+    }
+    return activitySlides.length > 0 ? activitySlides : defaultSlides;
+  }, [pastEvents, mediaImages]);
 
   const startAutoPlay = () => {
     if (autoPlayIntervalRef.current) clearInterval(autoPlayIntervalRef.current);
@@ -1500,10 +1544,12 @@ const HeroCarousel = ({ mediaImages }) => {
           <div className="carousel-simple-image-bg" style={{ backgroundImage: `url(${currentSlideData.image})` }} />
         </div>
         <div className="carousel-simple-info">
-          <div className="carousel-simple-header">ACTIVITÉS RÉCENTES</div>
+          <div className="carousel-simple-header">ACTIVITÉ RÉCENTES</div>
           <h3 className="carousel-simple-title">{currentSlideData.title}</h3>
           <p className="carousel-simple-description">{currentSlideData.description}</p>
-          <div className="carousel-simple-date"><IconCalendar /> {formattedDate}</div>
+          <div className="carousel-simple-date">
+            <IconCalendar /> {formattedDate}
+          </div>
         </div>
       </div>
       {slides.length > 1 && (
@@ -1597,7 +1643,7 @@ const MiniCalendar = ({ eventsDates = [], eventsData = [], onDateClick, activeDa
   );
 };
 
-// --- PAST EVENT CONTENT MODAL CORRIGÉ ---
+// --- PAST EVENT CONTENT MODAL CORRIGÉ AVEC VIDÉOS ---
 const PastEventContentModal = ({ isOpen, onClose, date, events, mediaData }) => {
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
@@ -1612,6 +1658,22 @@ const PastEventContentModal = ({ isOpen, onClose, date, events, mediaData }) => 
   const relatedMedia = mediaData.filter(media => media.special_event_id && eventIds.includes(media.special_event_id));
   const generalMedia = mediaData.filter(media => !media.special_event_id && getLocalDateString(media.date) === dateStr);
   const formattedDate = formatDateFrench(date);
+
+  // Fonction pour obtenir l'URL de la vidéo (embed ou directe)
+  const getVideoEmbedUrl = (url) => {
+    if (!url) return null;
+    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const youtubeMatch = url.match(youtubeRegex);
+    if (youtubeMatch) {
+      return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
+    }
+    const vimeoRegex = /vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|)(\d+)(?:$|\/|\?)/;
+    const vimeoMatch = url.match(vimeoRegex);
+    if (vimeoMatch) {
+      return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+    }
+    return url;
+  };
 
   const openMediaViewer = (media, mediaArray) => {
     const index = mediaArray.findIndex(m => m.id === media.id);
@@ -1655,14 +1717,45 @@ const PastEventContentModal = ({ isOpen, onClose, date, events, mediaData }) => 
                       {event.famille_reception && <p style={{ fontSize: '0.85rem' }}><strong>Famille de réception :</strong> {event.famille_reception}</p>}
                       {eventMedia.length > 0 && (
                         <div className="past-event-media">
-                          <h4>Médias associés</h4>
+                          <h4>📸 Médias associés</h4>
                           <div className="media-gallery">
-                            {eventMedia.map(media => (
-                              <div key={media.id} className="media-gallery-item" onClick={() => openMediaViewer(media, eventMedia)}>
-                                {media.type === 'video' ? <video src={media.url} style={{ pointerEvents: 'none' }} /> : <img src={media.url} alt={media.title} />}
-                                <div style={{ padding: '6px', fontSize: '0.7rem', textAlign: 'center', background: 'white' }}>{media.title.length > 20 ? media.title.substring(0, 20) + '...' : media.title}</div>
-                              </div>
-                            ))}
+                            {eventMedia.map(media => {
+                              let mediaUrl = '';
+                              let thumbnailUrl = '';
+                              
+                              if (media.type === 'video') {
+                                mediaUrl = media.video_url || media.url;
+                                thumbnailUrl = media.thumbnail || getVideoEmbedUrl(mediaUrl) || '/default-video-thumb.jpg';
+                              } else {
+                                mediaUrl = media.url;
+                                thumbnailUrl = media.url;
+                              }
+                              
+                              return (
+                                <div key={media.id} className="media-gallery-item" onClick={() => openMediaViewer(media, eventMedia)}>
+                                  {media.type === 'video' ? (
+                                    <div className="relative">
+                                      <img 
+                                        src={thumbnailUrl} 
+                                        alt={media.title} 
+                                        style={{ width: '100%', height: '120px', objectFit: 'cover' }}
+                                        onError={(e) => { e.target.src = '/default-video-thumb.jpg'; }}
+                                      />
+                                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40">
+                                        <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                          <path d="M8 5v14l11-7z"/>
+                                        </svg>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <img src={media.url} alt={media.title} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
+                                  )}
+                                  <div style={{ padding: '6px', fontSize: '0.7rem', textAlign: 'center', background: 'white' }}>
+                                    {media.title.length > 20 ? media.title.substring(0, 20) + '...' : media.title}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -1673,12 +1766,43 @@ const PastEventContentModal = ({ isOpen, onClose, date, events, mediaData }) => 
                   <div className="past-event-media">
                     <h4>📸 Médias du jour</h4>
                     <div className="media-gallery">
-                      {generalMedia.map(media => (
-                        <div key={media.id} className="media-gallery-item" onClick={() => openMediaViewer(media, generalMedia)}>
-                          {media.type === 'video' ? <video src={media.url} style={{ pointerEvents: 'none' }} /> : <img src={media.url} alt={media.title} />}
-                          <div style={{ padding: '6px', fontSize: '0.7rem', textAlign: 'center', background: 'white' }}>{media.title.length > 20 ? media.title.substring(0, 20) + '...' : media.title}</div>
-                        </div>
-                      ))}
+                      {generalMedia.map(media => {
+                        let mediaUrl = '';
+                        let thumbnailUrl = '';
+                        
+                        if (media.type === 'video') {
+                          mediaUrl = media.video_url || media.url;
+                          thumbnailUrl = media.thumbnail || getVideoEmbedUrl(mediaUrl) || '/default-video-thumb.jpg';
+                        } else {
+                          mediaUrl = media.url;
+                          thumbnailUrl = media.url;
+                        }
+                        
+                        return (
+                          <div key={media.id} className="media-gallery-item" onClick={() => openMediaViewer(media, generalMedia)}>
+                            {media.type === 'video' ? (
+                              <div className="relative">
+                                <img 
+                                  src={thumbnailUrl} 
+                                  alt={media.title} 
+                                  style={{ width: '100%', height: '120px', objectFit: 'cover' }}
+                                  onError={(e) => { e.target.src = '/default-video-thumb.jpg'; }}
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40">
+                                  <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z"/>
+                                  </svg>
+                                </div>
+                              </div>
+                            ) : (
+                              <img src={media.url} alt={media.title} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
+                            )}
+                            <div style={{ padding: '6px', fontSize: '0.7rem', textAlign: 'center', background: 'white' }}>
+                              {media.title.length > 20 ? media.title.substring(0, 20) + '...' : media.title}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -1893,7 +2017,9 @@ export default function Programmes() {
   const [activeCalendarDate, setActiveCalendarDate] = useState(null);
   const [galleryFilter, setGalleryFilter] = useState({ search: '', month: '', year: '' });
   const [currentPage, setCurrentPage] = useState(1);
+  const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
   const itemsPerPage = 4;
+  const historyItemsPerPage = 6;
   const scrollRefs = useRef({});
 
   // Filtrer les événements pour n'afficher que ceux du mois en cours
@@ -1904,14 +2030,27 @@ export default function Programmes() {
 
   const getFilteredEventsByActiveDate = () => {
     if (!activeCalendarDate) return currentMonthEvents;
-    const activeDateStr = activeCalendarDate.toISOString().split('T')[0];
+    const activeDateStr = getLocalDateString(activeCalendarDate);
     return currentMonthEvents.filter(event => {
-      const eventDateStr = new Date(event.date).toISOString().split('T')[0];
+      const eventDateStr = getLocalDateString(event.date);
       return eventDateStr === activeDateStr;
     });
   };
 
   const filteredEvents = getFilteredEventsByActiveDate();
+
+  // Pagination pour l'historique
+  const totalHistoryPages = Math.ceil(pastEvents.length / historyItemsPerPage);
+  const paginatedHistoryEvents = pastEvents.slice(
+    (historyCurrentPage - 1) * historyItemsPerPage,
+    historyCurrentPage * historyItemsPerPage
+  );
+
+  useEffect(() => {
+    if (historyCurrentPage > totalHistoryPages && totalHistoryPages > 0) {
+      setHistoryCurrentPage(totalHistoryPages);
+    }
+  }, [pastEvents.length]);
 
   // Récupérer les années disponibles pour les filtres de la galerie
   const galleryAvailableMonths = [
@@ -2007,7 +2146,7 @@ export default function Programmes() {
     setCurrentPage(1);
   }, [galleryFilter]);
 
-  const getAllEventDates = () => allEvents.map(event => new Date(event.date).toISOString().split('T')[0]);
+  const getAllEventDates = () => allEvents.map(event => getLocalDateString(event.date));
   
   const handleDateClick = (date) => { 
     setActiveCalendarDate(date);
@@ -2023,6 +2162,7 @@ export default function Programmes() {
   const closeDateContentModal = () => { 
     setIsDateContentModalOpen(false); 
     setSelectedDate(null);
+    setActiveCalendarDate(null);
   };
   
   const handleClearDateFilter = () => setActiveCalendarDate(null);
@@ -2106,7 +2246,10 @@ export default function Programmes() {
         
         return (
           <>
-            <HeroCarousel mediaImages={mediaData.filter(m => m.type === 'photo')} />
+            <HeroCarousel 
+              mediaImages={mediaData} 
+              pastEvents={pastEvents}
+            />
             
             <div className="action-bar">
               <h2>🔥 ACTIVITÉS EN COURS
@@ -2167,8 +2310,6 @@ export default function Programmes() {
           </>
         );
       case 'historique':
-        // Prendre uniquement les 10 dernières activités
-        const lastTenEvents = pastEvents.slice(0, 10);
         const currentYear = new Date().getFullYear();
         
         return (
@@ -2184,67 +2325,92 @@ export default function Programmes() {
             <div className="glass-container">
               <div className="main-layout">
                 <div className="cards-container">
-                  {lastTenEvents.length > 0 ? (
-                    <div className="history-grid">
-                      {lastTenEvents.map(item => {
-                        const eventMedia = mediaData.filter(media => media.special_event_id === item.id);
-                        const hasMedia = eventMedia.length > 0;
-                        
-                        return (
-                          <div key={item.id} className="history-card-v2" onClick={() => handleHistoricalCardClick(item)}>
-                            <div className="history-card-v2-header">
-                              <h3 className="history-card-v2-title">{item.title}</h3>
-                              <div className="history-card-v2-date">
-                                <IconCalendar />
-                                {formatDateFrench(item.date)}
-                                {item.time && (
-                                  <>
-                                    <span style={{ margin: '0 4px' }}>•</span>
-                                    <IconClock />
-                                    {item.time.substring(0, 5)}
-                                  </>
-                                )}
+                  {paginatedHistoryEvents.length > 0 ? (
+                    <>
+                      <div className="history-grid">
+                        {paginatedHistoryEvents.map(item => {
+                          const eventMedia = mediaData.filter(media => media.special_event_id === item.id);
+                          const hasMedia = eventMedia.length > 0;
+                          
+                          return (
+                            <div key={item.id} className="history-card-v2" onClick={() => handleHistoricalCardClick(item)}>
+                              <div className="history-card-v2-header">
+                                <h3 className="history-card-v2-title">{item.title}</h3>
+                                <div className="history-card-v2-date">
+                                  <IconCalendar />
+                                  {formatDateFrench(item.date)}
+                                  {item.time && (
+                                    <>
+                                      <span style={{ margin: '0 4px' }}>•</span>
+                                      <IconClock />
+                                      {item.time.substring(0, 5)}
+                                    </>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                            <div className="history-card-v2-body">
-                              <div className="history-card-v2-info">
-                                {item.lieu && (
-                                  <div className="history-card-v2-info-item">
-                                    <IconLocation className="history-card-v2-info-icon" />
-                                    <span className="history-card-v2-info-label">Lieu :</span>
-                                    <span className="history-card-v2-info-value">{item.lieu}</span>
-                                  </div>
-                                )}
-                                {item.orateur && (
-                                  <div className="history-card-v2-info-item">
-                                    <IconMic className="history-card-v2-info-icon" />
-                                    <span className="history-card-v2-info-label">Orateur :</span>
-                                    <span className="history-card-v2-info-value">{item.orateur}</span>
-                                  </div>
-                                )}
-                                {item.moderateur && (
-                                  <div className="history-card-v2-info-item">
-                                    <IconUser className="history-card-v2-info-icon" />
-                                    <span className="history-card-v2-info-label">Modérateur :</span>
-                                    <span className="history-card-v2-info-value">{item.moderateur}</span>
-                                  </div>
-                                )}
+                              <div className="history-card-v2-body">
+                                <div className="history-card-v2-info">
+                                  {item.lieu && (
+                                    <div className="history-card-v2-info-item">
+                                      <IconLocation className="history-card-v2-info-icon" />
+                                      <span className="history-card-v2-info-label">Lieu :</span>
+                                      <span className="history-card-v2-info-value">{item.lieu}</span>
+                                    </div>
+                                  )}
+                                  {item.orateur && (
+                                    <div className="history-card-v2-info-item">
+                                      <IconMic className="history-card-v2-info-icon" />
+                                      <span className="history-card-v2-info-label">Orateur :</span>
+                                      <span className="history-card-v2-info-value">{item.orateur}</span>
+                                    </div>
+                                  )}
+                                  {item.moderateur && (
+                                    <div className="history-card-v2-info-item">
+                                      <IconUser className="history-card-v2-info-icon" />
+                                      <span className="history-card-v2-info-label">Modérateur :</span>
+                                      <span className="history-card-v2-info-value">{item.moderateur}</span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                            <div className="history-card-v2-footer">
-                              <span className="history-card-v2-badge">
-                                {new Date(item.date).getFullYear()}
-                              </span>
-                              {hasMedia && (
-                                <span className="history-card-v2-media-badge">
-                                  <IconGallery /> {eventMedia.length} média(s)
+                              <div className="history-card-v2-footer">
+                                <span className="history-card-v2-badge">
+                                  {new Date(item.date).getFullYear()}
                                 </span>
-                              )}
+                                {hasMedia && (
+                                  <span className="history-card-v2-media-badge">
+                                    <IconGallery /> {eventMedia.length} média(s)
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                      
+                      {/* Pagination pour l'historique */}
+                      {totalHistoryPages > 1 && (
+                        <div className="pagination">
+                          <button 
+                            className="pagination-btn" 
+                            onClick={() => setHistoryCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={historyCurrentPage === 1}
+                          >
+                            ‹
+                          </button>
+                          <span className="pagination-info">
+                            Page {historyCurrentPage} sur {totalHistoryPages}
+                          </span>
+                          <button 
+                            className="pagination-btn" 
+                            onClick={() => setHistoryCurrentPage(prev => Math.min(totalHistoryPages, prev + 1))}
+                            disabled={historyCurrentPage === totalHistoryPages}
+                          >
+                            ›
+                          </button>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="empty-state">
                       <div className="empty-icon">📜</div>
@@ -2255,13 +2421,6 @@ export default function Programmes() {
                 </div>
               </div>
             </div>
-            {pastEvents.length > 10 && (
-              <div className="btn-view-more-wrapper">
-                <button className="btn-view-more" onClick={handleViewAllHistory}>
-                  <IconEye /> Voir toute l'historique ({pastEvents.length - 10} activités supplémentaires)
-                </button>
-              </div>
-            )}
           </>
         );
       case 'parcours':

@@ -1,9 +1,8 @@
-// pages/Conducteur/AllProgrammes.jsx
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
 import axios from 'axios';
 import html2pdf from 'html2pdf.js';
+import * as XLSX from 'xlsx';
 
 // Styles pour le tableau (conservés identiques)
 const tableStyles = `
@@ -142,6 +141,26 @@ tr.past-row td.actions-cell .btn-table-delete {
     transform: translateY(-2px);
     background: linear-gradient(135deg, #fbbf24, #f59e0b);
     box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+.btn-excel {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 2rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+.btn-excel:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, #059669, #047857);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 .page-header {
     display: flex;
@@ -763,6 +782,9 @@ const IconTrash = () => (
 const IconDownload = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
 );
+const IconExcel = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M10 14l4 4m0-4l-4 4"></path></svg>
+);
 const IconCheckCircle = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
 );
@@ -990,13 +1012,14 @@ export default function AllProgrammes() {
   const { allProgrammes = [], currentClass = null } = props;
   const [toast, setToast] = useState(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const tableRef = useRef(null);
   
-  // Pagination
+  // Pagination - 15 éléments par page
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 15;
   
   // États pour les modales de confirmation
   const [confirmModal, setConfirmModal] = useState({
@@ -1029,15 +1052,22 @@ export default function AllProgrammes() {
   // Années disponibles
   const availableYears = [...new Set(allProgrammes.map(event => new Date(event.date).getFullYear()))].sort((a, b) => b - a);
 
-  // Calcul des statistiques
+  // Calcul des statistiques avec correction du fuseau horaire
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayStr = today.toISOString().split('T')[0];
   
+  // Fonction pour vérifier si une date est aujourd'hui (indépendante du fuseau horaire)
+  const isToday = (eventDate) => {
+    const eventDateObj = new Date(eventDate);
+    eventDateObj.setHours(0, 0, 0, 0);
+    return eventDateObj.getTime() === today.getTime();
+  };
+  
   const totalCount = allProgrammes.length;
   const upcomingCount = allProgrammes.filter(event => new Date(event.date) >= today).length;
   const pastCount = allProgrammes.filter(event => new Date(event.date) < today).length;
-  const todayCount = allProgrammes.filter(event => event.date === todayStr).length;
+  const todayCount = allProgrammes.filter(event => isToday(event.date)).length;
 
   // Fonction pour vérifier si un événement est passé
   const isPastEvent = (event) => {
@@ -1066,9 +1096,11 @@ export default function AllProgrammes() {
     if (filters.status !== 'all') {
       const isUpcoming = eventDate >= today;
       const isPast = eventDate < today;
+      const isTodayEvent = isToday(event.date);
+      
       if (filters.status === 'upcoming' && !isUpcoming) return false;
       if (filters.status === 'past' && !isPast) return false;
-      if (filters.status === 'today' && event.date !== todayStr) return false;
+      if (filters.status === 'today' && !isTodayEvent) return false;
     }
     
     // Filtre par mois
@@ -1241,7 +1273,7 @@ export default function AllProgrammes() {
       // En-tête du tableau - Colonne Date en premier
       const thead = document.createElement('thead');
       const headerRow = document.createElement('tr');
-      const headers = ['Date', 'Activités', 'Heure', 'Lieu', 'Orateur', 'Modérateur', 'Famille de réception'];
+      const headers = ['#', 'Date', 'Activités', 'Heure', 'Lieu', 'Orateur', 'Modérateur', 'Famille de réception'];
       headers.forEach(header => {
         const th = document.createElement('th');
         th.textContent = header;
@@ -1258,10 +1290,18 @@ export default function AllProgrammes() {
       
       // Corps du tableau
       const tbody = document.createElement('tbody');
-      filteredProgrammes.forEach(event => {
+      filteredProgrammes.forEach((event, index) => {
         const row = document.createElement('tr');
         
-        // Date (première colonne)
+        // Numéro
+        const numCell = document.createElement('td');
+        numCell.textContent = (index + 1).toString();
+        numCell.style.padding = '10px';
+        numCell.style.border = '1px solid #e5e7eb';
+        numCell.style.textAlign = 'center';
+        row.appendChild(numCell);
+        
+        // Date
         const dateCell = document.createElement('td');
         dateCell.textContent = formatDate(event.date);
         dateCell.style.padding = '10px';
@@ -1342,6 +1382,71 @@ export default function AllProgrammes() {
     }
   };
 
+  // Génération du fichier Excel
+  const handleExportExcel = async () => {
+    setIsExportingExcel(true);
+    try {
+      // Préparer les données pour Excel
+      const excelData = filteredProgrammes.map((event, index) => ({
+        '#': index + 1,
+        'Date': formatDate(event.date),
+        'Activités': event.title || '',
+        'Heure': event.time?.substring(0, 5) || '',
+        'Lieu': event.lieu || '',
+        'Orateur': event.orateur || '',
+        'Modérateur': event.moderateur || '',
+        'Famille de réception': event.famille_reception || '',
+        'Statut': getStatus(event.date)
+      }));
+
+      // Créer un nouveau classeur
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      
+      // Ajuster la largeur des colonnes
+      const colWidths = [
+        { wch: 5 },   // #
+        { wch: 15 },  // Date
+        { wch: 30 },  // Activités
+        { wch: 10 },  // Heure
+        { wch: 25 },  // Lieu
+        { wch: 20 },  // Orateur
+        { wch: 20 },  // Modérateur
+        { wch: 25 },  // Famille de réception
+        { wch: 12 }   // Statut
+      ];
+      ws['!cols'] = colWidths;
+      
+      // Créer le classeur
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Programmes');
+      
+      // Ajouter une feuille de statistiques
+      const statsData = [
+        { 'Statistique': 'Total des programmes', 'Valeur': filteredProgrammes.length },
+        { 'Statistique': 'Programmes à venir', 'Valeur': filteredProgrammes.filter(e => new Date(e.date) >= today).length },
+        { 'Statistique': 'Programmes passés', 'Valeur': filteredProgrammes.filter(e => new Date(e.date) < today).length },
+        { 'Statistique': 'Programmes aujourd\'hui', 'Valeur': filteredProgrammes.filter(e => isToday(e.date)).length },
+        { 'Statistique': 'Date de génération', 'Valeur': new Date().toLocaleString('fr-FR') },
+        { 'Statistique': 'Filtres appliqués', 'Valeur': `Recherche: ${filters.search || 'Aucune'} | Statut: ${filters.status} | Mois: ${filters.month} | Année: ${filters.year}` }
+      ];
+      
+      const statsWs = XLSX.utils.json_to_sheet(statsData);
+      statsWs['!cols'] = [{ wch: 25 }, { wch: 30 }];
+      XLSX.utils.book_append_sheet(wb, statsWs, 'Statistiques');
+      
+      // Générer et télécharger le fichier
+      const fileName = `programmes_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      
+      showToast('Excel téléchargé avec succès', 'success');
+    } catch (error) {
+      console.error('Erreur lors de la génération de l\'Excel', error);
+      showToast('Erreur lors de la génération de l\'Excel', 'error');
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
   const resetFilters = () => {
     setFilters({
       search: '',
@@ -1352,13 +1457,13 @@ export default function AllProgrammes() {
   };
 
   const getStatus = (date) => {
-    if (date === todayStr) return 'Aujourd\'hui';
+    if (isToday(date)) return 'Aujourd\'hui';
     if (date > todayStr) return 'À venir';
     return 'Passé';
   };
 
   const getStatusClass = (date) => {
-    if (date === todayStr) return 'status-today';
+    if (isToday(date)) return 'status-today';
     if (date > todayStr) return 'status-upcoming';
     return 'status-past';
   };
@@ -1452,6 +1557,14 @@ export default function AllProgrammes() {
               📋 Tous les programmes d'activités
             </div>
             <div className="header-buttons">
+              <button 
+                className="btn-excel" 
+                onClick={handleExportExcel}
+                disabled={isExportingExcel}
+                style={{ opacity: isExportingExcel ? 0.6 : 1, cursor: isExportingExcel ? 'wait' : 'pointer' }}
+              >
+                <IconExcel /> {isExportingExcel ? 'Génération...' : 'Exporter Excel'}
+              </button>
               <button 
                 className="btn-pdf" 
                 onClick={handleDownloadPDF}
@@ -1553,11 +1666,12 @@ export default function AllProgrammes() {
             </div>
           </div>
 
-          {/* Tableau principal avec la colonne Date en premier */}
+          {/* Tableau principal avec la colonne # en premier */}
           <div className="table-container" ref={tableRef}>
             <table className="programmes-table">
               <thead>
                 <tr>
+                  <th style={{ width: '50px', textAlign: 'center' }}>#</th>
                   <th>Date</th>
                   <th>Activités</th>
                   <th>Heure</th>
@@ -1571,10 +1685,14 @@ export default function AllProgrammes() {
               </thead>
               <tbody>
                 {paginatedProgrammes.length > 0 ? (
-                  paginatedProgrammes.map(event => {
+                  paginatedProgrammes.map((event, index) => {
                     const past = isPastEvent(event);
+                    const rowNumber = (currentPage - 1) * itemsPerPage + index + 1;
                     return (
                       <tr key={event.id} className={past ? 'past-row' : ''}>
+                        <td style={{ textAlign: 'center', fontWeight: 'bold', color: past ? '#9ca3af' : '#6b7280' }}>
+                          {rowNumber}
+                        </td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: past ? '#9ca3af' : '#4b5563' }}>
                             <IconCalendar style={{ width: '14px', height: '14px', color: '#9ca3af' }} />
@@ -1650,7 +1768,7 @@ export default function AllProgrammes() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan="9" style={{ textAlign: 'center', padding: '60px 20px', color: '#9ca3af' }}>
+                    <td colSpan="10" style={{ textAlign: 'center', padding: '60px 20px', color: '#9ca3af' }}>
                       <div style={{ fontSize: '4rem', marginBottom: '1rem', opacity: 0.5 }}>📋</div>
                       <p style={{ fontSize: '1rem' }}>Aucun programme d'activité ne correspond à vos critères.</p>
                     </td>

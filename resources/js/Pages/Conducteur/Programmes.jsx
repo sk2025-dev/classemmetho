@@ -1,5 +1,3 @@
-// pages/Conducteur/Programmes.jsx
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
 import axios from 'axios';
@@ -664,6 +662,20 @@ const styles = `
     z-index: 1;
 }
 
+.carousel-media-badge {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: white;
+    z-index: 10;
+    font-weight: 500;
+}
+
 .carousel-simple-info {
     flex: 0 0 30%;
     background: white;
@@ -700,13 +712,23 @@ const styles = `
     margin-bottom: 1rem;
 }
 
+/* Style pour la date du carrousel - taille agrandie */
 .carousel-simple-date {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    font-size: 0.7rem;
-    color: #9ca3af;
+    gap: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #4b5563;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.carousel-simple-date svg {
+    width: 18px;
+    height: 18px;
 }
 
 .carousel-simple-nav {
@@ -1817,6 +1839,10 @@ textarea {
     background: #e0e7ff;
     color: var(--primary);
 }
+.more-menu-item.featured:hover {
+    background: #fef3c7;
+    color: #d97706;
+}
 
 /* Styles pour les cartes d'historique */
 .history-grid {
@@ -2281,6 +2307,7 @@ const IconChevronLeft = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20
 const IconChevronRight = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>);
 const IconTrash2 = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>);
 const IconAlertTriangle = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>);
+const IconStar = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>);
 
 // --- FONCTIONS DE FORMATAGE DE DATE ---
 const getLocalDateString = (date) => {
@@ -2375,29 +2402,88 @@ const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText
   );
 };
 
-// --- CAROUSEL COMPONENT ---
-const HeroCarousel = ({ classInfo, eventsCount, mediaImages }) => {
+// --- CAROUSEL COMPONENT MODIFIÉ ---
+const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const autoPlayIntervalRef = useRef(null);
 
+  // Slides par défaut (si pas de médias)
   const defaultSlides = [
     { id: 1, image: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1200&h=500&fit=crop', title: 'Bienvenue', description: 'Gérez les activités de votre classe', date: new Date().toISOString() },
     { id: 2, image: 'https://images.unsplash.com/photo-1504052434569-70ad5836ab61?w=1200&h=500&fit=crop', title: 'Programmes', description: 'Créez et organisez vos activités', date: new Date().toISOString() },
     { id: 3, image: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&h=500&fit=crop', title: 'Galerie', description: 'Partagez vos moments forts', date: new Date().toISOString() },
   ];
 
-  const slides = mediaImages?.length > 0 ? mediaImages.slice(0, 5).map(media => ({
-    id: media.id,
-    image: media.type === 'video' ? (media.thumbnail || '/default-video-thumb.jpg') : media.url,
-    title: media.title || 'Activité',
-    description: media.description || 'Moment de partage',
-    date: media.date,
-  })) : defaultSlides;
+  // Fonction pour obtenir l'image à la une ou la première photo
+  const getActivityImage = (activityId) => {
+    if (!mediaImages) return null;
+    
+    // Chercher d'abord une image à la une
+    const featuredImage = mediaImages.find(media => 
+      media.special_event_id === activityId && 
+      media.type === 'photo' && 
+      media.is_featured === true
+    );
+    
+    if (featuredImage) return featuredImage.url;
+    
+    // Sinon, prendre la première photo
+    const firstPhoto = mediaImages.find(media => 
+      media.special_event_id === activityId && media.type === 'photo'
+    );
+    
+    return firstPhoto ? firstPhoto.url : null;
+  };
+
+  // Construire les slides à partir des photos des 4 dernières activités PASSÉES
+  const slides = useMemo(() => {
+    // Vérifier si on a des activités passées
+    if (!pastEvents || pastEvents.length === 0) {
+      return defaultSlides;
+    }
+    
+    // Trier les activités passées par date (les plus récentes d'abord) et prendre les 4 dernières
+    const sortedPastEvents = [...pastEvents]
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, 4);
+    
+    if (sortedPastEvents.length === 0) {
+      return defaultSlides;
+    }
+    
+    // Pour chaque activité, trouver la première photo
+    const activitySlides = [];
+    
+    for (const activity of sortedPastEvents) {
+      const activityImage = getActivityImage(activity.id);
+      
+      if (activityImage) {
+        const hasFeaturedImage = mediaImages?.some(m => m.special_event_id === activity.id && m.type === 'photo' && m.is_featured === true) || false;
+        
+        activitySlides.push({
+          id: activity.id,
+          image: activityImage,
+          title: activity.title,
+          description: activity.lieu || activity.orateur 
+            ? `${activity.lieu || ''} ${activity.orateur ? '· ' + activity.orateur : ''}` 
+            : 'Moment de partage',
+          date: activity.date,
+          hasFeaturedImage: hasFeaturedImage
+        });
+      }
+    }
+    
+    // Si aucune activité n'a de photo, utiliser les slides par défaut
+    return activitySlides.length > 0 ? activitySlides : defaultSlides;
+  }, [pastEvents, mediaImages]);
 
   const startAutoPlay = () => {
     if (autoPlayIntervalRef.current) clearInterval(autoPlayIntervalRef.current);
-    autoPlayIntervalRef.current = setInterval(() => setCurrentSlide((prev) => (prev + 1) % slides.length), 5000);
+    autoPlayIntervalRef.current = setInterval(
+      () => setCurrentSlide((prev) => (prev + 1) % slides.length), 
+      5000
+    );
   };
 
   useEffect(() => {
@@ -2415,20 +2501,36 @@ const HeroCarousel = ({ classInfo, eventsCount, mediaImages }) => {
       <div className="carousel-simple-wrapper">
         <div className="carousel-simple-image">
           <div className="carousel-simple-image-bg" style={{ backgroundImage: `url(${currentSlideData.image})` }} />
+          {currentSlideData.hasFeaturedImage && (
+            <div className="absolute top-4 left-4 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 z-20 shadow-lg">
+              <IconStar /> À la une
+            </div>
+          )}
         </div>
         <div className="carousel-simple-info">
-          <div className="carousel-simple-header">ACTIVITÉS RÉCENTES</div>
+          <div className="carousel-simple-header">
+            ACTIVITÉ RÉCENTES
+          </div>
           <h3 className="carousel-simple-title">{currentSlideData.title}</h3>
           <p className="carousel-simple-description">{currentSlideData.description}</p>
-          <div className="carousel-simple-date"><IconCalendar /> {formattedDate}</div>
+          <div className="carousel-simple-date">
+            <IconCalendar /> {formattedDate}
+          </div>
         </div>
       </div>
+      
       {slides.length > 1 && (
         <>
           <button className="carousel-simple-nav carousel-simple-nav-left" onClick={() => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)}>‹</button>
           <button className="carousel-simple-nav carousel-simple-nav-right" onClick={() => setCurrentSlide((prev) => (prev + 1) % slides.length)}>›</button>
           <div className="carousel-simple-dots">
-            {slides.map((_, index) => (<button key={index} className={`carousel-simple-dot ${currentSlide === index ? 'active' : ''}`} onClick={() => setCurrentSlide(index)} />))}
+            {slides.map((_, index) => (
+              <button 
+                key={index} 
+                className={`carousel-simple-dot ${currentSlide === index ? 'active' : ''}`} 
+                onClick={() => setCurrentSlide(index)} 
+              />
+            ))}
           </div>
         </>
       )}
@@ -2510,7 +2612,7 @@ const MiniCalendar = ({ eventsDates = [], eventsData = [], onDateClick, activeDa
   );
 };
 
-// --- PAST EVENT CONTENT MODAL ---
+// --- PAST EVENT CONTENT MODAL CORRIGÉ ---
 const PastEventContentModal = ({ isOpen, onClose, date, events, mediaData }) => {
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
@@ -2525,6 +2627,21 @@ const PastEventContentModal = ({ isOpen, onClose, date, events, mediaData }) => 
   const relatedMedia = mediaData.filter(media => media.special_event_id && eventIds.includes(media.special_event_id));
   const generalMedia = mediaData.filter(media => !media.special_event_id && getLocalDateString(media.date) === dateStr);
   const formattedDate = formatDateFrench(date);
+
+  const getVideoEmbedUrl = (url) => {
+    if (!url) return null;
+    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const youtubeMatch = url.match(youtubeRegex);
+    if (youtubeMatch) {
+      return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
+    }
+    const vimeoRegex = /vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|)(\d+)(?:$|\/|\?)/;
+    const vimeoMatch = url.match(vimeoRegex);
+    if (vimeoMatch) {
+      return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+    }
+    return url;
+  };
 
   const openMediaViewer = (media, mediaArray) => {
     const index = mediaArray.findIndex(m => m.id === media.id);
@@ -2570,12 +2687,43 @@ const PastEventContentModal = ({ isOpen, onClose, date, events, mediaData }) => 
                         <div className="past-event-media">
                           <h4>📸 Médias associés</h4>
                           <div className="media-gallery">
-                            {eventMedia.map(media => (
-                              <div key={media.id} className="media-gallery-item" onClick={() => openMediaViewer(media, eventMedia)}>
-                                {media.type === 'video' ? <video src={media.url} style={{ pointerEvents: 'none' }} /> : <img src={media.url} alt={media.title} />}
-                                <div style={{ padding: '6px', fontSize: '0.7rem', textAlign: 'center', background: 'white' }}>{media.title.length > 20 ? media.title.substring(0, 20) + '...' : media.title}</div>
-                              </div>
-                            ))}
+                            {eventMedia.map(media => {
+                              let mediaUrl = '';
+                              let thumbnailUrl = '';
+                              
+                              if (media.type === 'video') {
+                                mediaUrl = media.video_url || media.url;
+                                thumbnailUrl = media.thumbnail || getVideoEmbedUrl(mediaUrl) || '/default-video-thumb.jpg';
+                              } else {
+                                mediaUrl = media.url;
+                                thumbnailUrl = media.url;
+                              }
+                              
+                              return (
+                                <div key={media.id} className="media-gallery-item" onClick={() => openMediaViewer(media, eventMedia)}>
+                                  {media.type === 'video' ? (
+                                    <div className="relative">
+                                      <img 
+                                        src={thumbnailUrl} 
+                                        alt={media.title} 
+                                        style={{ width: '100%', height: '120px', objectFit: 'cover' }}
+                                        onError={(e) => { e.target.src = '/default-video-thumb.jpg'; }}
+                                      />
+                                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40">
+                                        <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                          <path d="M8 5v14l11-7z"/>
+                                        </svg>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <img src={media.url} alt={media.title} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
+                                  )}
+                                  <div style={{ padding: '6px', fontSize: '0.7rem', textAlign: 'center', background: 'white' }}>
+                                    {media.title.length > 20 ? media.title.substring(0, 20) + '...' : media.title}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -2586,12 +2734,43 @@ const PastEventContentModal = ({ isOpen, onClose, date, events, mediaData }) => 
                   <div className="past-event-media">
                     <h4>📸 Médias du jour</h4>
                     <div className="media-gallery">
-                      {generalMedia.map(media => (
-                        <div key={media.id} className="media-gallery-item" onClick={() => openMediaViewer(media, generalMedia)}>
-                          {media.type === 'video' ? <video src={media.url} style={{ pointerEvents: 'none' }} /> : <img src={media.url} alt={media.title} />}
-                          <div style={{ padding: '6px', fontSize: '0.7rem', textAlign: 'center', background: 'white' }}>{media.title.length > 20 ? media.title.substring(0, 20) + '...' : media.title}</div>
-                        </div>
-                      ))}
+                      {generalMedia.map(media => {
+                        let mediaUrl = '';
+                        let thumbnailUrl = '';
+                        
+                        if (media.type === 'video') {
+                          mediaUrl = media.video_url || media.url;
+                          thumbnailUrl = media.thumbnail || getVideoEmbedUrl(mediaUrl) || '/default-video-thumb.jpg';
+                        } else {
+                          mediaUrl = media.url;
+                          thumbnailUrl = media.url;
+                        }
+                        
+                        return (
+                          <div key={media.id} className="media-gallery-item" onClick={() => openMediaViewer(media, generalMedia)}>
+                            {media.type === 'video' ? (
+                              <div className="relative">
+                                <img 
+                                  src={thumbnailUrl} 
+                                  alt={media.title} 
+                                  style={{ width: '100%', height: '120px', objectFit: 'cover' }}
+                                  onError={(e) => { e.target.src = '/default-video-thumb.jpg'; }}
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40">
+                                  <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z"/>
+                                  </svg>
+                                </div>
+                              </div>
+                            ) : (
+                              <img src={media.url} alt={media.title} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
+                            )}
+                            <div style={{ padding: '6px', fontSize: '0.7rem', textAlign: 'center', background: 'white' }}>
+                              {media.title.length > 20 ? media.title.substring(0, 20) + '...' : media.title}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -2631,7 +2810,6 @@ const MediaViewerModal = ({ isOpen, onClose, media, mediaList = [], currentIndex
 
   const currentMedia = mediaList[currentIndex] || media;
 
-  // Extraire l'ID YouTube de l'URL
   const getYouTubeEmbedUrl = (url) => {
     if (!url) return null;
     const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
@@ -2642,7 +2820,6 @@ const MediaViewerModal = ({ isOpen, onClose, media, mediaList = [], currentIndex
     return null;
   };
 
-  // Extraire l'ID Vimeo de l'URL
   const getVimeoEmbedUrl = (url) => {
     if (!url) return null;
     const regex = /vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|)(\d+)(?:$|\/|\?)/;
@@ -2653,33 +2830,54 @@ const MediaViewerModal = ({ isOpen, onClose, media, mediaList = [], currentIndex
     return null;
   };
 
-  // Extraire l'URL Facebook embed
   const getFacebookEmbedUrl = (url) => {
     if (!url) return null;
-    const regex = /facebook\.com\/.*(?:v|video)(?:\/|=)(\d+)/;
-    const match = url.match(regex);
-    if (match) {
+    let videoId = null;
+    const watchRegex = /facebook\.com\/watch\/?\?v=(\d+)/;
+    const watchMatch = url.match(watchRegex);
+    if (watchMatch) {
+      videoId = watchMatch[1];
+    }
+    const videosRegex = /facebook\.com\/(?:[^\/]+\/)?videos\/(?:[^\/]+\/)?(\d+)/;
+    const videosMatch = url.match(videosRegex);
+    if (videosMatch) {
+      videoId = videosMatch[1];
+    }
+    const fbWatchRegex = /fb\.watch\/([a-zA-Z0-9?=&]+)/;
+    const fbWatchMatch = url.match(fbWatchRegex);
+    if (fbWatchMatch) {
       return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&mute=0`;
     }
-    if (url.includes('facebook.com/plugins/video.php')) {
-      return url;
+    if (videoId) {
+      return `https://www.facebook.com/plugins/video.php?href=https://www.facebook.com/watch/?v=${videoId}&show_text=0&mute=0`;
+    }
+    if (url.includes('facebook.com')) {
+      return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&mute=0`;
     }
     return null;
   };
 
-  // Obtenir l'URL embed pour la vidéo
   const getEmbedUrl = (url) => {
     if (!url) return null;
     return getYouTubeEmbedUrl(url) || getVimeoEmbedUrl(url) || getFacebookEmbedUrl(url) || url;
   };
 
+  const getPlatform = (url) => {
+    if (!url) return 'unknown';
+    if (url.includes('youtube') || url.includes('youtu.be')) return 'youtube';
+    if (url.includes('vimeo')) return 'vimeo';
+    if (url.includes('facebook') || url.includes('fb.watch')) return 'facebook';
+    return 'unknown';
+  };
+
   const embedUrl = getEmbedUrl(currentMedia.video_url || currentMedia.url);
+  const platform = getPlatform(currentMedia.video_url || currentMedia.url);
   
   const getPlatformName = (url) => {
     if (!url) return 'la plateforme';
-    if (url.includes('youtube')) return 'YouTube';
+    if (url.includes('youtube') || url.includes('youtu.be')) return 'YouTube';
     if (url.includes('vimeo')) return 'Vimeo';
-    if (url.includes('facebook')) return 'Facebook';
+    if (url.includes('facebook') || url.includes('fb.watch')) return 'Facebook';
     return 'la plateforme';
   };
 
@@ -2694,16 +2892,40 @@ const MediaViewerModal = ({ isOpen, onClose, media, mediaList = [], currentIndex
           <div className="media-viewer">
             {currentMedia.type === 'video' ? (
               embedUrl && (embedUrl.includes('youtube') || embedUrl.includes('vimeo') || embedUrl.includes('facebook')) ? (
-                <div className="relative" style={{ paddingBottom: '56.25%', height: 0 }}>
-                  <iframe
-                    src={embedUrl}
-                    title={currentMedia.title}
-                    className="absolute top-0 left-0 w-full h-full rounded-lg"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                  />
-                </div>
+                platform === 'facebook' ? (
+                  <div className="text-center p-8 bg-gray-100 rounded-lg">
+                    <div className="mb-4">
+                      <img 
+                        src={currentMedia.thumbnail || '/default-video-thumb.jpg'} 
+                        alt={currentMedia.title} 
+                        className="max-h-64 mx-auto rounded-lg mb-4"
+                      />
+                    </div>
+                    <p className="text-gray-600 mb-4">La vidéo Facebook ne peut pas être intégrée directement.</p>
+                    <a 
+                      href={currentMedia.video_url || currentMedia.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                    >
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                      </svg>
+                      Ouvrir sur Facebook
+                    </a>
+                  </div>
+                ) : (
+                  <div className="relative" style={{ paddingBottom: '56.25%', height: 0 }}>
+                    <iframe
+                      src={embedUrl}
+                      title={currentMedia.title}
+                      className="absolute top-0 left-0 w-full h-full rounded-lg"
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  </div>
+                )
               ) : (
                 <div className="text-center p-8 bg-gray-100 rounded-lg cursor-pointer" onClick={() => window.open(currentMedia.video_url || currentMedia.url, '_blank')}>
                   <img 
@@ -2766,9 +2988,10 @@ const MediaViewerModal = ({ isOpen, onClose, media, mediaList = [], currentIndex
   );
 };
 
-// --- EVENT PLANNER MODAL ---
+// --- EVENT PLANNER MODAL AVEC RÉINITIALISATION CORRIGÉE ---
 const EventPlannerModal = ({ isOpen, onClose, onSave, editingEvent = null, isLoading = false }) => {
   const [activities, setActivities] = useState([{ title: '', date: '', time: '', orateur: '', moderateur: '', famille_reception: '', lieu: '' }]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen && editingEvent) {
@@ -2784,7 +3007,16 @@ const EventPlannerModal = ({ isOpen, onClose, onSave, editingEvent = null, isLoa
     } else if (isOpen && !editingEvent) {
       setActivities([{ title: '', date: '', time: '', orateur: '', moderateur: '', famille_reception: '', lieu: '' }]);
     }
+    if (!isOpen) {
+      setIsSubmitting(false);
+    }
   }, [isOpen, editingEvent]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setIsSubmitting(false);
+    }
+  }, [isLoading]);
 
   const cleanActivityData = (activity) => {
     return {
@@ -2798,7 +3030,7 @@ const EventPlannerModal = ({ isOpen, onClose, onSave, editingEvent = null, isLoa
     };
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const validActivities = activities.filter(a => a.title.trim() !== '' && a.date !== '');
     if (validActivities.length === 0) { 
@@ -2806,8 +3038,18 @@ const EventPlannerModal = ({ isOpen, onClose, onSave, editingEvent = null, isLoa
       return; 
     }
     
+    setIsSubmitting(true);
     const cleanedActivities = validActivities.map(cleanActivityData);
-    onSave(cleanedActivities, editingEvent?.id);
+    
+    try {
+      await onSave(cleanedActivities, editingEvent?.id);
+      if (!editingEvent) {
+        setActivities([{ title: '', date: '', time: '', orateur: '', moderateur: '', famille_reception: '', lieu: '' }]);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la soumission:', error);
+    } finally {
+    }
   };
 
   if (!isOpen) return null;
@@ -2881,8 +3123,8 @@ const EventPlannerModal = ({ isOpen, onClose, onSave, editingEvent = null, isLoa
         </div>
         <div className="modal-footer">
           <button className="btn-cancel" onClick={onClose}>Annuler</button>
-          <button type="submit" form="event-form" className="btn-add" disabled={isLoading}>
-            <IconPlus /> {isLoading ? 'Envoi en cours...' : (editingEvent ? 'Mettre à jour' : `Ajouter ${activities.length} programme(s)`)}
+          <button type="submit" form="event-form" className="btn-add" disabled={isLoading || isSubmitting}>
+            <IconPlus /> {isLoading || isSubmitting ? 'Envoi en cours...' : (editingEvent ? 'Mettre à jour' : `Ajouter ${activities.length} programme(s)`)}
           </button>
         </div>
       </div>
@@ -2890,7 +3132,7 @@ const EventPlannerModal = ({ isOpen, onClose, onSave, editingEvent = null, isLoa
   );
 };
 
-// --- IMPORT EXCEL MODAL CORRIGÉ ---
+// --- IMPORT EXCEL MODAL ---
 const ImportExcelModal = ({ isOpen, onClose, onImport, isLoading = false, progress = 0 }) => {
   const [file, setFile] = useState(null);
   const [previewData, setPreviewData] = useState([]);
@@ -2978,7 +3220,7 @@ const ImportExcelModal = ({ isOpen, onClose, onImport, isLoading = false, progre
   );
 };
 
-// --- ADD MEDIA MODALE AVEC CLASSEMENT IMAGES/VIDÉOS ---
+// --- ADD MEDIA MODALE ---
 const AddMediaModal = ({ isOpen, onClose, onAdd, isLoading = false, events = [], preselectedEventId = null }) => {
   const [mediaType, setMediaType] = useState('photo');
   const [title, setTitle] = useState('');
@@ -3246,7 +3488,6 @@ export default function Programmes() {
   const [currentPage, setCurrentPage] = useState(1);
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, mediaToDelete: null, isMultiple: false, count: 0 });
   
-  // États pour le modal d'édition des médias
   const [isEditMediaModalOpen, setIsEditMediaModalOpen] = useState(false);
   const [editingMedia, setEditingMedia] = useState(null);
   const [editMediaForm, setEditMediaForm] = useState({
@@ -3258,10 +3499,12 @@ export default function Programmes() {
   const [editMediaErrors, setEditMediaErrors] = useState({});
   const [isEditMediaLoading, setIsEditMediaLoading] = useState(false);
   
+  const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
+  const historyItemsPerPage = 6;
+  
   const itemsPerPage = 6;
   const scrollRefs = useRef({});
 
-  // Filtrer les événements pour n'afficher que ceux du mois en cours
   const currentMonthEvents = initialClassList.filter(event => isDateInCurrentMonth(event.date));
   const pastEvents = initialClassHistory.filter(event => isDateInPastMonth(event.date));
   const allEvents = [...currentMonthEvents, ...pastEvents];
@@ -3278,7 +3521,6 @@ export default function Programmes() {
 
   const filteredEvents = getFilteredEventsByActiveDate();
 
-  // Récupérer les années disponibles pour les filtres de la galerie
   const galleryAvailableMonths = [
     'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
     'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
@@ -3289,7 +3531,6 @@ export default function Programmes() {
     return [...new Set(years)].sort((a, b) => b - a);
   }, [mediaData]);
 
-  // Filtrer les médias pour la galerie
   const filteredGalleryMedia = useMemo(() => {
     let filtered = [...mediaData];
     
@@ -3315,7 +3556,6 @@ export default function Programmes() {
     return filtered;
   }, [mediaData, galleryFilter]);
 
-  // Grouper les médias par activité après filtrage - CLASSEMENT IMAGES À GAUCHE, VIDÉOS À DROITE
   const groupedGalleryMedia = useMemo(() => {
     const groups = [];
     const mediaByActivity = new Map();
@@ -3334,15 +3574,10 @@ export default function Programmes() {
         activity = allEvents.find(e => e.id === parseInt(activityId));
       }
       
-      // Séparer les images et les vidéos
       const images = medias.filter(m => m.type === 'photo');
       const videos = medias.filter(m => m.type === 'video');
-      
-      // Trier chaque catégorie par date décroissante
       const sortedImages = images.sort((a, b) => new Date(b.date) - new Date(a.date));
       const sortedVideos = videos.sort((a, b) => new Date(b.date) - new Date(a.date));
-      
-      // Concaténer : images d'abord, puis vidéos
       const sortedMedias = [...sortedImages, ...sortedVideos];
       
       groups.push({
@@ -3363,11 +3598,21 @@ export default function Programmes() {
     });
   }, [filteredGalleryMedia, allEvents]);
 
-  // Pagination des groupes
   const totalPages = Math.ceil(groupedGalleryMedia.length / itemsPerPage);
   const paginatedGroups = groupedGalleryMedia.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  // Réinitialiser la page quand les filtres changent
+  const totalHistoryPages = Math.ceil(pastEvents.length / historyItemsPerPage);
+  const paginatedHistoryEvents = pastEvents.slice(
+    (historyCurrentPage - 1) * historyItemsPerPage,
+    historyCurrentPage * historyItemsPerPage
+  );
+
+  useEffect(() => {
+    if (historyCurrentPage > totalHistoryPages && totalHistoryPages > 0) {
+      setHistoryCurrentPage(totalHistoryPages);
+    }
+  }, [pastEvents.length]);
+
   useEffect(() => {
     setCurrentPage(1);
   }, [galleryFilter]);
@@ -3390,6 +3635,7 @@ export default function Programmes() {
   const closeDateContentModal = () => { 
     setIsDateContentModalOpen(false); 
     setSelectedDate(null);
+    setActiveCalendarDate(null);
   };
   
   const handleClearDateFilter = () => setActiveCalendarDate(null);
@@ -3431,7 +3677,6 @@ export default function Programmes() {
     setCurrentMediaIndex(0);
   };
 
-  // Fonctions pour le modal d'édition des médias
   const openEditMediaModal = (media) => {
     setEditingMedia(media);
     setEditMediaForm({
@@ -3474,11 +3719,9 @@ export default function Programmes() {
     try {
       const response = await axios.put(`/conducteur/galerie/update/${editingMedia.id}`, editMediaForm);
       if (response.data.success) {
-        setMediaData(prev => prev.map(m => 
-          m.id === editingMedia.id ? { ...m, ...response.data.media } : m
-        ));
         showToast('Média mis à jour avec succès', 'success');
         closeEditMediaModal();
+        setTimeout(() => router.reload(), 1500);
       } else {
         showToast('Erreur lors de la mise à jour', 'error');
       }
@@ -3498,10 +3741,9 @@ export default function Programmes() {
     try {
       const response = await axios.post('/conducteur/galerie/add', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (response.data.success) { 
-        const newMedia = response.data.media;
-        setMediaData(prev => [...newMedia, ...prev]); 
-        showToast(`${newMedia.length} contenu(s) ajouté(s) !`, 'success'); 
-        closeAddMediaModal(); 
+        showToast(`${response.data.media?.length || 1} contenu(s) ajouté(s) !`, 'success'); 
+        closeAddMediaModal();
+        setTimeout(() => router.reload(), 1500);
       }
       else showToast('Erreur lors de l\'ajout', 'error');
     } catch (error) { 
@@ -3523,8 +3765,8 @@ export default function Programmes() {
         try {
           const response = await axios.delete(`/conducteur/galerie/${media.id}`);
           if (response.data.success) { 
-            setMediaData(prev => prev.filter(m => m.id !== media.id)); 
-            showToast('Média supprimé', 'success'); 
+            showToast('Média supprimé', 'success');
+            setTimeout(() => router.reload(), 1500);
           }
           else showToast('Erreur lors de la suppression', 'error');
         } catch (error) { 
@@ -3539,11 +3781,37 @@ export default function Programmes() {
     });
   };
 
+  // Fonction pour définir une image comme "à la une"
+  const setAsFeaturedMedia = async (media) => {
+    setIsLoading(true);
+    try {
+      const response = await axios.put(`/conducteur/galerie/set-featured/${media.id}`);
+      
+      if (response.data.success) {
+        // Mettre à jour localement l'état des médias
+        setMediaData(prev => prev.map(m => {
+          if (m.special_event_id === media.special_event_id && m.type === 'photo') {
+            return { ...m, is_featured: m.id === media.id };
+          }
+          return m;
+        }));
+        showToast('⭐ Image à la une définie avec succès', 'success');
+        setTimeout(() => router.reload(), 1000);
+      } else {
+        showToast(response.data.message || 'Erreur lors de la mise à jour', 'error');
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+      showToast('Erreur lors de la définition de l\'image à la une', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleAddMediaToHistory = (eventId) => {
     openAddMediaModal(eventId);
   };
 
-  // Fonctions pour la sélection multiple dans la galerie
   const toggleGalleryMediaSelection = (mediaId) => {
     setSelectedGalleryMediaIds(prev => 
       prev.includes(mediaId) ? prev.filter(id => id !== mediaId) : [...prev, mediaId]
@@ -3575,8 +3843,8 @@ export default function Programmes() {
           } catch (error) {}
         }
         if (successCount > 0) {
-          setMediaData(prev => prev.filter(media => !selectedGalleryMediaIds.includes(media.id)));
           showToast(`${successCount} média(s) supprimé(s)`, 'success');
+          setTimeout(() => router.reload(), 1500);
         }
         setSelectedGalleryMediaIds([]);
         setIsGallerySelectionMode(false);
@@ -3600,7 +3868,6 @@ export default function Programmes() {
     setIsGallerySelectionMode(true);
   };
 
-  // Fonctions de défilement horizontal pour chaque groupe
   const handleScrollLeft = (groupId) => {
     const container = scrollRefs.current[groupId];
     if (container) {
@@ -3648,27 +3915,37 @@ export default function Programmes() {
     setIsLoading(true);
     
     if (eventId && activities.length === 1) {
-      router.put(`/conducteur/programmes/event/${eventId}`, activities[0], {
-        onSuccess: () => { 
-          closeEventModal(); 
-          showToast('Événement modifié !', 'success'); 
-          setTimeout(() => router.reload(), 1000);
-        },
-        onError: (error) => { 
-          console.error('Erreur modification:', error);
-          showToast('Erreur lors de la modification', 'error'); 
-          setIsLoading(false); 
+      try {
+        const response = await axios.put(`/conducteur/programmes/event/${eventId}`, activities[0]);
+        console.log('Réponse modification:', response.data);
+        
+        if (response.data.success) {
+          showToast(response.data.message || 'Événement modifié avec succès !', 'success');
+          closeEventModal();
+          setTimeout(() => {
+            router.reload();
+          }, 1500);
+        } else {
+          showToast(response.data.message || 'Erreur lors de la modification', 'error');
+          setIsLoading(false);
         }
-      });
+      } catch (error) {
+        console.error('Erreur modification:', error);
+        const errorMessage = error.response?.data?.message || 'Erreur lors de la modification';
+        showToast(errorMessage, 'error');
+        setIsLoading(false);
+      }
     } else {
       try {
         const response = await axios.post('/conducteur/programmes/events-multiple', { activities });
         console.log('Réponse serveur:', response.data);
         
-        if (response.data.success) { 
-          closeEventModal(); 
+        if (response.data.success) {
           showToast(response.data.message, 'success');
-          setTimeout(() => router.reload(), 1000);
+          closeEventModal();
+          setTimeout(() => {
+            router.reload();
+          }, 1500);
         } else {
           showToast(response.data.message || 'Erreur lors de la création', 'error');
           setIsLoading(false);
@@ -3694,7 +3971,7 @@ export default function Programmes() {
       if (response.data.success) { 
         showToast(response.data.message, 'success'); 
         closeImportModal(); 
-        setTimeout(() => router.reload(), 1000);
+        setTimeout(() => router.reload(), 1500);
       } else {
         showToast('Erreur lors de l\'import', 'error');
         setIsLoading(false);
@@ -3719,7 +3996,10 @@ export default function Programmes() {
         
         return (
           <>
-            <HeroCarousel mediaImages={mediaData.filter(m => m.type === 'photo')} />
+            <HeroCarousel 
+              mediaImages={mediaData} 
+              pastEvents={pastEvents}
+            />
             
             <div className="action-bar">
               <h2>🔥 ACTIVITÉS EN COURS
@@ -3787,7 +4067,6 @@ export default function Programmes() {
           </>
         );
       case 'historique':
-        const lastTenEvents = pastEvents.slice(0, 10);
         const currentYear = new Date().getFullYear();
         
         return (
@@ -3803,78 +4082,102 @@ export default function Programmes() {
             <div className="glass-container">
               <div className="main-layout">
                 <div className="cards-container">
-                  {lastTenEvents.length > 0 ? (
-                    <div className="history-grid">
-                      {lastTenEvents.map(item => {
-                        const eventMedia = mediaData.filter(media => media.special_event_id === item.id);
-                        const hasMedia = eventMedia.length > 0;
-                        
-                        return (
-                          <div key={item.id} className="history-card-v2">
-                            <div className="history-card-v2-header" onClick={() => handleHistoricalCardClick(item)}>
-                              <h3 className="history-card-v2-title">{item.title}</h3>
-                              <div className="history-card-v2-date">
-                                <IconCalendar />
-                                {formatDateFrench(item.date)}
-                                {item.time && (
-                                  <>
-                                    <span style={{ margin: '0 4px' }}>•</span>
-                                    <IconClock />
-                                    {item.time.substring(0, 5)}
-                                  </>
-                                )}
+                  {paginatedHistoryEvents.length > 0 ? (
+                    <>
+                      <div className="history-grid">
+                        {paginatedHistoryEvents.map(item => {
+                          const eventMedia = mediaData.filter(media => media.special_event_id === item.id);
+                          const hasMedia = eventMedia.length > 0;
+                          
+                          return (
+                            <div key={item.id} className="history-card-v2">
+                              <div className="history-card-v2-header" onClick={() => handleHistoricalCardClick(item)}>
+                                <h3 className="history-card-v2-title">{item.title}</h3>
+                                <div className="history-card-v2-date">
+                                  <IconCalendar />
+                                  {formatDateFrench(item.date)}
+                                  {item.time && (
+                                    <>
+                                      <span style={{ margin: '0 4px' }}>•</span>
+                                      <IconClock />
+                                      {item.time.substring(0, 5)}
+                                    </>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                            <div className="history-card-v2-body" onClick={() => handleHistoricalCardClick(item)}>
-                              <div className="history-card-v2-info">
-                                {item.lieu && (
-                                  <div className="history-card-v2-info-item">
-                                    <IconLocation className="history-card-v2-info-icon" />
-                                    <span className="history-card-v2-info-label">Lieu :</span>
-                                    <span className="history-card-v2-info-value">{item.lieu}</span>
-                                  </div>
-                                )}
-                                {item.orateur && (
-                                  <div className="history-card-v2-info-item">
-                                    <IconMic className="history-card-v2-info-icon" />
-                                    <span className="history-card-v2-info-label">Orateur :</span>
-                                    <span className="history-card-v2-info-value">{item.orateur}</span>
-                                  </div>
-                                )}
-                                {item.moderateur && (
-                                  <div className="history-card-v2-info-item">
-                                    <IconUser className="history-card-v2-info-icon" />
-                                    <span className="history-card-v2-info-label">Modérateur :</span>
-                                    <span className="history-card-v2-info-value">{item.moderateur}</span>
-                                  </div>
-                                )}
+                              <div className="history-card-v2-body" onClick={() => handleHistoricalCardClick(item)}>
+                                <div className="history-card-v2-info">
+                                  {item.lieu && (
+                                    <div className="history-card-v2-info-item">
+                                      <IconLocation className="history-card-v2-info-icon" />
+                                      <span className="history-card-v2-info-label">Lieu :</span>
+                                      <span className="history-card-v2-info-value">{item.lieu}</span>
+                                    </div>
+                                  )}
+                                  {item.orateur && (
+                                    <div className="history-card-v2-info-item">
+                                      <IconMic className="history-card-v2-info-icon" />
+                                      <span className="history-card-v2-info-label">Orateur :</span>
+                                      <span className="history-card-v2-info-value">{item.orateur}</span>
+                                    </div>
+                                  )}
+                                  {item.moderateur && (
+                                    <div className="history-card-v2-info-item">
+                                      <IconUser className="history-card-v2-info-icon" />
+                                      <span className="history-card-v2-info-label">Modérateur :</span>
+                                      <span className="history-card-v2-info-value">{item.moderateur}</span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                            <div className="history-card-v2-footer">
-                              <span className="history-card-v2-badge">
-                                {new Date(item.date).getFullYear()}
-                              </span>
-                              <div style={{ display: 'flex', gap: '8px' }}>
-                                {hasMedia && (
-                                  <span 
-                                    className="history-card-v2-media-badge" 
-                                    onClick={() => handleHistoricalCardClick(item)}
+                              <div className="history-card-v2-footer">
+                                <span className="history-card-v2-badge">
+                                  {new Date(item.date).getFullYear()}
+                                </span>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  {hasMedia && (
+                                    <span 
+                                      className="history-card-v2-media-badge" 
+                                      onClick={() => handleHistoricalCardClick(item)}
+                                    >
+                                      <IconGallery /> {eventMedia.length} média(s)
+                                    </span>
+                                  )}
+                                  <button 
+                                    className="history-card-v2-add-btn"
+                                    onClick={() => handleAddMediaToHistory(item.id)}
                                   >
-                                    <IconGallery /> {eventMedia.length} média(s)
-                                  </span>
-                                )}
-                                <button 
-                                  className="history-card-v2-add-btn"
-                                  onClick={() => handleAddMediaToHistory(item.id)}
-                                >
-                                  <IconPlus /> Ajouter un contenu
-                                </button>
+                                    <IconPlus /> Ajouter un contenu
+                                  </button>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                      
+                      {totalHistoryPages > 1 && (
+                        <div className="pagination">
+                          <button 
+                            className="pagination-btn" 
+                            onClick={() => setHistoryCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={historyCurrentPage === 1}
+                          >
+                            ‹
+                          </button>
+                          <span className="pagination-info">
+                            Page {historyCurrentPage} sur {totalHistoryPages}
+                          </span>
+                          <button 
+                            className="pagination-btn" 
+                            onClick={() => setHistoryCurrentPage(prev => Math.min(totalHistoryPages, prev + 1))}
+                            disabled={historyCurrentPage === totalHistoryPages}
+                          >
+                            ›
+                          </button>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="empty-state">
                       <div className="empty-icon">📜</div>
@@ -3885,13 +4188,6 @@ export default function Programmes() {
                 </div>
               </div>
             </div>
-            {pastEvents.length > 10 && (
-              <div className="btn-view-all-wrapper">
-                <button className="btn-view-all" onClick={handleViewAllHistory}>
-                  <IconEye /> Voir toute l'historique ({pastEvents.length - 10} activités supplémentaires)
-                </button>
-              </div>
-            )}
           </>
         );
       case 'parcours':
@@ -4028,6 +4324,11 @@ export default function Programmes() {
                                         </svg>
                                       </div>
                                     )}
+                                    {media.type === 'photo' && media.is_featured && (
+                                      <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 z-20 shadow-md">
+                                        <IconStar /> À la une
+                                      </div>
+                                    )}
                                     <div className="media-badge">
                                       {media.type === 'video' ? <IconVideo /> : <IconPhoto />}
                                       {media.type === 'video' ? 'Vidéo' : 'Photo'}
@@ -4053,6 +4354,14 @@ export default function Programmes() {
                                       }}>
                                         <IconEdit /> Modifier
                                       </div>
+                                      {media.type === 'photo' && media.special_event_id && (
+                                        <div className="more-menu-item featured" onClick={() => { 
+                                          setOpenGalleryMenuId(null);
+                                          setAsFeaturedMedia(media);
+                                        }}>
+                                          <IconStar /> Définir comme image à la une
+                                        </div>
+                                      )}
                                       <div className="more-menu-item delete" onClick={() => { 
                                         setOpenGalleryMenuId(null);
                                         handleDeleteSingleMedia(media);
@@ -4137,7 +4446,6 @@ export default function Programmes() {
           : `Voulez-vous vraiment supprimer "${confirmDialog.mediaToDelete?.title}" ?`}
       />
       
-      {/* Modal d'édition du média */}
       {isEditMediaModalOpen && editingMedia && (
         <div className="modal-overlay" onClick={closeEditMediaModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>

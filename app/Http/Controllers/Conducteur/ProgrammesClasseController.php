@@ -183,6 +183,7 @@ class ProgrammesClasseController extends Controller
     
     /**
      * Créer plusieurs événements en une seule requête
+     * Accepte désormais les dates passées pour l'historique
      */
     public function storeMultipleEvents(Request $request)
     {
@@ -211,6 +212,7 @@ class ProgrammesClasseController extends Controller
             $activities = $validated['activities'];
             $createdCount = 0;
             $errors = [];
+            $pastDates = [];
             
             Log::info('Début création multiple', [
                 'user_id' => $user->id,
@@ -221,12 +223,11 @@ class ProgrammesClasseController extends Controller
             
             try {
                 foreach ($activities as $index => $activity) {
+                    // Vérifier si la date est dans le passé (juste pour information, pas pour bloquer)
                     $eventDateTime = $activity['date'] . ' ' . ($activity['time'] ?? '00:00');
-                    if ($eventDateTime < now()->format('Y-m-d H:i')) {
-                        $errors[] = "Activité " . ($index + 1) . ": La date ne peut pas être dans le passé";
-                        continue;
-                    }
+                    $isPast = $eventDateTime < now()->format('Y-m-d H:i');
                     
+                    // Créer l'événement même si la date est passée (pour l'historique)
                     $event = SpecialEvent::create([
                         'title' => $activity['title'],
                         'date' => $activity['date'],
@@ -241,28 +242,24 @@ class ProgrammesClasseController extends Controller
                     ]);
                     
                     $createdCount++;
-                }
-                
-                if ($createdCount === 0 && count($errors) > 0) {
-                    DB::rollBack();
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Aucun événement n\'a pu être créé',
-                        'errors' => $errors
-                    ], 400);
+                    
+                    if ($isPast) {
+                        $pastDates[] = "Activité " . ($index + 1) . " (" . $activity['title'] . "): Date dans le passé (" . $activity['date'] . ")";
+                    }
                 }
                 
                 DB::commit();
                 
                 $message = "{$createdCount} événement(s) créé(s) avec succès.";
-                if (count($errors) > 0) {
-                    $message .= " " . count($errors) . " erreur(s).";
+                if (count($pastDates) > 0) {
+                    $message .= " Attention: " . count($pastDates) . " événement(s) ont des dates passées.";
                 }
                 
                 return response()->json([
                     'success' => true,
                     'created_count' => $createdCount,
                     'message' => $message,
+                    'past_dates' => $pastDates,
                     'errors' => $errors
                 ]);
                 
@@ -362,6 +359,7 @@ class ProgrammesClasseController extends Controller
     
     /**
      * Importer plusieurs événements
+     * Accepte désormais les dates passées pour l'historique
      */
     public function importEvents(Request $request)
     {
@@ -390,17 +388,17 @@ class ProgrammesClasseController extends Controller
             $events = $validated['events'];
             $importedCount = 0;
             $errors = [];
+            $pastDates = [];
             
             DB::beginTransaction();
             
             try {
                 foreach ($events as $index => $eventData) {
+                    // Vérifier si la date est dans le passé (juste pour information)
                     $eventDateTime = $eventData['date'] . ' ' . ($eventData['time'] ?? '00:00');
-                    if ($eventDateTime < now()->format('Y-m-d H:i')) {
-                        $errors[] = "Ligne " . ($index + 2) . ": Date dans le passé";
-                        continue;
-                    }
+                    $isPast = $eventDateTime < now()->format('Y-m-d H:i');
                     
+                    // Créer l'événement même si la date est passée (pour l'historique)
                     SpecialEvent::create([
                         'title' => $eventData['title'],
                         'date' => $eventData['date'],
@@ -415,14 +413,24 @@ class ProgrammesClasseController extends Controller
                     ]);
                     
                     $importedCount++;
+                    
+                    if ($isPast) {
+                        $pastDates[] = "Ligne " . ($index + 2) . ": Date dans le passé (" . $eventData['date'] . ")";
+                    }
                 }
                 
                 DB::commit();
                 
+                $message = "{$importedCount} événement(s) importé(s) avec succès.";
+                if (count($pastDates) > 0) {
+                    $message .= " Attention: " . count($pastDates) . " événement(s) ont des dates passées.";
+                }
+                
                 return response()->json([
                     'success' => true,
                     'imported_count' => $importedCount,
-                    'message' => "{$importedCount} événement(s) importé(s)",
+                    'message' => $message,
+                    'past_dates' => $pastDates,
                     'errors' => $errors
                 ]);
                 
@@ -438,6 +446,10 @@ class ProgrammesClasseController extends Controller
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
+            Log::error('Erreur import', [
+                'error' => $e->getMessage()
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur: ' . $e->getMessage()
@@ -604,6 +616,83 @@ class ProgrammesClasseController extends Controller
             Log::error('Erreur lors de l\'ajout du média', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Définir un média comme image à la une
+     */
+    public function setFeaturedMedia(Request $request, $id)
+    {
+        try {
+            $user = Auth::user();
+            $classe = $user->classe;
+            
+            if (!$classe) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Aucune classe associée.'
+                ], 403);
+            }
+            
+            $media = Media::where('id', $id)
+                ->where('class_id', $classe->id)
+                ->first();
+            
+            if (!$media) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Média non trouvé.'
+                ], 404);
+            }
+            
+            // Vérifier que c'est une photo
+            if ($media->type !== 'photo') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Seules les photos peuvent être définies comme image à la une.'
+                ], 400);
+            }
+            
+            // Vérifier que le média est associé à une activité
+            if (!$media->special_event_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ce média n\'est associé à aucune activité.'
+                ], 400);
+            }
+            
+            // Enlever le statut featured des autres médias de la même activité
+            Media::where('special_event_id', $media->special_event_id)
+                ->where('type', 'photo')
+                ->where('id', '!=', $media->id)
+                ->update(['is_featured' => false]);
+            
+            // Définir le média actuel comme featured
+            $media->update(['is_featured' => true]);
+            
+            Log::info('Image à la une définie', [
+                'media_id' => $media->id,
+                'activity_id' => $media->special_event_id,
+                'user_id' => $user->id
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Image à la une définie avec succès.',
+                'media' => $media
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Erreur définition image à la une', [
+                'error' => $e->getMessage(),
+                'media_id' => $id
             ]);
             
             return response()->json([

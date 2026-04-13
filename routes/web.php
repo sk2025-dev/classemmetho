@@ -23,11 +23,7 @@ use App\Http\Controllers\Pasteur\ProgrammesPasteurController;
 use App\Http\Controllers\MembreFamille\AnnuaireController as MembreFamilleAnnuaireController;
 use App\Http\Controllers\MembreFamille\DashboardController as MembreFamilleDashboardController;
 use App\Http\Controllers\MembreFamille\FinancesController as MembreFamilleFinancesController;
-<<<<<<< HEAD
-use App\Http\Controllers\MembreFamille\ProgrammesActivitesClasseController;
-=======
 use App\Http\Controllers\MembreFamille\ProgrammesController; 
->>>>>>> e92aa1e (version récente Programmes d'activités)
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\Profile\ChangePasswordController;
 use App\Http\Controllers\Admin\AdministrationController;
@@ -36,6 +32,7 @@ use App\Http\Controllers\Admin\ClasseController;
 use App\Http\Controllers\Admin\FonctionController;
 use App\Http\Controllers\Admin\NotificationsController;
 use App\Http\Controllers\Admin\AnnonceController;
+use App\Http\Controllers\Admin\AnnuaireController;
 use App\Http\Controllers\Admin\TresorerieController as AdminTresorerieController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\LiturgieController as AdminLiturgieController;
@@ -57,7 +54,6 @@ Route::get('/', function () {
 Route::get('/certificat/verification/{reference}', [VerificationCertificatController::class, 'show'])
     ->name('certificat.verification');
 
-<<<<<<< HEAD
 Route::get('/sondages/public/{token}', [\App\Http\Controllers\Public\SondageController::class, 'show'])
     ->name('sondages.public.show');
 Route::post('/sondages/public/{token}/acces', [\App\Http\Controllers\Public\SondageController::class, 'verifyAccess'])
@@ -67,8 +63,6 @@ Route::get('/sondages/public/{token}/repondre', [\App\Http\Controllers\Public\So
 Route::post('/sondages/public/{token}/reponses', [\App\Http\Controllers\Public\SondageController::class, 'storeResponse'])
     ->name('sondages.public.responses.store');
 
-=======
->>>>>>> e92aa1e (version récente Programmes d'activités)
 // Pages d'authentification (Inertia)
 Route::get('/login', function () {
     return Inertia::render('login');
@@ -340,6 +334,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/conducteur/galerie/{id}', [ProgrammesClasseController::class, 'deleteMedia'])->name('conducteur.galerie.delete');
         Route::get('/conducteur/galerie/edit/{id}', [ProgrammesClasseController::class, 'editMedia'])->name('galerie.edit');
         Route::put('/conducteur/galerie/update/{id}', [ProgrammesClasseController::class, 'updateMedia'])->name('galerie.update');
+        Route::put('/conducteur/galerie/set-featured/{id}', [ProgrammesClasseController::class, 'setFeaturedMedia']);
     });
 
     // Tableau de bord Responsable de Famille
@@ -416,7 +411,6 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:pasteur')->group(function () {
         Route::get('/pasteur/annuaire', [PasteurAnnuaireController::class, 'index'])->name('pasteur.annuaire.index');
         Route::get('/pasteur/dashboard', [PasteurDashboardController::class, 'index'])->name('pasteur.dashboard');
-<<<<<<< HEAD
         Route::get('/pasteur/prieres', [\App\Http\Controllers\Pasteur\Prieres\PrieresController::class, 'index'])->name('pasteur.prieres.index');
         Route::patch('/pasteur/prieres/{priere}/status', [\App\Http\Controllers\Pasteur\Prieres\PrieresController::class, 'updateStatus'])->name('pasteur.prieres.status');
         Route::patch('/pasteur/prieres/{priere}/commentaire', [\App\Http\Controllers\Pasteur\Prieres\PrieresController::class, 'addComment'])->name('pasteur.prieres.comment');
@@ -425,8 +419,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/pasteur/sondages/{id}/export', [\App\Http\Controllers\Pasteur\Sondage\SondageController::class, 'export'])->whereNumber('id')->name('pasteur.sondages.export');
         Route::get('/pasteur/sondages/{id}', [\App\Http\Controllers\Pasteur\Sondage\SondageController::class, 'show'])->whereNumber('id')->name('pasteur.sondages.show');
         // Liste des inscriptions pour le pasteur (module controller)
-=======
->>>>>>> e92aa1e (version récente Programmes d'activités)
         Route::get('/pasteur/inscriptions', [\App\Http\Controllers\Pasteur\InscriptionsController::class, 'index'])
             ->name('pasteur.inscriptions');
 
@@ -500,11 +492,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/membre-famille/finances/paiement/{paiement}/verify', [MembreFamilleFinancesController::class, 'verifyPaiement'])
             ->name('membre_famille.finances.paiement.verify');
 
-<<<<<<< HEAD
-        Route::get('/membre-famille/programmes', [ProgrammesActivitesClasseController::class, 'index'])->name('membre_famille.programmes');
-        Route::post('/membre-famille/programmes/agenda', [ProgrammesActivitesClasseController::class, 'storeAgenda'])->name('membre_famille.programmes.agenda');
-        Route::post('/membre-famille/programmes/event', [ProgrammesActivitesClasseController::class, 'storeEvent'])->name('membre_famille.programmes.event');
-=======
         // ===== ROUTES PROGRAMMES MEMBRE (LECTURE SEULE) =====
         Route::get('/membre-famille/programmes', [ProgrammesController::class, 'index'])->name('membre_famille.programmes');
         Route::get('/membre-famille/programmes/all', [ProgrammesController::class, 'allProgrammes'])->name('membre_famille.programmes.all');
@@ -516,7 +503,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/membre-famille/api/gallery/media', [ProgrammesController::class, 'getGalleryMedia'])->name('membre_famille.api.gallery.index');
         Route::get('/membre-famille/api/gallery/media/{id}', [ProgrammesController::class, 'showMedia'])->name('membre_famille.api.gallery.show');
         Route::get('/membre-famille/api/events/{eventId}/media', [ProgrammesController::class, 'getMediaByEvent'])->name('membre_famille.api.events.media');
->>>>>>> e92aa1e (version récente Programmes d'activités)
     });
 
     // Route pour changer le mot de passe
