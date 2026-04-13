@@ -45,6 +45,7 @@ use App\Http\Controllers\Pasteur\LiturgieController as PasteurLiturgieController
 use App\Http\Controllers\ResponsableFamille\LiturgieController as ResponsableFamilleLiturgieController;
 use App\Http\Controllers\ResponsableFamille\TresorerieController as ResponsableFamilleTresorerieController;
 use App\Http\Controllers\VerificationCertificatController;
+use App\Http\Controllers\Public\PresenceScanController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome');
@@ -68,6 +69,8 @@ Route::get('/paiement/echec', function () {
 
 Route::get('/certificat/verification/{reference}', [VerificationCertificatController::class, 'show'])
     ->name('certificat.verification');
+
+Route::get('/presence/{token}', [PresenceScanController::class, 'show'])->name('presence.scan');
 
 Route::get('/sondages/public/{token}', [\App\Http\Controllers\Public\SondageController::class, 'show'])
     ->name('sondages.public.show');
@@ -361,7 +364,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/conducteur/programmes', [ProgrammesClasseController::class, 'index'])->name('conducteur.programmes');
         Route::get('/conducteur/programmes/all', [ProgrammesClasseController::class, 'allProgrammes'])->name('conducteur.programmes.all');
         Route::post('/conducteur/programmes/event', [ProgrammesClasseController::class, 'storeEvent'])->name('conducteur.programmes.event');
+        Route::post('/conducteur/programmes/events-multiple', [ProgrammesClasseController::class, 'storeMultipleEvents'])->name('conducteur.programmes.events-multiple');
         Route::put('/conducteur/programmes/event/{id}', [ProgrammesClasseController::class, 'updateEvent'])->name('conducteur.programmes.event.update');
+        Route::get('/conducteur/programmes/event/{id}/qr', [ProgrammesClasseController::class, 'qrCode'])->name('conducteur.programmes.event.qr');
         Route::delete('/conducteur/programmes/event/{id}', [ProgrammesClasseController::class, 'destroy'])->name('conducteur.programmes.event.destroy');
         Route::post('/conducteur/programmes/import-events', [ProgrammesClasseController::class, 'importEvents'])->name('conducteur.programmes.import');
         Route::get('/conducteur/programmes/events-by-month', [ProgrammesClasseController::class, 'getEventsByMonth'])->name('conducteur.programmes.events.by-month');
@@ -369,6 +374,9 @@ Route::middleware(['auth'])->group(function () {
         // ===== ROUTES GALERIE CONDUCTEUR =====
         Route::post('/conducteur/galerie/add', [ProgrammesClasseController::class, 'addMedia'])->name('conducteur.galerie.add');
         Route::get('/conducteur/galerie', [ProgrammesClasseController::class, 'getGalleryMedia'])->name('conducteur.galerie');
+        Route::get('/conducteur/galerie/edit/{id}', [ProgrammesClasseController::class, 'editMedia'])->name('conducteur.galerie.edit');
+        Route::put('/conducteur/galerie/update/{id}', [ProgrammesClasseController::class, 'updateMedia'])->name('conducteur.galerie.update');
+        Route::put('/conducteur/galerie/set-featured/{id}', [ProgrammesClasseController::class, 'setFeaturedMedia'])->name('conducteur.galerie.set-featured');
         Route::delete('/conducteur/galerie/{id}', [ProgrammesClasseController::class, 'deleteMedia'])->name('conducteur.galerie.delete');
     });
 
@@ -432,16 +440,17 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/responsable-famille/transferts', [\App\Http\Controllers\ResponsableFamille\TransferController::class, 'store'])->name('responsable_famille.transferts.store');
         Route::post('/responsable-famille/transfer', [\App\Http\Controllers\ResponsableFamille\TransferController::class, 'transfer'])->name('responsable_famille.transfer');
 
-        // Props Inertia dans le contrôleur
+        // ===== ROUTES PROGRAMMES RESPONSABLE FAMILLE (LECTURE SEULE) =====
         Route::get('/responsable-famille/programmes', [MembreProgrammesController::class, 'index'])->name('responsable_famille.programmes');
-        Route::post('/responsable-famille/programmes/agenda', [MembreProgrammesController::class, 'storeAgenda'])->name('responsable_famille.programmes.agenda');
-        Route::post('/responsable-famille/programmes/event', [MembreProgrammesController::class, 'storeEvent'])->name('responsable_famille.programmes.event');
-        Route::get('/responsable-famille/programmes/events-by-month', [MembreProgrammesController::class, 'getEventsByMonth'])->name('responsable-famille.programmes.events.by-month');
-        Route::get('/responsable-famille/programmes/history', [MembreProgrammesController::class, 'historyProgrammes'])->name('responsable-famille.programmes.history');
-        // Routes API pour le frontend (Calendrier, Galerie)
-        Route::post('/responsable-famille/galerie/add', [MembreProgrammesController::class, 'addMedia'])->name('responsable-famille.galerie.add');
-        Route::get('/responsable-famille/galerie', [MembreProgrammesController::class, 'getGalleryMedia'])->name('responsable-famille.galerie');
-        Route::delete('/responsable-famille/galerie/{id}', [MembreProgrammesController::class, 'deleteMedia'])->name('responsable-famille.galerie.delete');
+        Route::get('/responsable-famille/programmes/all', [MembreProgrammesController::class, 'allProgrammes'])->name('responsable_famille.programmes.all');
+        Route::get('/responsable-famille/programmes/history', [MembreProgrammesController::class, 'historyProgrammes'])->name('responsable_famille.programmes.history');
+
+        // Routes API pour les données (lecture seule)
+        Route::get('/responsable-famille/api/events/by-month', [MembreProgrammesController::class, 'getEventsByMonth'])->name('responsable_famille.api.events.by-month');
+        Route::get('/responsable-famille/api/events/{id}', [MembreProgrammesController::class, 'showEvent'])->name('responsable_famille.api.events.show');
+        Route::get('/responsable-famille/api/gallery/media', [MembreProgrammesController::class, 'getGalleryMedia'])->name('responsable_famille.api.gallery.index');
+        Route::get('/responsable-famille/api/gallery/media/{id}', [MembreProgrammesController::class, 'showMedia'])->name('responsable_famille.api.gallery.show');
+        Route::get('/responsable-famille/api/events/{eventId}/media', [MembreProgrammesController::class, 'getMediaByEvent'])->name('responsable_famille.api.events.media');
     });
 
     // Module Trésorerie de classe pour membre assigné Trésorier

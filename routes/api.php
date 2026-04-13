@@ -14,9 +14,11 @@ use App\Http\Controllers\API\MemberController;
 use App\Http\Controllers\AuthenticatedRegistrationController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\ExcelImportController;
+use App\Http\Controllers\Api\PresenceController;
 use App\Http\Controllers\Admin\TresorerieController as AdminTresorerieController;
 use App\Http\Controllers\Conducteur\TresorerieController as ConducteurTresorerieController;
 use App\Http\Controllers\MembreFamille\FinancesController as MembreFamilleFinancesController;
+use App\Http\Controllers\MembreFamille\ProgrammesController as MembreFamilleProgrammesController;
 use App\Http\Controllers\ResponsableFamille\TresorerieController as ResponsableFamilleTresorerieController;
 
 // Routes publiques (sans authentification)
@@ -30,6 +32,9 @@ Route::post('/photo/upload-inscription', [PhotoUploadController::class, 'uploadI
 
 // Paiement public (don en ligne depuis Welcome)
 Route::post('/payment', [PaymentController::class, 'store']);
+
+// Présence publique via QR code
+Route::post('/presence', [PresenceController::class, 'store']);
 
 // Route API standard documentée pour upload photo (authentifié)
 Route::middleware(['auth:web'])->post('/photo/upload', [PhotoController::class, 'upload']);
@@ -89,11 +94,21 @@ Route::middleware(['auth:web'])->group(function () {
             Route::post('/dons', [MembreFamilleFinancesController::class, 'storeDon']);
         });
 
+    // Activités - Membre de famille / Responsable famille
+    Route::middleware('role:membre_famille')->get('/membre-famille/activites', [MembreFamilleProgrammesController::class, 'activitiesApi']);
+    Route::middleware('role:responsable_famille')->get('/responsable-famille/activites', [MembreFamilleProgrammesController::class, 'activitiesApi']);
+
     // Trésorerie - Conducteur
     Route::middleware('role:conducteur')
         ->prefix('conducteur/tresorerie')
         ->group(function () {
             Route::post('/cotisations', [ConducteurTresorerieController::class, 'storeCotisation']);
+        });
+
+    Route::middleware('role:conducteur')
+        ->prefix('conducteur/programmes')
+        ->group(function () {
+            Route::get('/{event}/presences', [PresenceController::class, 'programmeSummary']);
         });
 });
 

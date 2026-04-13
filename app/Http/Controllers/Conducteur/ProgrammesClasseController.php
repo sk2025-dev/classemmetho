@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Conducteur;
 use App\Http\Controllers\Controller;
 use App\Models\SpecialEvent;
 use App\Models\Media;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -114,6 +116,59 @@ class ProgrammesClasseController extends Controller
     }
 
     /**
+     * Générer le QR code d'un programme de la classe.
+     */
+    public function qrCode(int $id)
+    {
+        $user = Auth::user();
+        $classe = $user->classe;
+
+        if (!$classe) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Aucune classe associée à votre compte.',
+            ], 403);
+        }
+
+        $event = SpecialEvent::where('id', $id)
+            ->where('class_id', $classe->id)
+            ->where('is_parish', false)
+            ->first();
+
+        if (!$event) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Programme introuvable.',
+            ], 404);
+        }
+
+        $token = $event->ensureQrToken();
+        $scanUrl = url('/presence/' . $token);
+
+        $writer = new PngWriter();
+        $result = $writer->write(
+            new QrCode(
+                data: $scanUrl,
+                size: 360,
+                margin: 12
+            )
+        );
+
+        return response()->json([
+            'success' => true,
+            'token' => $token,
+            'scan_url' => $scanUrl,
+            'qr_code' => $result->getDataUri(),
+            'event' => [
+                'id' => $event->id,
+                'title' => $event->title,
+                'date' => $event->date,
+                'time' => $event->time,
+            ],
+        ]);
+    }
+
+    /**
      * Créer un événement (un seul)
      */
     public function storeEvent(Request $request)
@@ -123,7 +178,10 @@ class ProgrammesClasseController extends Controller
 
             $classe = $user->classe;
             if (!$classe) {
-                return $this->errorResponse($request, 'Aucune classe associée à votre compte.', 403);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Aucune classe associée à votre compte.'
+                ], 403);
             }
 
             $validated = $request->validate([
@@ -147,6 +205,7 @@ class ProgrammesClasseController extends Controller
                 'class_id' => $classe->id,
                 'created_by' => $user->id,
                 'is_parish' => false,
+                'qr_token' => SpecialEvent::generateUniqueQrToken(),
             ]);
 
             Log::info('Événement créé avec succès', [
@@ -154,17 +213,26 @@ class ProgrammesClasseController extends Controller
                 'user_id' => $user->id
             ]);
 
-            return $this->successResponse($request, 'Événement créé avec succès', [
-                'event' => $event,
+            return response()->json([
+                'success' => true,
+                'message' => 'Événement créé avec succès',
+                'event' => $event
             ]);
         } catch (ValidationException $e) {
-            return $this->validationErrorResponse($request, $e);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur de validation',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             Log::error('Erreur lors de la création', [
                 'error' => $e->getMessage()
             ]);
 
-            return $this->errorResponse($request, 'Erreur: ' . $e->getMessage(), 500);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -212,7 +280,6 @@ class ProgrammesClasseController extends Controller
                 foreach ($activities as $index => $activity) {
                     // Vérifier si la date est dans le passé (juste pour information, pas pour bloquer)
                     $eventDateTime = $activity['date'] . ' ' . ($activity['time'] ?? '00:00');
-
                     $isPast = $eventDateTime < now()->format('Y-m-d H:i');
 
                     // Créer l'événement même si la date est passée (pour l'historique)
@@ -227,6 +294,7 @@ class ProgrammesClasseController extends Controller
                         'class_id' => $classe->id,
                         'created_by' => $user->id,
                         'is_parish' => false,
+                        'qr_token' => SpecialEvent::generateUniqueQrToken(),
                     ]);
 
                     $createdCount++;
@@ -282,7 +350,10 @@ class ProgrammesClasseController extends Controller
 
             $classe = $user->classe;
             if (!$classe) {
-                return $this->errorResponse($request, 'Aucune classe associée', 403);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Aucune classe associée'
+                ], 403);
             }
 
             $event = SpecialEvent::where('id', $id)
@@ -290,11 +361,17 @@ class ProgrammesClasseController extends Controller
                 ->first();
 
             if (!$event) {
-                return $this->errorResponse($request, 'Événement non trouvé', 404);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Événement non trouvé'
+                ], 404);
             }
 
             if ($event->created_by !== $user->id) {
-                return $this->errorResponse($request, 'Vous ne pouvez modifier que vos propres événements', 403);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Vous ne pouvez modifier que vos propres événements'
+                ], 403);
             }
 
             $validated = $request->validate([
@@ -309,18 +386,27 @@ class ProgrammesClasseController extends Controller
 
             $event->update($validated);
 
-            return $this->successResponse($request, 'Événement modifié avec succès', [
-                'event' => $event,
+            return response()->json([
+                'success' => true,
+                'message' => 'Événement modifié avec succès',
+                'event' => $event
             ]);
         } catch (ValidationException $e) {
-            return $this->validationErrorResponse($request, $e);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur de validation',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             Log::error('Erreur modification', [
                 'error' => $e->getMessage(),
                 'event_id' => $id
             ]);
 
-            return $this->errorResponse($request, 'Erreur: ' . $e->getMessage(), 500);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -355,7 +441,6 @@ class ProgrammesClasseController extends Controller
             $events = $validated['events'];
             $importedCount = 0;
             $errors = [];
-
             $pastDates = [];
 
             DB::beginTransaction();
@@ -364,11 +449,6 @@ class ProgrammesClasseController extends Controller
                 foreach ($events as $index => $eventData) {
                     // Vérifier si la date est dans le passé (juste pour information)
                     $eventDateTime = $eventData['date'] . ' ' . ($eventData['time'] ?? '00:00');
-                    if ($eventDateTime < now()->format('Y-m-d H:i')) {
-                        $errors[] = "Ligne " . ($index + 2) . ": Date dans le passé";
-                        continue;
-                    }
-
                     $isPast = $eventDateTime < now()->format('Y-m-d H:i');
 
                     // Créer l'événement même si la date est passée (pour l'historique)
@@ -383,6 +463,7 @@ class ProgrammesClasseController extends Controller
                         'class_id' => $classe->id,
                         'created_by' => $user->id,
                         'is_parish' => false,
+                        'qr_token' => SpecialEvent::generateUniqueQrToken(),
                     ]);
 
                     $importedCount++;
@@ -393,7 +474,6 @@ class ProgrammesClasseController extends Controller
                 }
 
                 DB::commit();
-
 
                 $message = "{$importedCount} événement(s) importé(s) avec succès.";
                 if (count($pastDates) > 0) {
@@ -432,14 +512,17 @@ class ProgrammesClasseController extends Controller
     /**
      * Supprimer un événement
      */
-    public function destroy(Request $request, $id)
+    public function destroy($id)
     {
         try {
             $user = Auth::user();
 
             $classe = $user->classe;
             if (!$classe) {
-                return $this->errorResponse($request, 'Aucune classe associée', 403);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Aucune classe associée'
+                ], 403);
             }
 
             $event = SpecialEvent::where('id', $id)
@@ -447,61 +530,31 @@ class ProgrammesClasseController extends Controller
                 ->first();
 
             if (!$event) {
-                return $this->errorResponse($request, 'Événement non trouvé', 404);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Événement non trouvé'
+                ], 404);
             }
 
             if ($event->created_by !== $user->id) {
-                return $this->errorResponse($request, 'Suppression non autorisée', 403);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Suppression non autorisée'
+                ], 403);
             }
 
             $event->delete();
 
-            return $this->successResponse($request, 'Événement supprimé');
+            return response()->json([
+                'success' => true,
+                'message' => 'Événement supprimé'
+            ]);
         } catch (\Exception $e) {
-            return $this->errorResponse($request, 'Erreur: ' . $e->getMessage(), 500);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur: ' . $e->getMessage()
+            ], 500);
         }
-    }
-
-    private function isInertiaRequest(Request $request): bool
-    {
-        return $request->header('X-Inertia') === 'true';
-    }
-
-    private function successResponse(Request $request, string $message, array $data = [], int $status = 200)
-    {
-        if ($this->isInertiaRequest($request)) {
-            return redirect()->back()->with('success', $message);
-        }
-
-        return response()->json(array_merge([
-            'success' => true,
-            'message' => $message,
-        ], $data), $status);
-    }
-
-    private function errorResponse(Request $request, string $message, int $status = 400)
-    {
-        if ($this->isInertiaRequest($request)) {
-            return redirect()->back()->with('error', $message);
-        }
-
-        return response()->json([
-            'success' => false,
-            'message' => $message,
-        ], $status);
-    }
-
-    private function validationErrorResponse(Request $request, ValidationException $e)
-    {
-        if ($this->isInertiaRequest($request)) {
-            return redirect()->back()->withErrors($e->errors())->withInput();
-        }
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Erreur de validation',
-            'errors' => $e->errors(),
-        ], 422);
     }
 
     /**

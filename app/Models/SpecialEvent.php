@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class SpecialEvent extends Model
 {
@@ -18,17 +19,64 @@ class SpecialEvent extends Model
         'lieu',
         'class_id',
         'created_by',
-        'is_parish'
+        'is_parish',
+        'qr_token',
+        'qr_expires_at',
     ];
-    
+
     protected $casts = [
         'date' => 'date',
         'time' => 'datetime:H:i',
         'is_parish' => 'boolean',
+        'qr_expires_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
-    
+
+    protected $appends = [
+        'scan_url',
+    ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $event): void {
+            if (empty($event->qr_token)) {
+                $event->qr_token = self::generateUniqueQrToken();
+            }
+        });
+    }
+
+    public static function generateUniqueQrToken(): string
+    {
+        do {
+            $token = Str::lower(Str::random(40));
+        } while (self::query()->where('qr_token', $token)->exists());
+
+        return $token;
+    }
+
+    public function ensureQrToken(): string
+    {
+        if (!empty($this->qr_token)) {
+            return (string) $this->qr_token;
+        }
+
+        $this->forceFill([
+            'qr_token' => self::generateUniqueQrToken(),
+        ])->save();
+
+        return (string) $this->qr_token;
+    }
+
+    public function getScanUrlAttribute(): ?string
+    {
+        if (empty($this->qr_token)) {
+            return null;
+        }
+
+        return url('/presence/' . $this->qr_token);
+    }
+
     /**
      * Relation avec la classe
      */
@@ -36,7 +84,7 @@ class SpecialEvent extends Model
     {
         return $this->belongsTo(Classe::class, 'class_id');
     }
-    
+
     /**
      * Relation avec le créateur (conducteur)
      */
@@ -44,7 +92,7 @@ class SpecialEvent extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
-    
+
     /**
      * Relation avec les médias associés
      */
@@ -52,7 +100,7 @@ class SpecialEvent extends Model
     {
         return $this->hasMany(Media::class, 'special_event_id');
     }
-    
+
     /**
      * Accesseur pour la date formatée
      */
@@ -60,7 +108,7 @@ class SpecialEvent extends Model
     {
         return $this->date->format('d/m/Y');
     }
-    
+
     /**
      * Accesseur pour l'heure formatée
      */
@@ -68,7 +116,7 @@ class SpecialEvent extends Model
     {
         return $this->time ? \Carbon\Carbon::parse($this->time)->format('H:i') : '';
     }
-    
+
     /**
      * Accesseur pour la date complète formatée
      */
@@ -76,7 +124,7 @@ class SpecialEvent extends Model
     {
         return $this->date->translatedFormat('l d F Y');
     }
-    
+
     /**
      * Scope pour les événements à venir
      */
@@ -86,7 +134,7 @@ class SpecialEvent extends Model
             ->orderBy('date', 'asc')
             ->orderBy('time', 'asc');
     }
-    
+
     /**
      * Scope pour les événements passés
      */
@@ -96,7 +144,7 @@ class SpecialEvent extends Model
             ->orderBy('date', 'desc')
             ->orderBy('time', 'desc');
     }
-    
+
     /**
      * Scope pour les événements d'une année spécifique
      */
@@ -104,7 +152,7 @@ class SpecialEvent extends Model
     {
         return $query->whereYear('date', $year);
     }
-    
+
     /**
      * Scope pour les événements d'une classe spécifique
      */
@@ -112,7 +160,7 @@ class SpecialEvent extends Model
     {
         return $query->where('class_id', $classId);
     }
-    
+
     /**
      * Scope pour les événements non paroissiaux
      */
@@ -120,7 +168,7 @@ class SpecialEvent extends Model
     {
         return $query->where('is_parish', false);
     }
-    
+
     /**
      * Vérifier si l'événement est à venir
      */
@@ -128,7 +176,7 @@ class SpecialEvent extends Model
     {
         return $this->date >= now()->startOfDay();
     }
-    
+
     /**
      * Vérifier si l'événement est passé
      */
@@ -136,7 +184,7 @@ class SpecialEvent extends Model
     {
         return $this->date < now()->startOfDay();
     }
-    
+
     /**
      * Vérifier si l'événement est aujourd'hui
      */
@@ -144,7 +192,7 @@ class SpecialEvent extends Model
     {
         return $this->date->isToday();
     }
-    
+
     /**
      * Obtenir le nombre de médias associés
      */
