@@ -18,7 +18,6 @@ use App\Http\Controllers\Api\PresenceController;
 use App\Http\Controllers\Admin\TresorerieController as AdminTresorerieController;
 use App\Http\Controllers\Conducteur\TresorerieController as ConducteurTresorerieController;
 use App\Http\Controllers\MembreFamille\FinancesController as MembreFamilleFinancesController;
-use App\Http\Controllers\MembreFamille\ProgrammesController as MembreFamilleProgrammesController;
 use App\Http\Controllers\ResponsableFamille\TresorerieController as ResponsableFamilleTresorerieController;
 
 // Routes publiques (sans authentification)
@@ -93,10 +92,6 @@ Route::middleware(['auth:web'])->group(function () {
             Route::post('/paiements', [MembreFamilleFinancesController::class, 'storePaiement']);
             Route::post('/dons', [MembreFamilleFinancesController::class, 'storeDon']);
         });
-
-    // Activités - Membre de famille / Responsable famille
-    Route::middleware('role:membre_famille')->get('/membre-famille/activites', [MembreFamilleProgrammesController::class, 'activitiesApi']);
-    Route::middleware('role:responsable_famille')->get('/responsable-famille/activites', [MembreFamilleProgrammesController::class, 'activitiesApi']);
 
     // Trésorerie - Conducteur
     Route::middleware('role:conducteur')

@@ -23,7 +23,7 @@ class ProgrammesController extends Controller
             ->where('classe_id', $classe->id)
             ->where('role', 'conducteur')
             ->pluck('id')
-            ->map(fn ($id) => (int) $id)
+            ->map(fn($id) => (int) $id)
             ->all();
 
         if (is_numeric($classe->conducteur)) {

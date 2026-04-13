@@ -1555,7 +1555,7 @@ export default function AllProgrammes() {
     };
 
     const handleGoBack = () => {
-        router.visit("/conducteur/programmes");
+        router.visit("/responsable-famille/programmes");
     };
 
     const openEditModal = (event) => {
@@ -1608,26 +1608,8 @@ export default function AllProgrammes() {
     };
 
     const handleUpdateEvent = async (data, eventId) => {
-        try {
-            const response = await axios.put(
-                `/conducteur/programmes/event/${eventId}`,
-                data,
-            );
-            if (response.data.success) {
-                showToast("Événement modifié avec succès", "success");
-                closeEditModal();
-                router.reload();
-            } else {
-                showToast("Erreur lors de la modification", "error");
-            }
-        } catch (error) {
-            console.error("Erreur de modification", error);
-            if (error.response?.data?.errors) {
-                throw error;
-            }
-            showToast("Erreur lors de la modification", "error");
-            throw error;
-        }
+        showToast("Module en lecture seule pour le Responsable de famille", "error");
+        closeEditModal();
     };
 
     const handleConfirmAction = async () => {
@@ -1638,23 +1620,8 @@ export default function AllProgrammes() {
             setSelectedEvent(event);
             setIsEditModalOpen(true);
         } else if (action === "delete") {
-            try {
-                const response = await axios.delete(
-                    `/conducteur/programmes/event/${event.id}`,
-                );
-                if (response.data.success) {
-                    showToast("Événement supprimé avec succès", "success");
-                    setConfirmModal({ ...confirmModal, isOpen: false });
-                    router.reload();
-                } else {
-                    showToast("Erreur lors de la suppression", "error");
-                    setConfirmModal({ ...confirmModal, isOpen: false });
-                }
-            } catch (error) {
-                console.error("Erreur de suppression", error);
-                showToast("Erreur lors de la suppression", "error");
-                setConfirmModal({ ...confirmModal, isOpen: false });
-            }
+            showToast("Module en lecture seule pour le Responsable de famille", "error");
+            setConfirmModal({ ...confirmModal, isOpen: false });
         }
     };
 
