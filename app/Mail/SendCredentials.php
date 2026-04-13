@@ -37,7 +37,7 @@ class SendCredentials extends Mailable
     {
         return $this
             ->to($this->user->email)
-            ->subject('Vos identifiants de connexion')
+            ->subject('Votre code membre de connexion')
             ->view('emails.account-created')
             ->with([
                 'user' => $this->user,

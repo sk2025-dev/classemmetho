@@ -55,6 +55,7 @@ class AppServiceProvider extends ServiceProvider
                         'prenom' => Auth::user()->prenom,
                         'nom' => Auth::user()->nom,
                         'email' => Auth::user()->email,
+                        'code_membre' => Auth::user()->code_membre,
                         'identifier' => Auth::user()->identifier,
                         'role' => Auth::user()->role,
                     ] : null,

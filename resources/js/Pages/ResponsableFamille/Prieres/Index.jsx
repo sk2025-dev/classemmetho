@@ -22,6 +22,10 @@ function badgeClasses(status) {
         return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
     }
 
+    if (status === "Non exaucee") {
+        return "bg-rose-50 text-rose-700 ring-1 ring-rose-200";
+    }
+
     if (status === "Transmise") {
         return "bg-blue-50 text-blue-700 ring-1 ring-blue-200";
     }
@@ -52,6 +56,18 @@ function formatReplySnippet(message) {
     return `${normalized.slice(0, 90)}...`;
 }
 
+function getMessagePreview(message) {
+    const normalized = String(message || "").replace(/\s+/g, " ").trim();
+
+    if (!normalized) {
+        return "";
+    }
+
+    const [firstWord] = normalized.split(" ");
+
+    return normalized === firstWord ? firstWord : `${firstWord}...`;
+}
+
 function commentRowClasses(actorType) {
     return actorType === "requester" ? "justify-end" : "justify-start";
 }
@@ -66,6 +82,10 @@ function commentCardClasses(actorType) {
     }
 
     return "border-slate-200 bg-white text-slate-900";
+}
+
+function isResolvedPrayer(status) {
+    return ["Exaucement partage", "Non exaucee"].includes(status);
 }
 
 export default function ResponsableFamillePrieresIndex({
@@ -92,6 +112,7 @@ export default function ResponsableFamillePrieresIndex({
     );
     const [scopeTab, setScopeTab] = useState("mine");
     const [activeTab, setActiveTab] = useState("all");
+    const [expandedRequests, setExpandedRequests] = useState({});
     const [subject, setSubject] = useState("");
     const [message, setMessage] = useState("");
     const [identityMode, setIdentityMode] = useState("anonymous");
@@ -158,22 +179,37 @@ export default function ResponsableFamillePrieresIndex({
     );
 
     const stats = useMemo(() => {
-        const total = scopedRequests.length;
-        const fulfilledCount = scopedRequests.filter(
+        const profileRequests = [...requests, ...receivedRequests];
+        const receivedCount = receivedRequests.length;
+        const inPrayerCount = profileRequests.filter(
+            (request) => request.status === "En priere",
+        ).length;
+        const fulfilledCount = profileRequests.filter(
             (request) => request.status === "Exaucement partage",
         ).length;
-        const anonymousCount = scopedRequests.filter(
+        const unfulfilledCount = profileRequests.filter(
+            (request) => request.status === "Non exaucee",
+        ).length;
+        const anonymousCount = profileRequests.filter(
             (request) => request.isAnonymous,
         ).length;
 
         return [
             {
-                title: "Demandes",
-                value: total,
+                title: "Demandes recues",
+                value: receivedCount,
                 subtitle:
-                    "Demandes de priere deja formulees dans votre espace.",
+                    "Demandes de priere adressees a votre profil dans cet espace.",
                 icon: FileHeart,
                 iconWrapClass: "bg-sky-100 text-sky-700",
+            },
+            {
+                title: "En priere",
+                value: inPrayerCount,
+                subtitle:
+                    "Demandes actuellement en cours de prise en charge pastorale.",
+                icon: MessageSquare,
+                iconWrapClass: "bg-amber-100 text-amber-700",
             },
             {
                 title: "Exaucements",
@@ -181,6 +217,13 @@ export default function ResponsableFamillePrieresIndex({
                 subtitle: "Demandes explicitement marquees comme exaucees.",
                 icon: CheckCircle2,
                 iconWrapClass: "bg-emerald-100 text-emerald-700",
+            },
+            {
+                title: "Non exaucees",
+                value: unfulfilledCount,
+                subtitle: "Demandes explicitement marquees comme non exaucees.",
+                icon: X,
+                iconWrapClass: "bg-rose-100 text-rose-700",
             },
             {
                 title: "Mode anonyme",
@@ -191,7 +234,7 @@ export default function ResponsableFamillePrieresIndex({
                 iconWrapClass: "bg-violet-100 text-violet-700",
             },
         ];
-    }, [scopedRequests]);
+    }, [receivedRequests, requests]);
 
     const tabs = useMemo(
         () => [
@@ -211,6 +254,13 @@ export default function ResponsableFamillePrieresIndex({
                     request.status === "Exaucement partage",
                 ).length,
             },
+            {
+                id: "unfulfilled",
+                label: "Non exaucees",
+                count: scopedRequests.filter(
+                    (request) => request.status === "Non exaucee",
+                ).length,
+            },
         ],
         [scopedRequests],
     );
@@ -226,6 +276,12 @@ export default function ResponsableFamillePrieresIndex({
             return scopedRequests.filter(
                 (request) =>
                     request.status === "Exaucement partage",
+            );
+        }
+
+        if (activeTab === "unfulfilled") {
+            return scopedRequests.filter(
+                (request) => request.status === "Non exaucee",
             );
         }
 
@@ -248,12 +304,63 @@ export default function ResponsableFamillePrieresIndex({
             };
         }
 
+        if (activeTab === "unfulfilled") {
+            return {
+                title: "Demandes non exaucees",
+                description: "Retrouvez ici les demandes explicitement marquees comme non exaucees.",
+            };
+        }
+
         return {
             title: "Total des demandes",
             description:
                 "Retrouvez vos demandes, leur statut et ajoutez un commentaire en cas d'exaucement.",
         };
     }, [activeTab]);
+
+    const syncRequestStatus = (requestId, status) => {
+        const updater = (collection) =>
+            collection.map((request) =>
+                request.id === requestId ? { ...request, status } : request,
+            );
+
+        setRequests((current) => updater(current));
+        setReceivedRequests((current) => updater(current));
+    };
+
+    const updateRequestStatus = (requestId, status) => {
+        syncRequestStatus(requestId, status);
+
+        router.patch(
+            `/responsable-famille/prieres/${requestId}/status`,
+            { statut: status },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onError: () => {
+                    setRequests(prayerRequests.map(normalizeRequest));
+                    setReceivedRequests(receivedPrayerRequests.map(normalizeRequest));
+                },
+            },
+        );
+    };
+
+    const handleToggleDetails = (request) => {
+        const isExpanded = Boolean(expandedRequests[request.id]);
+
+        setExpandedRequests((current) => ({
+            ...current,
+            [request.id]: !isExpanded,
+        }));
+
+        if (
+            !isExpanded &&
+            request.direction === "received" &&
+            ["Nouvelle", "Vu", "Transmise"].includes(request.status)
+        ) {
+            updateRequestStatus(request.id, "En priere");
+        }
+    };
 
     const currentThreadData = useMemo(() => {
         if (!openThread?.id) {
@@ -358,6 +465,14 @@ export default function ResponsableFamillePrieresIndex({
         );
     };
 
+    const handleMarkUnfulfilled = (requestId) => {
+        router.patch(
+            `/responsable-famille/prieres/${requestId}/non-exaucee`,
+            {},
+            { preserveScroll: true },
+        );
+    };
+
     return (
         <>
             <Head title="Prieres - Responsable Famille" />
@@ -393,7 +508,7 @@ export default function ResponsableFamillePrieresIndex({
                         </div>
                     </div>
 
-                    <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                         {stats.map((stat) => (
                             <div
                                 key={stat.title}
@@ -538,7 +653,7 @@ export default function ResponsableFamillePrieresIndex({
                                             key={request.id}
                                             className="rounded-[20px] border border-slate-200/90 bg-white shadow-[0_12px_24px_rgba(15,23,42,0.06)]"
                                         >
-                                            <div className="grid gap-3 p-3 xl:grid-cols-[minmax(0,1fr)_260px] xl:items-stretch">
+                                            <div className="grid gap-3 p-3 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-stretch">
                                                 <div className="min-w-0 flex-1">
                                                     <div className="flex flex-wrap items-center gap-3">
                                                         <span
@@ -566,9 +681,41 @@ export default function ResponsableFamillePrieresIndex({
                                                     <h3 className="mt-2.5 text-base font-bold tracking-tight text-slate-900">
                                                         {request.subject}
                                                     </h3>
-                                                    <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-                                                        {request.message}
-                                                    </p>
+                                                    <div className="mt-2">
+                                                        {request.direction === "received" ? (
+                                                            expandedRequests[request.id] ? (
+                                                                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                                                                    <p className="whitespace-pre-wrap text-sm leading-7 text-slate-700">
+                                                                        {request.message}
+                                                                    </p>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleToggleDetails(request)}
+                                                                        className="mt-3 inline-flex items-center rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700"
+                                                                    >
+                                                                        Voir moins
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex flex-wrap items-center gap-2">
+                                                                    <span className="text-sm italic text-slate-500">
+                                                                        {getMessagePreview(request.message)}
+                                                                    </span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleToggleDetails(request)}
+                                                                        className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-blue-700 transition hover:bg-blue-50"
+                                                                    >
+                                                                        Voir plus
+                                                                    </button>
+                                                                </div>
+                                                            )
+                                                        ) : (
+                                                            <p className="max-w-3xl text-sm leading-6 text-slate-600">
+                                                                {request.message}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                     {request.sourceLabel ? (
                                                         <div className="mt-3 inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">
                                                             Source: {request.sourceLabel}
@@ -581,8 +728,8 @@ export default function ResponsableFamillePrieresIndex({
                                                     ) : null}
                                                 </div>
 
-                                                <div className="flex h-full w-full flex-col rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-3 shadow-sm">
-                                                    <div className="rounded-[16px] border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                                                <div className="flex h-full w-full flex-col rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-3.5 shadow-sm">
+                                                    <div className="rounded-[18px] border border-slate-200 bg-white px-3.5 py-3.5 shadow-sm">
                                                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                                                             Dernier commentaire
                                                         </p>
@@ -595,37 +742,65 @@ export default function ResponsableFamillePrieresIndex({
 
                                                     <button
                                                         type="button"
-                                                        onClick={() =>
+                                                        onClick={() => {
+                                                            if (
+                                                                request.direction === "received" &&
+                                                                ["Nouvelle", "Vu", "Transmise"].includes(request.status)
+                                                            ) {
+                                                                updateRequestStatus(request.id, "En priere");
+                                                            }
+
                                                             setOpenThread({
                                                                 id: request.id,
-                                                            })
-                                                        }
-                                                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-[16px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                                                            });
+                                                        }}
+                                                        className="mt-4 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-[16px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
                                                     >
                                                         <MessageSquare className="h-4 w-4" />
                                                         Faire un commentaire
                                                     </button>
 
                                                     {!isReadOnlyScope ? (
-                                                        <button
-                                                            type="button"
-                                                            disabled={
-                                                                request.status === "Exaucement partage" ||
-                                                                request.comments.length === 0
-                                                            }
-                                                            onClick={() => setRequestToFulfill(request)}
-                                                            className={`mt-2 inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-[16px] px-3 py-2.5 text-[13px] font-semibold text-white transition ${
-                                                                request.status === "Exaucement partage" ||
-                                                                request.comments.length === 0
-                                                                    ? "cursor-not-allowed bg-slate-400"
-                                                                    : "bg-emerald-600 hover:bg-emerald-700"
-                                                            }`}
-                                                        >
-                                                            <CheckCircle2 className="h-4 w-4" />
-                                                            {request.status === "Exaucement partage"
-                                                                ? "Priere deja exaucee"
-                                                                : "Marquer exaucee"}
-                                                        </button>
+                                                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                                            <button
+                                                                type="button"
+                                                                disabled={
+                                                                    isResolvedPrayer(request.status) ||
+                                                                    request.comments.length === 0
+                                                                }
+                                                                onClick={() => setRequestToFulfill(request)}
+                                                                className={`inline-flex min-h-[48px] w-full items-center justify-center gap-2 whitespace-nowrap rounded-[16px] px-3.5 py-2.5 text-[13px] font-semibold text-white transition ${
+                                                                    isResolvedPrayer(request.status) ||
+                                                                    request.comments.length === 0
+                                                                        ? "cursor-not-allowed bg-slate-400"
+                                                                        : "bg-emerald-600 hover:bg-emerald-700"
+                                                                }`}
+                                                            >
+                                                                <CheckCircle2 className="h-4 w-4" />
+                                                                {request.status === "Exaucement partage"
+                                                                    ? "Priere deja exaucee"
+                                                                    : request.status === "Non exaucee"
+                                                                      ? "Priere deja non exaucee"
+                                                                      : "Marquer exaucee"}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                disabled={isResolvedPrayer(request.status)}
+                                                                onClick={() => handleMarkUnfulfilled(request.id)}
+                                                                className={`inline-flex min-h-[48px] w-full items-center justify-center gap-2 whitespace-nowrap rounded-[16px] px-3.5 py-2.5 text-[13px] font-semibold text-white transition ${
+                                                                    isResolvedPrayer(request.status)
+                                                                        ? "cursor-not-allowed bg-slate-400"
+                                                                        : "bg-rose-600 hover:bg-rose-700"
+                                                                }`}
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                                {request.status === "Non exaucee"
+                                                                    ? "Priere deja non exaucee"
+                                                                    : request.status === "Exaucement partage"
+                                                                      ? "Priere deja exaucee"
+                                                                      : "Marquer non exaucee"}
+                                                            </button>
+                                                        </div>
                                                     ) : null}
                                                 </div>
                                             </div>
@@ -848,25 +1023,48 @@ export default function ResponsableFamillePrieresIndex({
                                     </button>
                                 </div>
 
-                                <button
-                                    type="button"
-                                    disabled={
-                                        currentThreadData.status === "Exaucement partage" ||
-                                        currentThreadData.comments.length === 0
-                                    }
-                                    onClick={() => setRequestToFulfill(currentThreadData)}
-                                    className={`mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold text-white transition ${
-                                        currentThreadData.status === "Exaucement partage" ||
-                                        currentThreadData.comments.length === 0
-                                            ? "cursor-not-allowed bg-slate-400"
-                                            : "bg-emerald-600 hover:bg-emerald-700"
-                                    }`}
-                                >
-                                    <CheckCircle2 className="h-4 w-4" />
-                                    {currentThreadData.status === "Exaucement partage"
-                                        ? "Priere deja exaucee"
-                                        : "Marquer comme priere exaucee"}
-                                </button>
+                                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            isResolvedPrayer(currentThreadData.status) ||
+                                            currentThreadData.comments.length === 0
+                                        }
+                                        onClick={() => setRequestToFulfill(currentThreadData)}
+                                        className={`inline-flex min-h-[56px] w-full items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-5 py-3 text-sm font-semibold text-white transition ${
+                                            isResolvedPrayer(currentThreadData.status) ||
+                                            currentThreadData.comments.length === 0
+                                                ? "cursor-not-allowed bg-slate-400"
+                                                : "bg-emerald-600 hover:bg-emerald-700"
+                                        }`}
+                                    >
+                                        <CheckCircle2 className="h-4 w-4" />
+                                        {currentThreadData.status === "Exaucement partage"
+                                            ? "Priere deja exaucee"
+                                            : currentThreadData.status === "Non exaucee"
+                                              ? "Priere deja non exaucee"
+                                              : "Marquer comme priere exaucee"}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={isResolvedPrayer(currentThreadData.status)}
+                                        onClick={() =>
+                                            handleMarkUnfulfilled(currentThreadData.id)
+                                        }
+                                        className={`inline-flex min-h-[56px] w-full items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-5 py-3 text-sm font-semibold text-white transition ${
+                                            isResolvedPrayer(currentThreadData.status)
+                                                ? "cursor-not-allowed bg-slate-400"
+                                                : "bg-rose-600 hover:bg-rose-700"
+                                        }`}
+                                    >
+                                        <X className="h-4 w-4" />
+                                        {currentThreadData.status === "Non exaucee"
+                                            ? "Priere deja non exaucee"
+                                            : currentThreadData.status === "Exaucement partage"
+                                              ? "Priere deja exaucee"
+                                              : "Marquer non exaucee"}
+                                    </button>
+                                </div>
                             </div>
                         ) : (
                             <div className="border-t border-slate-200 bg-slate-50 px-6 py-4 text-center text-[12px] text-slate-500">

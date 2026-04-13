@@ -519,8 +519,8 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
                                 }
                             />
                             <InfoItem
-                                label="Identifiant"
-                                value={displayValue(member.identifiant)}
+                                label="Code membre"
+                                value={displayValue(member.code_membre)}
                                 icon={
                                     <Award className="w-4 h-4 text-blue-500" />
                                 }
@@ -2651,7 +2651,6 @@ const TabUtilisateurs = ({
                                         "Nom",
                                         "Prénom",
                                         "Email",
-                                        "Identifiant",
                                         "Téléphone",
                                         "Genre",
                                         "Rôle",
@@ -2720,9 +2719,6 @@ const TabUtilisateurs = ({
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
                                                 {m.email || "-"}
-                                            </td>
-                                            <td className="px-3 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
-                                                {m.identifiant || "-"}
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
                                                 {m.telephone || "-"}

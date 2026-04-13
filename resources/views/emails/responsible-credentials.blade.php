@@ -92,14 +92,14 @@
             <p><strong>Classe :</strong> {{ $classe->nom ?? $classe }}</p>
             @endif
 
-            <h3 style="color: #667eea; margin-top: 25px;">Vos identifiants</h3>
+            <h3 style="color: #667eea; margin-top: 25px;">Vos informations de connexion</h3>
             <div class="credentials">
-                <p><span class="label">Identifiant :</span> {{ $identifier }}</p>
+                <p><span class="label">Code membre :</span> {{ $user->code_membre ?? $identifier }}</p>
                 <p><span class="label">Mot de passe :</span> {{ $password }}</p>
             </div>
 
             @if (!empty($members) && count($members) > 0)
-            <h3 style="color: #28a745; margin-top: 25px;">👥 Identifiants de vos membres</h3>
+            <h3 style="color: #28a745; margin-top: 25px;">👥 Codes membre de vos membres</h3>
             <div class="members-section">
                 <p class="section-title">{{ count($members) }} membre(s) inscrit(s) :</p>
 
@@ -107,7 +107,7 @@
                 <div class="member-item">
                     <p><strong>{{ $member['nom'] }} {{ $member['prenom'] }}</strong></p>
                     <p><span class="label">Classe :</span> {{ $member['classe'] ?? 'Non spécifiée' }}</p>
-                    <p><span class="label">Identifiant :</span> <code>{{ $member['identifier'] }}</code></p>
+                    <p><span class="label">Code membre :</span> <code>{{ $member['code_membre'] ?? $member['identifier'] }}</code></p>
                     <p><span class="label">Mot de passe :</span> <code>{{ $member['password'] }}</code></p>
                 </div>
                 @endforeach
@@ -119,14 +119,14 @@
 
             <p style="margin-top: 20px;"><strong>Veuillez :</strong></p>
             <ul>
-                <li>Vous connecter avec vos identifiants</li>
+                <li>Vous connecter avec votre code membre</li>
                 <li>Modifier votre mot de passe lors de la première connexion</li>
-                <li>Transmettre les identifiants de vos membres de manière sécurisée</li>
+                <li>Transmettre les codes membre de vos membres de manière sécurisée</li>
                 <li>Conserver cet email en lieu sûr</li>
             </ul>
 
             <p style="background: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin: 20px 0;">
-                <strong>⚠️ Sécurité :</strong> Ne partagez jamais vos identifiants. Notre équipe ne vous les demandera jamais par email.
+                <strong>⚠️ Sécurité :</strong> Ne partagez jamais votre code membre ni votre mot de passe. Notre équipe ne vous les demandera jamais par email.
             </p>
 
             <p>Bienvenue parmi nous!<br>L'équipe ClasseMéthO Jubilé</p>

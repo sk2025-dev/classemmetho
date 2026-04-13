@@ -392,6 +392,7 @@ class InscriptionApprovalController extends Controller
                 'nom' => $memberUser->nom,
                 'prenom' => $memberUser->prenom,
                 'classe' => $family->classe?->nom ?? null,
+                'code_membre' => $memberUser->code_membre,
                 'identifier' => $identifier,
                 'password' => $tempPassword,
             ];

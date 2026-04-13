@@ -27,7 +27,7 @@ export default function ProfileShow({ user }) {
   })
   const [signaturePreview, setSignaturePreview] = useState(user.signature_url || '')
   const toast = useToast()
-  const profileLabel = user.name || user.identifier || 'Profil'
+  const profileLabel = user.name || user.code_membre || 'Profil'
   const profileInitials = profileLabel
     .split(' ')
     .filter(Boolean)
@@ -141,7 +141,7 @@ export default function ProfileShow({ user }) {
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                   <p className="text-sm text-blue-800">
-                    <strong>Identifiant:</strong> {user.identifier}
+                    <strong>Code membre:</strong> {user.code_membre || '-'}
                   </p>
                   <p className="text-sm text-blue-800 mt-2">
                     <strong>Role:</strong> {user.role === 'admin' ? 'Administrateur' : user.role}

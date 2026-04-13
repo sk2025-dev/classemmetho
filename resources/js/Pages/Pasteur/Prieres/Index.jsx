@@ -39,6 +39,9 @@ function statusBadgeClass(status) {
     if (status === "Exaucement" || status === "Exaucement partage") {
         return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
     }
+    if (status === "Non exaucee") {
+        return "bg-rose-50 text-rose-700 ring-1 ring-rose-200";
+    }
     if (status === "En priere") {
         return "bg-sky-50 text-sky-700 ring-1 ring-sky-200";
     }
@@ -70,6 +73,9 @@ function statusAccent(status) {
     if (status === "Exaucement" || status === "Exaucement partage") {
         return "from-emerald-500/15 via-emerald-500/5 to-transparent";
     }
+    if (status === "Non exaucee") {
+        return "from-rose-500/15 via-rose-500/5 to-transparent";
+    }
     if (status === "En priere") {
         return "from-sky-500/15 via-sky-500/5 to-transparent";
     }
@@ -85,6 +91,13 @@ function getStatusConfig(status) {
             dot: "#10b981",
             badge: "bg-emerald-100 text-emerald-800 ring-1 ring-emerald-300",
             bar: "#10b981",
+        };
+    }
+    if (status === "Non exaucee") {
+        return {
+            dot: "#f43f5e",
+            badge: "bg-rose-100 text-rose-800 ring-1 ring-rose-300",
+            bar: "#f43f5e",
         };
     }
     if (status === "En priere") {
@@ -137,6 +150,9 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
         const inPrayer = requests.filter(
             (r) => r.status === "En priere",
         ).length;
+        const unfulfilledCount = requests.filter(
+            (r) => r.status === "Non exaucee",
+        ).length;
         const fulfilledCount = requests.filter(
             (r) =>
                 r.status === "Exaucement" || r.status === "Exaucement partage",
@@ -161,19 +177,27 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
                 iconClass: "bg-blue-100 text-blue-700",
             },
             {
+                title: "Exaucements",
+                value: fulfilledCount,
+                subtitle: "Demandes explicitement marquees comme exaucees.",
+                icon: CheckCheck,
+                iconClass: "bg-emerald-100 text-emerald-700",
+            },
+            {
+                title: "Non exaucees",
+                value: unfulfilledCount,
+                subtitle:
+                    "Demandes marquees comme non exaucees par leurs auteurs.",
+                icon: X,
+                iconClass: "bg-rose-100 text-rose-700",
+            },
+            {
                 title: "Mode anonyme",
                 value: anonymousCount,
                 subtitle:
                     "Demandes preservees sans affichage du nom et prenom.",
                 icon: EyeOff,
                 iconClass: "bg-violet-100 text-violet-700",
-            },
-            {
-                title: "Exaucements",
-                value: fulfilledCount,
-                subtitle: "Demandes explicitement marquees comme exaucees.",
-                icon: CheckCheck,
-                iconClass: "bg-emerald-100 text-emerald-700",
             },
         ];
     }, [requests]);
@@ -195,12 +219,6 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
             {
                 preserveScroll: true,
                 preserveState: true,
-                onSuccess: () => {
-                    router.reload({
-                        only: ["prayerRequests"],
-                        preserveScroll: true,
-                    });
-                },
                 onError: () => {
                     setRequests(normalizeRequests(prayerRequests));
                 },
@@ -276,6 +294,11 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
                         r.status === "Exaucement partage",
                 ).length,
             },
+            {
+                id: "unfulfilled",
+                label: "Non exaucees",
+                count: requests.filter((r) => r.status === "Non exaucee").length,
+            },
         ],
         [requests],
     );
@@ -291,6 +314,8 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
                     r.status === "Exaucement" ||
                     r.status === "Exaucement partage",
             );
+        if (activeTab === "unfulfilled")
+            return requests.filter((r) => r.status === "Non exaucee");
         return requests;
     }, [activeTab, requests]);
 
@@ -310,6 +335,11 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
                 title: "Demandes exaucees",
                 description:
                     "Retrouvez ici les demandes explicitement marquees comme exaucees.",
+            },
+            unfulfilled: {
+                title: "Demandes non exaucees",
+                description:
+                    "Retrouvez ici les demandes explicitement marquees comme non exaucees.",
             },
             all: {
                 title: "Toutes les demandes de priere",
@@ -365,7 +395,7 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
                     </div>
 
                     {/* STATS */}
-                    <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                         {stats.map((stat) => (
                             <div
                                 key={stat.title}

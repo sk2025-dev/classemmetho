@@ -25,6 +25,7 @@ class ProfileController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'code_membre' => $user->code_membre,
                 'identifier' => $user->identifier,
                 'role' => $user->role,
                 'created_at' => $user->created_at,
@@ -66,7 +67,7 @@ class ProfileController extends Controller
             'current_password' => 'required|string',
             'new_identifier' => 'required|string|min:3|max:50|unique:users,identifier,' . $user->id,
         ], [
-            'new_identifier.unique' => 'Cet identifiant est deja utilise.',
+            'new_identifier.unique' => 'Cet identifiant technique est deja utilise.',
             'new_identifier.min' => 'L\'identifiant doit contenir au moins 3 caracteres.',
         ]);
 
@@ -79,7 +80,7 @@ class ProfileController extends Controller
         $oldIdentifier = $user->identifier;
         $user->update(['identifier' => strtoupper($validated['new_identifier'])]);
 
-        return back()->with('success', "Identifiant change de '{$oldIdentifier}' a '{$user->identifier}'.");
+        return back()->with('success', "Identifiant technique change de '{$oldIdentifier}' a '{$user->identifier}'.");
     }
 
     /**
