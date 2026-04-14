@@ -1608,7 +1608,10 @@ export default function AllProgrammes() {
     };
 
     const handleUpdateEvent = async (data, eventId) => {
-        showToast("Module en lecture seule pour le Responsable de famille", "error");
+        showToast(
+            "Module en lecture seule pour le Responsable de famille",
+            "error",
+        );
         closeEditModal();
     };
 
@@ -1620,7 +1623,10 @@ export default function AllProgrammes() {
             setSelectedEvent(event);
             setIsEditModalOpen(true);
         } else if (action === "delete") {
-            showToast("Module en lecture seule pour le Responsable de famille", "error");
+            showToast(
+                "Module en lecture seule pour le Responsable de famille",
+                "error",
+            );
             setConfirmModal({ ...confirmModal, isOpen: false });
         }
     };
@@ -1930,7 +1936,7 @@ export default function AllProgrammes() {
 
     return (
         <>
-            <Head title="Tous les programmes" />
+            <Head title="Programmes de la classe" />
             <style>{tableStyles}</style>
 
             {toast && (
@@ -1940,32 +1946,6 @@ export default function AllProgrammes() {
                     onClose={hideToast}
                 />
             )}
-
-            <ConfirmModal
-                isOpen={confirmModal.isOpen}
-                onClose={closeConfirmModal}
-                onConfirm={handleConfirmAction}
-                title={confirmModal.title}
-                message={confirmModal.message}
-                confirmText={confirmModal.confirmText}
-                icon={confirmModal.icon}
-                confirmButtonClass={confirmModal.confirmButtonClass}
-            />
-
-            <AlertModal
-                isOpen={alertModal.isOpen}
-                onClose={closeAlertModal}
-                title={alertModal.title}
-                message={alertModal.message}
-                icon={alertModal.icon}
-            />
-
-            <EditProgrammeModal
-                isOpen={isEditModalOpen}
-                onClose={closeEditModal}
-                event={selectedEvent}
-                onSave={handleUpdateEvent}
-            />
 
             <div
                 className="min-h-screen animate-fade-in-up"
@@ -1987,93 +1967,73 @@ export default function AllProgrammes() {
                             className="btn-back-table"
                             onClick={handleGoBack}
                         >
-                            <IconArrowLeft /> Retour
+                            ← Retour
                         </button>
-                        <div className="page-title">
-                            📋 Tous les programmes d'activités
-                        </div>
+                        <h1 className="page-title">
+                            Programmes d'activités de la classe
+                        </h1>
                         <div className="header-buttons">
-                            <button
-                                className="btn-excel"
-                                onClick={handleExportExcel}
-                                disabled={isExportingExcel}
-                                style={{
-                                    opacity: isExportingExcel ? 0.6 : 1,
-                                    cursor: isExportingExcel
-                                        ? "wait"
-                                        : "pointer",
-                                }}
-                            >
-                                <IconExcel />{" "}
-                                {isExportingExcel
-                                    ? "Génération..."
-                                    : "Exporter Excel"}
-                            </button>
                             <button
                                 className="btn-pdf"
                                 onClick={handleDownloadPDF}
                                 disabled={isDownloading}
-                                style={{
-                                    opacity: isDownloading ? 0.6 : 1,
-                                    cursor: isDownloading ? "wait" : "pointer",
-                                }}
                             >
-                                <IconDownload />{" "}
+                                <IconDownload />
                                 {isDownloading
-                                    ? "Génération..."
+                                    ? "Téléchargement PDF..."
                                     : "Télécharger PDF"}
+                            </button>
+                            <button
+                                className="btn-excel"
+                                onClick={handleExportExcel}
+                                disabled={isExportingExcel}
+                            >
+                                <IconExcel />
+                                {isExportingExcel
+                                    ? "Export Excel..."
+                                    : "Télécharger Excel"}
                             </button>
                         </div>
                     </div>
 
-                    {/* Cartes statistiques */}
                     <div className="stats-cards">
                         <div className="stat-card">
-                            <div className="stat-icon total">📊</div>
+                            <div className="stat-icon total">📋</div>
                             <div className="stat-info">
                                 <h3>{totalCount}</h3>
                                 <p>Total programmes</p>
                             </div>
                         </div>
                         <div className="stat-card">
-                            <div className="stat-icon upcoming">📅</div>
+                            <div className="stat-icon upcoming">⏭️</div>
                             <div className="stat-info">
                                 <h3>{upcomingCount}</h3>
-                                <p>À venir</p>
+                                <p>Programmes à venir</p>
                             </div>
                         </div>
                         <div className="stat-card">
-                            <div className="stat-icon past">📜</div>
+                            <div className="stat-icon past">🕘</div>
                             <div className="stat-info">
                                 <h3>{pastCount}</h3>
-                                <p>Passés</p>
+                                <p>Programmes passés</p>
                             </div>
                         </div>
                         <div className="stat-card">
-                            <div className="stat-icon today">⭐</div>
+                            <div className="stat-icon today">📅</div>
                             <div className="stat-info">
                                 <h3>{todayCount}</h3>
-                                <p>Aujourd'hui</p>
+                                <p>Programmes aujourd'hui</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Barre de filtre */}
                     <div className="filter-bar">
-                        <div className="filter-group" style={{ flex: 2 }}>
-                            <label>
-                                <IconFilter
-                                    style={{
-                                        display: "inline",
-                                        marginRight: "4px",
-                                    }}
-                                />{" "}
-                                Recherche
-                            </label>
+                        <div className="filter-group">
+                            <label>Recherche</label>
                             <input
                                 type="text"
                                 className="filter-input"
-                                placeholder="Rechercher par titre, orateur, modérateur, famille, lieu..."
+                                placeholder="Titre, orateur, modérateur, lieu..."
                                 value={filters.search}
                                 onChange={(e) =>
                                     setFilters({
@@ -2083,6 +2043,7 @@ export default function AllProgrammes() {
                                 }
                             />
                         </div>
+
                         <div className="filter-group">
                             <label>Statut</label>
                             <select
@@ -2096,31 +2057,12 @@ export default function AllProgrammes() {
                                 }
                             >
                                 <option value="all">Tous</option>
+                                <option value="today">Aujourd'hui</option>
                                 <option value="upcoming">À venir</option>
                                 <option value="past">Passés</option>
-                                <option value="today">Aujourd'hui</option>
                             </select>
                         </div>
-                        <div className="filter-group">
-                            <label>Année</label>
-                            <select
-                                className="filter-select"
-                                value={filters.year}
-                                onChange={(e) =>
-                                    setFilters({
-                                        ...filters,
-                                        year: e.target.value,
-                                    })
-                                }
-                            >
-                                <option value="all">Toutes</option>
-                                {availableYears.map((year) => (
-                                    <option key={year} value={year}>
-                                        {year}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+
                         <div className="filter-group">
                             <label>Mois</label>
                             <select
@@ -2133,7 +2075,7 @@ export default function AllProgrammes() {
                                     })
                                 }
                             >
-                                <option value="all">Tous</option>
+                                <option value="all">Tous les mois</option>
                                 {months.map((month) => (
                                     <option
                                         key={month.value}
@@ -2144,6 +2086,28 @@ export default function AllProgrammes() {
                                 ))}
                             </select>
                         </div>
+
+                        <div className="filter-group">
+                            <label>Année</label>
+                            <select
+                                className="filter-select"
+                                value={filters.year}
+                                onChange={(e) =>
+                                    setFilters({
+                                        ...filters,
+                                        year: e.target.value,
+                                    })
+                                }
+                            >
+                                <option value="all">Toutes les années</option>
+                                {availableYears.map((year) => (
+                                    <option key={year} value={year.toString()}>
+                                        {year}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
                         <div className="filter-actions">
                             <button
                                 className="btn-filter-reset"
@@ -2154,303 +2118,45 @@ export default function AllProgrammes() {
                         </div>
                     </div>
 
-                    {/* Tableau principal avec la colonne # en premier */}
-                    <div className="table-container" ref={tableRef}>
+                    <div className="table-container">
                         <table className="programmes-table">
                             <thead>
                                 <tr>
-                                    <th
-                                        style={{
-                                            width: "50px",
-                                            textAlign: "center",
-                                        }}
-                                    >
-                                        #
-                                    </th>
                                     <th>Date</th>
-                                    <th>Activités</th>
+                                    <th>Activité</th>
                                     <th>Heure</th>
-                                    <th>Lieu</th>
                                     <th>Orateur</th>
                                     <th>Modérateur</th>
                                     <th>Famille de réception</th>
-                                    <th>Statut</th>
-                                    <th>Actions</th>
+                                    <th>Lieu</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {paginatedProgrammes.length > 0 ? (
-                                    paginatedProgrammes.map((event, index) => {
-                                        const past = isPastEvent(event);
-                                        const rowNumber =
-                                            (currentPage - 1) * itemsPerPage +
-                                            index +
-                                            1;
-                                        return (
-                                            <tr
-                                                key={event.id}
-                                                className={
-                                                    past ? "past-row" : ""
-                                                }
-                                            >
-                                                <td
-                                                    style={{
-                                                        textAlign: "center",
-                                                        fontWeight: "bold",
-                                                        color: past
-                                                            ? "#9ca3af"
-                                                            : "#6b7280",
-                                                    }}
-                                                >
-                                                    {rowNumber}
-                                                </td>
-                                                <td>
-                                                    <div
-                                                        style={{
-                                                            display: "flex",
-                                                            alignItems:
-                                                                "center",
-                                                            gap: "6px",
-                                                            color: past
-                                                                ? "#9ca3af"
-                                                                : "#4b5563",
-                                                        }}
-                                                    >
-                                                        <IconCalendar
-                                                            style={{
-                                                                width: "14px",
-                                                                height: "14px",
-                                                                color: "#9ca3af",
-                                                            }}
-                                                        />
-                                                        {formatDate(event.date)}
-                                                    </div>
-                                                </td>
-                                                <td
-                                                    style={{
-                                                        fontWeight: "600",
-                                                        color: past
-                                                            ? "#9ca3af"
-                                                            : "#111827",
-                                                    }}
-                                                >
-                                                    {event.title}
-                                                </td>
-                                                <td>
-                                                    <div
-                                                        style={{
-                                                            display: "flex",
-                                                            alignItems:
-                                                                "center",
-                                                            gap: "6px",
-                                                            color: past
-                                                                ? "#9ca3af"
-                                                                : "#4b5563",
-                                                        }}
-                                                    >
-                                                        <IconClock
-                                                            style={{
-                                                                width: "14px",
-                                                                height: "14px",
-                                                                color: "#9ca3af",
-                                                            }}
-                                                        />
-                                                        {event.time?.substring(
-                                                            0,
-                                                            5,
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    {event.lieu && (
-                                                        <div
-                                                            style={{
-                                                                display: "flex",
-                                                                alignItems:
-                                                                    "center",
-                                                                gap: "6px",
-                                                                color: past
-                                                                    ? "#9ca3af"
-                                                                    : "#4b5563",
-                                                            }}
-                                                        >
-                                                            <IconLocation
-                                                                style={{
-                                                                    width: "14px",
-                                                                    height: "14px",
-                                                                    color: "#9ca3af",
-                                                                }}
-                                                            />
-                                                            {event.lieu.length >
-                                                            30
-                                                                ? event.lieu.substring(
-                                                                      0,
-                                                                      30,
-                                                                  ) + "..."
-                                                                : event.lieu}
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td>
-                                                    {event.orateur && (
-                                                        <div
-                                                            style={{
-                                                                display: "flex",
-                                                                alignItems:
-                                                                    "center",
-                                                                gap: "6px",
-                                                                color: past
-                                                                    ? "#9ca3af"
-                                                                    : "#4b5563",
-                                                            }}
-                                                        >
-                                                            <IconMic
-                                                                style={{
-                                                                    width: "14px",
-                                                                    height: "14px",
-                                                                    color: "#9ca3af",
-                                                                }}
-                                                            />
-                                                            {event.orateur}
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td>
-                                                    {event.moderateur && (
-                                                        <div
-                                                            style={{
-                                                                display: "flex",
-                                                                alignItems:
-                                                                    "center",
-                                                                gap: "6px",
-                                                                color: past
-                                                                    ? "#9ca3af"
-                                                                    : "#4b5563",
-                                                            }}
-                                                        >
-                                                            <IconUser
-                                                                style={{
-                                                                    width: "14px",
-                                                                    height: "14px",
-                                                                    color: "#9ca3af",
-                                                                }}
-                                                            />
-                                                            {event.moderateur}
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td>
-                                                    {event.famille_reception && (
-                                                        <div
-                                                            style={{
-                                                                display: "flex",
-                                                                alignItems:
-                                                                    "center",
-                                                                gap: "6px",
-                                                                color: past
-                                                                    ? "#9ca3af"
-                                                                    : "#4b5563",
-                                                            }}
-                                                        >
-                                                            <IconFamily
-                                                                style={{
-                                                                    width: "14px",
-                                                                    height: "14px",
-                                                                    color: "#9ca3af",
-                                                                }}
-                                                            />
-                                                            {
-                                                                event.famille_reception
-                                                            }
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td>
-                                                    <span
-                                                        className={`status-badge ${getStatusClass(event.date)}`}
-                                                    >
-                                                        {getStatus(event.date)}
-                                                    </span>
-                                                </td>
-                                                <td
-                                                    className="actions-cell"
-                                                    onClick={(e) =>
-                                                        e.stopPropagation()
-                                                    }
-                                                >
-                                                    <div className="table-actions">
-                                                        <button
-                                                            className="btn-table-edit"
-                                                            onClick={() =>
-                                                                openEditModal(
-                                                                    event,
-                                                                )
-                                                            }
-                                                            disabled={past}
-                                                            title={
-                                                                past
-                                                                    ? "Impossible de modifier une activité passée"
-                                                                    : "Modifier"
-                                                            }
-                                                        >
-                                                            <IconEdit
-                                                                style={{
-                                                                    width: "14px",
-                                                                    height: "14px",
-                                                                }}
-                                                            />{" "}
-                                                            Modifier
-                                                        </button>
-                                                        <button
-                                                            className="btn-table-delete"
-                                                            onClick={() =>
-                                                                openDeleteConfirm(
-                                                                    event,
-                                                                )
-                                                            }
-                                                            disabled={past}
-                                                            title={
-                                                                past
-                                                                    ? "Impossible de supprimer une activité passée"
-                                                                    : "Supprimer"
-                                                            }
-                                                        >
-                                                            <IconTrash
-                                                                style={{
-                                                                    width: "14px",
-                                                                    height: "14px",
-                                                                }}
-                                                            />{" "}
-                                                            Supprimer
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })
+                                    paginatedProgrammes.map((event) => (
+                                        <tr key={event.id}>
+                                            <td>{formatDate(event.date)}</td>
+                                            <td>{event.title || "-"}</td>
+                                            <td>{event.time || "-"}</td>
+                                            <td>{event.orateur || "-"}</td>
+                                            <td>{event.moderateur || "-"}</td>
+                                            <td>
+                                                {event.famille_reception || "-"}
+                                            </td>
+                                            <td>{event.lieu || "-"}</td>
+                                        </tr>
+                                    ))
                                 ) : (
                                     <tr>
                                         <td
-                                            colSpan="10"
+                                            colSpan="7"
                                             style={{
                                                 textAlign: "center",
-                                                padding: "60px 20px",
-                                                color: "#9ca3af",
+                                                padding: "32px",
                                             }}
                                         >
-                                            <div
-                                                style={{
-                                                    fontSize: "4rem",
-                                                    marginBottom: "1rem",
-                                                    opacity: 0.5,
-                                                }}
-                                            >
-                                                📋
-                                            </div>
-                                            <p style={{ fontSize: "1rem" }}>
-                                                Aucun programme d'activité ne
-                                                correspond à vos critères.
-                                            </p>
+                                            Aucun programme ne correspond aux
+                                            filtres sélectionnés.
                                         </td>
                                     </tr>
                                 )}
@@ -2458,64 +2164,40 @@ export default function AllProgrammes() {
                         </table>
                     </div>
 
-                    {/* Pagination */}
                     {totalPages > 1 && (
                         <div className="pagination">
                             <button
-                                className="pagination-arrows"
-                                onClick={() => setCurrentPage(1)}
+                                onClick={() => setCurrentPage(currentPage - 1)}
                                 disabled={currentPage === 1}
-                            >
-                                ⏮
-                            </button>
-                            <button
                                 className="pagination-arrows"
-                                onClick={() =>
-                                    setCurrentPage((prev) =>
-                                        Math.max(1, prev - 1),
-                                    )
-                                }
-                                disabled={currentPage === 1}
                             >
-                                ◀
+                                ‹
                             </button>
 
                             {getPageNumbers().map((page) => (
                                 <button
                                     key={page}
+                                    onClick={() => setCurrentPage(page)}
                                     className={
                                         currentPage === page
                                             ? "active-page"
                                             : ""
                                     }
-                                    onClick={() => setCurrentPage(page)}
                                 >
                                     {page}
                                 </button>
                             ))}
 
                             <button
-                                className="pagination-arrows"
-                                onClick={() =>
-                                    setCurrentPage((prev) =>
-                                        Math.min(totalPages, prev + 1),
-                                    )
-                                }
+                                onClick={() => setCurrentPage(currentPage + 1)}
                                 disabled={currentPage === totalPages}
-                            >
-                                ▶
-                            </button>
-                            <button
                                 className="pagination-arrows"
-                                onClick={() => setCurrentPage(totalPages)}
-                                disabled={currentPage === totalPages}
                             >
-                                ⏭
+                                ›
                             </button>
 
                             <span className="pagination-info">
-                                Page {currentPage} sur {totalPages} (
-                                {filteredProgrammes.length} éléments)
+                                Page {currentPage} / {totalPages}
                             </span>
                         </div>
                     )}

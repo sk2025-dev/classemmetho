@@ -1014,6 +1014,13 @@ const styles = `
     align-items: center;
 }
 
+.history-card-v2-left-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
 .history-card-v2-badge {
     background: #e5e7eb;
     color: #4b5563;
@@ -1021,6 +1028,25 @@ const styles = `
     border-radius: 20px;
     font-size: 0.7rem;
     font-weight: 600;
+}
+
+.history-card-v2-participation {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.history-card-v2-participation.present {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.history-card-v2-participation.absent,
+.history-card-v2-participation.excuse,
+.history-card-v2-participation.none {
+    background: #fee2e2;
+    color: #991b1b;
 }
 
 .history-card-v2-media-badge {
@@ -3302,11 +3328,24 @@ export default function Programmes() {
                                                                     </div>
                                                                 </div>
                                                                 <div className="history-card-v2-footer">
-                                                                    <span className="history-card-v2-badge">
-                                                                        {new Date(
-                                                                            item.date,
-                                                                        ).getFullYear()}
-                                                                    </span>
+                                                                    <div className="history-card-v2-left-badges">
+                                                                        <span className="history-card-v2-badge">
+                                                                            {new Date(
+                                                                                item.date,
+                                                                            ).getFullYear()}
+                                                                        </span>
+                                                                        <span
+                                                                            className={`history-card-v2-participation ${
+                                                                                item.participation_statut ||
+                                                                                "none"
+                                                                            }`}
+                                                                        >
+                                                                            {item.participation_statut ===
+                                                                            "present"
+                                                                                ? "Vous avez participe"
+                                                                                : "Vous n'avez pas participe"}
+                                                                        </span>
+                                                                    </div>
                                                                     {hasMedia && (
                                                                         <span className="history-card-v2-media-badge">
                                                                             <IconGallery />{" "}

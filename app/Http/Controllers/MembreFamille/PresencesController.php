@@ -18,7 +18,10 @@ class PresencesController extends Controller
 
         $historique = Presence::query()
             ->where('membre_famille_id', $user->id)
-            ->with('activite:id,title,type,day,time')
+            ->with([
+                'activite:id,title,type,day,time',
+                'specialEvent:id,title,date,time',
+            ])
             ->orderByDesc('marquee_le')
             ->orderByDesc('updated_at')
             ->limit(120)
@@ -33,13 +36,30 @@ class PresencesController extends Controller
                     $dateSource = $this->dateHeureDebut($presence->activite->day, $presence->activite->time);
                 }
 
+                if ($presence->specialEvent && $presence->specialEvent->date) {
+                    $dateSource = Carbon::parse(
+                        trim((string) $presence->specialEvent->date . ' ' . (string) ($presence->specialEvent->time ?? '00:00'))
+                    );
+                }
+
                 $d = Carbon::parse($dateSource);
+
+                $activityLabel = $presence->specialEvent?->title
+                    ?? $presence->activite?->title
+                    ?? 'Activite';
+
+                $activityType = $presence->specialEvent ? 'programme' : ($presence->activite?->type ?? null);
+
+                $isCulte = str_contains(
+                    mb_strtolower((string) ($presence->specialEvent?->title ?? $presence->activite?->type ?? '')),
+                    'culte'
+                );
 
                 return [
                     'id' => $presence->id,
-                    'activite' => $presence->activite?->title ?? 'Activite',
-                    'type' => $presence->activite?->type,
-                    'is_culte' => str_contains(mb_strtolower((string) ($presence->activite?->type ?? '')), 'culte'),
+                    'activite' => $activityLabel,
+                    'type' => $activityType,
+                    'is_culte' => $isCulte,
                     'date' => $d->locale('fr')->translatedFormat('d M'),
                     'mois' => (int) $d->month,
                     'statut' => $presence->statut ?? 'present',

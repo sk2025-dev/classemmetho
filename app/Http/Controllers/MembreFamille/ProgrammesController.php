@@ -5,6 +5,7 @@ namespace App\Http\Controllers\MembreFamille;
 use App\Http\Controllers\Controller;
 use App\Models\SpecialEvent;
 use App\Models\Media;
+use App\Models\Presence;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +14,31 @@ use Inertia\Inertia;
 
 class ProgrammesController extends Controller
 {
+    private function attachParticipationStatus($events, int $userId)
+    {
+        $eventIds = $events->pluck('id')->filter()->values();
+
+        if ($eventIds->isEmpty()) {
+            return $events;
+        }
+
+        $presenceByEvent = Presence::query()
+            ->where('membre_famille_id', $userId)
+            ->whereIn('special_event_id', $eventIds)
+            ->get(['special_event_id', 'statut'])
+            ->keyBy('special_event_id');
+
+        return $events->map(function ($event) use ($presenceByEvent) {
+            $presence = $presenceByEvent->get($event->id);
+            $status = $presence?->statut;
+
+            $event->participation_statut = $status;
+            $event->has_participated = $status === 'present';
+
+            return $event;
+        });
+    }
+
     private function conducteurActivitiesBaseQuery($classe)
     {
         $query = SpecialEvent::query()
@@ -156,9 +182,13 @@ class ProgrammesController extends Controller
 
             if (!$classe) {
                 return response()->json([
-                    'success' => false,
+                    'success' => true,
+                    'current' => [],
+                    'history' => [],
+                    'all' => [],
+                    'gallery' => [],
                     'message' => 'Aucune classe associée'
-                ], 403);
+                ]);
             }
 
             $today = now()->startOfDay();
@@ -170,6 +200,8 @@ class ProgrammesController extends Controller
                 ->orderBy('time', 'asc')
                 ->get();
 
+            $current = $this->attachParticipationStatus($current, (int) $user->id);
+
             $history = (clone $baseQuery)
                 ->where('date', '<', $today)
                 ->orderBy('date', 'desc')
@@ -177,11 +209,15 @@ class ProgrammesController extends Controller
                 ->limit(50)
                 ->get();
 
+            $history = $this->attachParticipationStatus($history, (int) $user->id);
+
             $all = (clone $baseQuery)
                 ->whereYear('date', now()->year)
                 ->orderBy('date', 'asc')
                 ->orderBy('time', 'asc')
                 ->get();
+
+            $all = $this->attachParticipationStatus($all, (int) $user->id);
 
             $eventIds = (clone $baseQuery)->pluck('id');
 

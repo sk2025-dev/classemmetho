@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Conducteur;
 use App\Http\Controllers\Controller;
 use App\Models\SpecialEvent;
 use App\Models\Media;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Http\Request;
@@ -165,6 +166,95 @@ class ProgrammesClasseController extends Controller
                 'date' => $event->date,
                 'time' => $event->time,
             ],
+        ]);
+    }
+
+    /**
+     * Telecharger la fiche PDF de scan QR d'une activite.
+     */
+    public function qrSheetPdf(int $id)
+    {
+        $user = Auth::user();
+        $classe = $user->classe;
+
+        if (!$classe) {
+            return redirect()->back()->with('error', 'Aucune classe associee a votre compte.');
+        }
+
+        $event = SpecialEvent::where('id', $id)
+            ->where('class_id', $classe->id)
+            ->where('is_parish', false)
+            ->first();
+
+        if (!$event) {
+            return redirect()->back()->with('error', 'Programme introuvable.');
+        }
+
+        $token = $event->ensureQrToken();
+        $scanUrl = url('/presence/' . $token);
+
+        $writer = new PngWriter();
+        $result = $writer->write(
+            new QrCode(
+                data: $scanUrl,
+                size: 460,
+                margin: 14
+            )
+        );
+
+        $pdf = Pdf::loadView('pdf.programme-qr-scan', [
+            'event' => $event,
+            'scanUrl' => $scanUrl,
+            'qrDataUri' => $result->getDataUri(),
+        ])->setPaper('a4', 'portrait');
+
+        $filename = 'fiche-scan-activite-' . $event->id . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Afficher une page de previsualisation QR imprimable.
+     */
+    public function qrPreview(int $id)
+    {
+        $user = Auth::user();
+        $classe = $user->classe;
+
+        if (!$classe) {
+            return redirect()->back()->with('error', 'Aucune classe associee a votre compte.');
+        }
+
+        $event = SpecialEvent::where('id', $id)
+            ->where('class_id', $classe->id)
+            ->where('is_parish', false)
+            ->first();
+
+        if (!$event) {
+            return redirect()->back()->with('error', 'Programme introuvable.');
+        }
+
+        $token = $event->ensureQrToken();
+        $scanUrl = url('/presence/' . $token);
+
+        $writer = new PngWriter();
+        $result = $writer->write(
+            new QrCode(
+                data: $scanUrl,
+                size: 460,
+                margin: 14
+            )
+        );
+
+        return Inertia::render('Conducteur/QrPreview', [
+            'event' => [
+                'id' => $event->id,
+                'title' => $event->title,
+                'date' => $event->date,
+                'time' => $event->time,
+            ],
+            'scanUrl' => $scanUrl,
+            'qrCode' => $result->getDataUri(),
         ]);
     }
 

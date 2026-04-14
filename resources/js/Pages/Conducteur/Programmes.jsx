@@ -440,6 +440,37 @@ const styles = `
     margin-bottom: 15px;
     line-height: 1.6;
 }
+.time-qr-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 8px;
+}
+.time-qr-row p {
+    margin: 0;
+    color: #374151;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.btn-qr-inline {
+    border: none;
+    border-radius: 10px;
+    padding: 8px 14px;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+.btn-qr-inline:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(217, 119, 6, 0.35);
+}
 .special-meta {
     display: flex;
     flex-direction: column;
@@ -5669,6 +5700,13 @@ export default function Programmes() {
         }
     };
 
+    const downloadQrSheetPdf = () => {
+        if (!qrPayload?.event?.id) return;
+
+        const pdfUrl = `/conducteur/programmes/event/${qrPayload.event.id}/qr/fiche-pdf`;
+        window.open(pdfUrl, "_blank");
+    };
+
     const renderContent = () => {
         switch (activeTab) {
             case "programmes":
@@ -5735,23 +5773,6 @@ export default function Programmes() {
                                                         >
                                                             <IconEdit />
                                                         </button>
-                                                        <button
-                                                            className="edit-btn-card"
-                                                            style={{
-                                                                right: "48px",
-                                                                background:
-                                                                    "#f59e0b",
-                                                                color: "#fff",
-                                                            }}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                openQrModal(
-                                                                    event,
-                                                                );
-                                                            }}
-                                                        >
-                                                            QR
-                                                        </button>
                                                         <div>
                                                             <div className="special-header">
                                                                 <span className="special-date">
@@ -5769,15 +5790,31 @@ export default function Programmes() {
                                                                     {event.lieu}
                                                                 </p>
                                                             )}
-                                                            {event.time && (
+                                                            <div className="time-qr-row">
                                                                 <p>
                                                                     <IconClock />{" "}
-                                                                    {event.time.substring(
-                                                                        0,
-                                                                        5,
-                                                                    )}
+                                                                    {event.time
+                                                                        ? event.time.substring(
+                                                                              0,
+                                                                              5,
+                                                                          )
+                                                                        : "--:--"}
                                                                 </p>
-                                                            )}
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn-qr-inline"
+                                                                    onClick={(
+                                                                        e,
+                                                                    ) => {
+                                                                        e.stopPropagation();
+                                                                        openQrModal(
+                                                                            event,
+                                                                        );
+                                                                    }}
+                                                                >
+                                                                    Code Qr
+                                                                </button>
+                                                            </div>
                                                             <div className="special-meta">
                                                                 {event.orateur && (
                                                                     <div>
@@ -6877,6 +6914,21 @@ export default function Programmes() {
                                     </p>
                                     <p
                                         style={{
+                                            color: "#78350f",
+                                            background: "#fffbeb",
+                                            border: "1px solid #fbbf24",
+                                            borderRadius: "10px",
+                                            fontSize: "0.88rem",
+                                            lineHeight: 1.5,
+                                            padding: "10px 12px",
+                                            marginBottom: "10px",
+                                        }}
+                                    >
+                                        Scannez puis entrez votre code membre
+                                        pour marquer votre presence.
+                                    </p>
+                                    <p
+                                        style={{
                                             color: "#6b7280",
                                             fontSize: "0.9rem",
                                             marginBottom: "14px",
@@ -6885,13 +6937,29 @@ export default function Programmes() {
                                     >
                                         {qrPayload.scan_url}
                                     </p>
-                                    <button
-                                        className="btn-add"
-                                        type="button"
-                                        onClick={copyQrUrl}
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            justifyContent: "center",
+                                            gap: "10px",
+                                            flexWrap: "wrap",
+                                        }}
                                     >
-                                        Copier le lien
-                                    </button>
+                                        <button
+                                            className="btn-add"
+                                            type="button"
+                                            onClick={copyQrUrl}
+                                        >
+                                            Copier le lien
+                                        </button>
+                                        <button
+                                            className="btn-add"
+                                            type="button"
+                                            onClick={downloadQrSheetPdf}
+                                        >
+                                            Imprimer le scan
+                                        </button>
+                                    </div>
                                 </>
                             )}
                         </div>

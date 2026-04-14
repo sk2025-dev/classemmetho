@@ -367,6 +367,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/conducteur/programmes/events-multiple', [ProgrammesClasseController::class, 'storeMultipleEvents'])->name('conducteur.programmes.events-multiple');
         Route::put('/conducteur/programmes/event/{id}', [ProgrammesClasseController::class, 'updateEvent'])->name('conducteur.programmes.event.update');
         Route::get('/conducteur/programmes/event/{id}/qr', [ProgrammesClasseController::class, 'qrCode'])->name('conducteur.programmes.event.qr');
+        Route::get('/conducteur/programmes/event/{id}/qr/fiche-pdf', [ProgrammesClasseController::class, 'qrSheetPdf'])->name('conducteur.programmes.event.qr.sheet-pdf');
+        Route::get('/conducteur/programmes/event/{id}/qr/preview', [ProgrammesClasseController::class, 'qrPreview'])->name('conducteur.programmes.event.qr.preview');
         Route::delete('/conducteur/programmes/event/{id}', [ProgrammesClasseController::class, 'destroy'])->name('conducteur.programmes.event.destroy');
         Route::post('/conducteur/programmes/import-events', [ProgrammesClasseController::class, 'importEvents'])->name('conducteur.programmes.import');
         Route::get('/conducteur/programmes/events-by-month', [ProgrammesClasseController::class, 'getEventsByMonth'])->name('conducteur.programmes.events.by-month');
@@ -554,8 +556,13 @@ Route::middleware(['auth'])->group(function () {
             ->name('membre_famille.finances.dons.store');
         Route::get('/membre-famille/finances/paiement/{paiement}/verify', [MembreFamilleFinancesController::class, 'verifyPaiement'])
             ->name('membre_famille.finances.paiement.verify');
+    });
 
+    // Routes programmes Membre (lecture seule, accessibles via session authentifiée)
+    Route::middleware(['auth:web'])->group(function () {
         Route::get('/membre-famille/programmes', [MembreProgrammesController::class, 'index'])->name('membre_famille.programmes');
+        Route::get('/membre-famille/programmes/all', [MembreProgrammesController::class, 'allProgrammes'])->name('membre_famille.programmes.all');
+        Route::get('/membre-famille/programmes/history', [MembreProgrammesController::class, 'historyProgrammes'])->name('membre_famille.programmes.history');
         Route::get('/api/membre-famille/activites', [MembreProgrammesController::class, 'activitiesApi'])->name('membre_famille.api.activites');
         Route::post('/membre-famille/programmes/agenda', [MembreProgrammesController::class, 'storeAgenda'])->name('membre_famille.programmes.agenda');
         Route::post('/membre-famille/programmes/event', [MembreProgrammesController::class, 'storeEvent'])->name('membre_famille.programmes.event');

@@ -1520,25 +1520,7 @@ export default function AllProgrammes() {
     };
 
     const openEditModal = (event) => {
-        if (isPastEvent(event)) {
-            setAlertModal({
-                isOpen: true,
-                title: "Activité passée",
-                message: `Cette activité "${event.title}" est déjà passée et ne peut plus être modifiée.`,
-                icon: "📅",
-            });
-            return;
-        }
-        setConfirmModal({
-            isOpen: true,
-            action: "edit",
-            event: event,
-            title: "Confirmation de modification",
-            message: `Êtes-vous sûr de vouloir modifier l'activité "${event.title}" ?`,
-            confirmText: "Oui, modifier",
-            icon: "✏️",
-            confirmButtonClass: "btn-confirm-edit",
-        });
+        showToast("Module en lecture seule pour le membre de famille", "error");
     };
 
     const closeEditModal = () => {
@@ -1547,75 +1529,29 @@ export default function AllProgrammes() {
     };
 
     const openDeleteConfirm = (event) => {
-        if (isPastEvent(event)) {
-            setAlertModal({
-                isOpen: true,
-                title: "Activité passée",
-                message: `Cette activité "${event.title}" est déjà passée et ne peut plus être supprimée.`,
-                icon: "📅",
-            });
-            return;
-        }
-        setConfirmModal({
-            isOpen: true,
-            action: "delete",
-            event: event,
-            title: "Supprimer le programme",
-            message: `Êtes-vous sûr de vouloir supprimer "${event.title}" ? Cette action est irréversible.`,
-            confirmText: "Supprimer",
-            icon: "🗑️",
-            confirmButtonClass: "btn-confirm",
-        });
+        showToast("Module en lecture seule pour le membre de famille", "error");
     };
 
     const handleUpdateEvent = async (data, eventId) => {
-        try {
-            const response = await axios.put(
-                `/conducteur/programmes/event/${eventId}`,
-                data,
-            );
-            if (response.data.success) {
-                showToast("Événement modifié avec succès", "success");
-                closeEditModal();
-                router.reload();
-            } else {
-                showToast("Erreur lors de la modification", "error");
-            }
-        } catch (error) {
-            console.error("Erreur de modification", error);
-            if (error.response?.data?.errors) {
-                throw error;
-            }
-            showToast("Erreur lors de la modification", "error");
-            throw error;
-        }
+        showToast("Module en lecture seule pour le membre de famille", "error");
+        closeEditModal();
     };
 
     const handleConfirmAction = async () => {
         const { action, event } = confirmModal;
 
         if (action === "edit") {
+            showToast(
+                "Module en lecture seule pour le membre de famille",
+                "error",
+            );
             setConfirmModal({ ...confirmModal, isOpen: false });
-            setSelectedEvent(event);
-            setIsEditModalOpen(true);
         } else if (action === "delete") {
-            try {
-                const response = await axios.delete(
-                    `/conducteur/programmes/event/${event.id}`,
-                );
-                if (response.data.success) {
-                    showToast("Événement supprimé avec succès", "success");
-                    setConfirmModal({ ...confirmModal, isOpen: false });
-                    router.reload();
-                } else {
-                    showToast("Erreur lors de la suppression", "error");
-                    setConfirmModal({ ...confirmModal, isOpen: false });
-                }
-            } catch (error) {
-                console.error("Erreur de suppression", error);
-                showToast("Erreur lors de la suppression", "error");
-                setConfirmModal({ ...confirmModal, isOpen: false });
-            }
+            showToast(
+                "Module en lecture seule pour le membre de famille",
+                "error",
+            );
+            setConfirmModal({ ...confirmModal, isOpen: false });
         }
     };
 
