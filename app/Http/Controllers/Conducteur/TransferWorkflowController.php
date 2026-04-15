@@ -100,13 +100,12 @@ class TransferWorkflowController extends Controller
         $members = User::query()
             ->with(['family:id,nom,code_famille'])
             ->where('classe_id', $user->classe_id)
-            ->whereNotNull('family_id')
-            ->where('is_family_responsible', false)
-            ->whereNotIn('role', ['admin', 'pasteur', 'conducteur'])
+            ->where('role', '!=', 'conducteur')
             ->orderBy('nom')
             ->orderBy('prenom')
             ->get([
                 'id',
+                'classe_id',
                 'nom',
                 'prenom',
                 'email',
@@ -122,6 +121,7 @@ class TransferWorkflowController extends Controller
             ->map(function (User $member) {
                 return [
                     'id' => $member->id,
+                    'classe_id' => $member->classe_id,
                     'nom' => $member->nom,
                     'prenom' => $member->prenom,
                     'email' => $member->email,

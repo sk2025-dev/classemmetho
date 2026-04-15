@@ -370,38 +370,43 @@ export default function TransfersWorkflow() {
     }), [pendingTransfers]);
 
     const formErrors = useMemo(() => Object.values(errors || {}), [errors]);
-    const isExternal = form.transfer_mode === "external";
-    const selectedOptionKey = getTransferOptionKey(form.type, form.transfer_mode);
     const canCreate = members.length > 0 || families.length > 0;
-    const canSubmit = form.type === "member"
-        ? Boolean(form.user_id && (isExternal ? (form.destination_city && form.destination_church) : form.target_class_id))
-        : Boolean(form.family_id && (isExternal ? (form.destination_city && form.destination_church) : form.target_class_id));
+    const canSubmit = form.type.includes("member")
+        ? form.type.includes("external")
+          ? Boolean(form.user_id && form.destination_city && form.destination_church)
+          : Boolean(form.user_id && form.target_class_id)
+        : form.type.includes("external")
+          ? Boolean(form.family_id && form.destination_city && form.destination_church)
+          : Boolean(form.family_id && form.target_class_id);
     const selectedType = useMemo(
-        () => transferTypeOptions.find((option) => option.value === selectedOptionKey) || transferTypeOptions[0],
-        [selectedOptionKey],
+        () => transferTypeOptions.find((option) => option.value === form.type) || transferTypeOptions[0],
+        [form.type],
     );
     const selectedMember = useMemo(
-        () => members.find((member) => String(member.id) === String(form.user_id)) || null,
+        () => (form.user_id ? members.find((member) => String(member.id) === String(form.user_id)) : null),
         [members, form.user_id],
     );
     const selectedFamily = useMemo(
-        () => families.find((family) => String(family.id) === String(form.family_id)) || null,
+        () => (form.family_id ? families.find((family) => String(family.id) === String(form.family_id)) : null),
         [families, form.family_id],
     );
     const selectedClass = useMemo(
-        () => classes.find((classe) => String(classe.id) === String(form.target_class_id)) || null,
+        () => (form.target_class_id ? classes.find((classe) => String(classe.id) === String(form.target_class_id)) : null),
         [classes, form.target_class_id],
     );
-    const stepTwoValid = form.type === "member"
-        ? Boolean(form.user_id && (isExternal ? (form.destination_city && form.destination_church) : form.target_class_id))
-        : Boolean(form.family_id && (isExternal ? (form.destination_city && form.destination_church) : form.target_class_id));
+    const stepTwoValid = form.type.includes("member")
+        ? form.type.includes("external")
+          ? Boolean(form.user_id && form.destination_city && form.destination_church)
+          : Boolean(form.user_id && form.target_class_id)
+        : form.type.includes("external")
+          ? Boolean(form.family_id && form.destination_city && form.destination_church)
+          : Boolean(form.family_id && form.target_class_id);
     const reviewRows = useMemo(() => {
         const rows = [
-            { label: "Action", value: selectedType.label },
-            { label: "Nature", value: isExternal ? "Sortie externe" : "Transfert interne" },
+            { label: "Type", value: selectedType?.label || form.type },
             {
-                label: form.type === "member" ? "Membre concerne" : "Famille concernee",
-                value: form.type === "member"
+                label: form.type.includes("member") ? "Beneficiaire" : "Famille source",
+                value: form.type.includes("member")
                     ? (selectedMember ? `${selectedMember.nom} ${selectedMember.prenom}` : "-")
                     : (selectedFamily ? `${selectedFamily.nom}${selectedFamily.code_famille ? ` • ${selectedFamily.code_famille}` : ""}` : "-"),
                 strong: true,
@@ -410,10 +415,10 @@ export default function TransfersWorkflow() {
                 label: "Depart",
                 value: userClass.nom || "Votre classe",
             },
-            isExternal
+            form.type.includes("external")
                 ? {
                       label: "Destination",
-                      value: `${form.destination_city || "-"}${form.destination_country ? ` • ${form.destination_country}` : ""}`,
+                      value: `${form.destination_city || "-"}${form.destination_church ? ` • ${form.destination_church}` : ""}`,
                   }
                 : {
                       label: "Classe d'accueil",
@@ -421,14 +426,14 @@ export default function TransfersWorkflow() {
                   },
         ];
 
-        if (form.type === "member" && selectedMember?.family_name) {
+        if (form.type.includes("member") && selectedMember?.family_name) {
             rows.push({
                 label: "Famille d'origine",
                 value: `${selectedMember.family_name}${selectedMember.family_code ? ` • ${selectedMember.family_code}` : ""}`,
             });
         }
 
-        if (form.type === "external" && form.destination_note) {
+        if (form.type.includes("external") && form.destination_note) {
             rows.push({
                 label: "Note destination",
                 value: form.destination_note,
@@ -501,13 +506,13 @@ export default function TransfersWorkflow() {
         if (!canSubmit) return;
         setSubmitting(true);
         router.post(withBasePath("", "/conducteur/transferts"), {
-            type: form.type,
-            user_id: form.type === "member" ? Number(form.user_id) : null,
-            family_id: form.type !== "member" ? Number(form.family_id) : null,
-            target_class_id: form.type === "external" ? null : Number(form.target_class_id),
-            destination_city: form.type === "external" ? form.destination_city : null,
-            destination_country: form.type === "external" ? form.destination_country : null,
-            destination_note: form.type === "external" ? form.destination_note || null : null,
+            type: form.type.includes("member") ? "member" : "family",
+            transfer_mode: form.type.includes("external") ? "external" : "internal",
+            user_id: form.type.includes("member") ? Number(form.user_id) : null,
+            family_id: !form.type.includes("member") ? Number(form.family_id) : null,
+            target_class_id: !form.type.includes("external") ? Number(form.target_class_id) : null,
+            destination_city: form.type.includes("external") ? form.destination_city : null,
+            destination_church: form.type.includes("external") ? form.destination_church : null,
             reason: form.reason || null,
         }, {
             preserveScroll: true,
@@ -651,7 +656,7 @@ export default function TransfersWorkflow() {
                                     <div style={{ borderRadius: 18, border: "1px solid #bfdbfe", background: "#eff6ff", color: "#1e3a8a", padding: 16, display: "flex", gap: 12, alignItems: "flex-start" }}>
                                         <ShieldCheck size={18} style={{ flexShrink: 0, marginTop: 1 }} />
                                         <div style={{ lineHeight: 1.6, fontSize: 13 }}>
-                                            {form.type === "external"
+                                            {form.type.includes("external")
                                                 ? "Une sortie externe est cloturee directement apres votre validation, sans attente d'une autre classe."
                                                 : "Comme conducteur, votre validation source sera appliquee automatiquement a l'envoi. Le conducteur d'accueil reste le seul validateur suivant."}
                                         </div>
@@ -662,27 +667,29 @@ export default function TransfersWorkflow() {
                             {step === 2 && (
                                 <div style={{ display: "grid", gap: 18 }}>
                                     <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
-                                        {form.type === "member" ? (
+                                        {form.type.includes("member") ? (
                                             <label style={inputLabel}><span style={inputLabelText}>Membre concerne</span><Select2Single name="user_id" value={form.user_id} placeholder="Selectionner un membre" onChange={(e) => setForm((cur) => ({ ...cur, user_id: e.target.value }))} options={members.map((m) => ({ value: m.id, label: buildTransferOptionLabel(m, `${m.nom} ${m.prenom} - ${m.family_name || "Sans famille"}`), description: buildTransferOptionDescription(m, `${m.code_membre || "Sans code"}${m.family_code ? ` - ${m.family_code}` : ""}`), disabled: m.transfer_locked }))} /></label>
                                         ) : (
                                             <label style={inputLabel}><span style={inputLabelText}>Famille concernee</span><Select2Single name="family_id" value={form.family_id} placeholder="Selectionner une famille" onChange={(e) => setForm((cur) => ({ ...cur, family_id: e.target.value }))} options={families.map((f) => ({ value: f.id, label: buildTransferOptionLabel(f, `${f.nom} - ${f.code_famille || "Sans code"}`), description: buildTransferOptionDescription(f, f.responsable ? `Responsable: ${f.responsable}` : "Sans responsable"), disabled: f.transfer_locked }))} /></label>
                                         )}
 
-                                        {form.type !== "external" ? (
+                                        {!form.type.includes("external") ? (
                                             <label style={inputLabel}><span style={inputLabelText}>Classe d'accueil</span><Select2Single name="target_class_id" value={form.target_class_id} placeholder="Selectionner une classe" onChange={(e) => setForm((cur) => ({ ...cur, target_class_id: e.target.value }))} options={classes.map((c) => ({ value: c.id, label: c.nom }))} /></label>
                                         ) : (
                                             <>
                                                 <label style={inputLabel}><span style={inputLabelText}>Ville de destination</span><input className="field" value={form.destination_city} onChange={(e) => setForm((cur) => ({ ...cur, destination_city: e.target.value }))} placeholder="Ex: Abidjan" /></label>
-                                                <label style={inputLabel}><span style={inputLabelText}>Pays de destination</span><input className="field" value={form.destination_country} onChange={(e) => setForm((cur) => ({ ...cur, destination_country: e.target.value }))} placeholder="Ex: Cote d'Ivoire" /></label>
+                                                <label style={inputLabel}><span style={inputLabelText}>Nom d'eglise de destination</span><input className="field" value={form.destination_church} onChange={(e) => setForm((cur) => ({ ...cur, destination_church: e.target.value }))} placeholder="Ex: Eglise genese" /></label>
                                             </>
                                         )}
                                     </div>
 
-                                    {form.type === "external" && (
-                                        <label style={inputLabel}><span style={inputLabelText}>Note de destination</span><textarea className="field" rows={3} value={form.destination_note} onChange={(e) => setForm((cur) => ({ ...cur, destination_note: e.target.value }))} placeholder="Eglise d'accueil, contact, precision utile..." style={{ resize: "vertical" }} /></label>
+                                    {form.type.includes("external") && (
+                                        <label style={inputLabel}><span style={inputLabelText}>Motif</span><textarea className="field" rows={4} value={form.reason} onChange={(e) => setForm((cur) => ({ ...cur, reason: e.target.value }))} placeholder="Expliquez la raison du transfert" style={{ resize: "vertical" }} /></label>
                                     )}
 
-                                    <label style={inputLabel}><span style={inputLabelText}>Motif</span><textarea className="field" rows={4} value={form.reason} onChange={(e) => setForm((cur) => ({ ...cur, reason: e.target.value }))} placeholder="Expliquez la raison du transfert" style={{ resize: "vertical" }} /></label>
+                                    {!form.type.includes("external") && (
+                                        <label style={inputLabel}><span style={inputLabelText}>Motif</span><textarea className="field" rows={4} value={form.reason} onChange={(e) => setForm((cur) => ({ ...cur, reason: e.target.value }))} placeholder="Expliquez la raison du transfert" style={{ resize: "vertical" }} /></label>
+                                    )}
 
                                     <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
                                         <div style={{ borderRadius: 16, background: "#fff", border: "1px solid #e2e8f0", padding: "14px 16px" }}>
@@ -692,7 +699,7 @@ export default function TransfersWorkflow() {
                                         <div style={{ borderRadius: 16, background: "#fff", border: "1px solid #e2e8f0", padding: "14px 16px" }}>
                                             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#64748b", marginBottom: 6 }}>Suite du workflow</div>
                                             <div style={{ fontSize: 14, lineHeight: 1.5, color: "#334155" }}>
-                                                {form.type === "external"
+                                                {form.type.includes("external")
                                                     ? "Cloture immediate apres validation source."
                                                     : "Transmission directe au conducteur de la classe d'accueil."}
                                             </div>
@@ -716,7 +723,7 @@ export default function TransfersWorkflow() {
                                     <div style={{ borderRadius: 18, border: "1px solid #c7f9cc", background: "#f0fdf4", color: "#166534", padding: 16, display: "flex", gap: 12, alignItems: "flex-start" }}>
                                         <ShieldCheck size={18} style={{ flexShrink: 0, marginTop: 1 }} />
                                         <div style={{ fontSize: 13, lineHeight: 1.65 }}>
-                                            {form.type === "external"
+                                            {form.type.includes("external")
                                                 ? "Apres confirmation, le transfert sera enregistre et cloture immediatement dans le workflow conducteur."
                                                 : "Apres confirmation, votre validation source sera enregistree puis la demande passera automatiquement en attente d'accueil."}
                                         </div>
