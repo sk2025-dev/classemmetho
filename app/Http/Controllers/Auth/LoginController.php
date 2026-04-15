@@ -93,7 +93,13 @@ class LoginController extends Controller
         }
 
         // Vérifier si le compte est actif
-        if (isset($user->is_active) && $user->is_active === false) {
+        $isInactiveByStatus = in_array(
+            strtolower((string) ($user->status ?? $user->statut ?? 'active')),
+            ['inactive', 'inactif'],
+            true
+        );
+
+        if ((isset($user->is_active) && $user->is_active === false) || $isInactiveByStatus) {
             Log::warning('Login attempt on inactive account', ['user_id' => $user->id]);
 
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {

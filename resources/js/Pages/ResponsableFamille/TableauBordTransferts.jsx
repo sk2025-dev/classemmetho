@@ -15,6 +15,7 @@ import {
     MapPin,
     Layers,
 } from "lucide-react";
+import Select2Single from "../../Components/Select2Single";
 import { withBasePath } from "../../Utils/urlHelper";
 
 const fontStyle = `
@@ -1086,6 +1087,32 @@ export default function Index({
     });
     const [processing, setProcessing] = useState(false);
 
+    const getMemberOptionLabel = (member) =>
+        member.transfer_status
+            ? `${member.nom} ${member.prenom} - ${member.transfer_label || "Action bloquee"}`
+            : `${member.nom} ${member.prenom}`;
+
+    const statusOptions = [
+        { value: "SOUMISE", label: "Soumise" },
+        { value: "VALIDEE_SOURCE", label: "Validee Source" },
+        { value: "TERMINEE", label: "Terminee" },
+        { value: "REFUSEE", label: "Refusee" },
+    ];
+
+    const memberOptions = members.map((member) => ({
+        value: member.id,
+        label: getMemberOptionLabel(member),
+        description: member.transfer_status
+            ? member.transfer_label || "Action bloquee"
+            : member.email || "Disponible pour transfert",
+        disabled: Boolean(member.transfer_status),
+    }));
+
+    const classOptions = classes.map((classe) => ({
+        value: classe.id,
+        label: classe.nom,
+    }));
+
     const stats = useMemo(
         () => ({
             total: transfers.length,
@@ -1380,29 +1407,19 @@ export default function Index({
                                         }}
                                     />
                                 </div>
-                                <select
-                                    className="input-field"
-                                    value={statusFilter}
-                                    onChange={(e) =>
-                                        setStatusFilter(e.target.value)
-                                    }
-                                    style={{
-                                        padding: "10px 14px",
-                                        fontSize: 13.5,
-                                        color: "#333",
-                                        cursor: "pointer",
-                                        fontWeight: 500,
-                                        minWidth: 160,
-                                    }}
-                                >
-                                    <option value="">Tous les statuts</option>
-                                    <option value="SOUMISE">Soumise</option>
-                                    <option value="VALIDEE_SOURCE">
-                                        Validée Source
-                                    </option>
-                                    <option value="TERMINEE">Terminée</option>
-                                    <option value="REFUSEE">Refusée</option>
-                                </select>
+                                <div style={{ minWidth: 180 }}>
+                                    <Select2Single
+                                        name="status_filter"
+                                        value={statusFilter}
+                                        onChange={(e) =>
+                                            setStatusFilter(e.target.value)
+                                        }
+                                        options={statusOptions}
+                                        placeholder="Tous les statuts"
+                                        variant="orange"
+                                        allowClearOption={false}
+                                    />
+                                </div>
                             </div>
                         </div>
                     )}
@@ -1716,7 +1733,8 @@ export default function Index({
                                             >
                                                 Membre
                                             </label>
-                                            <select
+                                            <Select2Single
+                                                name="member_id"
                                                 value={formData.member_id}
                                                 onChange={(e) =>
                                                     setFormData({
@@ -1725,26 +1743,21 @@ export default function Index({
                                                             e.target.value,
                                                     })
                                                 }
-                                                className="input-field"
+                                                options={memberOptions}
+                                                placeholder="Selectionner un membre..."
+                                                variant="orange"
+                                                allowClearOption={false}
+                                            />
+                                            <div
                                                 style={{
-                                                    width: "100%",
-                                                    padding: "10px 14px",
-                                                    fontSize: 13,
-                                                    color: "#111",
+                                                    marginTop: 8,
+                                                    fontSize: 12,
+                                                    color: "#64748b",
+                                                    lineHeight: 1.5,
                                                 }}
                                             >
-                                                <option value="">
-                                                    Sélectionner un membre…
-                                                </option>
-                                                {members.map((m) => (
-                                                    <option
-                                                        key={m.id}
-                                                        value={m.id}
-                                                    >
-                                                        {m.nom} {m.prenom}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                                Les anciens membres et les membres avec un transfert en cours restent visibles, mais ils sont desactives pour eviter une nouvelle action.
+                                            </div>
                                         </div>
                                     )}
 
@@ -1763,7 +1776,8 @@ export default function Index({
                                             >
                                                 Classe cible
                                             </label>
-                                            <select
+                                            <Select2Single
+                                                name="target_class_id"
                                                 value={formData.target_class_id}
                                                 onChange={(e) =>
                                                     setFormData({
@@ -1772,26 +1786,11 @@ export default function Index({
                                                             e.target.value,
                                                     })
                                                 }
-                                                className="input-field"
-                                                style={{
-                                                    width: "100%",
-                                                    padding: "10px 14px",
-                                                    fontSize: 13,
-                                                    color: "#111",
-                                                }}
-                                            >
-                                                <option value="">
-                                                    Sélectionner une classe…
-                                                </option>
-                                                {classes.map((c) => (
-                                                    <option
-                                                        key={c.id}
-                                                        value={c.id}
-                                                    >
-                                                        {c.nom}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                                options={classOptions}
+                                                placeholder="Selectionner une classe..."
+                                                variant="orange"
+                                                allowClearOption={false}
+                                            />
                                         </div>
                                     ) : (
                                         <>

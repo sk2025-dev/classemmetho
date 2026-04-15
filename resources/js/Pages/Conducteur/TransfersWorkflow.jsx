@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Link, router, usePage } from "@inertiajs/react";
 import { withBasePath } from "../../Utils/urlHelper";
+import Select2Single from "../../Components/Select2Single";
 import {
     AlertCircle,
     ArrowLeft,
@@ -26,7 +27,7 @@ const styles = `
   .tab{border:none;border-radius:999px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
   .tab.active{background:#fff;color:#0f172a}.tab.idle{background:rgba(255,255,255,.12);color:#fff}
   .btn{border:none;border-radius:12px;padding:12px 16px;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;gap:8px;align-items:center;justify-content:center}
-  .btn-primary{color:#fff;background:linear-gradient(135deg,#0f766e,#155e75)}
+  .btn-primary{color:#fff;background:#0f766e}
   .btn-ghost{color:#334155;background:#fff;border:1px solid #d9e2ef}
   .btn-danger{color:#9f1239;background:#fff1f2;border:1px solid #fecdd3}
   .btn:disabled{opacity:.6;cursor:not-allowed}
@@ -35,19 +36,92 @@ const styles = `
   .pill{display:inline-flex;gap:6px;align-items:center;border-radius:999px;padding:4px 10px;font-size:11px;font-weight:700;text-transform:uppercase}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;align-items:start;justify-items:start}
   .modal-backdrop{position:fixed;inset:0;z-index:90;background:rgba(15,23,42,.56);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px}
-  .modal{width:min(760px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#f8fbff;border:1px solid #d9e2ef;border-radius:24px;box-shadow:0 30px 60px rgba(15,23,42,.25)}
+  .modal{width:min(680px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#f8fbff;border:1px solid #d9e2ef;border-radius:24px;box-shadow:0 30px 60px rgba(15,23,42,.25)}
+  .step-option{border:1px solid #d9e2ef;border-radius:18px;padding:16px;background:#fff;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;cursor:pointer}
+  .step-option:hover{transform:translateY(-2px);border-color:#99f6e4;box-shadow:0 12px 26px rgba(15,23,42,.08)}
+  .step-option-active{border-color:#0f766e;background:#ccfbf1;box-shadow:0 16px 32px rgba(15,118,110,.16)}
 `;
 
 const initialForm = {
     type: "member",
+    transfer_mode: "internal",
     user_id: "",
     family_id: "",
     target_class_id: "",
     destination_city: "",
-    destination_country: "",
-    destination_note: "",
+    destination_church: "",
     reason: "",
 };
+
+const legacyTransferTypeOptions = [
+    {
+        value: "member",
+        label: "Un membre",
+        description: "Transfert individuel d'un membre de votre classe.",
+        icon: User,
+        accent: "#f97316",
+        soft: "#fff7ed",
+    },
+    {
+        value: "family",
+        label: "Toute la famille",
+        description: "Transfert complet de la famille vers une autre classe.",
+        icon: Users,
+        accent: "#06b6d4",
+        soft: "#ecfeff",
+    },
+    {
+        value: "external",
+        label: "Sortie externe",
+        description: "Départ hors communauté vers une autre ville ou un autre pays.",
+        icon: MapPin,
+        accent: "#8b5cf6",
+        soft: "#f5f3ff",
+    },
+];
+
+const transferTypeOptions = [
+    {
+        value: "member_internal",
+        type: "member",
+        transferMode: "internal",
+        label: "Un membre",
+        description: "Transfert individuel d'un membre vers une autre classe.",
+        icon: User,
+        accent: "#f97316",
+        soft: "#fff7ed",
+    },
+    {
+        value: "family_internal",
+        type: "family",
+        transferMode: "internal",
+        label: "Toute la famille",
+        description: "Transfert complet de la famille vers une autre classe.",
+        icon: Users,
+        accent: "#06b6d4",
+        soft: "#ecfeff",
+    },
+    {
+        value: "member_external",
+        type: "member",
+        transferMode: "external",
+        label: "Sortie externe d'un membre",
+        description: "Archive un membre comme ancien membre vers une autre eglise.",
+        icon: MapPin,
+        accent: "#8b5cf6",
+        soft: "#f5f3ff",
+    },
+    {
+        value: "family_external",
+        type: "family",
+        transferMode: "external",
+        label: "Sortie externe d'une famille",
+        description: "Archive toute la famille hors communaute vers une autre eglise.",
+        icon: MapPin,
+        accent: "#7c3aed",
+        soft: "#f5f3ff",
+    },
+];
 
 const statusCfg = {
     EN_ATTENTE_SOURCE: { label: "Attente source", bg: "#fff7ed", color: "#c2410c", dot: "#f97316" },
@@ -58,6 +132,28 @@ const statusCfg = {
 
 const inputLabel = { display: "grid", gap: 8 };
 const inputLabelText = { fontSize: 13, fontWeight: 700, color: "#334155" };
+
+function buildTransferOptionLabel(entity, baseLabel) {
+    if (!entity?.transfer_locked) {
+        return baseLabel;
+    }
+
+    return `${baseLabel} - ${entity.transfer_label || "Transfert bloque"}`;
+}
+
+function buildTransferOptionDescription(entity, fallback) {
+    if (!entity?.transfer_locked) {
+        return fallback;
+    }
+
+    return entity.transfer_status === "completed"
+        ? `${entity.transfer_label || "Ancien membre"} archive, aucune nouvelle action possible.`
+        : "Transfert en cours, impossible de lancer une nouvelle action.";
+}
+
+function getTransferOptionKey(type, transferMode) {
+    return `${type}_${transferMode}`;
+}
 
 function StatusPill({ status }) {
     const cfg = statusCfg[status] || { label: status || "Inconnu", bg: "#f8fafc", color: "#475569", dot: "#94a3b8" };
@@ -77,6 +173,75 @@ function Stat({ icon: Icon, title, value, iconBg, iconColor }) {
             </div>
             <div style={{ fontSize: 30, lineHeight: 1, fontWeight: 800, color: "#0f172a", marginBottom: 6 }}>{value}</div>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#64748b" }}>{title}</div>
+        </div>
+    );
+}
+
+function StepDots({ current, total = 3 }) {
+    return (
+        <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "center" }}>
+            {Array.from({ length: total }, (_, index) => {
+                const step = index + 1;
+                const active = current === step;
+                const done = current > step;
+
+                return (
+                    <div
+                        key={step}
+                        style={{
+                            flex: 1,
+                            height: 6,
+                            borderRadius: 999,
+                            background: done
+                                ? "rgba(255,255,255,.92)"
+                                : active
+                                  ? "rgba(255,255,255,.72)"
+                                  : "rgba(255,255,255,.22)",
+                            boxShadow: active
+                                ? "0 0 0 1px rgba(255,255,255,.2) inset"
+                                : "none",
+                        }}
+                    />
+                );
+            })}
+        </div>
+    );
+}
+
+function SummaryRow({ label, value, strong = false }) {
+    return (
+        <div
+            style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 18,
+                padding: "13px 16px",
+                alignItems: "flex-start",
+            }}
+        >
+            <span
+                style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    letterSpacing: ".06em",
+                    textTransform: "uppercase",
+                    color: "#64748b",
+                }}
+            >
+                {label}
+            </span>
+            <span
+                style={{
+                    fontSize: 14,
+                    fontWeight: strong ? 800 : 600,
+                    color: "#0f172a",
+                    textAlign: "right",
+                    maxWidth: "65%",
+                    lineHeight: 1.45,
+                }}
+            >
+                {value || "-"}
+            </span>
         </div>
     );
 }
@@ -105,7 +270,7 @@ function TransferCard({ transfer, onApprove, onRefuse }) {
 
     return (
         <div className="card" style={{ overflow: "hidden", width: "100%", maxWidth: 460, justifySelf: "start" }}>
-            <div style={{ padding: "18px 20px", background: `linear-gradient(135deg, ${soft} 0%, #fff 100%)`, borderBottom: `1px solid ${border}` }}>
+            <div style={{ padding: "18px 20px", background: soft, borderBottom: `1px solid ${border}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
                     <div style={{ display: "flex", gap: 12, minWidth: 0, flex: "1 1 240px" }}>
                         <div style={{ width: 46, height: 46, borderRadius: 14, background: accent, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -194,6 +359,7 @@ export default function TransfersWorkflow() {
     const { pendingTransfers = [], processedTransfers = [], classes = [], families = [], members = [], userClass = {}, flash = {}, errors = {} } = usePage().props;
     const [tab, setTab] = useState("pending");
     const [open, setOpen] = useState(false);
+    const [step, setStep] = useState(1);
     const [submitting, setSubmitting] = useState(false);
     const [form, setForm] = useState(initialForm);
 
@@ -204,12 +370,80 @@ export default function TransfersWorkflow() {
     }), [pendingTransfers]);
 
     const formErrors = useMemo(() => Object.values(errors || {}), [errors]);
+    const isExternal = form.transfer_mode === "external";
+    const selectedOptionKey = getTransferOptionKey(form.type, form.transfer_mode);
     const canCreate = members.length > 0 || families.length > 0;
     const canSubmit = form.type === "member"
-        ? Boolean(form.user_id && form.target_class_id)
-        : form.type === "family"
-          ? Boolean(form.family_id && form.target_class_id)
-          : Boolean(form.family_id && form.destination_city && form.destination_country);
+        ? Boolean(form.user_id && (isExternal ? (form.destination_city && form.destination_church) : form.target_class_id))
+        : Boolean(form.family_id && (isExternal ? (form.destination_city && form.destination_church) : form.target_class_id));
+    const selectedType = useMemo(
+        () => transferTypeOptions.find((option) => option.value === selectedOptionKey) || transferTypeOptions[0],
+        [selectedOptionKey],
+    );
+    const selectedMember = useMemo(
+        () => members.find((member) => String(member.id) === String(form.user_id)) || null,
+        [members, form.user_id],
+    );
+    const selectedFamily = useMemo(
+        () => families.find((family) => String(family.id) === String(form.family_id)) || null,
+        [families, form.family_id],
+    );
+    const selectedClass = useMemo(
+        () => classes.find((classe) => String(classe.id) === String(form.target_class_id)) || null,
+        [classes, form.target_class_id],
+    );
+    const stepTwoValid = form.type === "member"
+        ? Boolean(form.user_id && (isExternal ? (form.destination_city && form.destination_church) : form.target_class_id))
+        : Boolean(form.family_id && (isExternal ? (form.destination_city && form.destination_church) : form.target_class_id));
+    const reviewRows = useMemo(() => {
+        const rows = [
+            { label: "Action", value: selectedType.label },
+            { label: "Nature", value: isExternal ? "Sortie externe" : "Transfert interne" },
+            {
+                label: form.type === "member" ? "Membre concerne" : "Famille concernee",
+                value: form.type === "member"
+                    ? (selectedMember ? `${selectedMember.nom} ${selectedMember.prenom}` : "-")
+                    : (selectedFamily ? `${selectedFamily.nom}${selectedFamily.code_famille ? ` • ${selectedFamily.code_famille}` : ""}` : "-"),
+                strong: true,
+            },
+            {
+                label: "Depart",
+                value: userClass.nom || "Votre classe",
+            },
+            isExternal
+                ? {
+                      label: "Destination",
+                      value: `${form.destination_city || "-"}${form.destination_country ? ` • ${form.destination_country}` : ""}`,
+                  }
+                : {
+                      label: "Classe d'accueil",
+                      value: selectedClass?.nom || "-",
+                  },
+        ];
+
+        if (form.type === "member" && selectedMember?.family_name) {
+            rows.push({
+                label: "Famille d'origine",
+                value: `${selectedMember.family_name}${selectedMember.family_code ? ` • ${selectedMember.family_code}` : ""}`,
+            });
+        }
+
+        if (form.type === "external" && form.destination_note) {
+            rows.push({
+                label: "Note destination",
+                value: form.destination_note,
+            });
+        }
+
+        if (form.reason) {
+            rows.push({
+                label: "Motif",
+                value: form.reason,
+            });
+        }
+
+        return rows;
+    }, [form, selectedClass, selectedFamily, selectedMember, selectedType, userClass.nom]);
 
     const approve = (id) => {
         const transfer = pendingTransfers.find((t) => t.id === id);
@@ -224,8 +458,43 @@ export default function TransfersWorkflow() {
 
     const closeModal = () => {
         setOpen(false);
+        setStep(1);
         setSubmitting(false);
         setForm(initialForm);
+    };
+
+    const openModal = () => {
+        setForm(initialForm);
+        setStep(1);
+        setSubmitting(false);
+        setOpen(true);
+    };
+
+    const handleTypeChange = (type) => {
+        setForm({
+            ...initialForm,
+            type,
+        });
+    };
+
+    const nextStep = () => {
+        if (step === 1) {
+            setStep(2);
+            return;
+        }
+
+        if (step === 2 && stepTwoValid) {
+            setStep(3);
+        }
+    };
+
+    const previousStep = () => {
+        if (step > 1) {
+            setStep(step - 1);
+            return;
+        }
+
+        closeModal();
     };
 
     const submit = () => {
@@ -251,7 +520,7 @@ export default function TransfersWorkflow() {
     return (
         <>
             <style>{styles}</style>
-            <div style={{ minHeight: "100vh", width: "100%", background: "linear-gradient(135deg,#6B46C1 0%,#1E40AF 48%,#B6C01A 100%)" }}>
+            <div style={{ minHeight: "100vh", width: "100%", background: "#5B21B6" }}>
                 <div style={{ width: "100%", maxWidth: "none", margin: 0, padding: "28px clamp(12px, 2vw, 24px) 40px" }}>
                     <Link href={withBasePath("", "/conducteur/inscriptions")} className="glass" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 999, color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none", marginBottom: 18 }}>
                         <ArrowLeft size={16} />
@@ -272,7 +541,7 @@ export default function TransfersWorkflow() {
                                 <Clock size={15} />
                                 {pendingTransfers.length} en attente
                             </div>
-                            <button type="button" className="btn btn-primary" onClick={() => setOpen(true)} disabled={!canCreate}>
+                            <button type="button" className="btn btn-primary" onClick={openModal} disabled={!canCreate}>
                                 <Plus size={16} />
                                 Nouveau transfert
                             </button>
@@ -330,32 +599,137 @@ export default function TransfersWorkflow() {
             {open && (
                 <div className="modal-backdrop">
                     <div className="modal">
-                        <div style={{ padding: "24px 24px 18px", borderBottom: "1px solid #e2e8f0" }}>
+                        <div style={{ padding: "24px 24px 22px", background: selectedType.accent, borderBottom: "1px solid rgba(255,255,255,.12)" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
                                 <div>
-                                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".10em", textTransform: "uppercase", color: "#64748b", marginBottom: 8 }}>Nouveau transfert</div>
-                                    <div style={{ fontSize: 28, lineHeight: 1.05, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Soumettre un transfert conducteur</div>
-                                    <div style={{ color: "#475569", fontSize: 14, lineHeight: 1.6 }}>Votre validation source sera appliquee automatiquement. Seul le conducteur de l'autre classe devra encore approuver.</div>
+                                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(255,255,255,.68)", marginBottom: 8 }}>Etape {step} sur 3</div>
+                                    <div style={{ fontSize: 28, lineHeight: 1.05, fontWeight: 800, color: "#fff", marginBottom: 8 }}>Nouveau transfert</div>
+                                    <div style={{ color: "rgba(255,255,255,.82)", fontSize: 14, lineHeight: 1.6, maxWidth: 560 }}>Même structure que le module responsable de famille, avec la validation source automatique propre au conducteur.</div>
+                                    <StepDots current={step} total={3} />
                                 </div>
-                                <button type="button" className="btn btn-ghost" onClick={closeModal}>Fermer</button>
+                                <button
+                                    type="button"
+                                    className="btn"
+                                    onClick={closeModal}
+                                    style={{ background: "rgba(255,255,255,.12)", color: "#fff", border: "1px solid rgba(255,255,255,.16)" }}
+                                >
+                                    Fermer
+                                </button>
                             </div>
                         </div>
                         <div style={{ padding: 24, display: "grid", gap: 18 }}>
                             {formErrors.length > 0 && <div style={{ borderRadius: 16, border: "1px solid #fecaca", background: "#fff1f2", padding: 14, color: "#9f1239" }}>{formErrors.map((m, i) => <div key={`${m}-${i}`}>- {m}</div>)}</div>}
-                            <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
-                                <label style={inputLabel}><span style={inputLabelText}>Type de transfert</span><select className="field" value={form.type} onChange={(e) => setForm({ ...initialForm, type: e.target.value })}><option value="member">Membre</option><option value="family">Famille</option><option value="external">Sortie externe</option></select></label>
-                                {form.type === "member" ? <label style={inputLabel}><span style={inputLabelText}>Membre concerne</span><select className="field" value={form.user_id} onChange={(e) => setForm((cur) => ({ ...cur, user_id: e.target.value }))}><option value="">Selectionner un membre</option>{members.map((m) => <option key={m.id} value={m.id}>{`${m.nom} ${m.prenom} - ${m.family_name || "Sans famille"}`}</option>)}</select></label> : <label style={inputLabel}><span style={inputLabelText}>Famille concernee</span><select className="field" value={form.family_id} onChange={(e) => setForm((cur) => ({ ...cur, family_id: e.target.value }))}><option value="">Selectionner une famille</option>{families.map((f) => <option key={f.id} value={f.id}>{`${f.nom} - ${f.code_famille || "Sans code"}`}</option>)}</select></label>}
-                                {form.type !== "external" ? <label style={inputLabel}><span style={inputLabelText}>Classe d'accueil</span><select className="field" value={form.target_class_id} onChange={(e) => setForm((cur) => ({ ...cur, target_class_id: e.target.value }))}><option value="">Selectionner une classe</option>{classes.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}</select></label> : <>
-                                    <label style={inputLabel}><span style={inputLabelText}>Ville de destination</span><input className="field" value={form.destination_city} onChange={(e) => setForm((cur) => ({ ...cur, destination_city: e.target.value }))} placeholder="Ex: Abidjan" /></label>
-                                    <label style={inputLabel}><span style={inputLabelText}>Pays de destination</span><input className="field" value={form.destination_country} onChange={(e) => setForm((cur) => ({ ...cur, destination_country: e.target.value }))} placeholder="Ex: Cote d'Ivoire" /></label>
-                                </>}
-                            </div>
-                            {form.type === "external" && <label style={inputLabel}><span style={inputLabelText}>Note de destination</span><textarea className="field" rows={3} value={form.destination_note} onChange={(e) => setForm((cur) => ({ ...cur, destination_note: e.target.value }))} placeholder="Detail complementaire" style={{ resize: "vertical" }} /></label>}
-                            <label style={inputLabel}><span style={inputLabelText}>Motif</span><textarea className="field" rows={4} value={form.reason} onChange={(e) => setForm((cur) => ({ ...cur, reason: e.target.value }))} placeholder="Expliquez la raison du transfert" style={{ resize: "vertical" }} /></label>
-                            <div style={{ borderRadius: 16, border: "1px solid #bfdbfe", background: "#eff6ff", color: "#1e3a8a", padding: 14, display: "flex", gap: 10, alignItems: "flex-start" }}><ShieldCheck size={18} style={{ flexShrink: 0 }} />{form.type === "external" ? "Une sortie externe sera enregistree directement sans validation d'une autre classe." : "Des l'envoi, votre classe source est consideree comme validee. La demande attendra ensuite uniquement le conducteur de la classe d'accueil."}</div>
+                            {step === 1 && (
+                                <div style={{ display: "grid", gap: 18 }}>
+                                    <div>
+                                        <div style={{ fontSize: 13, fontWeight: 700, color: "#475569", marginBottom: 14 }}>Qui concerne ce transfert ?</div>
+                                        <div style={{ display: "grid", gap: 12 }}>
+                                            {transferTypeOptions.map((option) => {
+                                                const Icon = option.icon;
+                                                const active = form.type === option.value;
+
+                                                return (
+                                                    <button
+                                                        key={option.value}
+                                                        type="button"
+                                                        className={`step-option ${active ? "step-option-active" : ""}`}
+                                                        onClick={() => handleTypeChange(option.value)}
+                                                        style={{ display: "flex", alignItems: "center", gap: 14, textAlign: "left", width: "100%" }}
+                                                    >
+                                                        <div style={{ width: 48, height: 48, borderRadius: 16, background: option.soft, color: option.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                                            <Icon size={20} />
+                                                        </div>
+                                                        <div style={{ minWidth: 0, flex: 1 }}>
+                                                            <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a", marginBottom: 4 }}>{option.label}</div>
+                                                            <div style={{ fontSize: 13, lineHeight: 1.55, color: "#64748b" }}>{option.description}</div>
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                    <div style={{ borderRadius: 18, border: "1px solid #bfdbfe", background: "#eff6ff", color: "#1e3a8a", padding: 16, display: "flex", gap: 12, alignItems: "flex-start" }}>
+                                        <ShieldCheck size={18} style={{ flexShrink: 0, marginTop: 1 }} />
+                                        <div style={{ lineHeight: 1.6, fontSize: 13 }}>
+                                            {form.type === "external"
+                                                ? "Une sortie externe est cloturee directement apres votre validation, sans attente d'une autre classe."
+                                                : "Comme conducteur, votre validation source sera appliquee automatiquement a l'envoi. Le conducteur d'accueil reste le seul validateur suivant."}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {step === 2 && (
+                                <div style={{ display: "grid", gap: 18 }}>
+                                    <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
+                                        {form.type === "member" ? (
+                                            <label style={inputLabel}><span style={inputLabelText}>Membre concerne</span><Select2Single name="user_id" value={form.user_id} placeholder="Selectionner un membre" onChange={(e) => setForm((cur) => ({ ...cur, user_id: e.target.value }))} options={members.map((m) => ({ value: m.id, label: buildTransferOptionLabel(m, `${m.nom} ${m.prenom} - ${m.family_name || "Sans famille"}`), description: buildTransferOptionDescription(m, `${m.code_membre || "Sans code"}${m.family_code ? ` - ${m.family_code}` : ""}`), disabled: m.transfer_locked }))} /></label>
+                                        ) : (
+                                            <label style={inputLabel}><span style={inputLabelText}>Famille concernee</span><Select2Single name="family_id" value={form.family_id} placeholder="Selectionner une famille" onChange={(e) => setForm((cur) => ({ ...cur, family_id: e.target.value }))} options={families.map((f) => ({ value: f.id, label: buildTransferOptionLabel(f, `${f.nom} - ${f.code_famille || "Sans code"}`), description: buildTransferOptionDescription(f, f.responsable ? `Responsable: ${f.responsable}` : "Sans responsable"), disabled: f.transfer_locked }))} /></label>
+                                        )}
+
+                                        {form.type !== "external" ? (
+                                            <label style={inputLabel}><span style={inputLabelText}>Classe d'accueil</span><Select2Single name="target_class_id" value={form.target_class_id} placeholder="Selectionner une classe" onChange={(e) => setForm((cur) => ({ ...cur, target_class_id: e.target.value }))} options={classes.map((c) => ({ value: c.id, label: c.nom }))} /></label>
+                                        ) : (
+                                            <>
+                                                <label style={inputLabel}><span style={inputLabelText}>Ville de destination</span><input className="field" value={form.destination_city} onChange={(e) => setForm((cur) => ({ ...cur, destination_city: e.target.value }))} placeholder="Ex: Abidjan" /></label>
+                                                <label style={inputLabel}><span style={inputLabelText}>Pays de destination</span><input className="field" value={form.destination_country} onChange={(e) => setForm((cur) => ({ ...cur, destination_country: e.target.value }))} placeholder="Ex: Cote d'Ivoire" /></label>
+                                            </>
+                                        )}
+                                    </div>
+
+                                    {form.type === "external" && (
+                                        <label style={inputLabel}><span style={inputLabelText}>Note de destination</span><textarea className="field" rows={3} value={form.destination_note} onChange={(e) => setForm((cur) => ({ ...cur, destination_note: e.target.value }))} placeholder="Eglise d'accueil, contact, precision utile..." style={{ resize: "vertical" }} /></label>
+                                    )}
+
+                                    <label style={inputLabel}><span style={inputLabelText}>Motif</span><textarea className="field" rows={4} value={form.reason} onChange={(e) => setForm((cur) => ({ ...cur, reason: e.target.value }))} placeholder="Expliquez la raison du transfert" style={{ resize: "vertical" }} /></label>
+
+                                    <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
+                                        <div style={{ borderRadius: 16, background: "#fff", border: "1px solid #e2e8f0", padding: "14px 16px" }}>
+                                            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#64748b", marginBottom: 6 }}>Depuis</div>
+                                            <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{userClass.nom || "Votre classe"}</div>
+                                        </div>
+                                        <div style={{ borderRadius: 16, background: "#fff", border: "1px solid #e2e8f0", padding: "14px 16px" }}>
+                                            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#64748b", marginBottom: 6 }}>Suite du workflow</div>
+                                            <div style={{ fontSize: 14, lineHeight: 1.5, color: "#334155" }}>
+                                                {form.type === "external"
+                                                    ? "Cloture immediate apres validation source."
+                                                    : "Transmission directe au conducteur de la classe d'accueil."}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {step === 3 && (
+                                <div style={{ display: "grid", gap: 18 }}>
+                                    <div style={{ display: "grid", gap: 8 }}>
+                                        <div style={{ fontSize: 13, fontWeight: 700, color: "#475569" }}>Recapitulatif avant envoi</div>
+                                        <div style={{ borderRadius: 20, overflow: "hidden", background: "#fff", border: "1px solid #e2e8f0" }}>
+                                            {reviewRows.map((row, index) => (
+                                                <div key={`${row.label}-${index}`} style={{ borderBottom: index === reviewRows.length - 1 ? "none" : "1px solid #e2e8f0" }}>
+                                                    <SummaryRow label={row.label} value={row.value} strong={row.strong} />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div style={{ borderRadius: 18, border: "1px solid #c7f9cc", background: "#f0fdf4", color: "#166534", padding: 16, display: "flex", gap: 12, alignItems: "flex-start" }}>
+                                        <ShieldCheck size={18} style={{ flexShrink: 0, marginTop: 1 }} />
+                                        <div style={{ fontSize: 13, lineHeight: 1.65 }}>
+                                            {form.type === "external"
+                                                ? "Apres confirmation, le transfert sera enregistre et cloture immediatement dans le workflow conducteur."
+                                                : "Apres confirmation, votre validation source sera enregistree puis la demande passera automatiquement en attente d'accueil."}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
-                                <button type="button" className="btn btn-ghost" onClick={closeModal}>Annuler</button>
-                                <button type="button" className="btn btn-primary" onClick={submit} disabled={!canSubmit || submitting}><Send size={16} />{submitting ? "Envoi..." : "Envoyer la demande"}</button>
+                                <button type="button" className="btn btn-ghost" onClick={previousStep}>{step > 1 ? "Retour" : "Annuler"}</button>
+                                {step < 3 ? (
+                                    <button type="button" className="btn btn-primary" onClick={nextStep} disabled={step === 2 && !stepTwoValid}><ArrowRight size={16} />Continuer</button>
+                                ) : (
+                                    <button type="button" className="btn btn-primary" onClick={submit} disabled={!canSubmit || submitting}><Send size={16} />{submitting ? "Envoi..." : "Confirmer l'envoi"}</button>
+                                )}
                             </div>
                         </div>
                     </div>

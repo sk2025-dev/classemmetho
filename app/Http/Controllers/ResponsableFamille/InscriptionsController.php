@@ -31,7 +31,9 @@ class InscriptionsController extends Controller
         if ($family) {
             $allMembers = $family->users()
                 ->with('classe', 'fonction', 'ville', 'sacrements')
-                ->get();
+                ->get()
+                ->reject(fn ($member) => $this->isSupersededTransferredUser($member))
+                ->values();
 
             $familyStats = [
                 'totalMembers' => $allMembers->count(),
@@ -57,6 +59,9 @@ class InscriptionsController extends Controller
                 'ville_name' => $family->ville?->nom ?? 'N/A',
                 'classe_name' => $family->classe?->nom ?? 'N/A',
                 'quartier' => $family->quartier,
+                'transfer_status' => $family->transfer_status,
+                'transfer_label' => $family->transfer_label,
+                'transfer_locked' => in_array((string) $family->transfer_status, ['pending', 'completed'], true),
             ];
 
             // Préparer les données des membres
@@ -88,6 +93,9 @@ class InscriptionsController extends Controller
                     'classe_name' => $m->classe?->nom ?? 'N/A',
                     'role' => $m->id === $family->responsable_id ? 'responsable_famille' : 'membre',
                     'is_responsable' => $m->id === $family->responsable_id,
+                    'transfer_status' => $m->transfer_status,
+                    'transfer_label' => $m->transfer_label,
+                    'transfer_locked' => in_array((string) $m->transfer_status, ['pending', 'completed'], true),
                     'profile_photo_url' => $m->profile_photo_url ?: PhotoHelper::getPhotoUrl($m->photo_path, $m->prenom, $m->nom),
                 ];
             })->values();
@@ -99,5 +107,10 @@ class InscriptionsController extends Controller
             'members' => $members,
             'classes' => $classes, // AJOUT : On passe les classes à la vue
         ]);
+    }
+    private function isSupersededTransferredUser($user): bool
+    {
+        return $user->transfer_status === 'completed'
+            && !empty($user->transferred_to_user_id);
     }
 }

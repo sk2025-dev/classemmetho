@@ -15,6 +15,15 @@ use App\Mail\SendCredentials;
 
 class MemberController extends Controller
 {
+    private function isTransferLocked(User|Family|null $record): bool
+    {
+        if (!$record) {
+            return false;
+        }
+
+        return in_array((string) $record->transfer_status, ['pending', 'completed'], true);
+    }
+
     public function show($id)
     {
         // Récupérer le membre (utilisateur) avec ses relations et sacrements
@@ -45,6 +54,11 @@ class MemberController extends Controller
     {
         $family = Family::findOrFail($request->query('family_id'));
 
+        if ($this->isTransferLocked($family)) {
+            return redirect()->route('responsable_famille.inscriptions')
+                ->with('error', 'Aucune nouvelle action n\'est possible sur une famille en transfert ou archivee.');
+        }
+
         return Inertia::render('ResponsableFamille/Members/CreateMember', [
             'family' => $family,
         ]);
@@ -54,6 +68,11 @@ class MemberController extends Controller
     {
         $familyId = $request->query('family_id');
         $family = Family::findOrFail($familyId);
+
+        if ($this->isTransferLocked($family)) {
+            return redirect()->route('responsable_famille.inscriptions')
+                ->with('error', 'Aucune nouvelle action n\'est possible sur une famille en transfert ou archivee.');
+        }
 
         // Validation avec messages personnalisés
         $validated = $request->validate(
@@ -206,6 +225,11 @@ class MemberController extends Controller
         }
 
         // Récupérer les fonctions disponibles
+        if ($this->isTransferLocked($member)) {
+            return redirect()->route('responsable_famille.inscriptions')
+                ->with('error', 'Aucune modification n\'est possible sur cet ancien membre ou sur un transfert en cours.');
+        }
+
         $fonctions = Fonction::select('id', 'nom', 'description')
             ->orderBy('nom')
             ->get();
@@ -230,6 +254,11 @@ class MemberController extends Controller
         }
 
         // Validation avec messages personnalisés
+        if ($this->isTransferLocked($member)) {
+            return redirect()->route('responsable_famille.inscriptions')
+                ->with('error', 'Aucune modification n\'est possible sur cet ancien membre ou sur un transfert en cours.');
+        }
+
         $validated = $request->validate(
             [
                 'nom' => 'required|string|max:255',

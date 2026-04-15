@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\Inscription;
 use App\Models\Family;
 use App\Models\Classe;
+use App\Models\ClassTransferRequest;
 use App\Helpers\PhotoHelper;
 
 use App\Models\Fonction; // <--- MODÈLE FONCTIONS CONSERVÉ
@@ -32,8 +33,45 @@ class AdministrationController extends Controller
         // ═══════════════════════════════════════════════════════════════
 
         // Utilisateurs avec relations
-        $allUsers = User::with(['family', 'family.responsable', 'family.ville', 'classe', 'ville', 'fonction', 'sacrements'])->get();
+        $allUsers = User::with([
+            'family',
+            'family.classe',
+            'family.responsable',
+            'family.ville',
+            'classe',
+            'ville',
+            'fonction',
+            'sacrements',
+            'transferOriginFamily',
+            'transferOriginFamily.classe',
+        ])->get()
+            ->reject(fn (User $user) => $this->isSupersededTransferredUser($user))
+            ->values();
         $totalUsersCount = $allUsers->count();
+
+        $completedTransfers = ClassTransferRequest::with('sourceClass:id,nom')
+            ->whereIn('statut', ['TERMINEE', 'completed'])
+            ->where(function ($query) use ($allUsers) {
+                $query->whereIn('membre_id', $allUsers->pluck('id')->all());
+
+                $familyIds = $allUsers->pluck('family_id')->filter()->unique()->values()->all();
+                if (!empty($familyIds)) {
+                    $query->orWhereIn('famille_id', $familyIds);
+                }
+            })
+            ->orderByDesc('date_validation_accueil')
+            ->orderByDesc('updated_at')
+            ->get();
+
+        $completedTransfersByUserId = $completedTransfers
+            ->filter(fn (ClassTransferRequest $transfer) => !empty($transfer->membre_id))
+            ->unique('membre_id')
+            ->keyBy('membre_id');
+
+        $completedTransfersByFamilyId = $completedTransfers
+            ->filter(fn (ClassTransferRequest $transfer) => !empty($transfer->famille_id))
+            ->unique('famille_id')
+            ->keyBy('famille_id');
 
         // Classes
         $classes = Classe::all();
@@ -151,9 +189,24 @@ class AdministrationController extends Controller
         // ÉTAPE 5: FORMATER LES UTILISATEURS
         // ═══════════════════════════════════════════════════════════════
 
-        $membersFormatted = $allUsers->map(function ($m) {
+        $membersFormatted = $allUsers->map(function ($m) use ($completedTransfersByUserId, $completedTransfersByFamilyId) {
             // Charger les sacrements s'ils existent
             $sacrements = $m->sacrements;
+            $familyCodeHistory = collect([
+                $m->transferOriginFamily?->code_famille,
+                $m->family?->code_famille,
+            ])->filter()->unique()->values()->all();
+            $latestMemberTransfer = $completedTransfersByUserId->get($m->id);
+            $latestFamilyTransfer = $m->family_id
+                ? $completedTransfersByFamilyId->get($m->family_id)
+                : null;
+            $ancienneClasse = $latestMemberTransfer?->sourceClass?->nom
+                ?? $latestFamilyTransfer?->sourceClass?->nom
+                ?? $m->transferOriginFamily?->classe?->nom;
+
+            if ($ancienneClasse === $m->classe?->nom) {
+                $ancienneClasse = null;
+            }
 
             // Déterminer le statut marital
             $statut_marital = 'Célibataire';
@@ -186,6 +239,7 @@ class AdministrationController extends Controller
                 'updated_at' => ($m->updated_at ?? $m->created_at) ? ($m->updated_at ?? $m->created_at)->format('d/m/Y H:i') : null,
                 'fonction' => $m->fonction?->nom,
                 'classe' => $m->classe?->nom,
+                'ancienne_classe' => $ancienneClasse,
                 'ville_id' => $m->ville_id,
                 'famille_ville_id' => $m->family?->ville_id,
                 'ville' => $m->ville?->nom
@@ -193,6 +247,9 @@ class AdministrationController extends Controller
                     ?? ($m->family?->ville_id ? ('Ville ID: ' . $m->family->ville_id) : null),
                 'famille' => $m->family?->nom,
                 'code_famille' => $m->family?->code_famille,
+                'ancienne_famille_code' => $m->transferOriginFamily?->code_famille,
+                'nouvelle_famille_code' => count($familyCodeHistory) > 1 ? $m->family?->code_famille : null,
+                'code_famille_historique' => $familyCodeHistory,
                 'code_membre' => $m->code_membre,
 
                 // === CHAMPS SUPPLÉMENTAIRES POUR LA MODIFICATION ===
@@ -514,5 +571,10 @@ class AdministrationController extends Controller
         $user->delete();
 
         return back()->with('success', 'Membre supprimé avec succès.');
+    }
+    private function isSupersededTransferredUser(User $user): bool
+    {
+        return $user->transfer_status === 'completed'
+            && !empty($user->transferred_to_user_id);
     }
 }

@@ -86,6 +86,43 @@ const MEMBER_MARITAL_STATUS_OPTIONS = [
     { value: "Dote", label: "Doté(e)" },
 ];
 
+function getFamilyCodeHistory(member) {
+    const history = Array.isArray(member?.code_famille_historique)
+        ? member.code_famille_historique.filter(Boolean)
+        : [];
+
+    if (history.length > 0) {
+        return history;
+    }
+
+    return member?.code_famille ? [member.code_famille] : [];
+}
+
+function renderTransferBadge(member) {
+    if (!member?.transfer_locked && !member?.transfer_history_label) {
+        return null;
+    }
+
+    const archived = member.transfer_status === "completed";
+    const historyOnly = !member?.transfer_locked && member?.transfer_history_label;
+
+    return (
+        <span
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+                historyOnly
+                    ? "bg-blue-100 text-blue-700 border border-blue-200"
+                    : archived
+                    ? "bg-slate-200 text-slate-700 border border-slate-300"
+                    : "bg-orange-100 text-orange-700 border border-orange-300"
+            }`}
+        >
+            {member.transfer_history_label ||
+                member.transfer_label ||
+                (archived ? "Ancien membre" : "Transfert en cours")}
+        </span>
+    );
+}
+
 // --- Pagination Component ---
 const PaginationControls = ({
     currentPage,
@@ -491,8 +528,15 @@ export default function Inscriptions({
         })(),
         famille_id: member.famille_id || member.family_id || null,
         code_famille: member.code_famille || null,
+        ancienne_famille_code: member.ancienne_famille_code || null,
+        nouvelle_famille_code: member.nouvelle_famille_code || null,
+        code_famille_historique: member.code_famille_historique || [],
         code_membre: member.code_membre || null,
         responsable_famille: member.responsable_famille || false,
+        transfer_status: member.transfer_status || null,
+        transfer_label: member.transfer_label || null,
+        transfer_history_label: member.transfer_history_label || null,
+        transfer_locked: Boolean(member.transfer_locked),
         profile_photo_url: normalizePhotoUrl(
             member.profile_photo_url ||
                 member.photo_path ||
@@ -517,9 +561,15 @@ export default function Inscriptions({
             email: family.responsable?.email,
             phone: family.responsable?.phone,
             code_membre: family.responsable?.code_membre || null,
+            transfer_status: family.responsable?.transfer_status || null,
+            transfer_label: family.responsable?.transfer_label || null,
+            transfer_locked: Boolean(family.responsable?.transfer_locked),
         },
         members: family.members || [],
         memberCount: family.member_count || family.members?.length || 0,
+        transfer_status: family.transfer_status || null,
+        transfer_label: family.transfer_label || null,
+        transfer_locked: Boolean(family.transfer_locked),
     }));
 
     const familyFilterOptions = [
@@ -1803,7 +1853,7 @@ export default function Inscriptions({
                                                                     member.id ||
                                                                     idx
                                                                 }
-                                                                className="hover:bg-slate-50 transition"
+                                                                className={`${member.transfer_locked ? "opacity-60" : "hover:bg-slate-50"} transition`}
                                                             >
                                                                 <td className="p-5 text-slate-500 font-mono text-xs">
                                                                     {idx + 1}
@@ -1828,7 +1878,7 @@ export default function Inscriptions({
                                                                                 true
                                                                             }
                                                                         />
-                                                                        <div>
+                                                                        <div className="space-y-1">
                                                                             <div className="font-semibold text-slate-900">
                                                                                 {member.prenom ||
                                                                                     member.first_name ||
@@ -1837,6 +1887,7 @@ export default function Inscriptions({
                                                                                     member.last_name ||
                                                                                     member.lastName}
                                                                             </div>
+                                                                            {renderTransferBadge(member)}
                                                                         </div>
                                                                     </div>
                                                                 </td>
@@ -1850,10 +1901,49 @@ export default function Inscriptions({
                                                                     </div>
                                                                 </td>
                                                                 <td className="p-5 text-slate-600">
-                                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
-                                                                        {member.code_famille ||
-                                                                            "N/A"}
-                                                                    </span>
+                                                                    <div className="flex flex-col gap-1">
+                                                                        {getFamilyCodeHistory(
+                                                                            member,
+                                                                        )
+                                                                            .slice(
+                                                                                0,
+                                                                                2,
+                                                                            )
+                                                                            .map(
+                                                                                (
+                                                                                    code,
+                                                                                    codeIndex,
+                                                                                ) => (
+                                                                                    <span
+                                                                                        key={`${member.id}-family-code-${codeIndex}`}
+                                                                                        className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700"
+                                                                                    >
+                                                                                        {codeIndex ===
+                                                                                            0 &&
+                                                                                        getFamilyCodeHistory(
+                                                                                            member,
+                                                                                        )
+                                                                                            .length >
+                                                                                            1
+                                                                                            ? "Ancienne: "
+                                                                                            : codeIndex ===
+                                                                                                1
+                                                                                              ? "Nouvelle: "
+                                                                                              : ""}
+                                                                                        {code}
+                                                                                    </span>
+                                                                                ),
+                                                                            )}
+                                                                        {getFamilyCodeHistory(
+                                                                            member,
+                                                                        )
+                                                                            .length ===
+                                                                            0 && (
+                                                                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
+                                                                                N/A
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                 </td>
                                                                 <td className="p-5 text-slate-600">
                                                                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-slate-50 border border-slate-200 rounded-full text-xs font-semibold text-slate-700">
@@ -1936,8 +2026,11 @@ export default function Inscriptions({
                                                                         <button
                                                                             type="button"
                                                                             title="Modifier"
-                                                                            className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition transform hover:scale-105"
+                                                                            disabled={member.transfer_locked}
+                                                                            className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition transform hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
                                                                             onClick={() => {
+                                                                                if (member.transfer_locked)
+                                                                                    return;
                                                                                 openEditModal(
                                                                                     member,
                                                                                 );
@@ -2120,7 +2213,7 @@ export default function Inscriptions({
                                                         return (
                                                             <tr
                                                                 key={member.id}
-                                                                className="hover:bg-slate-50 transition"
+                                                                className={`${member.transfer_locked ? "opacity-60" : "hover:bg-slate-50"} transition`}
                                                             >
                                                                 <td className="p-5 text-slate-500 font-mono text-xs">
                                                                     {startIndex +
@@ -2141,7 +2234,7 @@ export default function Inscriptions({
                                                                                 true
                                                                             }
                                                                         />
-                                                                        <div>
+                                                                        <div className="space-y-1">
                                                                             <div className="font-semibold text-slate-900">
                                                                                 {
                                                                                     member.prenom
@@ -2150,6 +2243,7 @@ export default function Inscriptions({
                                                                                     member.nom
                                                                                 }
                                                                             </div>
+                                                                            {renderTransferBadge(member)}
                                                                         </div>
                                                                     </div>
                                                                 </td>
@@ -2161,11 +2255,62 @@ export default function Inscriptions({
                                                                           : "Aucune famille"}
                                                                 </td>
                                                                 <td className="p-5 text-slate-600">
-                                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
-                                                                        {member.code_famille ||
-                                                                            memberFamily?.code_famille ||
-                                                                            "N/A"}
-                                                                    </span>
+                                                                    <div className="flex flex-col gap-1">
+                                                                        {(
+                                                                            getFamilyCodeHistory(
+                                                                                member,
+                                                                            )
+                                                                                .length >
+                                                                            0
+                                                                                ? getFamilyCodeHistory(
+                                                                                      member,
+                                                                                  )
+                                                                                : memberFamily?.code_famille
+                                                                                  ? [
+                                                                                        memberFamily.code_famille,
+                                                                                    ]
+                                                                                  : []
+                                                                        )
+                                                                            .slice(
+                                                                                0,
+                                                                                2,
+                                                                            )
+                                                                            .map(
+                                                                                (
+                                                                                    code,
+                                                                                    codeIndex,
+                                                                                ) => (
+                                                                                    <span
+                                                                                        key={`${member.id}-summary-family-code-${codeIndex}`}
+                                                                                        className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700"
+                                                                                    >
+                                                                                        {codeIndex ===
+                                                                                            0 &&
+                                                                                        getFamilyCodeHistory(
+                                                                                            member,
+                                                                                        )
+                                                                                            .length >
+                                                                                            1
+                                                                                            ? "Ancienne: "
+                                                                                            : codeIndex ===
+                                                                                                1
+                                                                                              ? "Nouvelle: "
+                                                                                              : ""}
+                                                                                        {code}
+                                                                                    </span>
+                                                                                ),
+                                                                            )}
+                                                                        {getFamilyCodeHistory(
+                                                                            member,
+                                                                        )
+                                                                            .length ===
+                                                                            0 &&
+                                                                            !memberFamily?.code_famille && (
+                                                                                <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
+                                                                                    N/A
+                                                                                </span>
+                                                                            )}
+                                                                    </div>
                                                                 </td>
                                                                 <td className="p-5 text-slate-600">
                                                                     {
@@ -2267,7 +2412,10 @@ export default function Inscriptions({
                                                                                     "rgba(37, 99, 235, 0.1)",
                                                                                 border: "2px solid rgba(37, 99, 235, 0.2)",
                                                                             }}
+                                                                            disabled={member.transfer_locked}
                                                                             onClick={() => {
+                                                                                if (member.transfer_locked)
+                                                                                    return;
                                                                                 console.log(
                                                                                     "Modifier clicked for member:",
                                                                                     member,
@@ -2300,7 +2448,10 @@ export default function Inscriptions({
                                                                                         ? "2px solid rgba(22, 163, 74, 0.2)"
                                                                                         : "2px solid rgba(220, 38, 38, 0.2)",
                                                                             }}
+                                                                            disabled={member.transfer_locked}
                                                                             onClick={() => {
+                                                                                if (member.transfer_locked)
+                                                                                    return;
                                                                                 if (
                                                                                     member.status ===
                                                                                     "actif"
@@ -2328,12 +2479,16 @@ export default function Inscriptions({
                                                                                     "rgba(220, 38, 38, 0.1)",
                                                                                 border: "2px solid rgba(220, 38, 38, 0.2)",
                                                                             }}
-                                                                            onClick={() =>
+                                                                            disabled={member.transfer_locked}
+                                                                            onClick={() => {
+                                                                                if (member.transfer_locked)
+                                                                                    return;
+
                                                                                 handleDelete(
                                                                                     member.id,
                                                                                     "member",
-                                                                                )
-                                                                            }
+                                                                                );
+                                                                            }}
                                                                         >
                                                                             <Trash2 className="w-5 h-5 text-red-600" />
                                                                         </button>
