@@ -37,9 +37,23 @@ class PresencesController extends Controller
                 }
 
                 if ($presence->specialEvent && $presence->specialEvent->date) {
-                    $dateSource = Carbon::parse(
-                        trim((string) $presence->specialEvent->date . ' ' . (string) ($presence->specialEvent->time ?? '00:00'))
-                    );
+                    $eventDate = Carbon::parse($presence->specialEvent->date);
+                    $rawTime = trim((string) ($presence->specialEvent->time ?? ''));
+
+                    if ($rawTime !== '') {
+                        try {
+                            $parsedTime = Carbon::parse($rawTime);
+                            $eventDate->setTime(
+                                $parsedTime->hour,
+                                $parsedTime->minute,
+                                $parsedTime->second,
+                            );
+                        } catch (\Throwable $e) {
+                            // Keep date-only value when time format is not parseable.
+                        }
+                    }
+
+                    $dateSource = $eventDate;
                 }
 
                 $d = Carbon::parse($dateSource);
@@ -50,16 +64,10 @@ class PresencesController extends Controller
 
                 $activityType = $presence->specialEvent ? 'programme' : ($presence->activite?->type ?? null);
 
-                $isCulte = str_contains(
-                    mb_strtolower((string) ($presence->specialEvent?->title ?? $presence->activite?->type ?? '')),
-                    'culte'
-                );
-
                 return [
                     'id' => $presence->id,
                     'activite' => $activityLabel,
                     'type' => $activityType,
-                    'is_culte' => $isCulte,
                     'date' => $d->locale('fr')->translatedFormat('d M'),
                     'mois' => (int) $d->month,
                     'statut' => $presence->statut ?? 'present',

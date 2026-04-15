@@ -52,7 +52,7 @@ class PresencesController extends Controller
             fputcsv($out, ['Dashboard', 'Valeur']);
             fputcsv($out, ['Classes actives', $data['stats']['total_classes'] ?? 0]);
             fputcsv($out, ['Total membres', $data['stats']['total_membres'] ?? 0]);
-            fputcsv($out, ['Presents dernier culte', $data['stats']['presents_dernier'] ?? 0]);
+            fputcsv($out, ['Presents derniere activite', $data['stats']['presents_dernier'] ?? 0]);
             fputcsv($out, ['Absences recurrentes', $data['stats']['absences_recurrentes'] ?? 0]);
             fputcsv($out, []);
 
@@ -182,7 +182,6 @@ class PresencesController extends Controller
                 return [
                     'name' => $activity->title,
                     'type' => $activity->type,
-                    'is_culte' => str_contains(mb_strtolower((string) $activity->type), 'culte'),
                     'pct' => $pct,
                     'present' => $present,
                     'total' => max($total, 1),

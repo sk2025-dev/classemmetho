@@ -4030,6 +4030,7 @@ const EventPlannerModal = ({
             title: "",
             date: "",
             time: "",
+            end_time: "",
             orateur: "",
             moderateur: "",
             famille_reception: "",
@@ -4047,6 +4048,7 @@ const EventPlannerModal = ({
                         ? getLocalDateString(editingEvent.date)
                         : "",
                     time: editingEvent.time || "",
+                    end_time: editingEvent.end_time || "",
                     orateur: editingEvent.orateur || "",
                     moderateur: editingEvent.moderateur || "",
                     famille_reception: editingEvent.famille_reception || "",
@@ -4059,6 +4061,7 @@ const EventPlannerModal = ({
                     title: "",
                     date: "",
                     time: "",
+                    end_time: "",
                     orateur: "",
                     moderateur: "",
                     famille_reception: "",
@@ -4084,6 +4087,10 @@ const EventPlannerModal = ({
             time:
                 activity.time && activity.time.trim() !== ""
                     ? activity.time
+                    : null,
+            end_time:
+                activity.end_time && activity.end_time.trim() !== ""
+                    ? activity.end_time
                     : null,
             orateur:
                 activity.orateur && activity.orateur.trim() !== ""
@@ -4128,6 +4135,7 @@ const EventPlannerModal = ({
                         title: "",
                         date: "",
                         time: "",
+                        end_time: "",
                         orateur: "",
                         moderateur: "",
                         famille_reception: "",
@@ -4240,6 +4248,24 @@ const EventPlannerModal = ({
                                             />
                                         </div>
                                         <div className="form-group">
+                                            <label>Heure de fin</label>
+                                            <span className="input-icon">
+                                                <IconClock />
+                                            </span>
+                                            <input
+                                                type="time"
+                                                value={activity.end_time}
+                                                onChange={(e) => {
+                                                    const updated = [
+                                                        ...activities,
+                                                    ];
+                                                    updated[index].end_time =
+                                                        e.target.value;
+                                                    setActivities(updated);
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="form-group">
                                             <label>Orateur</label>
                                             <span className="input-icon">
                                                 <IconMic />
@@ -4334,6 +4360,7 @@ const EventPlannerModal = ({
                                             title: "",
                                             date: "",
                                             time: "",
+                                            end_time: "",
                                             orateur: "",
                                             moderateur: "",
                                             famille_reception: "",

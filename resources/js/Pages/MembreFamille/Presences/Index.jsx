@@ -173,31 +173,7 @@ function HistoriqueRow({ activite, date, classe, statut }) {
 // ─── Composant principal ─────────────────────────────────────────────────────
 export default function MembreFamilleView({ membre = {}, historique = [] }) {
     const [showAll, setShowAll] = useState(false);
-    const [activityKindFilter, setActivityKindFilter] = useState("tous");
-
-    const historiqueFiltree = useMemo(() => {
-        if (activityKindFilter === "cultes") {
-            return historique.filter(
-                (h) =>
-                    Boolean(h.is_culte) ||
-                    String(h.type ?? "")
-                        .toLowerCase()
-                        .includes("culte"),
-            );
-        }
-
-        if (activityKindFilter === "activites") {
-            return historique.filter(
-                (h) =>
-                    !Boolean(h.is_culte) &&
-                    !String(h.type ?? "")
-                        .toLowerCase()
-                        .includes("culte"),
-            );
-        }
-
-        return historique;
-    }, [historique, activityKindFilter]);
+    const historiqueFiltree = useMemo(() => historique, [historique]);
 
     const nbPresents = useMemo(
         () => historiqueFiltree.filter((h) => h.statut === "present").length,
@@ -440,50 +416,6 @@ export default function MembreFamilleView({ membre = {}, historique = [] }) {
                 ))}
             </div>
 
-            <div
-                style={{
-                    display: "flex",
-                    gap: 8,
-                    padding: "14px 24px 0",
-                    flexWrap: "wrap",
-                }}
-            >
-                {[
-                    { key: "tous", label: "Tous" },
-                    { key: "activites", label: "Activités" },
-                    { key: "cultes", label: "Cultes" },
-                ].map((item) => (
-                    <button
-                        key={item.key}
-                        onClick={() => {
-                            setActivityKindFilter(item.key);
-                            setShowAll(false);
-                        }}
-                        style={{
-                            border:
-                                activityKindFilter === item.key
-                                    ? "1px solid #ffffff"
-                                    : "1px solid rgba(255,255,255,0.25)",
-                            borderRadius: 20,
-                            padding: "6px 14px",
-                            fontSize: 12,
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            background:
-                                activityKindFilter === item.key
-                                    ? "rgba(255,255,255,0.95)"
-                                    : "rgba(255,255,255,0.12)",
-                            color:
-                                activityKindFilter === item.key
-                                    ? "#1e2070"
-                                    : "white",
-                        }}
-                    >
-                        {item.label}
-                    </button>
-                ))}
-            </div>
-
             {/* Historique récent */}
             <div
                 style={{
@@ -513,7 +445,7 @@ export default function MembreFamilleView({ membre = {}, historique = [] }) {
                         key={h.id}
                         activite={h.activite}
                         date={h.date}
-                        classe={h.is_culte ? "Culte" : membre.classe}
+                        classe={membre.classe}
                         statut={h.statut}
                     />
                 ))}

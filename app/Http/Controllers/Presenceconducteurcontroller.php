@@ -31,18 +31,18 @@ class PresenceConducteurController extends Controller
             ->where('is_parish', false)
             ->orderByDesc('date')
             ->orderByDesc('time')
-            ->get(['id', 'title', 'date', 'time', 'lieu'])
+            ->get(['id', 'title', 'date', 'time', 'end_time', 'lieu'])
             ->map(function (SpecialEvent $event) {
                 $dateHeure = $this->resolveSpecialEventDateTime($event);
+                $dateHeureFin = $this->resolveSpecialEventEndDateTime($event);
                 $titre = (string) $event->title;
-                $isCulte = str_contains(mb_strtolower($titre), 'culte');
 
                 return [
                     'id' => $event->id,
                     'titre' => $titre,
-                    'type' => $isCulte ? 'culte' : 'activite',
-                    'is_culte' => $isCulte,
+                    'type' => 'activite',
                     'date_heure_debut' => $dateHeure,
+                    'date_heure_fin' => $dateHeureFin,
                     'statut' => Carbon::parse($dateHeure)->isPast() ? 'terminee' : 'planifiee',
                     'presence_obligatoire' => true,
                     'source' => 'programme',
@@ -80,8 +80,8 @@ class PresenceConducteurController extends Controller
         $activiteActiveId = $activites->first()['id'] ?? null;
 
         // Stats rapides
-        $dernierCulte    = $activites->firstWhere('type', 'culte');
-        $presencesDernier = $dernierCulte ? ($presences[$dernierCulte['id']] ?? []) : [];
+        $derniereActivite = $activites->first();
+        $presencesDernier = $derniereActivite ? ($presences[$derniereActivite['id']] ?? []) : [];
         $nbPresents       = collect($presencesDernier)->filter(fn($v) => $v === 'present')->count();
 
         // Absences récurrentes : membres absents >= 3 fois
@@ -141,18 +141,18 @@ class PresenceConducteurController extends Controller
             ->where('is_parish', false)
             ->orderByDesc('date')
             ->orderByDesc('time')
-            ->get(['id', 'title', 'date', 'time', 'lieu'])
+            ->get(['id', 'title', 'date', 'time', 'end_time', 'lieu'])
             ->map(function (SpecialEvent $event) {
                 $dateHeure = $this->resolveSpecialEventDateTime($event);
+                $dateHeureFin = $this->resolveSpecialEventEndDateTime($event);
                 $title = (string) ($event->title ?? 'Activite');
-                $isCulte = str_contains(mb_strtolower($title), 'culte');
 
                 return [
                     'id' => $event->id,
                     'titre' => $title,
-                    'type' => $isCulte ? 'culte' : 'activite',
-                    'is_culte' => $isCulte,
+                    'type' => 'activite',
                     'date_heure_debut' => $dateHeure,
+                    'date_heure_fin' => $dateHeureFin,
                     'statut' => Carbon::parse($dateHeure)->isPast() ? 'terminee' : 'planifiee',
                     'presence_obligatoire' => true,
                     'source' => 'programme',
@@ -173,52 +173,10 @@ class PresenceConducteurController extends Controller
      */
     public function enregistrerProgramme(Request $request, SpecialEvent $event)
     {
-        $conducteur = Auth::user()->load('classe');
-        $classe = $conducteur->classe;
-
-        abort_if(! $classe, 403, 'Aucune classe associee a ce conducteur.');
-        abort_if((int) $event->class_id !== (int) $classe->id, 403, 'Activite hors de votre classe.');
-        abort_if((bool) $event->is_parish, 403, 'Activite invalide pour ce module.');
-
-        if (! Schema::hasColumn('presences', 'special_event_id')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Migration requise: colonne special_event_id absente.',
-            ], 500);
-        }
-
-        $request->validate([
-            'marquages' => ['required', 'array'],
-            'marquages.*' => ['nullable', 'in:present,absent,excuse'],
-            'notes' => ['nullable', 'array'],
-            'notes.*' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        foreach ($request->marquages as $membreId => $statut) {
-            if ($statut === null) {
-                Presence::where('special_event_id', $event->id)
-                    ->where('membre_famille_id', $membreId)
-                    ->delete();
-                continue;
-            }
-
-            Presence::updateOrCreate(
-                [
-                    'special_event_id' => $event->id,
-                    'membre_famille_id' => $membreId,
-                ],
-                [
-                    'activite_id' => null,
-                    'statut' => $statut,
-                    'marquee_par' => Auth::id(),
-                    'marquee_le' => now(),
-                    'methode' => 'manuelle_programme',
-                    'notes' => $request->notes[$membreId] ?? null,
-                ]
-            );
-        }
-
-        return response()->json(['message' => 'Presences enregistrees avec succes.']);
+        return response()->json([
+            'success' => false,
+            'message' => 'Le pointage manuel est desactive. Utilisez uniquement le QR code.',
+        ], 403);
     }
 
     /**
@@ -227,43 +185,10 @@ class PresenceConducteurController extends Controller
      */
     public function enregistrer(Request $request, PermanentActivity $activite)
     {
-        $conducteur = Auth::user()->load('classe');
-
-        // Vérification simple : seules les activités de classe sont autorisées ici
-        abort_if((bool) $activite->is_parish, 403);
-
-        $request->validate([
-            'marquages'   => ['required', 'array'],
-            'marquages.*' => ['nullable', 'in:present,absent,excuse'],
-            'notes'       => ['nullable', 'array'],
-            'notes.*'     => ['nullable', 'string', 'max:255'],
-        ]);
-
-        foreach ($request->marquages as $membreId => $statut) {
-            if ($statut === null) {
-                // Supprimer la présence si elle existe
-                Presence::where('activite_id', $activite->id)
-                    ->where('membre_famille_id', $membreId)
-                    ->delete();
-                continue;
-            }
-
-            Presence::updateOrCreate(
-                [
-                    'activite_id'       => $activite->id,
-                    'membre_famille_id' => $membreId,
-                ],
-                [
-                    'statut'      => $statut,   // ajoute ce champ à ta migration si besoin
-                    'marquee_par' => Auth::id(),
-                    'marquee_le'  => now(),
-                    'methode'     => 'manuelle',
-                    'notes'       => $request->notes[$membreId] ?? null,
-                ]
-            );
-        }
-
-        return response()->json(['message' => 'Présences enregistrées avec succès.']);
+        return response()->json([
+            'success' => false,
+            'message' => 'Le pointage manuel est desactive. Utilisez uniquement le QR code.',
+        ], 403);
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -334,6 +259,19 @@ class PresenceConducteurController extends Controller
         } else {
             $date->setTime(0, 0, 0);
         }
+
+        return $date->toDateTimeString();
+    }
+
+    private function resolveSpecialEventEndDateTime(SpecialEvent $event): ?string
+    {
+        if (empty($event->end_time)) {
+            return null;
+        }
+
+        $date = Carbon::parse($event->date);
+        $time = Carbon::parse($event->end_time);
+        $date->setTime($time->hour, $time->minute, $time->second);
 
         return $date->toDateTimeString();
     }

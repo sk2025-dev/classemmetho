@@ -367,6 +367,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/conducteur/programmes/events-multiple', [ProgrammesClasseController::class, 'storeMultipleEvents'])->name('conducteur.programmes.events-multiple');
         Route::put('/conducteur/programmes/event/{id}', [ProgrammesClasseController::class, 'updateEvent'])->name('conducteur.programmes.event.update');
         Route::get('/conducteur/programmes/event/{id}/qr', [ProgrammesClasseController::class, 'qrCode'])->name('conducteur.programmes.event.qr');
+        Route::get('/conducteur/programmes/{event}/presences', [\App\Http\Controllers\Api\PresenceController::class, 'programmeSummary'])
+            ->whereNumber('event')
+            ->name('conducteur.programmes.presences');
         Route::get('/conducteur/programmes/event/{id}/qr/fiche-pdf', [ProgrammesClasseController::class, 'qrSheetPdf'])->name('conducteur.programmes.event.qr.sheet-pdf');
         Route::get('/conducteur/programmes/event/{id}/qr/preview', [ProgrammesClasseController::class, 'qrPreview'])->name('conducteur.programmes.event.qr.preview');
         Route::delete('/conducteur/programmes/event/{id}', [ProgrammesClasseController::class, 'destroy'])->name('conducteur.programmes.event.destroy');

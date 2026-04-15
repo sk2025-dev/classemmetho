@@ -13,6 +13,7 @@ class SpecialEvent extends Model
         'title',
         'date',
         'time',
+        'end_time',
         'orateur',
         'moderateur',
         'famille_reception',
@@ -27,6 +28,7 @@ class SpecialEvent extends Model
     protected $casts = [
         'date' => 'date',
         'time' => 'datetime:H:i',
+        'end_time' => 'datetime:H:i',
         'is_parish' => 'boolean',
         'qr_expires_at' => 'datetime',
         'created_at' => 'datetime',

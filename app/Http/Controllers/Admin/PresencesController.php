@@ -8,6 +8,7 @@ use App\Models\Presence;
 use App\Models\PermanentActivity;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -51,7 +52,7 @@ class PresencesController extends Controller
             fputcsv($out, ['Dashboard', 'Valeur']);
             fputcsv($out, ['Classes actives', $data['stats']['total_classes'] ?? 0]);
             fputcsv($out, ['Total membres', $data['stats']['total_membres'] ?? 0]);
-            fputcsv($out, ['Presents dernier culte', $data['stats']['presents_dernier'] ?? 0]);
+            fputcsv($out, ['Presents derniere activite', $data['stats']['presents_dernier'] ?? 0]);
             fputcsv($out, ['Absences recurrentes', $data['stats']['absences_recurrentes'] ?? 0]);
             fputcsv($out, []);
 
@@ -107,6 +108,10 @@ class PresencesController extends Controller
         $totalClasses = (int) Classe::query()->count();
         $totalMembres = (int) User::query()->whereNotNull('classe_id')->count();
 
+        $classes = Classe::query()
+            ->with('users:id,classe_id')
+            ->get(['id', 'nom']);
+
         $lastActivityId = PermanentActivity::query()
             ->where('is_parish', false)
             ->latest('id')
@@ -128,9 +133,7 @@ class PresencesController extends Controller
             ->get()
             ->count();
 
-        $classesData = Classe::query()
-            ->with('users:id,classe_id')
-            ->get(['id', 'nom'])
+        $classesData = $classes
             ->map(function (Classe $classe) {
                 $memberIds = $classe->users->pluck('id');
                 $totalMembresClasse = $memberIds->count();
@@ -151,6 +154,7 @@ class PresencesController extends Controller
                 $pct = $totalMarquages > 0 ? (int) round(($presentCount / $totalMarquages) * 100) : 0;
 
                 return [
+                    'id' => $classe->id,
                     'name' => $classe->nom,
                     'pct' => $pct,
                     'present' => $presentCount,
@@ -160,6 +164,142 @@ class PresencesController extends Controller
             })
             ->sortByDesc('pct')
             ->values();
+
+        $classIds = $classes->pluck('id')->values();
+
+        $classActivitiesRows = Presence::query()
+            ->from('presences as p')
+            ->join('users as u', 'u.id', '=', 'p.membre_famille_id')
+            ->leftJoin('permanent_activities as pa', 'pa.id', '=', 'p.activite_id')
+            ->leftJoin('special_events as se', 'se.id', '=', 'p.special_event_id')
+            ->whereIn('u.classe_id', $classIds)
+            ->selectRaw('u.classe_id as classe_id,
+                COALESCE(se.title, pa.title, "Activite") as activity_name,
+                COALESCE(pa.type, "programme") as activity_type,
+                SUM(CASE WHEN p.statut = "present" THEN 1 ELSE 0 END) as presents,
+                COUNT(*) as total')
+            ->groupBy('u.classe_id', 'activity_name', 'activity_type')
+            ->get()
+            ->groupBy('classe_id')
+            ->map(function ($rows) {
+                return collect($rows)
+                    ->map(function ($row) {
+                        $present = (int) ($row->presents ?? 0);
+                        $total = (int) ($row->total ?? 0);
+                        $pct = $total > 0 ? (int) round(($present / $total) * 100) : 0;
+
+                        return [
+                            'name' => $row->activity_name,
+                            'type' => $row->activity_type,
+                            'pct' => $pct,
+                            'present' => $present,
+                            'total' => max($total, 1),
+                            'color' => $pct >= 75 ? '#2d2f8f' : ($pct >= 60 ? '#4a4db8' : '#7c3aed'),
+                        ];
+                    })
+                    ->sortByDesc('pct')
+                    ->values();
+            });
+
+        $classMonthlyRows = Presence::query()
+            ->from('presences as p')
+            ->join('users as u', 'u.id', '=', 'p.membre_famille_id')
+            ->whereIn('u.classe_id', $classIds)
+            ->whereNotNull('p.created_at')
+            ->selectRaw('u.classe_id as classe_id,
+                YEAR(p.created_at) as y,
+                MONTH(p.created_at) as m,
+                SUM(CASE WHEN p.statut = "present" THEN 1 ELSE 0 END) as presents,
+                COUNT(*) as total')
+            ->groupByRaw('u.classe_id, YEAR(p.created_at), MONTH(p.created_at)')
+            ->orderByRaw('YEAR(p.created_at), MONTH(p.created_at)')
+            ->get()
+            ->groupBy('classe_id')
+            ->map(function ($rows) {
+                return collect($rows)->map(function ($row) {
+                    $monthDate = Carbon::createFromDate((int) $row->y, (int) $row->m, 1);
+                    $total = (int) ($row->total ?? 0);
+                    $present = (int) ($row->presents ?? 0);
+                    $pct = $total > 0 ? (int) round(($present / $total) * 100) : 0;
+
+                    return [
+                        'mois' => $monthDate->locale('fr')->translatedFormat('F'),
+                        'pct' => $pct,
+                        'present' => $present,
+                        'total' => max($total, 1),
+                    ];
+                })->values();
+            });
+
+        $classWeeklyRows = Presence::query()
+            ->from('presences as p')
+            ->join('users as u', 'u.id', '=', 'p.membre_famille_id')
+            ->whereIn('u.classe_id', $classIds)
+            ->whereNotNull('p.created_at')
+            ->selectRaw('u.classe_id as classe_id,
+                DATE_FORMAT(p.created_at, "%x-%v") as iso_week,
+                SUM(CASE WHEN p.statut = "present" THEN 1 ELSE 0 END) as presents,
+                COUNT(*) as total')
+            ->groupByRaw('u.classe_id, DATE_FORMAT(p.created_at, "%x-%v")')
+            ->orderByRaw('DATE_FORMAT(p.created_at, "%x-%v")')
+            ->get()
+            ->groupBy('classe_id')
+            ->map(function ($rows) {
+                return collect($rows)
+                    ->take(-8)
+                    ->map(function ($row) {
+                        $parts = explode('-', (string) $row->iso_week);
+                        $weekNumber = $parts[1] ?? null;
+                        $total = (int) ($row->total ?? 0);
+                        $present = (int) ($row->presents ?? 0);
+                        $pct = $total > 0 ? (int) round(($present / $total) * 100) : 0;
+
+                        return [
+                            'semaine' => $weekNumber ? ('Sem. ' . ltrim($weekNumber, '0')) : 'Sem.',
+                            'pct' => $pct,
+                        ];
+                    })
+                    ->values();
+            });
+
+        $classAlertRows = Presence::query()
+            ->from('presences as p')
+            ->join('users as u', 'u.id', '=', 'p.membre_famille_id')
+            ->leftJoin('classes as c', 'c.id', '=', 'u.classe_id')
+            ->where('p.statut', 'absent')
+            ->whereIn('u.classe_id', $classIds)
+            ->selectRaw('u.classe_id as classe_id, u.id as user_id, u.prenom, u.nom, c.nom as classe_nom, COUNT(*) as absences')
+            ->groupBy('u.classe_id', 'u.id', 'u.prenom', 'u.nom', 'c.nom')
+            ->havingRaw('COUNT(*) >= 3')
+            ->orderByDesc('absences')
+            ->get()
+            ->groupBy('classe_id')
+            ->map(function ($rows) {
+                return collect($rows)
+                    ->take(20)
+                    ->map(function ($row) {
+                        $abs = (int) ($row->absences ?? 0);
+
+                        return [
+                            'name' => trim(($row->prenom ?? '') . ' ' . ($row->nom ?? '')),
+                            'classe' => $row->classe_nom ?? 'Sans classe',
+                            'absences' => $abs,
+                            'level' => $abs >= 4 ? 'high' : 'medium',
+                        ];
+                    })
+                    ->values();
+            });
+
+        $classInsights = [];
+        foreach ($classes as $classe) {
+            $classeKey = (string) $classe->id;
+            $classInsights[$classeKey] = [
+                'activitesData' => ($classActivitiesRows->get($classe->id) ?? collect())->values()->all(),
+                'periodesData' => ($classMonthlyRows->get($classe->id) ?? collect())->values()->all(),
+                'tendancesData' => ($classWeeklyRows->get($classe->id) ?? collect())->values()->all(),
+                'alertesData' => ($classAlertRows->get($classe->id) ?? collect())->values()->all(),
+            ];
+        }
 
         $activityMap = Presence::query()
             ->selectRaw('activite_id,
@@ -181,7 +321,6 @@ class PresencesController extends Controller
                 return [
                     'name' => $activity->title,
                     'type' => $activity->type,
-                    'is_culte' => str_contains(mb_strtolower((string) $activity->type), 'culte'),
                     'pct' => $pct,
                     'present' => $present,
                     'total' => max($total, 1),
@@ -272,6 +411,7 @@ class PresencesController extends Controller
             'periodesData' => $periodesData,
             'alertesData' => $alertesData,
             'tendancesData' => $tendancesData,
+            'classInsights' => $classInsights,
         ];
     }
 }

@@ -151,24 +151,24 @@
     $typeLabels = [
     'bapteme' => 'BAPTÊME',
     'mariage' => 'MARIAGE',
-    'funerailles' => 'FUNÉRAILLES',
-    'deces' => 'DÉCÈS',
-    'remerciement' => 'REMERCIEMENT',
-    'felicitations'=> 'FÉLICITATIONS',
-    'naissance' => 'NAISSANCE',
-    'communion' => 'COMMUNION',
+    // 'funerailles' => 'FUNÉRAILLES',
+    // 'deces' => 'DÉCÈS',
+    // 'remerciement' => 'REMERCIEMENT',
+    // 'felicitations'=> 'FÉLICITATIONS',
+    // 'naissance' => 'NAISSANCE',
+    // 'communion' => 'COMMUNION',
     ];
     $typeLabel = $typeLabels[$acte->type_acte ?? ''] ?? strtoupper(str_replace('_', ' ', $acte->type_acte ?? 'ACTE LITURGIQUE'));
 
     $attestationPhrases = [
     'bapteme' => 'a reçu le sacrement saint du Baptême au sein de notre communauté paroissiale, marquant son entrée solennelle dans la famille de Dieu.',
     'mariage' => 'ont uni leurs vies par le sacrement du Mariage, témoignant de leur amour et de leur engagement devant Dieu et l\'Assemblée.',
-    'funerailles' => 'a été conduit avec dignité et prière vers la maison du Père, en présence de ses proches et de toute la communauté.',
-    'deces' => 'a été accompagné dans son dernier voyage par notre communauté paroissiale réunie dans la prière et la foi.',
-    'remerciement' => 'a généreusement soutenu et contribué à la vie de notre communauté paroissiale.',
-    'felicitations'=> 'a reçu les félicitations solennelles de l\'Église Méthodiste Jubilé de Cocody.',
-    'naissance' => 'a été accueilli dans la joie et la grâce au sein de notre communauté paroissiale.',
-    'communion' => 'a reçu le sacrement de la Sainte Communion, partageant le Corps et le Sang de notre Seigneur Jésus-Christ.',
+    // 'funerailles' => 'a été conduit avec dignité et prière vers la maison du Père, en présence de ses proches et de toute la communauté.',
+    // 'deces' => 'a été accompagné dans son dernier voyage par notre communauté paroissiale réunie dans la prière et la foi.',
+    // 'remerciement' => 'a généreusement soutenu et contribué à la vie de notre communauté paroissiale.',
+    // 'felicitations'=> 'a reçu les félicitations solennelles de l\'Église Méthodiste Jubilé de Cocody.',
+    // 'naissance' => 'a été accueilli dans la joie et la grâce au sein de notre communauté paroissiale.',
+    // 'communion' => 'a reçu le sacrement de la Sainte Communion, partageant le Corps et le Sang de notre Seigneur Jésus-Christ.',
     ];
     $attestation = $attestationPhrases[$acte->type_acte ?? ''] ?? 'a reçu cet acte liturgique au sein de notre communauté.';
 
@@ -177,6 +177,7 @@
     // Pour le mariage : afficher les deux conjoints
     $displayName = $fullName;
     $subtitleText = "Ce certificat est décerné à";
+    $mariageLieu = '';
 
     if ($acte->type_acte === 'mariage') {
     $details = $acte->details ?? [];
@@ -192,8 +193,10 @@
 
     if (!empty($conjoint1)) {
     $displayName = $conjoint1 . ' & ' . $conjoint2;
-    $subtitleText = "Ce certificat atteste de l'union du couple";
     }
+
+    $subtitleText = '';
+    $mariageLieu = trim((string) ($details['lieu'] ?? $details['lieu_mariage'] ?? ''));
     }
 
     $dateActe = optional($acte->date_souhaitee)->format('d/m/Y') ?? now()->format('d/m/Y');
@@ -335,11 +338,14 @@
                 <td class="col-center zone-name" style="padding:0 8mm;">
 
                     {{-- Sous-titre --}}
+                    @if(!empty($subtitleText))
                     <div style="font-size:18px; color:#5a6478; font-style:italic;
                             margin-bottom:4mm; letter-spacing:0.5px;">
                         {{ $subtitleText }}
                     </div>
+                    @endif
 
+                    @if($acte->type_acte !== 'mariage')
                     {{-- Grand nom du bénéficiaire --}}
                     <div style="font-size:32px; font-weight:900; text-transform:uppercase;
                             letter-spacing:4px; color:#0F1E40; line-height:1.1; margin-bottom:3mm;">
@@ -354,14 +360,28 @@
                             <td width="33%" height="2" style="background:#6B46C160; font-size:0;">&nbsp;</td>
                         </tr>
                     </table>
+                    @endif
 
                     {{-- Texte d'attestation --}}
-                    <div style="font-size:18px; color:#374151; line-height:1.8;
+                        <div style="font-size:{{ $acte->type_acte === 'mariage' ? '21px' : '18px' }}; color:#374151; line-height:{{ $acte->type_acte === 'mariage' ? '1.9' : '1.8' }};
                             text-align:center; max-width:85%; margin:0 auto;">
+                        @if($acte->type_acte === 'mariage')
+                        L'Église Méthodiste Jubilé de Cocody atteste solennellement que
+                        <span style="font-weight:700; color:#0F1E40;">{{ strtoupper($displayName) }}</span>
+                        ont été unis par le sacrement du Mariage, le
+                        <span style="font-weight:700; color:#0F1E40;">{{ $dateActe }}</span>
+                        devant Dieu et l'Assemblée
+                        @if(!empty($mariageLieu))
+                        à <span style="font-weight:700; color:#0F1E40;">{{ $mariageLieu }}</span>.
+                        @else
+                        .
+                        @endif
+                        @else
                         L'Église Méthodiste Jubilé de Cocody atteste solennellement que la personne
                         mentionnée ci-dessus
                         <span style="font-weight:700; color:#0F1E40;">{{ $attestation }}</span>
                         Le présent certificat est délivré pour servir et valoir ce qui lui revient de droit.
+                        @endif
                     </div>
 
                 </td>

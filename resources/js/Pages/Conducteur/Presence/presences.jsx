@@ -23,16 +23,15 @@ export default function Presences({
     activite_active_id = null,
 }) {
     const [activeTab, setActiveTab] = useState("marquer");
-    const [eventKindFilter, setEventKindFilter] = useState("tous");
     const [selectedActiviteId, setSelectedActiviteId] = useState(
         activite_active_id ?? activites[0]?.id ?? null,
     );
     const [marquages, setMarquages] = useState(initialPresences);
     const [filterMembre, setFilterMembre] = useState("tous");
     const [searchQuery, setSearchQuery] = useState("");
-    const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState(null);
-    const [notes, setNotes] = useState({});
+    const [summaryLoading, setSummaryLoading] = useState(false);
+    const [programmeSummary, setProgrammeSummary] = useState(null);
     const [programmeActivites, setProgrammeActivites] = useState([]);
     const [loadingProgrammeActivites, setLoadingProgrammeActivites] =
         useState(false);
@@ -40,29 +39,7 @@ export default function Presences({
     const activiteSelectionnee = activites.find(
         (a) => a.id === selectedActiviteId,
     );
-    const activitesAffichables = useMemo(() => {
-        if (eventKindFilter === "cultes") {
-            return activites.filter(
-                (a) =>
-                    Boolean(a.is_culte) ||
-                    String(a.type ?? "")
-                        .toLowerCase()
-                        .includes("culte"),
-            );
-        }
-
-        if (eventKindFilter === "activites") {
-            return activites.filter(
-                (a) =>
-                    !Boolean(a.is_culte) &&
-                    !String(a.type ?? "")
-                        .toLowerCase()
-                        .includes("culte"),
-            );
-        }
-
-        return activites;
-    }, [activites, eventKindFilter]);
+    const activitesAffichables = useMemo(() => activites, [activites]);
     const marquagesActivite = marquages[selectedActiviteId] ?? {};
     const activitesOnglet =
         programmeActivites.length > 0 ? programmeActivites : activites;
@@ -141,57 +118,59 @@ export default function Presences({
             ? Math.round((nbPresents / membres.length) * 100)
             : 0;
 
-    function setStatut(membreId, statut) {
-        if (!selectedActiviteId) return;
-
-        setMarquages((prev) => {
-            const curr = prev[selectedActiviteId]?.[membreId];
-            return {
-                ...prev,
-                [selectedActiviteId]: {
-                    ...(prev[selectedActiviteId] ?? {}),
-                    [membreId]: curr === statut ? null : statut,
-                },
-            };
-        });
-    }
-
     function showToast(message, type = "success") {
         setToast({ message, type });
         setTimeout(() => setToast(null), 2500);
     }
 
-    async function handleSave() {
+    async function loadProgrammeSummary() {
         if (!selectedActiviteId) return;
-
-        setSaving(true);
+        setSummaryLoading(true);
         try {
             const endpoint =
                 typeof window.route === "function"
                     ? localizeUrl(
                           window.route(
-                              "presences.enregistrer_programme",
+                              "conducteur.programmes.presences",
                               selectedActiviteId,
                           ),
-                          `/conducteur/presences/programme/${selectedActiviteId}`,
+                          `/conducteur/programmes/${selectedActiviteId}/presences`,
                       )
                     : withBasePath(
                           "",
-                          `/conducteur/presences/programme/${selectedActiviteId}`,
+                          `/conducteur/programmes/${selectedActiviteId}/presences`,
                       );
 
-            await window.axios.post(endpoint, {
-                marquages: marquages[selectedActiviteId] ?? {},
-                notes: notes[selectedActiviteId] ?? {},
-            });
-            showToast("Pointage effectué", "success");
+            const response = await window.axios.get(endpoint);
+            if (!response?.data?.success) return;
+
+            setProgrammeSummary(response.data);
+            const mapByMember = {};
+            for (const membre of response.data.membres ?? []) {
+                mapByMember[membre.id] = membre.statut ?? null;
+            }
+            setMarquages((prev) => ({
+                ...prev,
+                [selectedActiviteId]: mapByMember,
+            }));
         } catch (e) {
             console.error(e);
-            showToast("Erreur lors de l'enregistrement", "error");
+            showToast("Erreur de chargement des présences QR", "error");
         } finally {
-            setSaving(false);
+            setSummaryLoading(false);
         }
     }
+
+    useEffect(() => {
+        if (!selectedActiviteId) return;
+
+        loadProgrammeSummary();
+        const timer = window.setInterval(loadProgrammeSummary, 10000);
+
+        return () => {
+            window.clearInterval(timer);
+        };
+    }, [selectedActiviteId]);
 
     function formatDate(dateStr) {
         if (!dateStr) return "";
@@ -249,14 +228,12 @@ export default function Presences({
                     <button
                         style={{
                             ...S.btnPrimary,
-                            ...(saving ? S.btnDisabled : {}),
+                            opacity: 0.9,
+                            cursor: "default",
                         }}
-                        onClick={handleSave}
-                        disabled={saving || !selectedActiviteId}
+                        disabled
                     >
-                        {saving
-                            ? "Enregistrement…"
-                            : "Enregistrer les présences"}
+                        QR automatique (lecture seule)
                     </button>
                 </div>
 
@@ -325,42 +302,6 @@ export default function Presences({
 
                 {/* ── Sélecteur activité ── */}
                 <div style={S.activiteSelector}>
-                    <span style={S.activiteSelectorLabel}>Type :</span>
-                    <div style={{ display: "flex", gap: 6 }}>
-                        <button
-                            style={{
-                                ...S.filterBtn,
-                                ...(eventKindFilter === "tous"
-                                    ? S.filterBtnActive
-                                    : {}),
-                            }}
-                            onClick={() => setEventKindFilter("tous")}
-                        >
-                            Tous
-                        </button>
-                        <button
-                            style={{
-                                ...S.filterBtn,
-                                ...(eventKindFilter === "activites"
-                                    ? S.filterBtnActive
-                                    : {}),
-                            }}
-                            onClick={() => setEventKindFilter("activites")}
-                        >
-                            Activités
-                        </button>
-                        <button
-                            style={{
-                                ...S.filterBtn,
-                                ...(eventKindFilter === "cultes"
-                                    ? S.filterBtnActive
-                                    : {}),
-                            }}
-                            onClick={() => setEventKindFilter("cultes")}
-                        >
-                            Cultes
-                        </button>
-                    </div>
                     <span
                         style={{ ...S.activiteSelectorLabel, marginLeft: 10 }}
                     >
@@ -378,12 +319,6 @@ export default function Presences({
                         <option value="">Choisir une activité...</option>
                         {activitesAffichables.map((a) => (
                             <option key={a.id} value={a.id}>
-                                {Boolean(a.is_culte) ||
-                                String(a.type ?? "")
-                                    .toLowerCase()
-                                    .includes("culte")
-                                    ? "[CULTE] "
-                                    : "[ACT] "}
                                 {a.titre}
                             </option>
                         ))}
@@ -437,8 +372,8 @@ export default function Presences({
                     <div style={S.card}>
                         {!selectedActiviteId && (
                             <div style={S.selectionNotice}>
-                                Choisissez d'abord une activité ou un culte pour
-                                marquer les présences.
+                                Choisissez d'abord une activité pour marquer les
+                                présences.
                             </div>
                         )}
 
@@ -457,6 +392,24 @@ export default function Presences({
                                         {formatHeure(
                                             activiteSelectionnee.date_heure_debut,
                                         )}{" "}
+                                        {activiteSelectionnee.date_heure_fin && (
+                                            <>
+                                                →{" "}
+                                                {formatHeure(
+                                                    activiteSelectionnee.date_heure_fin,
+                                                )}
+                                            </>
+                                        )}
+                                        {programmeSummary?.programme && (
+                                            <>
+                                                {" "}
+                                                ·{" "}
+                                                {programmeSummary.programme
+                                                    .is_closed
+                                                    ? "Activité clôturée"
+                                                    : "En attente des scans"}
+                                            </>
+                                        )}
                                         · {membres.length} membres
                                     </p>
                                 )}
@@ -482,7 +435,11 @@ export default function Presences({
                                 />
                                 <MiniCounter
                                     val={nbNonMarques}
-                                    label="?"
+                                    label={
+                                        programmeSummary?.programme?.is_closed
+                                            ? "?"
+                                            : "NS"
+                                    }
                                     color="#888"
                                     bg="#f5f5f5"
                                 />
@@ -559,9 +516,9 @@ export default function Presences({
                                                 textAlign: "center",
                                             }}
                                         >
-                                            Présence
+                                            Statut (QR)
                                         </th>
-                                        <th style={S.th}>Note</th>
+                                        <th style={S.th}>Scan</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -642,87 +599,61 @@ export default function Presences({
                                                     <td style={S.td}>
                                                         <div
                                                             style={{
-                                                                display: "flex",
-                                                                gap: 4,
-                                                                justifyContent:
+                                                                textAlign:
                                                                     "center",
                                                             }}
                                                         >
-                                                            <PresenceBtn
-                                                                active={
-                                                                    statut ===
-                                                                    "present"
-                                                                }
-                                                                color="#43a047"
-                                                                bg="#e8f5e9"
-                                                                label="Présent"
-                                                                onClick={() =>
-                                                                    setStatut(
-                                                                        m.id,
-                                                                        "present",
-                                                                    )
-                                                                }
-                                                            />
-                                                            <PresenceBtn
-                                                                active={
-                                                                    statut ===
-                                                                    "absent"
-                                                                }
-                                                                color="#e53935"
-                                                                bg="#ffebee"
-                                                                label="Absent"
-                                                                onClick={() =>
-                                                                    setStatut(
-                                                                        m.id,
-                                                                        "absent",
-                                                                    )
-                                                                }
-                                                            />
-                                                            <PresenceBtn
-                                                                active={
-                                                                    statut ===
-                                                                    "excuse"
-                                                                }
-                                                                color="#f57c00"
-                                                                bg="#fff3e0"
-                                                                label="Excusé"
-                                                                onClick={() =>
-                                                                    setStatut(
-                                                                        m.id,
-                                                                        "excuse",
-                                                                    )
-                                                                }
-                                                            />
+                                                            <span
+                                                                style={{
+                                                                    fontSize: 12,
+                                                                    padding:
+                                                                        "5px 11px",
+                                                                    borderRadius: 20,
+                                                                    background:
+                                                                        statut ===
+                                                                        "present"
+                                                                            ? "#e8f5e9"
+                                                                            : statut ===
+                                                                                "absent"
+                                                                              ? "#ffebee"
+                                                                              : "#f5f5f5",
+                                                                    color:
+                                                                        statut ===
+                                                                        "present"
+                                                                            ? "#2e7d32"
+                                                                            : statut ===
+                                                                                "absent"
+                                                                              ? "#c62828"
+                                                                              : "#777",
+                                                                    fontWeight: 500,
+                                                                }}
+                                                            >
+                                                                {statut ===
+                                                                "present"
+                                                                    ? "Présent"
+                                                                    : statut ===
+                                                                        "absent"
+                                                                      ? "Absent"
+                                                                      : "Non scanné"}
+                                                            </span>
                                                         </div>
                                                     </td>
                                                     <td style={S.td}>
-                                                        <input
-                                                            type="text"
-                                                            placeholder="Note…"
-                                                            value={
-                                                                notes[
-                                                                    selectedActiviteId
-                                                                ]?.[m.id] ?? ""
-                                                            }
-                                                            onChange={(e) =>
-                                                                setNotes(
-                                                                    (prev) => ({
-                                                                        ...prev,
-                                                                        [selectedActiviteId]:
-                                                                            {
-                                                                                ...(prev[
-                                                                                    selectedActiviteId
-                                                                                ] ??
-                                                                                    {}),
-                                                                                [m.id]: e
-                                                                                    .target
-                                                                                    .value,
-                                                                            },
-                                                                    }),
-                                                                )
-                                                            }
-                                                            style={S.noteInput}
-                                                        />
+                                                        <span
+                                                            style={{
+                                                                fontSize: 12,
+                                                                color: "#666",
+                                                            }}
+                                                        >
+                                                            {statut ===
+                                                            "present"
+                                                                ? "Scan validé"
+                                                                : programmeSummary
+                                                                        ?.programme
+                                                                        ?.is_closed
+                                                                  ? "Absent automatique"
+                                                                  : "En attente de scan"}
+                                                        </span>
                                                     </td>
                                                 </tr>
                                             );
@@ -732,48 +663,20 @@ export default function Presences({
                             </table>
                         </div>
 
-                        {/* Footer actions */}
                         <div style={S.cardFooter}>
-                            <button
-                                style={S.btnSecondary}
-                                onClick={() =>
-                                    setMarquages((prev) => ({
-                                        ...prev,
-                                        [selectedActiviteId]: membres.reduce(
-                                            (acc, m) => ({
-                                                ...acc,
-                                                [m.id]: "present",
-                                            }),
-                                            {},
-                                        ),
-                                    }))
-                                }
-                                disabled={!selectedActiviteId}
-                            >
-                                Tous présents
-                            </button>
-                            <button
-                                style={S.btnSecondary}
-                                onClick={() =>
-                                    setMarquages((prev) => ({
-                                        ...prev,
-                                        [selectedActiviteId]: {},
-                                    }))
-                                }
-                                disabled={!selectedActiviteId}
-                            >
-                                Réinitialiser
-                            </button>
+                            <span style={{ fontSize: 12, color: "#777" }}>
+                                Marquage 100% automatique par QR code. Aucun
+                                pointage manuel autorisé.
+                            </span>
                             <div style={{ flex: 1 }} />
                             <button
-                                style={{
-                                    ...S.btnPrimary,
-                                    ...(saving ? S.btnDisabled : {}),
-                                }}
-                                onClick={handleSave}
-                                disabled={saving || !selectedActiviteId}
+                                style={S.btnSecondary}
+                                onClick={loadProgrammeSummary}
+                                disabled={!selectedActiviteId || summaryLoading}
                             >
-                                {saving ? "Enregistrement…" : "Enregistrer"}
+                                {summaryLoading
+                                    ? "Actualisation..."
+                                    : "Actualiser"}
                             </button>
                         </div>
                     </div>
@@ -1354,11 +1257,7 @@ function StatutBadge({ statut }) {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function typeIcon(type) {
-    return (
-        { culte: "⛪", reunion: "👥", formation: "📚", evenement: "🎉" }[
-            type
-        ] ?? "📅"
-    );
+    return { reunion: "👥", formation: "📚", evenement: "🎉" }[type] ?? "📅";
 }
 
 function statutColor(statut) {

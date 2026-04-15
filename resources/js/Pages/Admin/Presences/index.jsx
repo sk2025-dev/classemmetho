@@ -36,7 +36,7 @@ const CLASSES = [
 
 const ACTIVITES = [
     {
-        name: "Culte dominical",
+        name: "Activite dominicale",
         pct: 79,
         present: 247,
         total: 312,
@@ -237,10 +237,11 @@ export default function AdminPresenceDashboard({
     periodesData = [],
     alertesData = [],
     tendancesData = [],
+    classInsights = {},
 }) {
     const [activeTab, setActiveTab] = useState("classe");
     const [activePeriod, setActivePeriod] = useState("avril");
-    const [activityKindFilter, setActivityKindFilter] = useState("tous");
+    const [selectedClasseId, setSelectedClasseId] = useState(null);
 
     const handleBack = () => {
         if (window.history.length > 1) {
@@ -365,40 +366,54 @@ export default function AdminPresenceDashboard({
         </button>
     );
 
-    const classesRows = classesData.length > 0 ? classesData : CLASSES;
+    const classesRows =
+        classesData.length > 0
+            ? classesData
+            : CLASSES.map((c, index) => ({ ...c, id: `mock-${index}` }));
     const activitesRows = activitesData.length > 0 ? activitesData : ACTIVITES;
-    const activitesRowsFiltres = useMemo(() => {
-        if (activityKindFilter === "cultes") {
-            return activitesRows.filter(
-                (a) =>
-                    Boolean(a.is_culte) ||
-                    String(a.type ?? a.name ?? "")
-                        .toLowerCase()
-                        .includes("culte"),
-            );
-        }
-
-        if (activityKindFilter === "activites") {
-            return activitesRows.filter(
-                (a) =>
-                    !Boolean(a.is_culte) &&
-                    !String(a.type ?? a.name ?? "")
-                        .toLowerCase()
-                        .includes("culte"),
-            );
-        }
-
-        return activitesRows;
-    }, [activitesRows, activityKindFilter]);
     const periodesRows = periodesData.length > 0 ? periodesData : PERIODES;
     const alertesRows = alertesData.length > 0 ? alertesData : ALERTES;
     const tendancesRows = tendancesData.length > 0 ? tendancesData : TENDANCES;
 
-    const totalPeriode = periodesRows.reduce(
+    const selectedClassKey =
+        selectedClasseId === null ? null : String(selectedClasseId);
+    const selectedClass = useMemo(
+        () =>
+            selectedClassKey === null
+                ? null
+                : classesRows.find((c) => String(c.id) === selectedClassKey) ??
+                  null,
+        [classesRows, selectedClassKey],
+    );
+    const selectedInsights = selectedClassKey
+        ? classInsights?.[selectedClassKey] ?? null
+        : null;
+
+    const activitesRowsFiltres = useMemo(() => {
+        if (!selectedClass) return activitesRows;
+        return selectedInsights?.activitesData ?? [];
+    }, [activitesRows, selectedClass, selectedInsights]);
+
+    const periodesRowsFiltres = useMemo(() => {
+        if (!selectedClass) return periodesRows;
+        return selectedInsights?.periodesData ?? [];
+    }, [periodesRows, selectedClass, selectedInsights]);
+
+    const alertesRowsFiltres = useMemo(() => {
+        if (!selectedClass) return alertesRows;
+        return selectedInsights?.alertesData ?? [];
+    }, [alertesRows, selectedClass, selectedInsights]);
+
+    const tendancesRowsFiltres = useMemo(() => {
+        if (!selectedClass) return tendancesRows;
+        return selectedInsights?.tendancesData ?? [];
+    }, [tendancesRows, selectedClass, selectedInsights]);
+
+    const totalPeriode = periodesRowsFiltres.reduce(
         (acc, row) => acc + (row.total ?? 0),
         0,
     );
-    const presentPeriode = periodesRows.reduce(
+    const presentPeriode = periodesRowsFiltres.reduce(
         (acc, row) => acc + (row.present ?? 0),
         0,
     );
@@ -445,7 +460,9 @@ export default function AdminPresenceDashboard({
                                     fontWeight: 400,
                                 }}
                             >
-                                Toutes les classes
+                                {selectedClass
+                                    ? `Classe: ${selectedClass.name}`
+                                    : "Toutes les classes"}
                             </span>
                         </div>
                     </div>
@@ -484,8 +501,8 @@ export default function AdminPresenceDashboard({
                 <KpiCard
                     icon="✔️"
                     value={String(stats.presents_dernier ?? 247)}
-                    label="Présents dernier culte"
-                    badge="Ce dim."
+                    label="Présents dernière activité"
+                    badge="Récent"
                     badgeBg="#fff3e0"
                     badgeColor="#c45c00"
                 />
@@ -510,16 +527,136 @@ export default function AdminPresenceDashboard({
             {activeTab === "classe" && (
                 <div style={styles.panel}>
                     <div style={styles.panelTitle}>
-                        Taux de participation par classe
+                        Classes (cartes cliquables)
                         <div style={styles.periodBtns}>
                             {periodBtn("avril", "Avril 2026")}
                             {periodBtn("trimestre", "Ce trimestre")}
                             {periodBtn("annuel", "Annuel")}
                         </div>
                     </div>
-                    {classesRows.map((c) => (
-                        <BarRow key={c.name} {...c} />
-                    ))}
+                    <div
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns:
+                                "repeat(auto-fill, minmax(210px, 1fr))",
+                            gap: 12,
+                            marginBottom: 20,
+                        }}
+                    >
+                        <button
+                            onClick={() => setSelectedClasseId(null)}
+                            style={{
+                                border:
+                                    selectedClasseId === null
+                                        ? "2px solid #2d2f8f"
+                                        : "1px solid #e6e7f7",
+                                borderRadius: 14,
+                                background:
+                                    selectedClasseId === null
+                                        ? "#f3f4ff"
+                                        : "#fff",
+                                padding: "14px",
+                                textAlign: "left",
+                                cursor: "pointer",
+                            }}
+                        >
+                            <div
+                                style={{
+                                    fontSize: 12,
+                                    color: "#666",
+                                    marginBottom: 6,
+                                }}
+                            >
+                                Vue globale
+                            </div>
+                            <div
+                                style={{
+                                    fontWeight: 700,
+                                    color: "#1e2070",
+                                    fontSize: 15,
+                                }}
+                            >
+                                Toutes les classes
+                            </div>
+                        </button>
+
+                        {classesRows.map((c) => {
+                            const isActive =
+                                selectedClassKey !== null &&
+                                String(c.id) === selectedClassKey;
+
+                            return (
+                                <button
+                                    key={c.id ?? c.name}
+                                    onClick={() => setSelectedClasseId(c.id)}
+                                    style={{
+                                        border: isActive
+                                            ? "2px solid #2d2f8f"
+                                            : "1px solid #e6e7f7",
+                                        borderRadius: 14,
+                                        background: isActive
+                                            ? "#f3f4ff"
+                                            : "#fff",
+                                        padding: "14px",
+                                        textAlign: "left",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            fontSize: 12,
+                                            color: "#666",
+                                            marginBottom: 6,
+                                        }}
+                                    >
+                                        {c.pct}% de participation
+                                    </div>
+                                    <div
+                                        style={{
+                                            fontWeight: 700,
+                                            color: "#1e2070",
+                                            fontSize: 15,
+                                            marginBottom: 8,
+                                        }}
+                                    >
+                                        {c.name}
+                                    </div>
+                                    <div
+                                        style={{
+                                            fontSize: 12,
+                                            color: "#555",
+                                        }}
+                                    >
+                                        {c.present}/{c.total}
+                                    </div>
+                                    <div
+                                        style={{
+                                            marginTop: 8,
+                                            height: 6,
+                                            borderRadius: 20,
+                                            background: "#ececf8",
+                                            overflow: "hidden",
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                width: `${c.pct}%`,
+                                                height: "100%",
+                                                background: c.color,
+                                                borderRadius: 20,
+                                            }}
+                                        />
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <div style={{ marginBottom: 10, fontSize: 13, color: "#666" }}>
+                        {selectedClass
+                            ? `Classe sélectionnée: ${selectedClass.name}`
+                            : "Sélectionnez une classe pour filtrer les autres onglets."}
+                    </div>
                 </div>
             )}
 
@@ -529,41 +666,13 @@ export default function AdminPresenceDashboard({
                     <div style={styles.panelTitle}>
                         Taux de participation par activité
                     </div>
-                    <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                        {[
-                            { key: "tous", label: "Tous" },
-                            { key: "activites", label: "Activités" },
-                            { key: "cultes", label: "Cultes" },
-                        ].map((item) => (
-                            <button
-                                key={item.key}
-                                onClick={() => setActivityKindFilter(item.key)}
-                                style={{
-                                    border:
-                                        activityKindFilter === item.key
-                                            ? "1px solid #2d2f8f"
-                                            : "1px solid #e0e0f0",
-                                    borderRadius: 20,
-                                    padding: "5px 14px",
-                                    fontSize: 12,
-                                    cursor: "pointer",
-                                    background:
-                                        activityKindFilter === item.key
-                                            ? "#eef0ff"
-                                            : "white",
-                                    color:
-                                        activityKindFilter === item.key
-                                            ? "#2d2f8f"
-                                            : "#555",
-                                    fontWeight: 600,
-                                }}
-                            >
-                                {item.label}
-                            </button>
-                        ))}
-                    </div>
+                    {activitesRowsFiltres.length === 0 && (
+                        <div style={{ fontSize: 13, color: "#888" }}>
+                            Aucune donnée d'activité pour cette classe.
+                        </div>
+                    )}
                     {activitesRowsFiltres.map((a) => (
-                        <BarRow key={a.name} {...a} />
+                        <BarRow key={`${a.name}-${a.type ?? "x"}`} {...a} />
                     ))}
                 </div>
             )}
@@ -574,7 +683,12 @@ export default function AdminPresenceDashboard({
                     <div style={styles.panelTitle}>
                         Évolution mensuelle — 2026
                     </div>
-                    {periodesRows.map(({ mois, pct, present, total }) => (
+                    {periodesRowsFiltres.length === 0 && (
+                        <div style={{ fontSize: 13, color: "#888" }}>
+                            Aucune donnée de période pour cette classe.
+                        </div>
+                    )}
+                    {periodesRowsFiltres.map(({ mois, pct, present, total }) => (
                         <BarRow
                             key={mois}
                             name={mois}
@@ -632,10 +746,15 @@ export default function AdminPresenceDashboard({
                                 fontWeight: 600,
                             }}
                         >
-                            {alertesRows.length} membres
+                            {alertesRowsFiltres.length} membres
                         </span>
                     </div>
-                    {alertesRows.map(({ name, classe, absences, level }) => (
+                    {alertesRowsFiltres.length === 0 && (
+                        <div style={{ fontSize: 13, color: "#888" }}>
+                            Aucune alerte d'absence pour cette classe.
+                        </div>
+                    )}
+                    {alertesRowsFiltres.map(({ name, classe, absences, level }) => (
                         <div
                             key={name}
                             style={{
@@ -712,7 +831,12 @@ export default function AdminPresenceDashboard({
             {activeTab === "tendances" && (
                 <div style={styles.panel}>
                     <div style={styles.panelTitle}>Tendances hebdomadaires</div>
-                    {tendancesRows.map(({ semaine, pct }) => (
+                    {tendancesRowsFiltres.length === 0 && (
+                        <div style={{ fontSize: 13, color: "#888" }}>
+                            Aucune tendance disponible pour cette classe.
+                        </div>
+                    )}
+                    {tendancesRowsFiltres.map(({ semaine, pct }) => (
                         <div
                             key={semaine}
                             style={{

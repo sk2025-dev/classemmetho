@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Presence;
 use App\Models\SpecialEvent;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -50,9 +51,31 @@ class PresenceController extends Controller
             ], 422);
         }
 
+        $alreadyAbsent = Presence::query()
+            ->where('special_event_id', $event->id)
+            ->where('membre_famille_id', $member->id)
+            ->where('statut', 'absent')
+            ->exists();
+
+        if ($alreadyAbsent) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous êtes déjà marqué absent pour cette activité. Pointage non autorisé.',
+            ], 409);
+        }
+
+        $programmeEndAt = $this->resolveProgrammeEndAt($event);
+        if (now()->greaterThanOrEqualTo($programmeEndAt)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cette activité est déjà passée. Le pointage est clôturé.',
+            ], 410);
+        }
+
         $alreadyExists = Presence::query()
             ->where('special_event_id', $event->id)
             ->where('membre_famille_id', $member->id)
+            ->where('statut', 'present')
             ->exists();
 
         if ($alreadyExists) {
@@ -108,6 +131,7 @@ class PresenceController extends Controller
 
         $presenceRows = Presence::query()
             ->where('special_event_id', $event->id)
+            ->where('statut', 'present')
             ->with('membre:id,nom,prenom,code_membre')
             ->get();
 
@@ -125,7 +149,7 @@ class PresenceController extends Controller
             ];
         })->values();
 
-        $absents = $members
+        $nonScannes = $members
             ->whereNotIn('id', $presentIds)
             ->map(function (User $member) {
                 return [
@@ -137,6 +161,41 @@ class PresenceController extends Controller
             })
             ->values();
 
+        $programmeEndAt = $this->resolveProgrammeEndAt($event);
+
+        $isClosed = now()->greaterThanOrEqualTo($programmeEndAt);
+        if ($isClosed) {
+            $this->persistAbsencesAtClosure($event, $members, $presentIds);
+        }
+
+        $absenceIds = Presence::query()
+            ->where('special_event_id', $event->id)
+            ->where('statut', 'absent')
+            ->pluck('membre_famille_id');
+
+        $absents = $isClosed ? $nonScannes : collect();
+        $pending = $isClosed ? collect() : $nonScannes;
+
+        $membres = $members->map(function (User $member) use ($presentIds, $absenceIds, $isClosed) {
+            if ($presentIds->contains($member->id)) {
+                $statut = 'present';
+            } elseif ($absenceIds->contains($member->id)) {
+                $statut = 'absent';
+            } elseif ($isClosed) {
+                $statut = 'absent';
+            } else {
+                $statut = null;
+            }
+
+            return [
+                'id' => $member->id,
+                'nom' => $member->nom,
+                'prenom' => $member->prenom,
+                'code_membre' => $member->code_membre,
+                'statut' => $statut,
+            ];
+        })->values();
+
         return response()->json([
             'success' => true,
             'programme' => [
@@ -144,14 +203,70 @@ class PresenceController extends Controller
                 'title' => $event->title,
                 'date' => $event->date,
                 'time' => $event->time,
+                'end_time' => $event->end_time,
+                'is_closed' => $isClosed,
+                'end_at' => $programmeEndAt->toDateTimeString(),
             ],
             'stats' => [
                 'total_membres' => $members->count(),
                 'presents' => $presents->count(),
                 'absents' => $absents->count(),
+                'non_scannes' => $pending->count(),
             ],
+            'membres' => $membres,
             'presents' => $presents,
-            'absents' => $absents,
+            'absents' => $absents->values(),
+            'non_scannes' => $pending->values(),
+            'mode' => 'qr_read_only',
         ]);
+    }
+
+    private function resolveProgrammeEndAt(SpecialEvent $event): Carbon
+    {
+        $programmeEndAt = Carbon::parse($event->date);
+
+        if (!empty($event->end_time)) {
+            $endTime = Carbon::parse($event->end_time);
+            $programmeEndAt->setTime($endTime->hour, $endTime->minute, $endTime->second);
+        } elseif (!empty($event->time)) {
+            $startTime = Carbon::parse($event->time);
+            $programmeEndAt->setTime($startTime->hour, $startTime->minute, $startTime->second);
+        } else {
+            $programmeEndAt->setTime(23, 59, 59);
+        }
+
+        return $programmeEndAt;
+    }
+
+    private function persistAbsencesAtClosure(SpecialEvent $event, $members, $presentIds): void
+    {
+        $existingMemberIds = Presence::query()
+            ->where('special_event_id', $event->id)
+            ->pluck('membre_famille_id');
+
+        $toInsert = $members
+            ->filter(function (User $member) use ($presentIds, $existingMemberIds) {
+                return ! $presentIds->contains($member->id) && ! $existingMemberIds->contains($member->id);
+            })
+            ->map(function (User $member) use ($event) {
+                return [
+                    'activite_id' => null,
+                    'special_event_id' => $event->id,
+                    'membre_famille_id' => $member->id,
+                    'statut' => 'absent',
+                    'marquee_par' => null,
+                    'marquee_le' => now(),
+                    'methode' => 'auto_cloture',
+                    'notes' => 'Absence automatique (non scanne avant fin d activite)',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            })
+            ->values()
+            ->all();
+
+        if (! empty($toInsert)) {
+            Presence::insert($toInsert);
+        }
     }
 }

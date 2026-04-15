@@ -600,8 +600,8 @@ export default function Index({
         });
     }, [localActes, quickFilter, searchNeedle]);
 
-    // Types d'annonces à exclure de l'onglet soumises
-    const ANNONCE_TYPE_VALUES = ["priere", "grace", "deces", "generale"];
+    // Types d'annonces à exclure de l'onglet soumises (deces est un acte liturgique, pas une annonce)
+    const ANNONCE_TYPE_VALUES = ["priere", "grace", "generale"];
 
     const soumises = filteredActes.filter(
         (a) =>

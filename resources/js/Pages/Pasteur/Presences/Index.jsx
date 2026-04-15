@@ -36,7 +36,7 @@ const CLASSES = [
 
 const ACTIVITES = [
     {
-        name: "Culte dominical",
+        name: "Activite dominicale",
         pct: 79,
         present: 247,
         total: 312,
@@ -240,7 +240,6 @@ export default function AdminPresenceDashboard({
 }) {
     const [activeTab, setActiveTab] = useState("classe");
     const [activePeriod, setActivePeriod] = useState("avril");
-    const [activityKindFilter, setActivityKindFilter] = useState("tous");
 
     const handleBack = () => {
         if (window.history.length > 1) {
@@ -367,29 +366,7 @@ export default function AdminPresenceDashboard({
 
     const classesRows = classesData.length > 0 ? classesData : CLASSES;
     const activitesRows = activitesData.length > 0 ? activitesData : ACTIVITES;
-    const activitesRowsFiltres = useMemo(() => {
-        if (activityKindFilter === "cultes") {
-            return activitesRows.filter(
-                (a) =>
-                    Boolean(a.is_culte) ||
-                    String(a.type ?? a.name ?? "")
-                        .toLowerCase()
-                        .includes("culte"),
-            );
-        }
-
-        if (activityKindFilter === "activites") {
-            return activitesRows.filter(
-                (a) =>
-                    !Boolean(a.is_culte) &&
-                    !String(a.type ?? a.name ?? "")
-                        .toLowerCase()
-                        .includes("culte"),
-            );
-        }
-
-        return activitesRows;
-    }, [activitesRows, activityKindFilter]);
+    const activitesRowsFiltres = useMemo(() => activitesRows, [activitesRows]);
     const periodesRows = periodesData.length > 0 ? periodesData : PERIODES;
     const alertesRows = alertesData.length > 0 ? alertesData : ALERTES;
     const tendancesRows = tendancesData.length > 0 ? tendancesData : TENDANCES;
@@ -484,8 +461,8 @@ export default function AdminPresenceDashboard({
                 <KpiCard
                     icon="✔️"
                     value={String(stats.presents_dernier ?? 247)}
-                    label="Présents dernier culte"
-                    badge="Ce dim."
+                    label="Présents dernière activité"
+                    badge="Récent"
                     badgeBg="#fff3e0"
                     badgeColor="#c45c00"
                 />
@@ -528,39 +505,6 @@ export default function AdminPresenceDashboard({
                 <div style={styles.panel}>
                     <div style={styles.panelTitle}>
                         Taux de participation par activité
-                    </div>
-                    <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                        {[
-                            { key: "tous", label: "Tous" },
-                            { key: "activites", label: "Activités" },
-                            { key: "cultes", label: "Cultes" },
-                        ].map((item) => (
-                            <button
-                                key={item.key}
-                                onClick={() => setActivityKindFilter(item.key)}
-                                style={{
-                                    border:
-                                        activityKindFilter === item.key
-                                            ? "1px solid #2d2f8f"
-                                            : "1px solid #e0e0f0",
-                                    borderRadius: 20,
-                                    padding: "5px 14px",
-                                    fontSize: 12,
-                                    cursor: "pointer",
-                                    background:
-                                        activityKindFilter === item.key
-                                            ? "#eef0ff"
-                                            : "white",
-                                    color:
-                                        activityKindFilter === item.key
-                                            ? "#2d2f8f"
-                                            : "#555",
-                                    fontWeight: 600,
-                                }}
-                            >
-                                {item.label}
-                            </button>
-                        ))}
                     </div>
                     {activitesRowsFiltres.map((a) => (
                         <BarRow key={a.name} {...a} />

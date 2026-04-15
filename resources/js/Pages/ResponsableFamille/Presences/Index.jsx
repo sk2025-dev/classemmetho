@@ -6,27 +6,90 @@ function countByStatus(records, status) {
     return Object.values(records ?? {}).filter((s) => s === status).length;
 }
 
+function parseDateValue(dateValue) {
+    if (!dateValue) return null;
+    if (dateValue instanceof Date) {
+        return Number.isNaN(dateValue.getTime()) ? null : dateValue;
+    }
+
+    const raw = String(dateValue).trim();
+    if (!raw) return null;
+
+    const m = raw.match(
+        /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/,
+    );
+
+    if (m) {
+        const year = Number(m[1]);
+        const month = Number(m[2]) - 1;
+        const day = Number(m[3]);
+        const hour = Number(m[4] ?? 0);
+        const minute = Number(m[5] ?? 0);
+        const second = Number(m[6] ?? 0);
+        const localDate = new Date(year, month, day, hour, minute, second);
+        return Number.isNaN(localDate.getTime()) ? null : localDate;
+    }
+
+    const fallback = new Date(raw);
+    return Number.isNaN(fallback.getTime()) ? null : fallback;
+}
+
 function toMonthShort(dateValue) {
     if (!dateValue) return "";
-    const d = new Date(dateValue);
-    if (Number.isNaN(d.getTime())) return "";
+    const d = parseDateValue(dateValue);
+    if (!d) return "";
     return d.toLocaleDateString("fr-FR", { month: "short" }).toUpperCase();
 }
 
 function toDay(dateValue) {
     if (!dateValue) return "--";
-    const d = new Date(dateValue);
-    if (Number.isNaN(d.getTime())) return "--";
+    const d = parseDateValue(dateValue);
+    if (!d) return "--";
     return String(d.getDate()).padStart(2, "0");
 }
 
 function toHour(dateValue) {
     if (!dateValue) return "";
-    const d = new Date(dateValue);
-    if (Number.isNaN(d.getTime())) return "";
+    const d = parseDateValue(dateValue);
+    if (!d) return "";
     return d
         .toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
         .replace(":", "h");
+}
+
+function toFullDate(dateValue) {
+    if (!dateValue) return "";
+    const d = parseDateValue(dateValue);
+    if (!d) return "";
+    return d.toLocaleDateString("fr-FR", {
+        weekday: "long",
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+    });
+}
+
+function getActivityStatus(dateValue) {
+    if (!dateValue) return { label: "Passée", bg: "#f0f0f0", color: "#666" };
+
+    const date = parseDateValue(dateValue);
+    if (!date) {
+        return { label: "Passée", bg: "#f0f0f0", color: "#666" };
+    }
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const activityDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    if (activityDay.getTime() === today.getTime()) {
+        return { label: "Aujourd'hui", bg: "#fff3cd", color: "#8a6d00" };
+    }
+
+    if (activityDay.getTime() > today.getTime()) {
+        return { label: "À venir", bg: "#e8f0fe", color: "#2d2f8f" };
+    }
+
+    return { label: "Passée", bg: "#f0f0f0", color: "#666" };
 }
 
 function StatusBadge({ status, count }) {
@@ -583,10 +646,11 @@ export default function RespoFamilleDashboard(props) {
 
     const [activeTab, setActiveTab] = useState("historique");
     const [selectedEvt, setSelectedEvt] = useState(null);
-    const [eventKindFilter, setEventKindFilter] = useState("tous");
     const [selectedActiviteId, setSelectedActiviteId] = useState(
         activites[0]?.id ?? null,
     );
+    const [apiActivites, setApiActivites] = useState([]);
+    const [loadingApiActivites, setLoadingApiActivites] = useState(false);
     const [saving, setSaving] = useState(false);
     const dashboardHref =
         typeof window.route === "function"
@@ -596,29 +660,101 @@ export default function RespoFamilleDashboard(props) {
               )
             : withBasePath("", "/responsable-famille/dashboard");
 
-    const activitesAffichables = useMemo(() => {
-        if (eventKindFilter === "cultes") {
-            return activites.filter(
-                (a) =>
-                    Boolean(a.is_culte) ||
-                    String(a.type ?? "")
-                        .toLowerCase()
-                        .includes("culte"),
-            );
+    const activitesAffichables = useMemo(() => activites, [activites]);
+
+    useEffect(() => {
+        if (activeTab !== "activites") return;
+
+        let cancelled = false;
+
+        async function fetchApiActivites() {
+            setLoadingApiActivites(true);
+            try {
+                const endpoint =
+                    typeof window.route === "function"
+                        ? window.route("responsable_famille.api.activites")
+                        : withBasePath(
+                              "",
+                              "/api/responsable-famille/activites",
+                          );
+
+                const response = await fetch(endpoint, {
+                    headers: {
+                        Accept: "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                    credentials: "same-origin",
+                });
+
+                if (!response.ok) {
+                    throw new Error("Impossible de charger les activités");
+                }
+
+                const data = await response.json();
+                const source = [
+                    ...(Array.isArray(data?.current) ? data.current : []),
+                    ...(Array.isArray(data?.history) ? data.history : []),
+                    ...(Array.isArray(data?.all) ? data.all : []),
+                ];
+
+                const seen = new Set();
+                const normalized = source
+                    .map((item) => {
+                        const datePart = item?.date ?? null;
+                        const timePart = item?.time ?? item?.heure ?? "00:00:00";
+                        const dateHeure =
+                            item?.date_heure_debut ??
+                            (datePart ? `${datePart} ${timePart}` : null);
+                        const dateValue = parseDateValue(dateHeure);
+
+                        return {
+                            id: item?.id,
+                            titre: item?.title ?? item?.titre ?? "Activite",
+                            date_heure_debut: dateHeure,
+                            heure:
+                                item?.heure ??
+                                (item?.time
+                                    ? toHour(`1970-01-01 ${item.time}`)
+                                    : ""),
+                            dateValue,
+                        };
+                    })
+                    .filter((item) => item.id && item.date_heure_debut)
+                    .filter((item) => {
+                        if (seen.has(item.id)) return false;
+                        seen.add(item.id);
+                        return true;
+                    })
+                    .sort(
+                        (a, b) =>
+                            (b.dateValue?.getTime() ?? 0) -
+                            (a.dateValue?.getTime() ?? 0),
+                    );
+
+                if (!cancelled) {
+                    setApiActivites(normalized);
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    setApiActivites([]);
+                }
+                console.error("Erreur API activités responsable", error);
+            } finally {
+                if (!cancelled) {
+                    setLoadingApiActivites(false);
+                }
+            }
         }
 
-        if (eventKindFilter === "activites") {
-            return activites.filter(
-                (a) =>
-                    !Boolean(a.is_culte) &&
-                    !String(a.type ?? "")
-                        .toLowerCase()
-                        .includes("culte"),
-            );
-        }
+        fetchApiActivites();
 
-        return activites;
-    }, [activites, eventKindFilter]);
+        return () => {
+            cancelled = true;
+        };
+    }, [activeTab]);
+
+    const activitesOnglet =
+        apiActivites.length > 0 ? apiActivites : activitesAffichables;
 
     // Données Marquer (état présences en cours)
     const initialForSelected = useMemo(() => {
@@ -725,7 +861,7 @@ export default function RespoFamilleDashboard(props) {
         if (!stillVisible) {
             handleSelectActivite(activitesAffichables[0].id);
         }
-    }, [eventKindFilter, activitesAffichables, selectedActiviteId]);
+    }, [activitesAffichables, selectedActiviteId]);
 
     const handleSave = async () => {
         if (!selectedActiviteId) return;
@@ -1008,46 +1144,6 @@ export default function RespoFamilleDashboard(props) {
                         >
                             Sélectionner une activité
                         </div>
-                        <div
-                            style={{
-                                display: "flex",
-                                gap: 8,
-                                marginBottom: 10,
-                                flexWrap: "wrap",
-                            }}
-                        >
-                            {[
-                                { key: "tous", label: "Tous" },
-                                { key: "activites", label: "Activités" },
-                                { key: "cultes", label: "Cultes" },
-                            ].map((item) => (
-                                <button
-                                    key={item.key}
-                                    onClick={() => setEventKindFilter(item.key)}
-                                    style={{
-                                        border:
-                                            eventKindFilter === item.key
-                                                ? "1px solid #2d2f8f"
-                                                : "1px solid #e0e0f0",
-                                        borderRadius: 20,
-                                        padding: "6px 12px",
-                                        fontSize: 12,
-                                        fontWeight: 600,
-                                        cursor: "pointer",
-                                        background:
-                                            eventKindFilter === item.key
-                                                ? "#eef0ff"
-                                                : "#fff",
-                                        color:
-                                            eventKindFilter === item.key
-                                                ? "#2d2f8f"
-                                                : "#667",
-                                    }}
-                                >
-                                    {item.label}
-                                </button>
-                            ))}
-                        </div>
                         <select
                             style={{
                                 width: "100%",
@@ -1071,14 +1167,7 @@ export default function RespoFamilleDashboard(props) {
                             <option value="">Choisir une activité...</option>
                             {(activitesAffichables ?? []).map((a) => (
                                 <option key={a.id} value={a.id}>
-                                    {`${
-                                        Boolean(a.is_culte) ||
-                                        String(a.type ?? "")
-                                            .toLowerCase()
-                                            .includes("culte")
-                                            ? "[CULTE]"
-                                            : "[ACT]"
-                                    } ${a.titre} · ${a.heure ?? toHour(a.date_heure_debut)}`}
+                                    {`${a.titre} · ${a.heure ?? toHour(a.date_heure_debut)}`}
                                 </option>
                             ))}
                         </select>
@@ -1262,14 +1351,23 @@ export default function RespoFamilleDashboard(props) {
                                 marginBottom: 16,
                             }}
                         >
-                            Prochaines activités
+                            Activités de votre conducteur
                         </div>
-                        {(activites ?? [])
-                            .filter(
-                                (a) =>
-                                    new Date(a.date_heure_debut) >= new Date(),
-                            )
-                            .map((a) => (
+                        {loadingApiActivites && (
+                            <div
+                                style={{
+                                    fontSize: 13,
+                                    color: "#667",
+                                    padding: "6px 0 12px",
+                                }}
+                            >
+                                Chargement des activités du conducteur...
+                            </div>
+                        )}
+                        {activitesOnglet.map((a) => {
+                            const status = getActivityStatus(a?.date_heure_debut);
+
+                            return (
                                 <div
                                     key={a.id}
                                     style={{
@@ -1324,27 +1422,53 @@ export default function RespoFamilleDashboard(props) {
                                             style={{
                                                 fontSize: 12,
                                                 color: "#aaa",
+                                                marginTop: 2,
                                             }}
                                         >
                                             {famille.classe} ·{" "}
                                             {a.heure ??
                                                 toHour(a.date_heure_debut)}
                                         </div>
+                                        <div
+                                            style={{
+                                                fontSize: 11,
+                                                color: "#7b7b90",
+                                                marginTop: 3,
+                                                textTransform: "capitalize",
+                                            }}
+                                        >
+                                            {toFullDate(a.date_heure_debut)}
+                                        </div>
                                     </div>
                                     <span
                                         style={{
-                                            background: "#e8f0fe",
-                                            color: "#2d2f8f",
+                                            background: status.bg,
+                                            color: status.color,
                                             borderRadius: 20,
                                             padding: "4px 14px",
                                             fontSize: 12,
                                             fontWeight: 500,
                                         }}
                                     >
-                                        À venir
+                                        {status.label}
                                     </span>
                                 </div>
-                            ))}
+                            );
+                        })}
+                        {!loadingApiActivites && activitesOnglet.length === 0 && (
+                                <div
+                                    style={{
+                                        fontSize: 13,
+                                        color: "#667",
+                                        background: "#f8f9ff",
+                                        border: "1px solid #e8eafb",
+                                        borderRadius: 10,
+                                        padding: "12px 14px",
+                                    }}
+                                >
+                                    Aucune activité trouvée pour votre classe.
+                                </div>
+                            )}
                     </div>
                 )}
 

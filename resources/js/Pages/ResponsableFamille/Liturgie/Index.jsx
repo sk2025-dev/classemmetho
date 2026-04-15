@@ -19,7 +19,7 @@ const ANN_PER_PAGE = 2;
 const ANNONCE_TYPES = [
     {
         value: "grace",
-        label: "Action de grâce / Remerciement",
+        label: "Action de grâce",
         emoji: "🙌",
         color: "amber",
     },
