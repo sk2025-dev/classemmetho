@@ -165,13 +165,10 @@ function AppHeader({ auth, onLogout, basePath }) {
                                                         auth?.user?.role,
                                                     )}
                                                 </p>
-                                                {auth?.user?.identifiant && (
+                                                {auth?.user?.code_membre && (
                                                     <p className="text-xs text-gray-700 font-semibold mt-1">
-                                                        ID:{" "}
-                                                        {
-                                                            auth?.user
-                                                                ?.identifiant
-                                                        }
+                                                        Code membre:{" "}
+                                                        {auth?.user?.code_membre}
                                                     </p>
                                                 )}
                                             </div>

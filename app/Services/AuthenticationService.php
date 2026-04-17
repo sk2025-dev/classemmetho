@@ -26,7 +26,7 @@ class AuthenticationService
         if (!$user) {
             return [
                 'success' => false,
-                'message' => 'Identifiant ou email introuvable.',
+                'message' => 'Code membre introuvable.',
                 'user' => null,
             ];
         }

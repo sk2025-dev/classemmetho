@@ -103,6 +103,7 @@ const NotificationBadge = ({ count }) => (
 
 export default function Dashboard({
     role,
+    isClassTresorier = false,
     pendingInscriptions,
     surveyBadgeCount = 0,
     prayerBadgeCount = 0,
@@ -175,6 +176,18 @@ export default function Dashboard({
             color: "text-teal-600",
             bg: "bg-teal-100",
         },
+        ...(isClassTresorier
+            ? [
+                  {
+                      title: "Trésorerie de classe",
+                      desc: "Gestion financière de votre classe",
+                      icon: "tresorerie",
+                      href: "/tresorier/tresorerie",
+                      color: "text-emerald-700",
+                      bg: "bg-emerald-100",
+                  },
+              ]
+            : []),
     ];
 
     const handleLogout = (e) => {

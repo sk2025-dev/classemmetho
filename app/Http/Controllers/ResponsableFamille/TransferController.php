@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\ResponsableFamille;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Models\ClassTransferRequest;
 use App\Models\Classe;
 use App\Models\Family;
-use App\Models\ClassTransferRequest;
+use App\Models\User;
+use App\Services\TransferWorkflowService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -15,14 +16,10 @@ use Inertia\Inertia;
 
 class TransferController extends Controller
 {
-    /**
-     * Afficher le tableau de bord des transferts
-     */
     public function index()
     {
         $user = Auth::user();
 
-        // Récupérer les demandes de transfert de la famille avec toutes les relations
         $transfers = ClassTransferRequest::with([
             'family',
             'user',
@@ -34,34 +31,34 @@ class TransferController extends Controller
             ->where('famille_id', $user->family_id)
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(function ($transfer) {
+            ->map(function (ClassTransferRequest $transfer) {
                 return [
                     'id' => $transfer->id,
                     'reference' => $transfer->reference,
-                    'status' => $transfer->statut,
+                    'status' => $transfer->status,
                     'type' => $transfer->type,
-                    'reason' => $transfer->motif,
+                    'transfer_mode' => $transfer->transfer_mode ?? ($transfer->target_class_id ? 'internal' : 'external'),
+                    'reason' => $transfer->reason,
                     'member' => $transfer->type === 'member' && $transfer->user ? [
                         'id' => $transfer->user->id,
                         'name' => $transfer->user->nom . ' ' . $transfer->user->prenom,
                     ] : null,
-                    'family' => $transfer->type === 'family' && $transfer->family ? [
+                    'family' => $transfer->family ? [
                         'id' => $transfer->family->id,
                         'name' => $transfer->family->nom,
                     ] : null,
-                    'classe_source' => [
+                    'classe_source' => $transfer->sourceClass ? [
                         'id' => $transfer->sourceClass->id,
                         'nom' => $transfer->sourceClass->nom,
-                    ],
+                    ] : null,
                     'classe_cible' => $transfer->targetClass ? [
                         'id' => $transfer->targetClass->id,
                         'nom' => $transfer->targetClass->nom,
                     ] : null,
-                    'external_destination' => $transfer->ville_destination
-                        ? trim($transfer->destination_city . ($transfer->destination_country ? " • {$transfer->destination_country}" : ''))
-                        : null,
-                    'destination_note' => $transfer->destination_note,
-                    'created_at' => $transfer->created_at->format('Y-m-d'),
+                    'destination_city' => $transfer->destination_city,
+                    'destination_church' => $transfer->destination_church,
+                    'external_destination' => $this->formatExternalDestination($transfer),
+                    'created_at' => $transfer->created_at?->format('Y-m-d'),
                     'validated_source_by' => $transfer->validatedBySource ? $transfer->validatedBySource->nom . ' ' . $transfer->validatedBySource->prenom : null,
                     'validated_source_at' => $transfer->validated_by_source_at ? $transfer->validated_by_source_at->format('Y-m-d') : null,
                     'validated_accueil_by' => $transfer->validatedByAccueil ? $transfer->validatedByAccueil->nom . ' ' . $transfer->validatedByAccueil->prenom : null,
@@ -69,18 +66,17 @@ class TransferController extends Controller
                 ];
             });
 
-        // Récupérer tous les membres de la famille (autres que le responsable et autres responsables)
         $members = User::where('family_id', $user->family_id)
             ->where('id', '!=', $user->id)
             ->where('is_family_responsible', false)
-            ->select('id', 'nom', 'prenom', 'email', 'classe_id')
-            ->get();
+            ->select('id', 'nom', 'prenom', 'email', 'classe_id', 'transfer_status', 'transfer_label', 'transferred_to_user_id')
+            ->get()
+            ->reject(fn (User $member) => $member->transfer_status === 'completed' && !empty($member->transferred_to_user_id))
+            ->values();
 
-        // Récupérer la famille
         $family = Family::findOrFail($user->family_id);
 
-        // Récupérer toutes les classes disponibles sauf celle d'origine de la famille
-        $classes = Classe::where('id', '!=', $family->classe_id)->get();
+        $classes = Classe::where('id', '!=', $family->classe_id)->get(['id', 'nom']);
 
         return Inertia::render('ResponsableFamille/TableauBordTransferts', [
             'transfers' => $transfers,
@@ -93,246 +89,118 @@ class TransferController extends Controller
         ]);
     }
 
-    /**
-     * Créer une nouvelle demande de transfert
-     */
     public function store(Request $request)
     {
+        $user = Auth::user();
+        $transferService = app(TransferWorkflowService::class);
+        $request->replace($this->normalizeTransferPayload($request));
+
         $validated = $request->validate([
-            'type' => ['required', Rule::in(['member', 'family', 'external'])],
-            'user_id' => 'nullable|integer|exists:users,id',
+            'type' => ['required', Rule::in(['member', 'family'])],
+            'transfer_mode' => ['required', Rule::in(['internal', 'external'])],
+            'user_id' => [
+                Rule::requiredIf(fn () => $request->input('type') === 'member'),
+                'nullable',
+                'integer',
+                'exists:users,id',
+            ],
             'target_class_id' => [
-                Rule::requiredIf(fn () => $request->input('type') !== 'external'),
+                Rule::requiredIf(fn () => $request->input('transfer_mode') === 'internal'),
                 'nullable',
                 'integer',
                 'exists:classes,id',
             ],
             'destination_city' => [
-                Rule::requiredIf(fn () => $request->input('type') === 'external'),
+                Rule::requiredIf(fn () => $request->input('transfer_mode') === 'external'),
                 'nullable',
                 'string',
                 'max:255',
             ],
-            'destination_country' => [
-                Rule::requiredIf(fn () => $request->input('type') === 'external'),
+            'destination_church' => [
+                Rule::requiredIf(fn () => $request->input('transfer_mode') === 'external'),
                 'nullable',
                 'string',
                 'max:255',
             ],
-            'destination_note' => 'nullable|string|max:500',
             'reason' => 'nullable|string|max:500',
         ]);
 
-        $user = Auth::user();
-
-        // Vérifier si l'utilisateur est responsable
         if (!$user->family_id) {
-            return redirect()->back()->with('error', 'Non autorisé');
+            return redirect()->back()->with('error', 'Non autorise');
         }
 
         try {
             DB::beginTransaction();
 
-            $sourceClassId = null;
+            $family = Family::findOrFail($user->family_id);
+            $member = null;
+
             if ($validated['type'] === 'member') {
-                // Vérifier que le membre appartient à la famille
                 $member = User::findOrFail($validated['user_id']);
-                if ($member->family_id != $user->family_id) {
+
+                if ((int) $member->family_id !== (int) $user->family_id) {
                     DB::rollBack();
-                    return redirect()->back()->with('error', 'Le membre n\'appartient pas à cette famille');
+                    return redirect()->back()->with('error', 'Le membre n\'appartient pas a cette famille');
                 }
 
-                // Empêcher le transfert si c'est un responsable de famille ou si son transfert laisserait la famille sans responsable
-                if ($member->is_family_responsible || ($member->id === $user->id && $user->is_family_responsible)) {
+                if ($member->is_family_responsible || ((int) $member->id === (int) $user->id && $user->is_family_responsible)) {
                     DB::rollBack();
-                    return redirect()->back()->with('error', 'Le responsable de famille ne peut pas être transféré. Désignez d\'abord un nouveau responsable.');
+                    return redirect()->back()->with('error', 'Le responsable de famille ne peut pas etre transfere seul. Utilisez le transfert de famille.');
                 }
 
-                $sourceClassId = $member->classe_id;
+                if ($transferService->isTransferLocked($member) || $transferService->hasPendingTransferForMember($member)) {
+                    DB::rollBack();
+                    return redirect()->back()->with('error', 'Ce membre est deja un ancien membre ou a un transfert en cours.');
+                }
             } else {
-                // Pour les demandes familiales ou externes, utiliser la classe du responsable comme référence
-                $sourceClassId = $user->classe_id;
+                if ($transferService->isTransferLocked($family) || $transferService->hasPendingTransferForFamily($family)) {
+                    DB::rollBack();
+                    return redirect()->back()->with('error', 'Cette famille est deja un ancien dossier ou a un transfert en cours.');
+                }
             }
 
-            // Créer la demande de transfert
+            $sourceClassId = $member?->classe_id ?? $family->classe_id ?? $user->classe_id;
+            $isExternal = $validated['transfer_mode'] === 'external';
+
+            if (!$isExternal && (int) $validated['target_class_id'] === (int) $sourceClassId) {
+                DB::rollBack();
+                return redirect()->back()->with('error', 'La classe d\'accueil doit etre differente de la classe source.');
+            }
+
             $transfer = ClassTransferRequest::create([
                 'family_id' => $user->family_id,
                 'user_id' => $validated['type'] === 'member' ? $validated['user_id'] : null,
                 'source_class_id' => $sourceClassId,
-                'target_class_id' => $validated['type'] === 'external' ? null : $validated['target_class_id'],
+                'target_class_id' => $isExternal ? null : $validated['target_class_id'],
                 'type' => $validated['type'],
+                'transfer_mode' => $validated['transfer_mode'],
                 'reason' => $validated['reason'] ?? null,
-                'destination_city' => $validated['destination_city'] ?? null,
-                'destination_country' => $validated['destination_country'] ?? null,
-                'destination_note' => $validated['destination_note'] ?? null,
+                'destination_city' => $isExternal ? $validated['destination_city'] : null,
+                'destination_church' => $isExternal ? $validated['destination_church'] : null,
                 'status' => 'EN_ATTENTE_SOURCE',
                 'reference' => ClassTransferRequest::generateReference(),
                 'created_by_id' => $user->id,
             ]);
 
-            DB::commit();
-
-            return redirect()->route('responsable_famille.transferts.index')
-                ->with('success', "Demande de transfert créée avec succès (Réf: {$transfer->reference})");
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->back()->with('error', 'Erreur lors de la création : ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Valider une demande de transfert par le conducteur source
-     */
-    public function approveBySource($id)
-    {
-        $transfer = ClassTransferRequest::findOrFail($id);
-        $user = Auth::user();
-
-        // Vérifier que l'utilisateur est conducteur de la classe source
-        if ($user->classe_id != $transfer->source_class_id || $user->role !== 'conducteur') {
-            return redirect()->back()->with('error', 'Non autorisé');
-        }
-
-        // Vérifier que la demande est en attente
-        if ($transfer->status !== 'EN_ATTENTE_SOURCE') {
-            return redirect()->back()->with('error', 'Cette demande ne peut pas être approuvée à ce stade');
-        }
-
-        try {
-            DB::beginTransaction();
-
-            // Mettre à jour la demande
-            $transfer->update([
-                'status' => 'EN_ATTENTE_ACCUEIL',
-                'validated_by_source_id' => $user->id,
-                'validated_by_source_at' => now(),
-            ]);
+            $transferService->lockForPendingTransfer($transfer);
 
             DB::commit();
 
-            return redirect()->back()->with('success', 'Demande approuvée par votre classe source');
+            $message = $isExternal
+                ? "Demande de sortie externe creee avec succes (Ref: {$transfer->reference})"
+                : "Demande de transfert creee avec succes (Ref: {$transfer->reference})";
 
+            return redirect()
+                ->route('responsable_famille.transferts.index')
+                ->with('success', $message);
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'Erreur : ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Erreur lors de la creation : ' . $e->getMessage());
         }
     }
 
-    /**
-     * Valider une demande de transfert par le conducteur accueil et finir le transfert
-     */
-    public function approveByAccueil($id)
-    {
-        $transfer = ClassTransferRequest::findOrFail($id);
-        $user = Auth::user();
-
-        // Vérifier que l'utilisateur est conducteur de la classe cible
-        if ($user->classe_id != $transfer->target_class_id || $user->role !== 'conducteur') {
-            return redirect()->back()->with('error', 'Non autorisé');
-        }
-
-        // Vérifier que la demande est en attente d'accueil
-        if ($transfer->status !== 'EN_ATTENTE_ACCUEIL') {
-            return redirect()->back()->with('error', 'Cette demande ne peut pas être approuvée à ce stade');
-        }
-
-        try {
-            DB::beginTransaction();
-
-            // Mettre à jour la demande
-            $transfer->update([
-                'status' => 'TERMINEE',
-                'validated_by_accueil_id' => $user->id,
-                'validated_by_accueil_at' => now(),
-            ]);
-
-            // Effectuer le transfert
-            if ($transfer->type === 'member') {
-                // Pour un transfert de membre, créer une nouvelle famille et le rendre responsable
-                $member = User::findOrFail($transfer->user_id);
-                $originalFamily = $member->family_id ? Family::find($member->family_id) : null;
-
-                // Créer une nouvelle famille pour le membre (copier certaines infos de la famille d'origine)
-                $newFamily = Family::create([
-                    'nom' => $member->nom,
-                    'email' => $member->email,
-                    'classe_id' => $transfer->target_class_id,
-                    'responsable_id' => $transfer->user_id,
-// Auto-généré par le modèle Family (CF + incrémentation)
-
-                    // Copier adresse et téléphone de la famille d'origine si elle existe
-                    'adresse' => $originalFamily ? $originalFamily->adresse : null,
-                    'quartier' => $originalFamily ? $originalFamily->quartier : null,
-                    'telephone' => $originalFamily ? $originalFamily->telephone : null,
-                    'telephone2' => $originalFamily ? $originalFamily->telephone2 : null,
-                    'ville_id' => $originalFamily ? $originalFamily->ville_id : null,
-                ]);
-
-                // Mettre à jour le membre: classe + famille + rôle
-                $member->update([
-                    'classe_id' => $transfer->target_class_id,
-                    'family_id' => $newFamily->id,
-                    'role' => 'responsable_famille', // Devient responsable de sa nouvelle famille
-                ]);
-            } else {
-                // Pour un transfert familial, juste changer la classe des membres
-                User::where('family_id', $transfer->family_id)
-                    ->where('id', '!=', $user->id)
-                    ->update(['classe_id' => $transfer->target_class_id]);
-            }
-
-            DB::commit();
-
-            return redirect()->back()->with('success', 'Transfert complété avec succès!');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->back()->with('error', 'Erreur : ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Refuser une demande de transfert
-     */
-    public function refuse(Request $request, $id)
-    {
-        $transfer = ClassTransferRequest::findOrFail($id);
-        $user = Auth::user();
-
-        $validated = $request->validate([
-            'reason' => 'required|string|max:500',
-        ]);
-
-        // Vérifier autorisation
-        $isConductorSource = $user->classe_id === $transfer->source_class_id && $user->role === 'conducteur' && $transfer->status === 'EN_ATTENTE_SOURCE';
-        $isConductorAccueil = $user->classe_id === $transfer->target_class_id && $user->role === 'conducteur' && $transfer->status === 'EN_ATTENTE_ACCUEIL';
-
-        if (!$isConductorSource && !$isConductorAccueil) {
-            return redirect()->back()->with('error', 'Non autorisé');
-        }
-
-        try {
-            $transfer->update([
-                'status' => 'REFUSEE',
-                'refusal_reason' => $validated['reason'],
-                'validated_by_source_id' => $isConductorSource ? $user->id : $transfer->validated_by_source_id,
-                'validated_by_accueil_id' => $isConductorAccueil ? $user->id : $transfer->validated_by_accueil_id,
-            ]);
-
-            return redirect()->back()->with('success', 'Demande refusée');
-
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Erreur : ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Transférer un ou plusieurs membres vers une nouvelle classe (ancien endpoint, à remplacer par store)
-     */
     public function transfer(Request $request)
     {
-        // Validation
         $validated = $request->validate([
             'type' => 'required|in:membre,famille',
             'member_id' => 'nullable|integer|exists:users,id',
@@ -342,9 +210,8 @@ class TransferController extends Controller
 
         $user = Auth::user();
 
-        // Vérifier que l'utilisateur est responsable de la famille
         if ($user->family_id != $validated['family_id']) {
-            return response()->json(['message' => 'Non autorisé'], 403);
+            return response()->json(['message' => 'Non autorise'], 403);
         }
 
         try {
@@ -354,23 +221,18 @@ class TransferController extends Controller
             $transferredCount = 0;
 
             if ($validated['type'] === 'membre') {
-                // Transférer un membre spécifique
                 $member = User::findOrFail($validated['member_id']);
 
-                // Vérifier que le membre appartient à la famille
                 if ($member->family_id != $validated['family_id']) {
                     DB::rollBack();
-                    return response()->json(['message' => 'Le membre n\'appartient pas à cette famille'], 403);
+                    return response()->json(['message' => 'Le membre n\'appartient pas a cette famille'], 403);
                 }
 
-                // Mettre à jour la classe
                 $member->update(['classe_id' => $targetClass->id]);
                 $transferredCount = 1;
-
-            } else if ($validated['type'] === 'famille') {
-                // Transférer tous les membres de la famille
+            } elseif ($validated['type'] === 'famille') {
                 $transferred = User::where('family_id', $validated['family_id'])
-                    ->where('id', '!=', $user->id) // Exclure le responsable
+                    ->where('id', '!=', $user->id)
                     ->update(['classe_id' => $targetClass->id]);
 
                 $transferredCount = $transferred;
@@ -379,11 +241,10 @@ class TransferController extends Controller
             DB::commit();
 
             return response()->json([
-                'message' => "Transfert réussi : {$transferredCount} membre(s) transféré(s) vers {$targetClass->nom}",
+                'message' => "Transfert reussi : {$transferredCount} membre(s) transferes vers {$targetClass->nom}",
                 'success' => true,
                 'transferred_count' => $transferredCount,
             ], 200);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -391,5 +252,30 @@ class TransferController extends Controller
                 'success' => false,
             ], 500);
         }
+    }
+
+    private function normalizeTransferPayload(Request $request): array
+    {
+        $payload = $request->all();
+        $legacyExternal = ($payload['type'] ?? null) === 'external';
+
+        if ($legacyExternal) {
+            $payload['transfer_mode'] = 'external';
+            $payload['type'] = !empty($payload['user_id']) ? 'member' : 'family';
+        }
+
+        $payload['transfer_mode'] = $payload['transfer_mode'] ?? 'internal';
+
+        return $payload;
+    }
+
+    private function formatExternalDestination(ClassTransferRequest $transfer): ?string
+    {
+        $parts = array_values(array_filter([
+            $transfer->destination_church,
+            $transfer->destination_city,
+        ]));
+
+        return empty($parts) ? null : implode(' - ', $parts);
     }
 }

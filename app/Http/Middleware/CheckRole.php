@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class CheckRole
@@ -17,21 +18,33 @@ class CheckRole
      */
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
-        if (!auth()->check()) {
+        if (!Auth::check()) {
             return redirect('/login');
         }
 
-        $userRole = trim((string) auth()->user()->role);
+        $user = Auth::user();
+        $userRole = trim((string) $user->role);
+        $isFamilyResponsible = (bool) ($user->is_family_responsible ?? false);
 
-        // Mapper pasteur -> responsable_famille pour accès aux fonctionnalités identiques
+        // Mapper certains rôles vers un rôle effectif pour partager les mêmes accès.
         $effectiveRole = $userRole;
         if (in_array($userRole, ['pasteur', 'responsable'], true)) {
             $effectiveRole = 'responsable_famille';
+        } elseif ($userRole === 'tresorier') {
+            $effectiveRole = 'membre_famille';
         }
 
-        \Log::info('role check', compact('userRole', 'effectiveRole', 'roles'));
+        if ($userRole === 'admin') {
+            return $next($request);
+        }
 
-        if (in_array($effectiveRole, $roles, true) || in_array($userRole, $roles, true)) {
+        Log::info('role check', compact('userRole', 'effectiveRole', 'roles', 'isFamilyResponsible'));
+
+        if (
+            in_array($effectiveRole, $roles, true) ||
+            in_array($userRole, $roles, true) ||
+            ($isFamilyResponsible && in_array('responsable_famille', $roles, true))
+        ) {
             return $next($request);
         }
 

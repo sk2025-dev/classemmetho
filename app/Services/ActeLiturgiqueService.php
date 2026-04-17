@@ -15,6 +15,7 @@ use App\Mail\ActeRefusedToCreateur;
 use App\Mail\ActeValidatedToCreateur;
 use App\Mail\ActeDecisionToConducteur;
 use InvalidArgumentException;
+use Illuminate\Support\Facades\Log;
 
 class ActeLiturgiqueService
 {
@@ -49,7 +50,7 @@ class ActeLiturgiqueService
             $exists = ActeLiturgique::query()
                 ->where('membre_id', $data['membre_id'])
                 ->where('type_acte', $data['type_acte'])
-                ->where('statut', '!=', 'ARCHIVEE')
+                ->whereIn('statut', ActeLiturgique::statutsBloquantNouvelleDemande())
                 ->exists();
             if ($exists) {
                 throw new InvalidArgumentException('Demande deja en cours pour ce membre et ce type.');
@@ -75,7 +76,7 @@ class ActeLiturgiqueService
                     ->whereNotNull('email')
                     ->get();
                 foreach ($conducteurs as $cond) {
-                    Mail::to($cond->email)->queue(new ActeSubmittedToConducteur($acte));
+                    $this->queueMailSafely($cond->email, new ActeSubmittedToConducteur($acte), 'ActeSubmittedToConducteur');
                     // create an in-app notification for the conducteur
                     try {
                         Notification::create([
@@ -194,7 +195,7 @@ class ActeLiturgiqueService
                 ->whereNotNull('email')
                 ->get();
             foreach ($pasteurs as $p) {
-                Mail::to($p->email)->queue(new ActeValidatedToPasteur($acte));
+                $this->queueMailSafely($p->email, new ActeValidatedToPasteur($acte), 'ActeValidatedToPasteur');
                 try {
                     Notification::create([
                         'user_id' => $p->id,
@@ -216,7 +217,7 @@ class ActeLiturgiqueService
             $owner = $acte->createur;
             if ($owner && $owner->email) {
                 $refusePar = $newStatus === 'REFUSEE_PAR_CONDUCTEUR' ? 'conducteur' : 'pasteur';
-                Mail::to($owner->email)->queue(new ActeRefusedToCreateur($acte, $refusePar));
+                $this->queueMailSafely($owner->email, new ActeRefusedToCreateur($acte, $refusePar), 'ActeRefusedToCreateur');
                 try {
                     Notification::create([
                         'user_id' => $owner->id,
@@ -237,7 +238,7 @@ class ActeLiturgiqueService
         if ($actor->role === 'pasteur' && $newStatus === 'VALIDEE') {
             $owner = $acte->createur;
             if ($owner && $owner->email) {
-                Mail::to($owner->email)->queue(new ActeValidatedToCreateur($acte));
+                $this->queueMailSafely($owner->email, new ActeValidatedToCreateur($acte), 'ActeValidatedToCreateur');
                 try {
                     Notification::create([
                         'user_id' => $owner->id,
@@ -263,7 +264,7 @@ class ActeLiturgiqueService
                 ->get();
             $decision = $newStatus === 'VALIDEE' ? 'validee' : 'refusee';
             foreach ($conducteurs as $cond) {
-                Mail::to($cond->email)->queue(new ActeDecisionToConducteur($acte, $decision));
+                $this->queueMailSafely($cond->email, new ActeDecisionToConducteur($acte, $decision), 'ActeDecisionToConducteur');
                 try {
                     $label = $decision === 'validee' ? 'validée' : 'refusée';
                     Notification::create([
@@ -285,7 +286,7 @@ class ActeLiturgiqueService
         if (in_array($newStatus, ['CELEBRE', 'TERMINE'], true)) {
             $owner = $acte->createur;
             if ($owner && $owner->email) {
-                Mail::to($owner->email)->queue(new ActeCertificateReadyToResponsable($acte));
+                $this->queueMailSafely($owner->email, new ActeCertificateReadyToResponsable($acte), 'ActeCertificateReadyToResponsable');
                 try {
                     Notification::create([
                         'user_id' => $owner->id,
@@ -365,6 +366,19 @@ class ActeLiturgiqueService
         ];
 
         return in_array($to, $map[$role][$from] ?? [], true);
+    }
+
+    private function queueMailSafely(string $email, object $mailable, string $context): void
+    {
+        try {
+            Mail::to($email)->queue($mailable);
+        } catch (\Throwable $e) {
+            Log::warning('Liturgy mail queue failed', [
+                'context' => $context,
+                'email' => $email,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

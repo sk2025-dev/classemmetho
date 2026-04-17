@@ -124,7 +124,7 @@ export default function Dashboard({
             title: "Présences",
             desc: "Gestion des présences",
             icon: "presence",
-            href: "/admin/presences",
+            href: "/responsable-famille/presences",
             color: "text-green-600",
             bg: "bg-green-100",
         },

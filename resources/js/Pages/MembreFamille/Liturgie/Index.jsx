@@ -2493,7 +2493,7 @@ const styles = `
 *{box-sizing:border-box}
 .rf-page{min-height:100vh;background:linear-gradient(135deg,#6B46C1 0%,#1E40AF 52%,#B6C01A 100%);color:#1E1B16}
 .rf-page::before{content:"";position:fixed;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.14) 1px,transparent 1px);background-size:28px 28px;pointer-events:none}
-.rf-wrap{position:relative;z-index:1;max-width:1320px;margin:0 auto;padding:26px}
+.rf-wrap{position:relative;z-index:1;margin:0 auto;padding:26px}
 
 /* ── actions ── */
 .rf-actions{display:flex;justify-content:space-between;gap:10px;margin-bottom:18px;align-items:center}

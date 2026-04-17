@@ -399,7 +399,10 @@ export default function EditMember({ member, family }) {
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-6">
                     <Link
-                        href={`/responsable-famille/members/${member.id}`}
+                        href={withBasePath(
+                            "",
+                            `/responsable-famille/members/${member.id}`,
+                        )}
                         className="p-2 bg-white/90 backdrop-blur-xl rounded-full border border-white/50 shadow-lg hover:shadow-xl hover:bg-white transition-all"
                     >
                         <ArrowLeft className="w-5 h-5 text-gray-700" />
@@ -564,17 +567,17 @@ export default function EditMember({ member, family }) {
 
                             <FormField label="Genre" required>
                                 <Select2Single
-                                name="genre"
-                                value={data.genre}
-                                onChange={(e) =>
-                                    setData({
-                                        ...data,
-                                        genre: e.target.value,
-                                    })
-                                }
-                                options={GENDER_OPTIONS}
-                                placeholder="Sélectionner..."
-                            />
+                                    name="genre"
+                                    value={data.genre}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            genre: e.target.value,
+                                        })
+                                    }
+                                    options={GENDER_OPTIONS}
+                                    placeholder="Sélectionner..."
+                                />
                             </FormField>
 
                             <FormField
@@ -643,32 +646,32 @@ export default function EditMember({ member, family }) {
 
                             <FormField label="Relation de Famille" icon={Users}>
                                 <Select2Single
-                                name="relation"
-                                value={data.relation}
-                                onChange={(e) =>
-                                    setData({
-                                        ...data,
-                                        relation: e.target.value,
-                                    })
-                                }
-                                options={RELATION_OPTIONS}
-                                placeholder="Sélectionner une relation..."
-                            />
+                                    name="relation"
+                                    value={data.relation}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            relation: e.target.value,
+                                        })
+                                    }
+                                    options={RELATION_OPTIONS}
+                                    placeholder="Sélectionner une relation..."
+                                />
                             </FormField>
 
                             <FormField label="Statut Marital">
                                 <Select2Single
-                                name="statut_marital"
-                                value={data.statut_marital}
-                                onChange={(e) =>
-                                    setData({
-                                        ...data,
-                                        statut_marital: e.target.value,
-                                    })
-                                }
-                                options={MEMBER_MARITAL_STATUS_OPTIONS}
-                                placeholder="Sélectionner..."
-                            />
+                                    name="statut_marital"
+                                    value={data.statut_marital}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            statut_marital: e.target.value,
+                                        })
+                                    }
+                                    options={MEMBER_MARITAL_STATUS_OPTIONS}
+                                    placeholder="Sélectionner..."
+                                />
                             </FormField>
 
                             {/* Afficher Date et Lieu de Mariage SEULEMENT si statut marital !== Célibataire */}
@@ -855,7 +858,10 @@ export default function EditMember({ member, family }) {
                     {/* Footer Actions */}
                     <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end gap-3 bg-gray-50/50 -mx-6 -mb-6 p-6 rounded-b-2xl">
                         <Link
-                            href={`/responsable-famille/members/${member.id}`}
+                            href={withBasePath(
+                                "",
+                                `/responsable-famille/members/${member.id}`,
+                            )}
                             className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2"
                         >
                             <X className="w-4 h-4" /> Annuler

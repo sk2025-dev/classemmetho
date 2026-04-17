@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Services\AuthenticationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -24,7 +23,7 @@ class LoginController extends Controller
 
     /**
      * Authentifier l'utilisateur et le connecter
-     * Accepte: email OU identifier
+     * Accepte: code membre
      */
     public function login(Request $request)
     {
@@ -35,35 +34,35 @@ class LoginController extends Controller
 
         // Validation
         $request->validate([
-            'identifiant' => ['required', 'string'],
+            'code_membre' => ['required', 'string'],
             'password' => ['required', 'string'],
+            'redirect_to' => ['nullable', 'string', 'max:2048'],
         ], [
-            'identifiant.required' => 'Veuillez entrer votre identifiant ou email.',
+            'code_membre.required' => 'Veuillez entrer votre code membre.',
             'password.required' => 'Le mot de passe est requis.',
         ]);
 
-        $login = $request->input('identifiant');
+        $login = trim((string) $request->input('code_membre'));
         $password = $request->input('password');
 
-        // Chercher par identifier OU email (incluant les soft-deleted)
+        // Chercher par code membre (incluant les soft-deleted)
         $user = User::withTrashed()
-                    ->where('identifier', $login)
-                    ->orWhere('email', $login)
-                    ->first();
+            ->where('code_membre', $login)
+            ->first();
 
-        // Message générique pour éviter l'énumération d'utilisateurs
-        $genericErrorMessage = 'Identifiant ou mot de passe incorrect.';
+        // Message generique pour eviter l'enumeration d'utilisateurs
+        $genericErrorMessage = 'Code membre ou mot de passe incorrect.';
 
         // Utilisateur non trouvé
         if (!$user) {
-            Log::warning('Login attempt with non-existent identifier/email', ['login' => $login]);
+            Log::warning('Login attempt with non-existent member code', ['code_membre' => $login]);
 
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json(['message' => $genericErrorMessage], 422);
             }
 
             throw ValidationException::withMessages([
-                'identifiant' => $genericErrorMessage,
+                'code_membre' => $genericErrorMessage,
             ]);
         }
 
@@ -76,7 +75,7 @@ class LoginController extends Controller
             }
 
             throw ValidationException::withMessages([
-                'identifiant' => $genericErrorMessage,
+                'code_membre' => $genericErrorMessage,
             ]);
         }
 
@@ -94,7 +93,13 @@ class LoginController extends Controller
         }
 
         // Vérifier si le compte est actif
-        if (isset($user->is_active) && $user->is_active === false) {
+        $isInactiveByStatus = in_array(
+            strtolower((string) ($user->status ?? $user->statut ?? 'active')),
+            ['inactive', 'inactif'],
+            true
+        );
+
+        if ((isset($user->is_active) && $user->is_active === false) || $isInactiveByStatus) {
             Log::warning('Login attempt on inactive account', ['user_id' => $user->id]);
 
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
@@ -102,7 +107,7 @@ class LoginController extends Controller
             }
 
             throw ValidationException::withMessages([
-                'identifiant' => $genericErrorMessage,
+                'code_membre' => $genericErrorMessage,
             ]);
         }
 
@@ -115,6 +120,7 @@ class LoginController extends Controller
         // Logger la connexion
         Log::info('User logged in successfully', [
             'user_id' => $user->id,
+            'code_membre' => $user->code_membre,
             'identifier' => $user->identifier,
             'email' => $user->email,
         ]);
@@ -129,10 +135,20 @@ class LoginController extends Controller
             'responsable_famille' => 'responsable_famille.dashboard',
             'pasteur' => 'pasteur.dashboard',
             'membre_famille' => 'membre_famille.dashboard',
-            default => 'welcome',
+            'tresorier' => 'membre_famille.dashboard',
+            default => 'dashboard',
         };
 
         $redirectUrl = route($redirectRoute);
+        $requestedRedirect = trim((string) $request->input('redirect_to', ''));
+
+        if (
+            $requestedRedirect !== ''
+            && $this->isSafeLocalRedirect($requestedRedirect)
+            && $this->canUseCustomRedirect($user, $requestedRedirect)
+        ) {
+            $redirectUrl = $requestedRedirect;
+        }
 
         // Si c'est une requête JSON/AJAX (fetch depuis le login)
         if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
@@ -144,6 +160,7 @@ class LoginController extends Controller
                     'prenom' => $user->prenom,
                     'nom' => $user->nom,
                     'email' => $user->email,
+                    'code_membre' => $user->code_membre,
                     'identifier' => $user->identifier,
                     'role' => $user->role,
                 ],
@@ -152,10 +169,30 @@ class LoginController extends Controller
         }
 
         // Redirection classique avec les données en session flash
-        return redirect()->route($redirectRoute)
+        return redirect()->to($redirectUrl)
             ->with('success', 'Bienvenue ' . $user->nom . '!')
             ->with('just_logged_in', true)
             ->with('user_welcome_name', $user->nom);
+    }
+
+    private function isSafeLocalRedirect(string $redirect): bool
+    {
+        if (str_starts_with($redirect, 'http://') || str_starts_with($redirect, 'https://') || str_starts_with($redirect, '//')) {
+            return false;
+        }
+
+        return str_starts_with($redirect, '/');
+    }
+
+    private function canUseCustomRedirect(User $user, string $redirect): bool
+    {
+        $normalized = mb_strtolower($redirect);
+
+        if (str_contains($normalized, '/membre-famille/tresorerie')) {
+            return in_array($user->role, ['membre_famille', 'tresorier'], true);
+        }
+
+        return true;
     }
 
     /**

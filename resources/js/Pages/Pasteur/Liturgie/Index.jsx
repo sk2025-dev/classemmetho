@@ -108,12 +108,23 @@ export default function Index({
     const [toast, setToast] = useState("");
     const [ficheModalOpen, setFicheModalOpen] = useState(false);
     const [sendingFiche, setSendingFiche] = useState(false);
+    const [selectedFicheBatchDate, setSelectedFicheBatchDate] = useState("");
+    const [ficheEmailForm, setFicheEmailForm] = useState({
+        destinataire: "",
+        subject: "Fiche finale des mariages",
+        message:
+            "Bonjour,\n\nVeuillez trouver en piece jointe la fiche finale des mariages.\n\nBien cordialement.",
+    });
     const pendingPerPage = actesPaginator?.per_page || 10;
     const [selectedIds, setSelectedIds] = useState([]);
     const [selectedHistoryIds, setSelectedHistoryIds] = useState([]);
     const DONE_STATUSES = ["CELEBRE", "TERMINE"];
     const [historyPage, setHistoryPage] = useState(1);
     const historyPerPage = 6;
+    const [dateHistorySearch, setDateHistorySearch] = useState("");
+    const [dateHistoryPage, setDateHistoryPage] = useState(1);
+    const dateHistoryPerPage = 6;
+    const [selectedCeremonyIds, setSelectedCeremonyIds] = useState([]);
 
     const goToActesPage = (page) => {
         router.visit(url, {
@@ -249,6 +260,15 @@ export default function Index({
         "CELEBRE",
         "TERMINE",
     ];
+    const HIDDEN_ALL_CONTENT_TYPES = new Set(["confirmation", "generale"]);
+    const isHiddenInAllContentsFilter = (...types) =>
+        types.some((type) =>
+            HIDDEN_ALL_CONTENT_TYPES.has(
+                String(type || "")
+                    .trim()
+                    .toLowerCase(),
+            ),
+        );
     const searchNeedle = searchTerm.trim().toLowerCase();
 
     const filteredActes = useMemo(() => {
@@ -256,6 +276,12 @@ export default function Index({
 
         // Afficher uniquement les actes en attente de validation du pasteur
         result = result.filter((a) => a.statut === "TRANSMISE_AU_PASTEUR");
+
+        if (quickFilter === "all") {
+            result = result.filter(
+                (a) => !isHiddenInAllContentsFilter(a.type_acte),
+            );
+        }
 
         if (quickFilter && quickFilter !== "all") {
             result = result.filter((a) =>
@@ -296,6 +322,15 @@ export default function Index({
     }, [localActes, quickFilter, selectedFamily, selectedClasse, searchNeedle]);
 
     const unsentCeremonyActes = useMemo(() => {
+        const isFicheMarkedAsSent = (value) => {
+            if (value === true || value === 1) return true;
+            if (typeof value === "string") {
+                const normalized = value.trim().toLowerCase();
+                return normalized === "1" || normalized === "true";
+            }
+            return false;
+        };
+
         const mergedActs = new Map();
         const seedActs = [...localActes, ...historiqueList];
         seedActs.forEach((acte) => {
@@ -314,10 +349,27 @@ export default function Index({
                     .trim()
                     .toUpperCase();
                 const details = acte?.details || {};
+                const ceremonyStatut = String(details?.ceremonie_statut || "")
+                    .trim()
+                    .toUpperCase();
+
+                const globallyEligible = [
+                    "VALIDEE",
+                    "PUBLIEE",
+                    "ARCHIVEE",
+                    "CELEBRE",
+                    "TERMINE",
+                ].includes(statut);
+
+                const ceremonyEligible = [
+                    "CEREMONIE_VALIDEE_PAR_PASTEUR",
+                    "CEREMONIE_VALIDE_PAR_PASTEUR",
+                ].includes(ceremonyStatut);
+
                 return (
                     type === "mariage" &&
-                    ["VALIDEE", "PUBLIEE"].includes(statut) &&
-                    !details?.fiche_pasteur_envoyee
+                    (globallyEligible || ceremonyEligible) &&
+                    !isFicheMarkedAsSent(details?.fiche_pasteur_envoyee)
                 );
             })
             .sort((a, b) => {
@@ -346,19 +398,88 @@ export default function Index({
         return Array.from(classes);
     }, [unsentCeremonyActes]);
 
+    const toBatchDateKey = (value) => {
+        if (!value) return null;
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return null;
+        return date.toISOString().slice(0, 10);
+    };
+
+    const unsentCeremonyBatchMap = useMemo(() => {
+        const map = new Map();
+        unsentCeremonyActes.forEach((acte) => {
+            const batchDate =
+                toBatchDateKey(acte?.created_at) ||
+                toBatchDateKey(acte?.details?.date_souhaitee) ||
+                toBatchDateKey(acte?.date_souhaitee) ||
+                toBatchDateKey(acte?.updated_at);
+            if (!batchDate) return;
+            if (!map.has(batchDate)) {
+                map.set(batchDate, []);
+            }
+            map.get(batchDate).push(acte);
+        });
+        return map;
+    }, [unsentCeremonyActes]);
+
+    const unsentBatchDates = useMemo(() => {
+        return Array.from(unsentCeremonyBatchMap.keys()).sort((a, b) =>
+            String(b).localeCompare(String(a)),
+        );
+    }, [unsentCeremonyBatchMap]);
+
+    useEffect(() => {
+        if (!ficheModalOpen) return;
+        if (!unsentBatchDates.length) {
+            setSelectedFicheBatchDate("");
+            return;
+        }
+        if (
+            !selectedFicheBatchDate ||
+            !unsentCeremonyBatchMap.has(selectedFicheBatchDate)
+        ) {
+            setSelectedFicheBatchDate(unsentBatchDates[0]);
+        }
+    }, [
+        ficheModalOpen,
+        unsentBatchDates,
+        selectedFicheBatchDate,
+        unsentCeremonyBatchMap,
+    ]);
+
+    const selectedUnsentCeremonyActes = useMemo(() => {
+        if (!selectedFicheBatchDate) return [];
+        return unsentCeremonyBatchMap.get(selectedFicheBatchDate) || [];
+    }, [selectedFicheBatchDate, unsentCeremonyBatchMap]);
+
+    const selectedUnsentClassNames = useMemo(() => {
+        const classes = new Set();
+        selectedUnsentCeremonyActes.forEach((acte) => {
+            const label =
+                acte.classe?.nom ||
+                acte.classe_id ||
+                acte.details?.classe ||
+                acte.family?.nom;
+            if (label) {
+                classes.add(label);
+            }
+        });
+        return Array.from(classes);
+    }, [selectedUnsentCeremonyActes]);
+
     const ficheMariageFinaleLink = useMemo(() => {
-        if (!unsentCeremonyActes.length) {
+        if (!selectedUnsentCeremonyActes.length) {
             return null;
         }
-        const firstId = unsentCeremonyActes[0]?.id;
+        const firstId = selectedUnsentCeremonyActes[0]?.id;
         if (!firstId) {
             return null;
         }
         const params = new URLSearchParams({
-            ids: unsentCeremonyActes.map((acte) => acte.id).join(","),
+            ids: selectedUnsentCeremonyActes.map((acte) => acte.id).join(","),
         });
         return `/pasteur/liturgie/${firstId}/fiche?${params.toString()}`;
-    }, [unsentCeremonyActes]);
+    }, [selectedUnsentCeremonyActes]);
 
     const ceremonyActs = useMemo(() => {
         return historiqueList
@@ -388,8 +509,229 @@ export default function Index({
             });
     }, [historiqueList]);
 
+    const allCeremonySelected =
+        ceremonyActs.length > 0 &&
+        ceremonyActs.every((acte) => selectedCeremonyIds.includes(acte.id));
+
+    const toggleCeremonySelect = (id) =>
+        setSelectedCeremonyIds((prev) =>
+            prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id],
+        );
+
+    const clearCeremonySelection = () => setSelectedCeremonyIds([]);
+
+    const toggleSelectAllCeremony = () => {
+        setSelectedCeremonyIds(
+            allCeremonySelected ? [] : ceremonyActs.map((acte) => acte.id),
+        );
+    };
+
+    const approveSelectedCeremony = async () => {
+        if (!selectedCeremonyIds.length) {
+            notify("Sélectionnez au moins une date.");
+            return;
+        }
+
+        try {
+            setProcessing(true);
+            const responses = await Promise.all(
+                selectedCeremonyIds.map((id) =>
+                    axios.post(`/pasteur/liturgie/${id}/ceremonie/decision`, {
+                        statut: "CEREMONIE_VALIDEE_PAR_PASTEUR",
+                        commentaire: "",
+                    }),
+                ),
+            );
+
+            const updatedById = new Map(
+                responses
+                    .map((response) => response?.data?.acte)
+                    .filter(Boolean)
+                    .map((acte) => [acte.id, acte]),
+            );
+
+            setHistoriqueList((prev) =>
+                prev.map((item) => {
+                    const updated = updatedById.get(item.id);
+                    if (!updated) return item;
+
+                    return {
+                        ...item,
+                        details: updated.details,
+                        date_souhaitee:
+                            updated.date_souhaitee || item.date_souhaitee,
+                    };
+                }),
+            );
+
+            setSelectedCeremonyIds([]);
+            notify(
+                `${responses.length} date${responses.length > 1 ? "s" : ""} validée${responses.length > 1 ? "s" : ""}.`,
+            );
+        } catch (error) {
+            notify(
+                error?.response?.data?.message ||
+                    "Echec de la validation groupée des dates.",
+            );
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    useEffect(() => {
+        setSelectedCeremonyIds((prev) =>
+            prev.filter((id) => ceremonyActs.some((acte) => acte.id === id)),
+        );
+    }, [ceremonyActs]);
+
+    const ceremonyValidatedActs = useMemo(() => {
+        return historiqueList
+            .filter((acte) => {
+                const type = String(acte?.type_acte || "")
+                    .trim()
+                    .toLowerCase();
+                const statut = String(acte?.details?.ceremonie_statut || "")
+                    .trim()
+                    .toUpperCase();
+                const date =
+                    acte?.details?.date_souhaitee || acte?.date_souhaitee;
+                return (
+                    type === "mariage" &&
+                    [
+                        "CEREMONIE_VALIDEE_PAR_PASTEUR",
+                        "CEREMONIE_VALIDE_PAR_PASTEUR",
+                    ].includes(statut) &&
+                    Boolean(date)
+                );
+            })
+            .sort((a, b) => {
+                const dateA = new Date(
+                    a?.details?.date_souhaitee || a?.date_souhaitee || 0,
+                ).valueOf();
+                const dateB = new Date(
+                    b?.details?.date_souhaitee || b?.date_souhaitee || 0,
+                ).valueOf();
+                return dateB - dateA;
+            });
+    }, [historiqueList]);
+
+    const ceremonyHistoryRows = useMemo(() => {
+        const uniqueRows = new Map();
+
+        ceremonyValidatedActs.forEach((acte) => {
+            const details = acte?.details || {};
+            const memberName =
+                `${acte?.membre?.prenom || ""} ${acte?.membre?.nom || ""}`.trim() ||
+                "Membre inconnu";
+            const fianceName =
+                [details?.conjoint_prenom, details?.conjoint_nom]
+                    .filter(Boolean)
+                    .join(" ") ||
+                [details?.epoux_prenom, details?.epoux_nom]
+                    .filter(Boolean)
+                    .join(" ") ||
+                [details?.conjoint_1, details?.conjoint_2]
+                    .filter(Boolean)
+                    .join(" ") ||
+                "—";
+            const witnesses =
+                [details?.temoin_femme, details?.temoin_homme]
+                    .filter(Boolean)
+                    .join(" / ") ||
+                details?.temoins ||
+                "—";
+
+            const dateChosen = details?.date_souhaitee || acte?.date_souhaitee;
+            const validatedAt =
+                details?.ceremonie_validee_pasteur_at ||
+                details?.ceremonie_transmise_pasteur_at ||
+                acte?.updated_at ||
+                acte?.created_at;
+
+            const signature = [
+                acte.id,
+                acte.reference || `ACTE-${acte.id}`,
+                memberName,
+                fianceName,
+                witnesses,
+                dateChosen || "",
+                validatedAt || "",
+            ].join("|");
+
+            if (!uniqueRows.has(signature)) {
+                uniqueRows.set(signature, {
+                    rowKey: signature,
+                    id: acte.id,
+                    typeActe: acte.type_acte,
+                    statut: acte.statut,
+                    ceremonyStatut: details?.ceremonie_statut,
+                    reference: acte.reference || `ACTE-${acte.id}`,
+                    memberName,
+                    fianceName,
+                    witnesses,
+                    dateChosen,
+                    validatedAt,
+                });
+            }
+        });
+
+        return Array.from(uniqueRows.values());
+    }, [ceremonyValidatedActs]);
+
+    const dateHistoryNeedle = dateHistorySearch.trim().toLowerCase();
+
+    const filteredCeremonyHistoryRows = useMemo(() => {
+        if (!dateHistoryNeedle) {
+            return ceremonyHistoryRows;
+        }
+
+        return ceremonyHistoryRows.filter((row) =>
+            [
+                row.reference,
+                row.memberName,
+                row.fianceName,
+                row.witnesses,
+                formatDate(row.dateChosen),
+                formatDateTime(row.validatedAt),
+            ].some((field) =>
+                String(field || "")
+                    .toLowerCase()
+                    .includes(dateHistoryNeedle),
+            ),
+        );
+    }, [ceremonyHistoryRows, dateHistoryNeedle]);
+
+    const dateHistoryTotalPages = Math.max(
+        1,
+        Math.ceil(filteredCeremonyHistoryRows.length / dateHistoryPerPage),
+    );
+
+    const pagedCeremonyHistoryRows = useMemo(() => {
+        const start = (dateHistoryPage - 1) * dateHistoryPerPage;
+        return filteredCeremonyHistoryRows.slice(
+            start,
+            start + dateHistoryPerPage,
+        );
+    }, [filteredCeremonyHistoryRows, dateHistoryPage]);
+
+    useEffect(() => {
+        setDateHistoryPage(1);
+    }, [dateHistoryNeedle, ceremonyHistoryRows.length]);
+
+    useEffect(() => {
+        if (dateHistoryPage > dateHistoryTotalPages) {
+            setDateHistoryPage(dateHistoryTotalPages);
+        }
+    }, [dateHistoryPage, dateHistoryTotalPages]);
+
     const filteredHistorique = useMemo(() => {
         let result = [...historiqueList];
+
+        if (quickFilter === "all") {
+            result = result.filter(
+                (a) => !isHiddenInAllContentsFilter(a.type_acte),
+            );
+        }
 
         if (quickFilter && quickFilter !== "all") {
             result = result.filter((a) =>
@@ -441,6 +783,9 @@ export default function Index({
         // Afficher uniquement les annonces en attente de validation du pasteur
         result = result.filter((a) => a.statut === "TRANSMISE_AU_PASTEUR");
 
+        // Note: Les annonces paroissiales ne doivent pas être filtrées par HIDDEN_ALL_CONTENT_TYPES
+        // Ce filtre s'applique uniquement aux actes liturgiques
+
         // Filter by specific type
         if (quickFilter && quickFilter !== "all") {
             result = result.filter((a) =>
@@ -489,6 +834,9 @@ export default function Index({
 
     const annHistFiltered = useMemo(() => {
         let result = [...annoncesHistorique];
+
+        // Note: Les annonces paroissiales ne doivent pas être filtrées par HIDDEN_ALL_CONTENT_TYPES
+        // Ce filtre s'applique uniquement aux actes liturgiques
 
         // Filter by status (Toutes/En cours/Validées/Refusées)
         if (annFilter === "en_cours") {
@@ -679,10 +1027,13 @@ export default function Index({
     };
 
     const openFicheModal = () => {
-        if (!unsentCeremonyActes.length) {
-            notify("Aucune fiche n'est en attente d'envoi.");
-            return;
-        }
+        setSelectedFicheBatchDate(unsentBatchDates[0] || "");
+        setFicheEmailForm({
+            destinataire: "",
+            subject: "Fiche finale des mariages",
+            message:
+                "Bonjour,\n\nVeuillez trouver en piece jointe la fiche finale des mariages.\n\nBien cordialement.",
+        });
         setFicheModalOpen(true);
     };
 
@@ -692,27 +1043,14 @@ export default function Index({
     };
 
     const handleSendFiche = async () => {
-        if (!unsentCeremonyActes.length) {
+        if (!selectedUnsentCeremonyActes.length) {
             notify("Aucune fiche n'est en attente d'envoi.");
             return;
         }
 
-        const gmailParams = new URLSearchParams({
-            view: "cm",
-            fs: "1",
-            su: "Fiche finale des mariages",
-            body: "Bonjour,\n\nVeuillez joindre la fiche finale des mariages telechargee depuis l'application.\n\nBien cordialement.",
-        });
-        const gmailUrl = `https://mail.google.com/mail/?${gmailParams.toString()}`;
-
-        if (typeof window !== "undefined") {
-            const gmailWindow = window.open(gmailUrl, "_blank");
-            if (!gmailWindow) {
-                notify(
-                    "Impossible d'ouvrir Gmail. Désactivez le bloqueur de fenêtres.",
-                );
-                return;
-            }
+        if (!ficheEmailForm.destinataire.trim()) {
+            notify("Veuillez renseigner l'email du destinataire.");
+            return;
         }
 
         try {
@@ -720,7 +1058,10 @@ export default function Index({
             const res = await axios.post(
                 withBasePath("", "/pasteur/liturgie/fiche/envoyer"),
                 {
-                    ids: unsentCeremonyActes.map((acte) => acte.id),
+                    ids: selectedUnsentCeremonyActes.map((acte) => acte.id),
+                    destinataire: ficheEmailForm.destinataire.trim(),
+                    subject: ficheEmailForm.subject.trim(),
+                    message: ficheEmailForm.message.trim(),
                 },
             );
             const updatedActes = Array.isArray(res.data?.actes)
@@ -2502,10 +2843,6 @@ export default function Index({
                                                     type="button"
                                                     className="hs-gmail-btn"
                                                     onClick={openFicheModal}
-                                                    disabled={
-                                                        unsentCeremonyActes.length ===
-                                                        0
-                                                    }
                                                 >
                                                     <svg
                                                         width="18"
@@ -2520,7 +2857,10 @@ export default function Index({
                                                         <path d="M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1z" />
                                                         <path d="M3 6l9 7 9-7" />
                                                     </svg>
-                                                    <>Envoyer fiche PDF</>
+                                                    <>
+                                                        Envoyer la fiche de
+                                                        mariage
+                                                    </>
                                                 </button>
                                                 {sessionRefuses > 0 && (
                                                     <span className="hs-pill red">
@@ -2784,36 +3124,7 @@ export default function Index({
 
                     {activeTab === "dates" && (
                         <div className="date-tab-root">
-                            {ceremonyActs.length === 0 ? (
-                                <div className="empty-state">
-                                    <svg
-                                        width="32"
-                                        height="32"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        strokeWidth="1.2"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            d="M6 2h12a2 2 0 012 2v16a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"
-                                        />
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            d="M6 10h12"
-                                        />
-                                    </svg>
-                                    <div className="empty-title">
-                                        Aucune date de mariage choisie
-                                    </div>
-                                    <div className="empty-sub">
-                                        Les responsables pourront proposer une
-                                        date une fois leur dossier validé.
-                                    </div>
-                                </div>
-                            ) : (
+                            <section className="date-section-panel">
                                 <div className="date-shell">
                                     <div className="date-shell-head">
                                         <div>
@@ -2827,118 +3138,475 @@ export default function Index({
                                                 plus lisible.
                                             </div>
                                         </div>
-                                        <div className="date-shell-count">
-                                            {ceremonyActs.length} dossier
-                                            {ceremonyActs.length > 1 ? "s" : ""}
+                                        <div className="date-shell-tools">
+                                            <button
+                                                type="button"
+                                                className="btn-mini"
+                                                onClick={
+                                                    toggleSelectAllCeremony
+                                                }
+                                                disabled={
+                                                    ceremonyActs.length === 0
+                                                }
+                                            >
+                                                {allCeremonySelected
+                                                    ? "Désélectionner"
+                                                    : "Tout sélectionner"}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="btn-mini"
+                                                onClick={clearCeremonySelection}
+                                                disabled={
+                                                    selectedCeremonyIds.length ===
+                                                    0
+                                                }
+                                            >
+                                                Effacer
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="btn-mini btn-mini-approve"
+                                                onClick={
+                                                    approveSelectedCeremony
+                                                }
+                                                disabled={
+                                                    selectedCeremonyIds.length ===
+                                                        0 || processing
+                                                }
+                                            >
+                                                Valider la sélection
+                                            </button>
+                                            <div className="date-shell-count">
+                                                {ceremonyActs.length} dossier
+                                                {ceremonyActs.length > 1
+                                                    ? "s"
+                                                    : ""}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="date-grid">
-                                        {ceremonyActs.map((acte) => {
-                                            const statut = String(
-                                                acte.details
-                                                    ?.ceremonie_statut || "",
-                                            )
-                                                .trim()
-                                                .toUpperCase();
-                                            const badgeClass = statut.includes(
-                                                "REFUSEE",
-                                            )
-                                                ? "badge-refuse"
-                                                : statut ===
-                                                    "CEREMONIE_VALIDEE_PAR_PASTEUR"
-                                                  ? "badge-valide"
-                                                  : "badge-transmis";
+                                    {ceremonyActs.length === 0 ? (
+                                        <div className="empty-state">
+                                            <svg
+                                                width="32"
+                                                height="32"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                strokeWidth="1.2"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M6 2h12a2 2 0 012 2v16a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"
+                                                />
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M6 10h12"
+                                                />
+                                            </svg>
+                                            <div className="empty-title">
+                                                Aucune date de mariage choisie
+                                            </div>
+                                            <div className="empty-sub">
+                                                Les responsables pourront
+                                                proposer une date une fois leur
+                                                dossier validé.
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="date-grid">
+                                            {ceremonyActs.map((acte) => {
+                                                const statut = String(
+                                                    acte.details
+                                                        ?.ceremonie_statut ||
+                                                        "",
+                                                )
+                                                    .trim()
+                                                    .toUpperCase();
+                                                const badgeClass =
+                                                    statut.includes("REFUSEE")
+                                                        ? "badge-refuse"
+                                                        : statut ===
+                                                            "CEREMONIE_VALIDEE_PAR_PASTEUR"
+                                                          ? "badge-valide"
+                                                          : "badge-transmis";
 
-                                            return (
-                                                <article
-                                                    className="date-card"
-                                                    key={`date-${acte.id}`}
-                                                >
-                                                    <div className="date-card-main">
-                                                        <div className="date-card-heading">
-                                                            <div className="date-card-title">
-                                                                {
-                                                                    acte.membre
-                                                                        ?.prenom
-                                                                }{" "}
-                                                                {
-                                                                    acte.membre
-                                                                        ?.nom
+                                                return (
+                                                    <article
+                                                        className="date-card"
+                                                        key={`date-${acte.id}`}
+                                                    >
+                                                        <label className="date-card-check">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedCeremonyIds.includes(
+                                                                    acte.id,
+                                                                )}
+                                                                onChange={() =>
+                                                                    toggleCeremonySelect(
+                                                                        acte.id,
+                                                                    )
                                                                 }
-                                                            </div>
-                                                            <div className="date-card-ref">
-                                                                {acte.reference ||
-                                                                    "Référence indisponible"}
-                                                            </div>
-                                                        </div>
-                                                        <span
-                                                            className={`badge ${badgeClass}`}
-                                                        >
-                                                            <span className="badge-dot" />
-                                                            {historyStatusLabel(
-                                                                statut,
-                                                            )}
-                                                        </span>
-                                                    </div>
-                                                    <div className="date-card-meta">
-                                                        <span>
-                                                            {formatDate(
-                                                                acte.details
-                                                                    ?.date_souhaitee ||
-                                                                    acte.date_souhaitee,
-                                                            )}
-                                                        </span>
-                                                        <span className="date-card-sep">
-                                                            •
-                                                        </span>
-                                                        <span>
-                                                            {acte.details
-                                                                ?.ceremonie_creneau ||
-                                                                "—"}
-                                                        </span>
-                                                    </div>
-                                                    <div className="date-card-body">
-                                                        <div className="date-card-field">
-                                                            <span className="date-card-label">
-                                                                Lieu
+                                                            />
+                                                            <span>
+                                                                Sélectionner
                                                             </span>
-                                                            <span className="date-card-value">
+                                                        </label>
+                                                        <div className="date-card-main">
+                                                            <div className="date-card-heading">
+                                                                <div className="date-card-title">
+                                                                    {
+                                                                        acte
+                                                                            .membre
+                                                                            ?.prenom
+                                                                    }{" "}
+                                                                    {
+                                                                        acte
+                                                                            .membre
+                                                                            ?.nom
+                                                                    }
+                                                                </div>
+                                                                <div className="date-card-ref">
+                                                                    {acte.reference ||
+                                                                        "Référence indisponible"}
+                                                                </div>
+                                                            </div>
+                                                            <span
+                                                                className={`badge ${badgeClass}`}
+                                                            >
+                                                                <span className="badge-dot" />
+                                                                {historyStatusLabel(
+                                                                    statut,
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                        <div className="date-card-meta">
+                                                            <span>
+                                                                {formatDate(
+                                                                    acte.details
+                                                                        ?.date_souhaitee ||
+                                                                        acte.date_souhaitee,
+                                                                )}
+                                                            </span>
+                                                            <span className="date-card-sep">
+                                                                •
+                                                            </span>
+                                                            <span>
                                                                 {acte.details
-                                                                    ?.lieu_ceremonie ||
+                                                                    ?.ceremonie_creneau ||
                                                                     "—"}
                                                             </span>
                                                         </div>
-                                                        <div className="date-card-field">
-                                                            <span className="date-card-label">
-                                                                Témoins
-                                                            </span>
-                                                            <span className="date-card-value">
-                                                                {acte.details
-                                                                    ?.temoins ||
-                                                                    "—"}
-                                                            </span>
+                                                        <div className="date-card-body">
+                                                            <div className="date-card-field">
+                                                                <span className="date-card-label">
+                                                                    Lieu
+                                                                </span>
+                                                                <span className="date-card-value">
+                                                                    {acte
+                                                                        .details
+                                                                        ?.lieu_ceremonie ||
+                                                                        "—"}
+                                                                </span>
+                                                            </div>
+                                                            <div className="date-card-field">
+                                                                <span className="date-card-label">
+                                                                    Témoins
+                                                                </span>
+                                                                <span className="date-card-value">
+                                                                    {acte
+                                                                        .details
+                                                                        ?.temoins ||
+                                                                        [
+                                                                            acte
+                                                                                .details
+                                                                                ?.temoin_femme,
+                                                                            acte
+                                                                                .details
+                                                                                ?.temoin_homme,
+                                                                        ]
+                                                                            .filter(
+                                                                                Boolean,
+                                                                            )
+                                                                            .join(
+                                                                                " / ",
+                                                                            ) ||
+                                                                        "—"}
+                                                                </span>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                    <div className="date-card-actions">
-                                                        <button
-                                                            className="btn-see date-card-button"
-                                                            type="button"
-                                                            onClick={() =>
-                                                                openModal(
-                                                                    "ceremony",
-                                                                    acte,
-                                                                )
-                                                            }
-                                                        >
-                                                            Voir la date choisie
-                                                        </button>
-                                                    </div>
-                                                </article>
-                                            );
-                                        })}
-                                    </div>
+                                                        <div className="date-card-actions">
+                                                            <button
+                                                                className="btn-see date-card-button"
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    openModal(
+                                                                        "ceremony",
+                                                                        acte,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Voir la date
+                                                                choisie
+                                                            </button>
+                                                        </div>
+                                                    </article>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
+                            </section>
+
+                            <section className="date-section-panel date-section-history">
+                                <div className="date-history-shell">
+                                    <div className="date-history-head">
+                                        <div>
+                                            <div className="date-history-title">
+                                                Historique des dates validées
+                                            </div>
+                                            <div className="date-history-sub">
+                                                Les dates que le pasteur a déjà
+                                                validées sont listées ici de
+                                                façon indépendante.
+                                            </div>
+                                        </div>
+                                        <div className="date-history-tools">
+                                            <input
+                                                type="search"
+                                                className="quick-search date-history-search"
+                                                placeholder="Rechercher membre, témoin, référence..."
+                                                value={dateHistorySearch}
+                                                onChange={(e) =>
+                                                    setDateHistorySearch(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                            />
+                                            {dateHistorySearch && (
+                                                <button
+                                                    type="button"
+                                                    className="btn-mini date-history-clear"
+                                                    onClick={() =>
+                                                        setDateHistorySearch("")
+                                                    }
+                                                >
+                                                    Effacer
+                                                </button>
+                                            )}
+                                            <div className="date-history-count">
+                                                {
+                                                    filteredCeremonyHistoryRows.length
+                                                }{" "}
+                                                date
+                                                {filteredCeremonyHistoryRows.length >
+                                                1
+                                                    ? "s"
+                                                    : ""}
+                                                {filteredCeremonyHistoryRows.length !==
+                                                    ceremonyHistoryRows.length && (
+                                                    <span className="date-history-muted">
+                                                        /{" "}
+                                                        {
+                                                            ceremonyHistoryRows.length
+                                                        }
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {ceremonyHistoryRows.length === 0 ? (
+                                        <div className="empty empty-history">
+                                            Aucune date validée pour le moment.
+                                        </div>
+                                    ) : filteredCeremonyHistoryRows.length ===
+                                      0 ? (
+                                        <div className="empty empty-history">
+                                            Aucun résultat pour cette recherche.
+                                        </div>
+                                    ) : (
+                                        <div className="table-scroll date-history-table-scroll">
+                                            <table className="history-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Référence</th>
+                                                        <th>Membre concerné</th>
+                                                        <th>
+                                                            Fiancé / fiancée
+                                                        </th>
+                                                        <th>Témoin(s)</th>
+                                                        <th>Date choisie</th>
+                                                        <th>Validée le</th>
+                                                        <th>Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {pagedCeremonyHistoryRows.map(
+                                                        (row) => {
+                                                            const canMarkCelebrated =
+                                                                String(
+                                                                    row.typeActe ||
+                                                                        "",
+                                                                ).toLowerCase() ===
+                                                                    "mariage" &&
+                                                                String(
+                                                                    row.statut ||
+                                                                        "",
+                                                                ).toUpperCase() !==
+                                                                    "CELEBRE" &&
+                                                                [
+                                                                    "CEREMONIE_VALIDEE_PAR_PASTEUR",
+                                                                    "CEREMONIE_VALIDE_PAR_PASTEUR",
+                                                                ].includes(
+                                                                    String(
+                                                                        row.ceremonyStatut ||
+                                                                            "",
+                                                                    )
+                                                                        .trim()
+                                                                        .toUpperCase(),
+                                                                );
+
+                                                            const canDownloadCertificate =
+                                                                String(
+                                                                    row.statut ||
+                                                                        "",
+                                                                ).toUpperCase() ===
+                                                                "CELEBRE";
+
+                                                            return (
+                                                                <tr
+                                                                    key={
+                                                                        row.rowKey
+                                                                    }
+                                                                >
+                                                                    <td>
+                                                                        {
+                                                                            row.reference
+                                                                        }
+                                                                    </td>
+                                                                    <td>
+                                                                        {
+                                                                            row.memberName
+                                                                        }
+                                                                    </td>
+                                                                    <td>
+                                                                        {
+                                                                            row.fianceName
+                                                                        }
+                                                                    </td>
+                                                                    <td>
+                                                                        {
+                                                                            row.witnesses
+                                                                        }
+                                                                    </td>
+                                                                    <td>
+                                                                        {formatDate(
+                                                                            row.dateChosen,
+                                                                        )}
+                                                                    </td>
+                                                                    <td>
+                                                                        {formatDateTime(
+                                                                            row.validatedAt,
+                                                                        )}
+                                                                    </td>
+                                                                    <td>
+                                                                        <div className="date-history-actions">
+                                                                            {canMarkCelebrated && (
+                                                                                <button
+                                                                                    type="button"
+                                                                                    className="btn-mini btn-mini-approve"
+                                                                                    onClick={() =>
+                                                                                        finalizeActe(
+                                                                                            {
+                                                                                                id: row.id,
+                                                                                                type_acte:
+                                                                                                    row.typeActe,
+                                                                                            },
+                                                                                        )
+                                                                                    }
+                                                                                    disabled={
+                                                                                        processing
+                                                                                    }
+                                                                                >
+                                                                                    Marquer
+                                                                                    célébré
+                                                                                </button>
+                                                                            )}
+                                                                            {canDownloadCertificate && (
+                                                                                <button
+                                                                                    type="button"
+                                                                                    className="btn-pdf"
+                                                                                    onClick={() =>
+                                                                                        window.open(
+                                                                                            `/pasteur/liturgie/${row.id}/certificat`,
+                                                                                            "_blank",
+                                                                                        )
+                                                                                    }
+                                                                                >
+                                                                                    Télécharger
+                                                                                    certificat
+                                                                                </button>
+                                                                            )}
+                                                                            {!canMarkCelebrated &&
+                                                                                !canDownloadCertificate && (
+                                                                                    <span className="date-history-action-muted">
+                                                                                        Déjà
+                                                                                        traité
+                                                                                    </span>
+                                                                                )}
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        },
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                    {filteredCeremonyHistoryRows.length > 0 &&
+                                        dateHistoryTotalPages > 1 && (
+                                            <div className="pager">
+                                                <button
+                                                    type="button"
+                                                    className="pager-btn"
+                                                    onClick={() =>
+                                                        setDateHistoryPage(
+                                                            dateHistoryPage - 1,
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        dateHistoryPage === 1
+                                                    }
+                                                >
+                                                    Précédent
+                                                </button>
+                                                <div className="pager-info">
+                                                    Page {dateHistoryPage} /{" "}
+                                                    {dateHistoryTotalPages}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    className="pager-btn"
+                                                    onClick={() =>
+                                                        setDateHistoryPage(
+                                                            dateHistoryPage + 1,
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        dateHistoryPage ===
+                                                        dateHistoryTotalPages
+                                                    }
+                                                >
+                                                    Suivant
+                                                </button>
+                                            </div>
+                                        )}
+                                </div>
+                            </section>
                         </div>
                     )}
 
@@ -4534,7 +5202,10 @@ export default function Index({
                                     <div className="modal-sub">
                                         Vérifiez la liste de tous les membres
                                         concernés avant de télécharger la fiche
-                                        finale ou d'ouvrir Gmail.
+                                        finale puis d'envoyer le mail. Tant que
+                                        le mail n'est pas envoyé, vous pouvez
+                                        consulter la fiche autant de fois que
+                                        nécessaire.
                                     </div>
                                 </div>
                             </div>
@@ -4587,24 +5258,70 @@ export default function Index({
                                     <div className="modal-detail-box">
                                         <div className="modal-detail-row">
                                             <span className="modal-key">
-                                                Demandes prêtes
+                                                Date de lot
                                             </span>
                                             <span className="modal-val">
-                                                {unsentCeremonyActes.length}
+                                                {selectedFicheBatchDate
+                                                    ? formatDate(
+                                                          `${selectedFicheBatchDate}T00:00:00`,
+                                                      )
+                                                    : "—"}
                                             </span>
                                         </div>
-                                        {unsentClassNames.length > 0 && (
+                                        <div className="modal-detail-row">
+                                            <span className="modal-key">
+                                                Demandes prêtes (même jour)
+                                            </span>
+                                            <span className="modal-val">
+                                                {
+                                                    selectedUnsentCeremonyActes.length
+                                                }
+                                            </span>
+                                        </div>
+                                        {selectedUnsentClassNames.length >
+                                            0 && (
                                             <div className="modal-detail-row">
                                                 <span className="modal-key">
                                                     Classes concernées
                                                 </span>
                                                 <span className="modal-val mono">
-                                                    {unsentClassNames.join(
+                                                    {selectedUnsentClassNames.join(
                                                         " · ",
                                                     )}
                                                 </span>
                                             </div>
                                         )}
+                                    </div>
+
+                                    <div
+                                        className="modal-field"
+                                        style={{ marginBottom: 16 }}
+                                    >
+                                        <label className="modal-label">
+                                            Sélectionner le jour de demande
+                                        </label>
+                                        <select
+                                            className="modal-select"
+                                            value={selectedFicheBatchDate}
+                                            onChange={(e) =>
+                                                setSelectedFicheBatchDate(
+                                                    e.target.value,
+                                                )
+                                            }
+                                        >
+                                            {unsentBatchDates.map(
+                                                (batchDate) => (
+                                                    <option
+                                                        key={`batch-${batchDate}`}
+                                                        value={batchDate}
+                                                    >
+                                                        {formatDate(
+                                                            `${batchDate}T00:00:00`,
+                                                        )}
+                                                    </option>
+                                                ),
+                                            )}
+                                        </select>
                                     </div>
 
                                     <div
@@ -4625,81 +5342,164 @@ export default function Index({
                                                     );
                                                 }
                                             }}
+                                            disabled={!ficheMariageFinaleLink}
                                         >
-                                            Télécharger
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="btn-mini btn-mini-send"
-                                            onClick={handleSendFiche}
-                                            disabled={sendingFiche}
-                                        >
-                                            {sendingFiche
-                                                ? "Ouverture de Gmail..."
-                                                : "Envoyer sur Gmail"}
+                                            Consulter la fiche
                                         </button>
                                     </div>
 
-                                    <div className="fiche-list">
-                                        {unsentCeremonyActes.map((acte) => (
-                                            <div
-                                                className="fiche-item"
-                                                key={`fiche-${acte.id}`}
+                                    <div
+                                        className="modal-detail-box"
+                                        style={{ marginBottom: 16 }}
+                                    >
+                                        <div className="modal-field">
+                                            <label className="modal-label">
+                                                Destinataire
+                                            </label>
+                                            <input
+                                                type="email"
+                                                className="modal-input"
+                                                placeholder="contact@eglise.org"
+                                                value={
+                                                    ficheEmailForm.destinataire
+                                                }
+                                                onChange={(e) =>
+                                                    setFicheEmailForm(
+                                                        (prev) => ({
+                                                            ...prev,
+                                                            destinataire:
+                                                                e.target.value,
+                                                        }),
+                                                    )
+                                                }
+                                            />
+                                        </div>
+                                        <div className="modal-field">
+                                            <label className="modal-label">
+                                                Objet
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className="modal-input"
+                                                placeholder="Objet du mail"
+                                                value={ficheEmailForm.subject}
+                                                onChange={(e) =>
+                                                    setFicheEmailForm(
+                                                        (prev) => ({
+                                                            ...prev,
+                                                            subject:
+                                                                e.target.value,
+                                                        }),
+                                                    )
+                                                }
+                                            />
+                                        </div>
+                                        <div className="modal-field">
+                                            <label className="modal-label">
+                                                Contenu du mail
+                                            </label>
+                                            <textarea
+                                                className="ann-textarea"
+                                                rows={4}
+                                                placeholder="Contenu du message"
+                                                value={ficheEmailForm.message}
+                                                onChange={(e) =>
+                                                    setFicheEmailForm(
+                                                        (prev) => ({
+                                                            ...prev,
+                                                            message:
+                                                                e.target.value,
+                                                        }),
+                                                    )
+                                                }
+                                            />
+                                        </div>
+                                        <div
+                                            className="fiche-actions"
+                                            style={{
+                                                justifyContent: "flex-end",
+                                                marginTop: 8,
+                                            }}
+                                        >
+                                            <button
+                                                type="button"
+                                                className="btn-mini btn-mini-send"
+                                                onClick={handleSendFiche}
+                                                disabled={sendingFiche}
                                             >
-                                                <div className="fiche-meta">
-                                                    <div>
-                                                        <strong>
-                                                            {acte.reference}
-                                                        </strong>
-                                                    </div>
-                                                    <div>
-                                                        {acte.membre
-                                                            ? `${acte.membre.prenom || ""} ${acte.membre.nom || ""}`
-                                                            : "Membre inconnu"}
-                                                    </div>
-                                                    <div>
-                                                        Conjoint :{" "}
-                                                        {[
-                                                            acte.details
-                                                                ?.conjoint_prenom,
-                                                            acte.details
-                                                                ?.conjoint_nom,
-                                                        ]
-                                                            .filter(Boolean)
-                                                            .join(" ") ||
-                                                            [
+                                                {sendingFiche
+                                                    ? "Envoi en cours..."
+                                                    : "Envoyer le mail"}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="fiche-list">
+                                        {selectedUnsentCeremonyActes.map(
+                                            (acte) => (
+                                                <div
+                                                    className="fiche-item"
+                                                    key={`fiche-${acte.id}`}
+                                                >
+                                                    <div className="fiche-meta">
+                                                        <div>
+                                                            <strong>
+                                                                {acte.reference}
+                                                            </strong>
+                                                        </div>
+                                                        <div>
+                                                            {acte.membre
+                                                                ? `${acte.membre.prenom || ""} ${acte.membre.nom || ""}`
+                                                                : "Membre inconnu"}
+                                                        </div>
+                                                        <div>
+                                                            Conjoint :{" "}
+                                                            {[
                                                                 acte.details
-                                                                    ?.epoux_prenom,
+                                                                    ?.conjoint_prenom,
                                                                 acte.details
-                                                                    ?.epoux_nom,
+                                                                    ?.conjoint_nom,
                                                             ]
                                                                 .filter(Boolean)
                                                                 .join(" ") ||
-                                                            "Non renseigné"}
-                                                    </div>
-                                                    <div>
-                                                        {acte.classe?.nom ||
-                                                            acte.classe_id ||
-                                                            "Classe non renseignée"}
-                                                    </div>
-                                                    <div>
-                                                        Contact :{" "}
-                                                        {acte.membre
-                                                            ?.telephone ||
-                                                            acte.family
+                                                                [
+                                                                    acte.details
+                                                                        ?.epoux_prenom,
+                                                                    acte.details
+                                                                        ?.epoux_nom,
+                                                                ]
+                                                                    .filter(
+                                                                        Boolean,
+                                                                    )
+                                                                    .join(
+                                                                        " ",
+                                                                    ) ||
+                                                                "Non renseigné"}
+                                                        </div>
+                                                        <div>
+                                                            {acte.classe?.nom ||
+                                                                acte.classe_id ||
+                                                                "Classe non renseignée"}
+                                                        </div>
+                                                        <div>
+                                                            Contact :{" "}
+                                                            {acte.membre
                                                                 ?.telephone ||
-                                                            "—"}
-                                                    </div>
-                                                    <div>
-                                                        Date de demande :{" "}
-                                                        {formatDate(
-                                                            acte.created_at ||
-                                                                acte.updated_at,
-                                                        )}
+                                                                acte.family
+                                                                    ?.telephone ||
+                                                                "—"}
+                                                        </div>
+                                                        <div>
+                                                            Date de demande :{" "}
+                                                            {formatDate(
+                                                                acte.created_at ||
+                                                                    acte.updated_at,
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ),
+                                        )}
                                     </div>
                                 </>
                             )}
@@ -5713,6 +6513,13 @@ function formatDate(value) {
     return d.toLocaleDateString("fr-FR");
 }
 
+function formatDateTime(value) {
+    if (!value) return "—";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    return d.toLocaleString("fr-FR");
+}
+
 /* ── STYLES ── */
 const styles = `
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
@@ -5884,14 +6691,32 @@ h1.hero-title{
 .panel-badge{font-size:11px;font-weight:800;padding:4px 12px;border-radius:20px;background:var(--gold-dim);color:var(--gold2);border:1px solid var(--gold-border)}
 
 /* DATES CHOISIES */
-.date-tab-root{background:var(--surface2);border:1px solid var(--border);border-radius:18px;padding:18px;backdrop-filter:blur(16px);box-shadow:0 8px 30px rgba(0,0,0,.18)}
+.date-tab-root{display:flex;flex-direction:column;gap:20px}
+.date-section-panel{background:var(--surface2);border:1px solid var(--border);border-radius:18px;padding:18px;backdrop-filter:blur(16px);box-shadow:0 8px 30px rgba(0,0,0,.18)}
+.date-section-history{border-color:rgba(15,23,42,0.22);box-shadow:0 10px 36px rgba(0,0,0,.2)}
 .date-shell{display:flex;flex-direction:column;gap:18px}
 .date-shell-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:8px 6px 2px}
 .date-shell-title{font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.02em}
 .date-shell-sub{font-size:12.5px;color:var(--text2);margin-top:6px;max-width:620px;line-height:1.55}
+.date-shell-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .date-shell-count{display:inline-flex;align-items:center;justify-content:center;min-width:112px;padding:9px 14px;border-radius:999px;background:rgba(126,182,255,.16);border:1px solid rgba(126,182,255,.28);color:#22437a;font-size:12px;font-weight:800}
-.date-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+.date-history-shell{display:flex;flex-direction:column;gap:12px}
+.date-history-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:6px 6px 4px}
+.date-history-title{font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.02em}
+.date-history-sub{font-size:12.5px;color:var(--text2);margin-top:6px;max-width:680px;line-height:1.55}
+.date-history-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.date-history-search{min-width:270px}
+.date-history-clear{height:35px}
+.date-history-count{display:inline-flex;align-items:center;justify-content:center;min-width:112px;padding:9px 14px;border-radius:999px;background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);color:#166534;font-size:12px;font-weight:800}
+.date-history-muted{margin-left:4px;color:#166534;opacity:.75;font-weight:700}
+.date-history-table-scroll{margin-top:2px}
+.date-history-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.date-history-action-muted{font-size:11px;color:var(--text3);font-weight:600}
+.date-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,360px));gap:18px}
 .date-card{padding:20px;border-radius:18px;border:1px solid rgba(15,23,42,.08);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(245,247,251,.96));display:flex;flex-direction:column;gap:14px;box-shadow:0 12px 34px rgba(15,23,42,.12);min-height:246px}
+.date-card-check{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700;color:var(--text3);width:fit-content}
+.date-card-check input{width:15px;height:15px;accent-color:var(--violet);cursor:pointer}
+.date-card-check span{user-select:none}
 .date-card-main{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
 .date-card-heading{display:flex;flex-direction:column;gap:6px;min-width:0}
 .date-card-title{font-size:17px;font-weight:800;color:var(--text);line-height:1.15;text-transform:none}
@@ -6073,7 +6898,7 @@ h1.hero-title{
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
 @media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}.layout-grid{grid-template-columns:1fr}.hero-header-inner{flex-wrap:wrap;justify-content:center}.hero-header-center{order:1;width:100%}.hero-header-actions{order:2;flex-direction:row}}
-@media(max-width:700px){.content{padding:14px}.kpi-row{grid-template-columns:1fr 1fr}.acte-actions{flex-direction:column}.pastoral-box{flex-wrap:wrap}.pastoral-stats{width:100%;justify-content:center}.tab-toolbar{align-items:stretch}.main-tabs{width:100%}.quick-tools{width:100%;justify-content:flex-start}.quick-dropdown{width:100%;min-width:0}.quick-search{width:100%;min-width:0}.ann-type-grid{grid-template-columns:1fr}.hero-stats-row{flex-wrap:wrap}.h1.hero-title{font-size:20px}.date-shell-head{flex-direction:column;align-items:flex-start}.date-shell-count{min-width:0}.date-card{min-height:auto;padding:18px}}
+@media(max-width:700px){.content{padding:14px}.kpi-row{grid-template-columns:1fr 1fr}.acte-actions{flex-direction:column}.pastoral-box{flex-wrap:wrap}.pastoral-stats{width:100%;justify-content:center}.tab-toolbar{align-items:stretch}.main-tabs{width:100%}.quick-tools{width:100%;justify-content:flex-start}.quick-dropdown{width:100%;min-width:0}.quick-search{width:100%;min-width:0}.ann-type-grid{grid-template-columns:1fr}.hero-stats-row{flex-wrap:wrap}.h1.hero-title{font-size:20px}.date-shell-head{flex-direction:column;align-items:flex-start}.date-shell-tools{width:100%;justify-content:flex-start}.date-shell-count{min-width:0}.date-card{min-height:auto;padding:18px}.date-history-head{flex-direction:column;align-items:flex-start}.date-history-tools{width:100%;justify-content:flex-start}.date-history-search{min-width:0;width:100%}.date-history-count{min-width:0}}
 @media(max-width:480px){.kpi-row{grid-template-columns:1fr}.hero-header-actions{flex-direction:column;width:100%}.btn-hero-annonce,.btn-hero-acte{width:100%;justify-content:center}}
 
 /* ════════════════ FORMATIONS HISTORIQUE TABLE ════════════════ */

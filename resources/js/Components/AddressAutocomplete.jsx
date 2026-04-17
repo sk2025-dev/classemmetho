@@ -1,7 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
-import axios from 'axios';
+import React, { useEffect, useRef, useState } from "react";
+import axios from "axios";
+import { withBasePath } from "../Utils/urlHelper";
 
-const AddressAutocomplete = ({ value, onChange, onAddressSelect, disabled = false }) => {
+const AddressAutocomplete = ({
+    value,
+    onChange,
+    onAddressSelect,
+    disabled = false,
+}) => {
     const inputRef = useRef(null);
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -37,20 +43,29 @@ const AddressAutocomplete = ({ value, onChange, onAddressSelect, disabled = fals
     // Récupérer les suggestions d'adresses via l'API backend
     const fetchAddressSuggestions = async (input) => {
         try {
-            const response = await axios.post('/api/address/autocomplete', {
-                input: input,
-            });
+            const response = await axios.post(
+                withBasePath("", "/api/address/autocomplete"),
+                {
+                    input: input,
+                },
+            );
 
             if (response.data.success && response.data.predictions) {
                 // Transformer les données pour maintenir la compatibilité
-                const formattedSuggestions = response.data.predictions.map(pred => ({
-                    description: pred.description,
-                    place_id: pred.place_id,
-                    structured_formatting: {
-                        main_text: pred.structured_formatting?.main_text || pred.description,
-                        secondary_text: pred.structured_formatting?.secondary_text || '',
-                    }
-                }));
+                const formattedSuggestions = response.data.predictions.map(
+                    (pred) => ({
+                        description: pred.description,
+                        place_id: pred.place_id,
+                        structured_formatting: {
+                            main_text:
+                                pred.structured_formatting?.main_text ||
+                                pred.description,
+                            secondary_text:
+                                pred.structured_formatting?.secondary_text ||
+                                "",
+                        },
+                    }),
+                );
 
                 setSuggestions(formattedSuggestions);
                 setShowSuggestions(true);
@@ -58,7 +73,10 @@ const AddressAutocomplete = ({ value, onChange, onAddressSelect, disabled = fals
                 setSuggestions([]);
             }
         } catch (error) {
-            console.error('Erreur lors de la récupération des suggestions:', error);
+            console.error(
+                "Erreur lors de la récupération des suggestions:",
+                error,
+            );
             setSuggestions([]);
         } finally {
             setLoading(false);
@@ -73,9 +91,12 @@ const AddressAutocomplete = ({ value, onChange, onAddressSelect, disabled = fals
 
         // Obtenir les détails du lieu via l'API backend
         try {
-            const response = await axios.post('/api/address/details', {
-                place_id: place_id,
-            });
+            const response = await axios.post(
+                withBasePath("", "/api/address/details"),
+                {
+                    place_id: place_id,
+                },
+            );
 
             if (response.data.success) {
                 const place = response.data.place;
@@ -94,7 +115,7 @@ const AddressAutocomplete = ({ value, onChange, onAddressSelect, disabled = fals
                 onAddressSelect({ full_address: description });
             }
         } catch (error) {
-            console.error('Erreur lors de la récupération des détails:', error);
+            console.error("Erreur lors de la récupération des détails:", error);
             onAddressSelect({ full_address: description });
         }
     };
@@ -102,23 +123,23 @@ const AddressAutocomplete = ({ value, onChange, onAddressSelect, disabled = fals
     // Gestion au clavier
     const handleKeyDown = (e) => {
         switch (e.key) {
-            case 'ArrowDown':
+            case "ArrowDown":
                 e.preventDefault();
-                setSelectedIndex(prev =>
-                    prev < suggestions.length - 1 ? prev + 1 : prev
+                setSelectedIndex((prev) =>
+                    prev < suggestions.length - 1 ? prev + 1 : prev,
                 );
                 break;
-            case 'ArrowUp':
+            case "ArrowUp":
                 e.preventDefault();
-                setSelectedIndex(prev => prev > 0 ? prev - 1 : -1);
+                setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
                 break;
-            case 'Enter':
+            case "Enter":
                 e.preventDefault();
                 if (selectedIndex >= 0 && suggestions[selectedIndex]) {
                     handleSelectSuggestion(suggestions[selectedIndex]);
                 }
                 break;
-            case 'Escape':
+            case "Escape":
                 setShowSuggestions(false);
                 break;
             default:
@@ -134,7 +155,9 @@ const AddressAutocomplete = ({ value, onChange, onAddressSelect, disabled = fals
                 value={value}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                onFocus={() => value && suggestions.length > 0 && setShowSuggestions(true)}
+                onFocus={() =>
+                    value && suggestions.length > 0 && setShowSuggestions(true)
+                }
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                 placeholder="Entrez une adresse en Côte d'Ivoire..."
                 disabled={disabled}
@@ -144,8 +167,19 @@ const AddressAutocomplete = ({ value, onChange, onAddressSelect, disabled = fals
             {loading && (
                 <div className="absolute right-3 top-3">
                     <div className="animate-spin h-5 w-5 text-blue-500">
-                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 12m0 0l-4 4m4-4l4 4" />
+                        <svg
+                            className="h-5 w-5"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 12m0 0l-4 4m4-4l4 4"
+                            />
                         </svg>
                     </div>
                 </div>
@@ -159,12 +193,16 @@ const AddressAutocomplete = ({ value, onChange, onAddressSelect, disabled = fals
                             onClick={() => handleSelectSuggestion(suggestion)}
                             className={`px-4 py-2 cursor-pointer transition-colors ${
                                 index === selectedIndex
-                                    ? 'bg-blue-500 text-white'
-                                    : 'hover:bg-gray-100'
+                                    ? "bg-blue-500 text-white"
+                                    : "hover:bg-gray-100"
                             }`}
                         >
-                            <div className="text-sm font-medium">{suggestion.main_text}</div>
-                            <div className={`text-xs ${index === selectedIndex ? 'text-blue-100' : 'text-gray-500'}`}>
+                            <div className="text-sm font-medium">
+                                {suggestion.main_text}
+                            </div>
+                            <div
+                                className={`text-xs ${index === selectedIndex ? "text-blue-100" : "text-gray-500"}`}
+                            >
                                 {suggestion.secondary_text}
                             </div>
                         </div>
@@ -172,11 +210,14 @@ const AddressAutocomplete = ({ value, onChange, onAddressSelect, disabled = fals
                 </div>
             )}
 
-            {showSuggestions && suggestions.length === 0 && value.length >= 3 && !loading && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 px-4 py-2 text-center text-gray-500">
-                    Aucune adresse trouvée
-                </div>
-            )}
+            {showSuggestions &&
+                suggestions.length === 0 &&
+                value.length >= 3 &&
+                !loading && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 px-4 py-2 text-center text-gray-500">
+                        Aucune adresse trouvée
+                    </div>
+                )}
         </div>
     );
 };

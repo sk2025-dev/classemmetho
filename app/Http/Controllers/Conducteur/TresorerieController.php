@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Conducteur;
 use App\Http\Controllers\Controller;
 use App\Models\Campagne;
 use App\Models\Cotisation;
+use App\Models\Don;
 use App\Models\Family;
+use App\Models\Fonction;
 use App\Models\NotificationFinanciere;
 use App\Models\Paiement;
 use App\Models\User;
@@ -22,6 +24,10 @@ class TresorerieController extends Controller
     public function index()
     {
         $user = Auth::user();
+
+        if (!$this->canManageClassTreasury($user)) {
+            abort(403, 'Accès non autorisé au module trésorerie de classe.');
+        }
 
         $className = $user->classe?->nom ?? 'Classe non definie';
         $classeId = $user->classe_id;
@@ -46,9 +52,11 @@ class TresorerieController extends Controller
                 'paiementsParFamille' => [],
                 'campagnesClasse' => [],
                 'collectesClasse' => [],
+                'donsClasse' => [],
                 'cotisationsCreees' => [],
                 'fimecoSuivi' => [],
                 'membresClasse' => [],
+                'tresorierClasse' => null,
                 'notificationsFinancieres' => [],
             ]);
         }
@@ -78,12 +86,14 @@ class TresorerieController extends Controller
         $payeesConfirmees = (int) Paiement::query()
             ->whereIn('family_id', $familyIds)
             ->whereIn('cotisation_id', $cotisationsFamiliales->pluck('id'))
+            ->where('statut', Paiement::STATUT_PAYE)
             ->sum('montant');
 
         $paidByFamily = Paiement::query()
             ->select('family_id', DB::raw('SUM(montant) as total_paye'))
             ->whereIn('family_id', $familyIds)
             ->whereIn('cotisation_id', $cotisationsFamiliales->pluck('id'))
+            ->where('statut', Paiement::STATUT_PAYE)
             ->groupBy('family_id')
             ->pluck('total_paye', 'family_id');
 
@@ -101,17 +111,45 @@ class TresorerieController extends Controller
             ];
         })->values();
 
-        $famillesEnRetard = $famillesSuivi
-            ->filter(fn($item) => $item['totalDu'] > 0)
-            ->map(function ($item) {
+        $retardThresholdDate = Carbon::today()->addDays(5)->endOfDay();
+        $cotisationsProchesFin = $cotisationsFamiliales
+            ->filter(function (Cotisation $cotisation) use ($retardThresholdDate) {
+                if (!$cotisation->date_fin) {
+                    return false;
+                }
+
+                return Carbon::parse($cotisation->date_fin)
+                    ->endOfDay()
+                    ->lessThanOrEqualTo($retardThresholdDate);
+            })
+            ->values();
+
+        $paidByFamilyNearDeadline = collect();
+        if ($cotisationsProchesFin->isNotEmpty()) {
+            $paidByFamilyNearDeadline = Paiement::query()
+                ->select('family_id', DB::raw('SUM(montant) as total_paye'))
+                ->whereIn('family_id', $familyIds)
+                ->whereIn('cotisation_id', $cotisationsProchesFin->pluck('id'))
+                ->groupBy('family_id')
+                ->pluck('total_paye', 'family_id');
+        }
+
+        $cotisationNearDeadlineUnit = (int) $cotisationsProchesFin->sum('montant');
+
+        $famillesEnRetard = $families
+            ->map(function (Family $family) use ($paidByFamilyNearDeadline, $cotisationNearDeadlineUnit) {
+                $paid = (int) ($paidByFamilyNearDeadline[$family->id] ?? 0);
+                $due = max(0, $cotisationNearDeadlineUnit - $paid);
+
                 return [
-                    'id' => $item['id'],
-                    'nom' => $item['nom'],
-                    'montantDu' => $item['totalDu'],
+                    'id' => $family->id,
+                    'nom' => $family->nom,
+                    'montantDu' => $due,
                     'daysEnRetard' => 0,
                     'dernier' => 'A verifier',
                 ];
             })
+            ->filter(fn($item) => (int) ($item['montantDu'] ?? 0) > 0)
             ->values();
 
         $paiementsRecents = Paiement::query()
@@ -139,16 +177,23 @@ class TresorerieController extends Controller
 
         $paiementsParFamille = Paiement::query()
             ->whereIn('family_id', $familyIds)
-            ->with(['family:id,nom', 'cotisation:id,nom', 'user:id,nom,prenom'])
+            ->where('statut', Paiement::STATUT_PAYE)
+            ->with(['family:id,nom', 'cotisation:id,nom,statut', 'user:id,nom,prenom'])
             ->orderByDesc('date_paiement')
             ->limit(100)
             ->get()
             ->map(function (Paiement $paiement) {
+                $rawStatutCotisation = strtoupper(trim((string) ($paiement->cotisation?->statut ?? '')));
+                $cotisationStatut = in_array($rawStatutCotisation, ['ACTIVE', 'ACTIF', 'EN COURS', 'EN_COURS'], true)
+                    ? 'EN COURS'
+                    : 'TERMINE';
+
                 return [
                     'id' => $paiement->id,
                     'famille' => $paiement->family?->nom ?? 'Famille',
                     'membre' => trim(($paiement->user?->prenom ?? '') . ' ' . ($paiement->user?->nom ?? '')),
                     'cotisation' => $paiement->cotisation?->nom ?? '-',
+                    'cotisationStatut' => $cotisationStatut,
                     'montant' => (int) $paiement->montant,
                     'mode' => $paiement->mode_paiement,
                     'date' => optional($paiement->date_paiement)->format('d/m/Y'),
@@ -177,6 +222,32 @@ class TresorerieController extends Controller
             ->values();
 
         $collectesClasse = $campagnesClasse;
+
+        $donsClasse = Schema::hasTable('dons')
+            ? Don::query()
+            ->with(['family:id,nom,classe_id', 'user:id,nom,prenom,classe_id', 'campagne:id,titre'])
+            ->where(function ($query) use ($classeId) {
+                $query->whereHas('family', fn($q) => $q->where('classe_id', $classeId))
+                    ->orWhereHas('user', fn($q) => $q->where('classe_id', $classeId));
+            })
+            ->orderByDesc('date_don')
+            ->limit(200)
+            ->get()
+            ->map(function (Don $don) {
+                return [
+                    'id' => $don->id,
+                    'donateur' => trim(($don->user?->prenom ?? '') . ' ' . ($don->user?->nom ?? '')) ?: 'Anonyme',
+                    'famille' => $don->family?->nom ?? '-',
+                    'campagne' => $don->campagne?->titre ?? '-',
+                    'montant' => (int) $don->montant,
+                    'type' => $don->type,
+                    'mode' => $don->mode_paiement,
+                    'date' => optional($don->date_don)->format('d/m/Y'),
+                    'note' => $don->note,
+                ];
+            })
+            ->values()
+            : collect();
 
         $cotisationsCreees = Cotisation::query()
             ->where('classe_id', $classeId)
@@ -229,10 +300,16 @@ class TresorerieController extends Controller
         $membresClasse = User::query()
             ->where('classe_id', $classeId)
             ->whereIn('role', ['membre_famille', 'responsable_famille'])
-            ->with('family:id,nom')
+            ->with(['family:id,nom', 'fonction:id,nom'])
             ->orderBy('nom')
             ->orderBy('prenom')
             ->get();
+
+        $tresorierClasse = $membresClasse->first(function (User $member) {
+            $fonctionNom = mb_strtolower(trim((string) ($member->fonction?->nom ?? '')));
+
+            return in_array($fonctionNom, ['trésorier', 'tresorier'], true);
+        });
 
         $cotisationsIndividuelles = Cotisation::query()
             ->where('statut', Cotisation::STATUT_ACTIVE)
@@ -256,12 +333,14 @@ class TresorerieController extends Controller
         $membresClasseData = $membresClasse->map(function (User $member) use ($paiementsByMember, $cotisationIndividuelleTotal) {
             $paid = (int) ($paiementsByMember[$member->id] ?? 0);
             $due = max(0, $cotisationIndividuelleTotal - $paid);
+            $fonctionNom = mb_strtolower(trim((string) ($member->fonction?->nom ?? '')));
 
             return [
                 'id' => $member->id,
                 'nom' => trim(($member->prenom ?? '') . ' ' . ($member->nom ?? '')),
                 'famille' => $member->family?->nom ?? 'Sans famille',
                 'role' => $member->role,
+                'is_tresorier' => in_array($fonctionNom, ['trésorier', 'tresorier'], true),
                 'genre' => $member->genre,
                 'employment_status' => $member->employment_status,
                 'statut' => $due === 0 ? 'A JOUR' : 'EN ATTENTE',
@@ -340,17 +419,208 @@ class TresorerieController extends Controller
             'paiementsParFamille' => $paiementsParFamille,
             'campagnesClasse' => $campagnesClasse,
             'collectesClasse' => $collectesClasse,
+            'donsClasse' => $donsClasse,
             'cotisationsCreees' => $cotisationsCreees,
             'cotisationsPaiement' => $cotisationsPaiement,
             'membresClasse' => $membresClasseData,
+            'tresorierClasse' => $tresorierClasse ? [
+                'id' => $tresorierClasse->id,
+                'nom' => trim(($tresorierClasse->prenom ?? '') . ' ' . ($tresorierClasse->nom ?? '')),
+                'famille' => $tresorierClasse->family?->nom ?? 'Sans famille',
+            ] : null,
             'fimecoSuivi' => $fimecoSuivi,
             'notificationsFinancieres' => $notificationsFinancieres,
+        ]);
+    }
+
+    public function indexTresorier()
+    {
+        $user = Auth::user();
+
+        if (!$this->canManageClassTreasury($user)) {
+            abort(403, 'Accès non autorisé au module trésorerie de classe.');
+        }
+
+        $classeId = $user->classe_id;
+        $className = $user->classe?->nom ?? 'Classe non definie';
+
+        if (!$classeId || !Schema::hasTable('cotisations') || !Schema::hasTable('paiements') || !Schema::hasTable('dons')) {
+            return Inertia::render('Conducteur/Tresorerie/tresorier_classe', [
+                'classInfo' => [
+                    'nom' => $className,
+                ],
+                'membresClasse' => [],
+                'cotisationsPaiement' => [],
+                'paiementsHistorique' => [],
+                'fimecoHistorique' => [],
+                'donsClasse' => [],
+                'retardsClasse' => [],
+            ]);
+        }
+
+        $membresClasse = User::query()
+            ->with(['family:id,nom'])
+            ->where('classe_id', $classeId)
+            ->whereIn('role', ['membre_famille', 'responsable_famille'])
+            ->orderBy('nom')
+            ->get();
+
+        $membresClasseData = $membresClasse->map(function (User $member) {
+            return [
+                'id' => $member->id,
+                'nom' => trim(($member->prenom ?? '') . ' ' . ($member->nom ?? '')),
+                'famille' => $member->family?->nom ?? 'Sans famille',
+                'role' => $member->role,
+            ];
+        })->values();
+
+        $cotisationsPaiement = Cotisation::query()
+            ->where('statut', Cotisation::STATUT_ACTIVE)
+            ->where(function ($query) use ($classeId) {
+                $query->whereNull('classe_id')
+                    ->orWhere('classe_id', $classeId);
+            })
+            ->orderBy('nom')
+            ->get()
+            ->map(function (Cotisation $cotisation) {
+                return [
+                    'id' => $cotisation->id,
+                    'nom' => $cotisation->nom,
+                    'periodicite' => $cotisation->periodicite,
+                ];
+            })
+            ->values();
+
+        $fimecoHistorique = Paiement::query()
+            ->with(['user:id,nom,prenom,classe_id,family_id', 'user.family:id,nom', 'cotisation:id,nom'])
+            ->whereHas('user', fn($q) => $q->where('classe_id', $classeId))
+            ->whereHas('cotisation', fn($q) => $q->whereRaw('LOWER(nom) like ?', ['%fimeco%']))
+            ->orderByDesc('date_paiement')
+            ->limit(250)
+            ->get()
+            ->map(function (Paiement $paiement) {
+                return [
+                    'id' => $paiement->id,
+                    'membre' => trim(($paiement->user?->prenom ?? '') . ' ' . ($paiement->user?->nom ?? '')),
+                    'famille' => $paiement->user?->family?->nom ?? '-',
+                    'cotisation' => $paiement->cotisation?->nom ?? '-',
+                    'montant' => (int) $paiement->montant,
+                    'mode' => $paiement->mode_paiement,
+                    'date' => optional($paiement->date_paiement)->format('d/m/Y'),
+                ];
+            })
+            ->values();
+
+        $paiementsHistorique = Paiement::query()
+            ->with(['user:id,nom,prenom,classe_id,family_id', 'user.family:id,nom', 'cotisation:id,nom'])
+            ->whereHas('user', fn($q) => $q->where('classe_id', $classeId))
+            ->orderByDesc('date_paiement')
+            ->limit(250)
+            ->get()
+            ->map(function (Paiement $paiement) {
+                return [
+                    'id' => $paiement->id,
+                    'membre' => trim(($paiement->user?->prenom ?? '') . ' ' . ($paiement->user?->nom ?? '')),
+                    'famille' => $paiement->user?->family?->nom ?? '-',
+                    'cotisation' => $paiement->cotisation?->nom ?? '-',
+                    'montant' => (int) $paiement->montant,
+                    'mode' => $paiement->mode_paiement,
+                    'date' => optional($paiement->date_paiement)->format('d/m/Y'),
+                ];
+            })
+            ->values();
+
+        $donsClasse = Don::query()
+            ->with(['family:id,nom,classe_id', 'user:id,nom,prenom,classe_id'])
+            ->where(function ($query) use ($classeId) {
+                $query->whereHas('family', fn($q) => $q->where('classe_id', $classeId))
+                    ->orWhereHas('user', fn($q) => $q->where('classe_id', $classeId));
+            })
+            ->orderByDesc('date_don')
+            ->limit(250)
+            ->get()
+            ->map(function (Don $don) {
+                return [
+                    'id' => $don->id,
+                    'donateur' => trim(($don->user?->prenom ?? '') . ' ' . ($don->user?->nom ?? '')) ?: 'Anonyme',
+                    'famille' => $don->family?->nom ?? '-',
+                    'type' => $don->type,
+                    'montant' => (int) $don->montant,
+                    'mode' => $don->mode_paiement,
+                    'date' => optional($don->date_don)->format('d/m/Y'),
+                    'note' => $don->note,
+                ];
+            })
+            ->values();
+
+        $cotisationsActives = Cotisation::query()
+            ->where('statut', Cotisation::STATUT_ACTIVE)
+            ->where('target_scope', Cotisation::TARGET_SCOPE_INDIVIDUELLE)
+            ->where(function ($query) use ($classeId) {
+                $query->whereNull('classe_id')
+                    ->orWhere('classe_id', $classeId);
+            })
+            ->get();
+
+        $retardThresholdDate = Carbon::today()->addDays(5)->endOfDay();
+
+        $retardsClasse = $membresClasse->flatMap(function (User $member) use ($cotisationsActives, $retardThresholdDate) {
+            return $cotisationsActives->map(function (Cotisation $cotisation) use ($member, $retardThresholdDate) {
+                if (!$cotisation->date_fin) {
+                    return null;
+                }
+
+                $dateFin = Carbon::parse($cotisation->date_fin)->endOfDay();
+                if ($dateFin->greaterThan($retardThresholdDate)) {
+                    return null;
+                }
+
+                $expected = (int) ($cotisation->resolveAmountForUser($member) ?? 0);
+                if ($expected < 100) {
+                    return null;
+                }
+
+                $alreadyPaid = (int) Paiement::query()
+                    ->where('user_id', $member->id)
+                    ->where('cotisation_id', $cotisation->id)
+                    ->sum('montant');
+
+                $remaining = max(0, $expected - $alreadyPaid);
+                if ($remaining <= 0) {
+                    return null;
+                }
+
+                return [
+                    'user_id' => $member->id,
+                    'nom' => trim(($member->prenom ?? '') . ' ' . ($member->nom ?? '')),
+                    'famille' => $member->family?->nom ?? '-',
+                    'cotisation' => $cotisation->nom,
+                    'montant_du' => $remaining,
+                    'date_echeance' => optional($cotisation->date_echeance)->format('d/m/Y') ?: '-',
+                ];
+            })->filter();
+        })->values();
+
+        return Inertia::render('Conducteur/Tresorerie/tresorier_classe', [
+            'classInfo' => [
+                'nom' => $className,
+            ],
+            'membresClasse' => $membresClasseData,
+            'cotisationsPaiement' => $cotisationsPaiement,
+            'paiementsHistorique' => $paiementsHistorique,
+            'fimecoHistorique' => $fimecoHistorique,
+            'donsClasse' => $donsClasse,
+            'retardsClasse' => $retardsClasse,
         ]);
     }
 
     public function storeCotisation(Request $request): JsonResponse
     {
         $user = Auth::user();
+
+        if (!$this->canManageClassTreasury($user)) {
+            return response()->json(['message' => 'Accès non autorisé au module trésorerie de classe.'], 403);
+        }
 
         if (!$user->classe_id) {
             return response()->json(['message' => 'Conducteur sans classe associee.'], 422);
@@ -446,6 +716,10 @@ class TresorerieController extends Controller
     {
         $user = Auth::user();
 
+        if (!$this->canManageClassTreasury($user)) {
+            return response()->json(['message' => 'Accès non autorisé au module trésorerie de classe.'], 403);
+        }
+
         if ($cotisation->classe_id !== $user->classe_id || $cotisation->created_by !== $user->id) {
             return response()->json(['message' => 'Cotisation non modifiable.'], 403);
         }
@@ -521,6 +795,10 @@ class TresorerieController extends Controller
     {
         $user = Auth::user();
 
+        if (!$this->canManageClassTreasury($user)) {
+            return response()->json(['message' => 'Accès non autorisé au module trésorerie de classe.'], 403);
+        }
+
         if ($cotisation->classe_id !== $user->classe_id || $cotisation->created_by !== $user->id) {
             return response()->json(['message' => 'Cotisation non supprimable.'], 403);
         }
@@ -535,6 +813,10 @@ class TresorerieController extends Controller
     public function showCotisation(Cotisation $cotisation): JsonResponse
     {
         $user = Auth::user();
+
+        if (!$this->canManageClassTreasury($user)) {
+            return response()->json(['message' => 'Accès non autorisé au module trésorerie de classe.'], 403);
+        }
 
         if ($cotisation->classe_id !== $user->classe_id) {
             return response()->json(['message' => 'Acces refuse.'], 403);
@@ -564,6 +846,10 @@ class TresorerieController extends Controller
     {
         $user = Auth::user();
 
+        if (!$this->canManageClassTreasury($user)) {
+            return response()->json(['message' => 'Accès non autorisé au module trésorerie de classe.'], 403);
+        }
+
         if (!$user->classe_id) {
             return response()->json(['message' => 'Conducteur sans classe associee.'], 422);
         }
@@ -592,9 +878,68 @@ class TresorerieController extends Controller
         ], 201);
     }
 
+    public function storeDon(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$this->canManageClassTreasury($user)) {
+            return response()->json(['message' => 'Accès non autorisé au module trésorerie de classe.'], 403);
+        }
+
+        if (!$user->classe_id) {
+            return response()->json(['message' => 'Conducteur sans classe associee.'], 422);
+        }
+
+        $validated = $request->validate([
+            'user_id' => ['nullable', 'exists:users,id'],
+            'campagne_id' => ['nullable', 'exists:campagnes,id'],
+            'montant' => ['required', 'integer', 'min:100'],
+            'type' => ['required', 'in:LIBRE,CAMPAGNE'],
+            'mode_paiement' => ['required', 'in:MOBILE_MONEY,ESPECES,VIREMENT'],
+            'date_don' => ['required', 'date'],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $donor = $user;
+        if (!empty($validated['user_id'])) {
+            $donor = User::query()->findOrFail($validated['user_id']);
+            if ((int) $donor->classe_id !== (int) $user->classe_id) {
+                return response()->json(['message' => 'Ce donateur n\'est pas dans votre classe.'], 403);
+            }
+        }
+
+        if (!empty($validated['campagne_id'])) {
+            $campagne = Campagne::query()->findOrFail($validated['campagne_id']);
+            if ((int) $campagne->classe_id !== (int) $user->classe_id) {
+                return response()->json(['message' => 'Cette campagne n\'est pas dans votre classe.'], 403);
+            }
+        }
+
+        $don = Don::create([
+            'family_id' => $donor->family_id,
+            'user_id' => $donor->id,
+            'campagne_id' => $validated['campagne_id'] ?? null,
+            'montant' => $validated['montant'],
+            'type' => $validated['type'],
+            'mode_paiement' => $validated['mode_paiement'],
+            'date_don' => $validated['date_don'],
+            'reference_recu' => 'DON-' . now()->format('YmdHis') . '-' . strtoupper(substr(md5((string) random_int(1, 9999999)), 0, 6)),
+            'note' => $validated['note'] ?? null,
+        ]);
+
+        return response()->json([
+            'message' => 'Don enregistré avec succès.',
+            'data' => $don,
+        ], 201);
+    }
+
     public function storePaiement(Request $request): JsonResponse
     {
         $user = Auth::user();
+
+        if (!$this->canManageClassTreasury($user)) {
+            return response()->json(['message' => 'Accès non autorisé au module trésorerie de classe.'], 403);
+        }
 
         $validated = $request->validate([
             'user_id' => ['required', 'exists:users,id'],
@@ -686,9 +1031,52 @@ class TresorerieController extends Controller
         ], 201);
     }
 
+    public function storeRappelTresorier(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$this->canManageClassTreasury($user)) {
+            return response()->json(['message' => 'Accès non autorisé au module trésorerie de classe.'], 403);
+        }
+
+        $validated = $request->validate([
+            'user_id' => ['required', 'exists:users,id'],
+            'message' => ['required', 'string', 'min:5', 'max:1000'],
+            'cotisation' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $member = User::query()->findOrFail($validated['user_id']);
+        if ((int) $member->classe_id !== (int) $user->classe_id) {
+            return response()->json(['message' => 'Ce membre n\'est pas dans votre classe.'], 403);
+        }
+
+        $titre = 'Rappel de paiement';
+        if (!empty($validated['cotisation'])) {
+            $titre .= ' - ' . $validated['cotisation'];
+        }
+
+        NotificationFinanciere::query()->create([
+            'user_id' => $member->id,
+            'type' => 'RAPPEL_PAIEMENT',
+            'entity_id' => null,
+            'entity_type' => User::class,
+            'titre' => $titre,
+            'message' => $validated['message'],
+            'lue' => false,
+        ]);
+
+        return response()->json([
+            'message' => 'Rappel envoyé avec succès.',
+        ], 201);
+    }
+
     public function assignTresorier(Request $request): JsonResponse
     {
         $user = Auth::user();
+
+        if ($user->role !== 'conducteur') {
+            return response()->json(['message' => 'Seul le conducteur peut assigner un trésorier.'], 403);
+        }
 
         if (!$user->classe_id) {
             return response()->json(['message' => 'Conducteur sans classe associee.'], 422);
@@ -705,13 +1093,36 @@ class TresorerieController extends Controller
             return response()->json(['message' => 'Ce membre n\'est pas dans votre classe.'], 403);
         }
 
-        // Vérifier que le membre a un rôle membre_famille
-        if ($member->role !== 'membre_famille') {
+        // Vérifier que le membre est un membre de famille (compatibilité anciens comptes tresorier)
+        if (!in_array($member->role, ['membre_famille', 'tresorier'], true)) {
             return response()->json(['message' => 'Seul un membre de famille peut devenir tresorier.'], 422);
         }
 
-        // Assigner le rôle tresorier
-        $member->update(['role' => 'tresorier']);
+        $tresorierFonction = Fonction::query()
+            ->whereRaw('LOWER(nom) = ?', ['trésorier'])
+            ->orWhereRaw('LOWER(nom) = ?', ['tresorier'])
+            ->first();
+
+        if (!$tresorierFonction) {
+            $tresorierFonction = Fonction::query()->create([
+                'nom' => 'Trésorier',
+                'description' => 'Responsable des finances de la classe',
+            ]);
+        }
+
+        // Une seule fonction Trésorier active par classe.
+        User::query()
+            ->where('classe_id', $user->classe_id)
+            ->where('fonction_id', $tresorierFonction->id)
+            ->where('id', '!=', $member->id)
+            ->update(['fonction_id' => null]);
+
+        // Assigner la fonction trésorier tout en conservant le rôle membre_famille.
+        $member->update([
+            'role' => 'membre_famille',
+            'fonction_id' => $tresorierFonction->id,
+        ]);
+        $member->load('fonction');
 
         return response()->json([
             'message' => 'Tresorier assigne avec succes.',
@@ -720,7 +1131,91 @@ class TresorerieController extends Controller
                 'nom' => $member->nom,
                 'prenom' => $member->prenom,
                 'role' => $member->role,
+                'fonction' => $member->fonction?->nom,
             ],
         ], 200);
+    }
+
+    public function unassignTresorier(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if ($user->role !== 'conducteur') {
+            return response()->json(['message' => 'Seul le conducteur peut retirer le trésorier.'], 403);
+        }
+
+        if (!$user->classe_id) {
+            return response()->json(['message' => 'Conducteur sans classe associee.'], 422);
+        }
+
+        $validated = $request->validate([
+            'user_id' => ['nullable', 'exists:users,id'],
+            'motif_retrait' => ['required', 'string', 'min:3', 'max:255'],
+        ]);
+
+        $tresorierFonction = Fonction::query()
+            ->whereRaw('LOWER(nom) = ?', ['trésorier'])
+            ->orWhereRaw('LOWER(nom) = ?', ['tresorier'])
+            ->first();
+
+        if (!$tresorierFonction) {
+            return response()->json(['message' => 'Aucun tresorier assigne pour cette classe.'], 422);
+        }
+
+        $query = User::query()
+            ->where('classe_id', $user->classe_id)
+            ->where('fonction_id', $tresorierFonction->id);
+
+        if (!empty($validated['user_id'])) {
+            $query->where('id', $validated['user_id']);
+        }
+
+        $member = $query->first();
+
+        if (!$member) {
+            return response()->json(['message' => 'Aucun tresorier correspondant trouve dans votre classe.'], 404);
+        }
+
+        $member->update(['fonction_id' => null]);
+
+        NotificationFinanciere::query()->create([
+            'user_id' => $user->id,
+            'type' => 'TRESORIER_RETRAIT',
+            'entity_id' => $member->id,
+            'entity_type' => User::class,
+            'titre' => 'Retrait du trésorier',
+            'message' => 'Fonction retirée à ' . trim(($member->prenom ?? '') . ' ' . ($member->nom ?? '')) . '. Motif: ' . $validated['motif_retrait'],
+            'lue' => false,
+        ]);
+
+        return response()->json([
+            'message' => 'Fonction de tresorier retiree avec succes.',
+            'data' => [
+                'id' => $member->id,
+                'nom' => $member->nom,
+                'prenom' => $member->prenom,
+                'role' => $member->role,
+                'motif_retrait' => $validated['motif_retrait'],
+            ],
+        ], 200);
+    }
+
+    private function canManageClassTreasury(User $user): bool
+    {
+        if (!$user->classe_id) {
+            return false;
+        }
+
+        if ($user->role === 'conducteur') {
+            return true;
+        }
+
+        if (!in_array($user->role, ['membre_famille', 'tresorier'], true)) {
+            return false;
+        }
+
+        $fonctionNom = mb_strtolower(trim((string) ($user->fonction?->nom ?? '')));
+
+        return in_array($fonctionNom, ['trésorier', 'tresorier'], true);
     }
 }

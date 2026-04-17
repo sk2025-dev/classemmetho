@@ -566,7 +566,10 @@ export default function ConducteurSondageIndex({
                                                         <td className="px-5 py-4">
                                                             <div className="flex flex-wrap gap-2">
                                                                 <Link
-                                                                    href={`/conducteur/sondages/${sondage.id}`}
+                                                                    href={withBasePath(
+                                                                        "",
+                                                                        `/conducteur/sondages/${sondage.id}`,
+                                                                    )}
                                                                     className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                                                                 >
                                                                     {sondage.statut ===
@@ -578,7 +581,10 @@ export default function ConducteurSondageIndex({
                                                                     sondage,
                                                                 ) ? (
                                                                     <Link
-                                                                        href={`/conducteur/sondages/${sondage.id}/repondre`}
+                                                                        href={withBasePath(
+                                                                            "",
+                                                                            `/conducteur/sondages/${sondage.id}/repondre`,
+                                                                        )}
                                                                         className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
                                                                     >
                                                                         {sondage.aDejaRepondu
@@ -588,7 +594,10 @@ export default function ConducteurSondageIndex({
                                                                 ) : null}
                                                                 {sondage.canEdit ? (
                                                                     <Link
-                                                                        href={`/conducteur/sondages/${sondage.id}/edit`}
+                                                                        href={withBasePath(
+                                                                            "",
+                                                                            `/conducteur/sondages/${sondage.id}/edit`,
+                                                                        )}
                                                                         className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
                                                                     >
                                                                         Modifier

@@ -148,7 +148,7 @@ $signaturePasteurDataUri = $toSignatureDataUri($pasteur->signature_path ?? null)
             color: #111;
             background: #fff;
             font-family: "Times New Roman", Times, serif;
-            font-size: 13px;
+            font-size: 20px;
             line-height: 1.45;
         }
 
@@ -308,8 +308,12 @@ $signaturePasteurDataUri = $toSignatureDataUri($pasteur->signature_path ?? null)
             margin-left: 6px;
         }
 
+        .content>.inline-field:last-of-type {
+            margin-bottom: 18px;
+        }
+
         .signature-zone {
-            margin-top: 30px;
+            margin-top: 50px;
             width: 100%;
             border-collapse: collapse;
         }
@@ -335,8 +339,8 @@ $signaturePasteurDataUri = $toSignatureDataUri($pasteur->signature_path ?? null)
             align-items: flex-end;
             justify-content: center;
             overflow: hidden;
-            margin-top: 10px;
-            margin-bottom: 6px;
+            margin-top: 16px;
+            margin-bottom: 12px;
         }
 
         .sig-image {
@@ -367,10 +371,10 @@ $signaturePasteurDataUri = $toSignatureDataUri($pasteur->signature_path ?? null)
             <table class="header">
                 <tr>
                     <td class="head-left">
-                        @if(!empty($logoDataUri))
-                        <img src="{{ $logoDataUri }}" alt="Logo église" class="logo">
-                        @elseif(file_exists(public_path('images/logo.png')))
-                        <img src="{{ public_path('images/logo.png') }}" alt="Logo église" class="logo">
+                        @if(!empty($methoDataUri))
+                        <img src="{{ $methoDataUri }}" alt="Logo jubilé" class="logo">
+                        @elseif(file_exists(public_path('images/metho.jpg')))
+                        <img src="{{ public_path('images/metho.jpg') }}" alt="Logo jubilé" class="logo">
                         @endif
                         <div class="logo-sub"></div>
                     </td>
@@ -382,10 +386,10 @@ $signaturePasteurDataUri = $toSignatureDataUri($pasteur->signature_path ?? null)
                         <div class="temple">Temple du JUBILE de Cocody</div>
                     </td>
                     <td class="head-right">
-                        @if(!empty($methoDataUri))
-                        <img src="{{ $methoDataUri }}" alt="Logo jubilé" class="logo">
-                        @elseif(file_exists(public_path('images/metho.jpg')))
-                        <img src="{{ public_path('images/metho.jpg') }}" alt="Logo jubilé" class="logo">
+                        @if(!empty($logoDataUri))
+                        <img src="{{ $logoDataUri }}" alt="Logo église" class="logo">
+                        @elseif(file_exists(public_path('images/logo.png')))
+                        <img src="{{ public_path('images/logo.png') }}" alt="Logo église" class="logo">
                         @endif
                     </td>
                 </tr>

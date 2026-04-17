@@ -281,8 +281,8 @@ class RegistrationController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => $type === 'conductor'
-                    ? '🎉 Excellente nouvelle ! Votre inscription de conducteur a été soumise avec succès. Bienvenue dans notre communauté spirituelle ! En attente de validation par l\'administrateur. Vous recevrez bientôt vos identifiants de connexion.'
-                    : '🎉 Excellente nouvelle ! Votre inscription familiale a été soumise avec succès. Bienvenue dans notre grande famille spirituelle ! En attente de validation par l\'administrateur. Vous recevrez bientôt vos identifiants de connexion.',
+                    ? '🎉 Excellente nouvelle ! Votre inscription de conducteur a été soumise avec succès. Bienvenue dans notre communauté spirituelle ! En attente de validation par l\'administrateur. Vous recevrez bientôt votre code membre et vos acc�s de connexion.'
+                    : '🎉 Excellente nouvelle ! Votre inscription familiale a été soumise avec succès. Bienvenue dans notre grande famille spirituelle ! En attente de validation par l\'administrateur. Vous recevrez bientôt votre code membre et vos acc�s de connexion.',
                 'inscription_ids'   => array_map(fn($i) => $i->id, $inscriptions),
                 'inscription_count' => count($inscriptions),
                 'status'            => 'en_attente',
@@ -845,7 +845,7 @@ class RegistrationController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => '🎉 Excellente nouvelle ! Votre inscription de conducteur a été soumise avec succès. Bienvenue dans notre communauté spirituelle ! En attente de validation par l\'administrateur. Vous recevrez bientôt vos identifiants de connexion.',
+                'message' => '🎉 Excellente nouvelle ! Votre inscription de conducteur a été soumise avec succès. Bienvenue dans notre communauté spirituelle ! En attente de validation par l\'administrateur. Vous recevrez bientôt votre code membre et vos acc�s de connexion.',
                 'data'    => [
                     'inscription_id'           => $inscription->id,
                     'reference'                => 'COND-' . now()->format('Ymd') . '-' . str_pad($inscription->id, 6, '0', STR_PAD_LEFT),

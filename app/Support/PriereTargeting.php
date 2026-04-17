@@ -49,7 +49,7 @@ class PriereTargeting
             ->get(['id', 'nom', 'prenom', 'role', 'classe_id']);
 
         $sameClasseMembers = User::query()
-            ->where('role', 'membre_famille')
+            ->whereIn('role', ['membre_famille', 'responsable_famille'])
             ->where('classe_id', $user->classe_id)
             ->whereKeyNot($user->id)
             ->orderBy('nom')
@@ -105,7 +105,7 @@ class PriereTargeting
             ? self::resolveTargetUser($targetUserId, 'conducteur', $user->classe_id)
             : null;
         $specificMember = $targetType === Priere::TYPE_SPECIFIC_MEMBRE_CLASSE
-            ? self::resolveTargetUser($targetUserId, 'membre_famille', $user->classe_id, $user->id)
+            ? self::resolveTargetUserByRoles($targetUserId, ['membre_famille', 'responsable_famille'], $user->classe_id, $user->id)
             : null;
 
         return match ($targetType) {
@@ -193,8 +193,46 @@ class PriereTargeting
                 );
             }
 
+            if ($user->role === 'responsable_famille') {
+                return $destinations->contains(fn (array $destination) =>
+                    ($destination['type_cible'] ?? null) === Priere::TYPE_SPECIFIC_MEMBRE_CLASSE
+                    && (int) ($destination['user_cible_id'] ?? 0) === (int) $user->id
+                );
+            }
+
             return false;
         })->values();
+    }
+
+    private static function resolveTargetUserByRoles(?int $targetUserId, array $roles, ?int $classeId = null, ?int $excludedUserId = null): User
+    {
+        if (!$targetUserId) {
+            throw ValidationException::withMessages([
+                'user_cible_id' => 'Veuillez choisir un destinataire precis.',
+            ]);
+        }
+
+        $query = User::query()
+            ->whereKey($targetUserId)
+            ->whereIn('role', $roles);
+
+        if ($classeId) {
+            $query->where('classe_id', $classeId);
+        }
+
+        if ($excludedUserId) {
+            $query->whereKeyNot($excludedUserId);
+        }
+
+        $target = $query->first();
+
+        if (!$target) {
+            throw ValidationException::withMessages([
+                'user_cible_id' => 'Le destinataire selectionne n est pas autorise pour cette priere.',
+            ]);
+        }
+
+        return $target;
     }
 
     private static function resolveTargetUser(?int $targetUserId, string $role, ?int $classeId = null, ?int $excludedUserId = null): User

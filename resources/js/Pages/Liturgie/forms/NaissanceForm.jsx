@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { Link } from "@inertiajs/react";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
@@ -38,9 +38,10 @@ export default function NaissanceForm({
             date_naissance: "",
             lieu_naissance: "",
             sexe_enfant: "",
-            parents: "",
+            nom_pere: "",
+            nom_mere: "",
             date_presentation: "",
-            lieu_ceremonie: "",
+            heure: "",
             observations: "",
         },
         pieces_jointes: [],
@@ -52,29 +53,84 @@ export default function NaissanceForm({
     const selectedMember = useMemo(
         () =>
             familyMembers.find(
-                (m) => String(m.id) === String(form.membre_id || defaultMemberId),
+                (m) =>
+                    String(m.id) === String(form.membre_id || defaultMemberId),
             ),
         [familyMembers, form.membre_id, defaultMemberId],
     );
 
+    const selectedMemberName = useMemo(() => {
+        if (!selectedMember) return "";
+        return `${selectedMember.prenom || ""} ${selectedMember.nom || ""}`.trim();
+    }, [selectedMember]);
+
+    const relationWithChild = String(form.details.lien_enfant || "").trim();
+    const isSelectedMemberFather = relationWithChild === "Pere";
+    const isSelectedMemberMother = relationWithChild === "Mere";
+
+    useEffect(() => {
+        if (!selectedMember) return;
+        const nextClasseId = selectedMember.classe_id
+            ? String(selectedMember.classe_id)
+            : "";
+        setForm((prev) => {
+            if (String(prev.classe_id || "") === nextClasseId) {
+                return prev;
+            }
+            return {
+                ...prev,
+                classe_id: nextClasseId,
+            };
+        });
+    }, [selectedMember]);
+
+    useEffect(() => {
+        setForm((prev) => {
+            if (isSelectedMemberFather && prev.details.nom_pere) {
+                return {
+                    ...prev,
+                    details: { ...prev.details, nom_pere: "" },
+                };
+            }
+            if (isSelectedMemberMother && prev.details.nom_mere) {
+                return {
+                    ...prev,
+                    details: { ...prev.details, nom_mere: "" },
+                };
+            }
+            return prev;
+        });
+    }, [isSelectedMemberFather, isSelectedMemberMother]);
+
     const recap = useMemo(
         () => ({
-            membre:
-                selectedMember
-                    ? `${selectedMember.prenom || ""} ${
-                          selectedMember.nom || ""
-                      }`.trim()
-                    : "-",
+            membre: selectedMember
+                ? `${selectedMember.prenom || ""} ${
+                      selectedMember.nom || ""
+                  }`.trim()
+                : "-",
             lien: form.details.lien_enfant || "-",
             enfant: form.details.nom_enfant || "-",
             dnais: form.details.date_naissance || "-",
             lnais: form.details.lieu_naissance || "-",
-            parents: form.details.parents || "-",
+            pere: isSelectedMemberFather
+                ? selectedMemberName || "-"
+                : form.details.nom_pere || "-",
+            mere: isSelectedMemberMother
+                ? selectedMemberName || "-"
+                : form.details.nom_mere || "-",
             datePres: form.details.date_presentation || "-",
-            lieuCer: form.details.lieu_ceremonie || "-",
+            heureCulte: form.details.heure || "-",
             classe: currentClasse?.nom || "-",
         }),
-        [form.details, currentClasse?.nom, selectedMember],
+        [
+            form.details,
+            currentClasse?.nom,
+            selectedMember,
+            selectedMemberName,
+            isSelectedMemberFather,
+            isSelectedMemberMother,
+        ],
     );
 
     const setDetail = (key, value) =>
@@ -82,8 +138,7 @@ export default function NaissanceForm({
             ...prev,
             details: { ...prev.details, [key]: value },
         }));
-    const onlyLetters = (value) =>
-        value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ\s'-]/g, "");
+    const onlyLetters = (value) => value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ\s'-]/g, "");
     const next = () => {
         if (step === 1) {
             const nextErrors = {};
@@ -93,10 +148,29 @@ export default function NaissanceForm({
                 nextErrors["details.nom_enfant"] = "Champ requis.";
             if (!form.details.date_naissance)
                 nextErrors["details.date_naissance"] = "Champ requis.";
-            if (!form.details.parents)
-                nextErrors["details.parents"] = "Champ requis.";
-            if (Object.keys(nextErrors).length)
-                return setErrors((prev) => ({ ...prev, ...nextErrors }));
+            if (form.details.date_naissance) {
+                const today = new Date();
+                const dateNaissance = new Date(form.details.date_naissance);
+                today.setHours(0, 0, 0, 0);
+                dateNaissance.setHours(0, 0, 0, 0);
+                if (dateNaissance > today) {
+                    nextErrors["details.date_naissance"] =
+                        "La date de naissance ne peut pas etre dans le futur.";
+                }
+            }
+
+            if (isSelectedMemberFather) {
+                if (!form.details.nom_mere)
+                    nextErrors["details.nom_mere"] = "Nom de la mere requis.";
+            } else if (isSelectedMemberMother) {
+                if (!form.details.nom_pere)
+                    nextErrors["details.nom_pere"] = "Nom du pere requis.";
+            } else if (!form.details.nom_pere && !form.details.nom_mere) {
+                nextErrors["details.nom_pere"] =
+                    "Renseignez au moins un parent (pere ou mere).";
+            }
+
+            if (Object.keys(nextErrors).length) return setErrors(nextErrors);
         }
         setStep((s) => Math.min(3, s + 1));
     };
@@ -120,7 +194,19 @@ export default function NaissanceForm({
             "details[date_naissance]",
             form.details.date_naissance || "",
         );
-        payload.append("details[parents]", form.details.parents || "");
+        const effectiveNomPere = isSelectedMemberFather
+            ? selectedMemberName
+            : form.details.nom_pere;
+        const effectiveNomMere = isSelectedMemberMother
+            ? selectedMemberName
+            : form.details.nom_mere;
+
+        payload.append("details[nom_pere]", effectiveNomPere || "");
+        payload.append("details[nom_mere]", effectiveNomMere || "");
+        payload.append(
+            "details[parents]",
+            [effectiveNomPere, effectiveNomMere].filter(Boolean).join(" / "),
+        );
         payload.append(
             "details[lieu_naissance]",
             form.details.lieu_naissance || "",
@@ -131,10 +217,7 @@ export default function NaissanceForm({
             "details[date_presentation]",
             form.details.date_presentation || "",
         );
-        payload.append(
-            "details[lieu_ceremonie]",
-            form.details.lieu_ceremonie || "",
-        );
+        payload.append("details[heure]", form.details.heure || "");
         payload.append(
             "details[observations]",
             form.details.observations || "",
@@ -264,11 +347,7 @@ export default function NaissanceForm({
                                         </select>
                                         {errors["details.lien_enfant"] && (
                                             <Err>
-                                                {
-                                                    errors[
-                                                        "details.lien_enfant"
-                                                    ]
-                                                }
+                                                {errors["details.lien_enfant"]}
                                             </Err>
                                         )}
                                     </Field>
@@ -284,10 +363,7 @@ export default function NaissanceForm({
                                             disabled={!canSelectMember}
                                         >
                                             {familyMembers.map((m) => (
-                                                <option
-                                                    key={m.id}
-                                                    value={m.id}
-                                                >
+                                                <option key={m.id} value={m.id}>
                                                     {m.prenom} {m.nom}
                                                 </option>
                                             ))}
@@ -374,17 +450,73 @@ export default function NaissanceForm({
                                         </select>
                                     </Field>
                                 </div>
-                                <Field label="Parents *">
-                                    <input
-                                        value={form.details.parents}
-                                        onChange={(e) =>
-                                            setDetail("parents", e.target.value)
-                                        }
-                                    />
-                                    {errors["details.parents"] && (
-                                        <Err>{errors["details.parents"]}</Err>
+                                {isSelectedMemberFather && (
+                                    <Field label="Nom de la mere *">
+                                        <input
+                                            value={form.details.nom_mere}
+                                            onChange={(e) =>
+                                                setDetail(
+                                                    "nom_mere",
+                                                    e.target.value,
+                                                )
+                                            }
+                                        />
+                                        {errors["details.nom_mere"] && (
+                                            <Err>
+                                                {errors["details.nom_mere"]}
+                                            </Err>
+                                        )}
+                                    </Field>
+                                )}
+                                {isSelectedMemberMother && (
+                                    <Field label="Nom du pere *">
+                                        <input
+                                            value={form.details.nom_pere}
+                                            onChange={(e) =>
+                                                setDetail(
+                                                    "nom_pere",
+                                                    e.target.value,
+                                                )
+                                            }
+                                        />
+                                        {errors["details.nom_pere"] && (
+                                            <Err>
+                                                {errors["details.nom_pere"]}
+                                            </Err>
+                                        )}
+                                    </Field>
+                                )}
+                                {!isSelectedMemberFather &&
+                                    !isSelectedMemberMother && (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <Field label="Nom du pere">
+                                                <input
+                                                    value={
+                                                        form.details.nom_pere
+                                                    }
+                                                    onChange={(e) =>
+                                                        setDetail(
+                                                            "nom_pere",
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                />
+                                            </Field>
+                                            <Field label="Nom de la mere">
+                                                <input
+                                                    value={
+                                                        form.details.nom_mere
+                                                    }
+                                                    onChange={(e) =>
+                                                        setDetail(
+                                                            "nom_mere",
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                />
+                                            </Field>
+                                        </div>
                                     )}
-                                </Field>
                                 <FooterButtons onNext={next} />
                             </section>
                         )}
@@ -395,7 +527,7 @@ export default function NaissanceForm({
                                     Ceremonie de presentation
                                 </h2>
                                 <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">
-                                    Date et lieu souhaites pour la presentation.
+                                    Date et heure souhaitees pour la presentation.
                                 </p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <Field label="Date souhaitee">
@@ -412,14 +544,12 @@ export default function NaissanceForm({
                                             }
                                         />
                                     </Field>
-                                    <Field label="Lieu de ceremonie">
+                                    <Field label="Heure du culte">
                                         <input
-                                            value={form.details.lieu_ceremonie}
+                                            type="time"
+                                            value={form.details.heure}
                                             onChange={(e) =>
-                                                setDetail(
-                                                    "lieu_ceremonie",
-                                                    e.target.value,
-                                                )
+                                                setDetail("heure", e.target.value)
                                             }
                                         />
                                     </Field>
@@ -480,14 +610,21 @@ export default function NaissanceForm({
                                         k="Lieu de naissance"
                                         v={recap.lnais}
                                     />
-                                    <RecapRow k="Parents" v={recap.parents} />
+                                    <RecapRow k="Nom du pere" v={recap.pere} />
+                                    <RecapRow
+                                        k="Nom de la mere"
+                                        v={recap.mere}
+                                    />
                                 </RecapCard>
                                 <RecapCard title="Ceremonie">
                                     <RecapRow
                                         k="Date souhaitee"
                                         v={recap.datePres}
                                     />
-                                    <RecapRow k="Lieu" v={recap.lieuCer} />
+                                    <RecapRow
+                                        k="Heure du culte"
+                                        v={recap.heureCulte}
+                                    />
                                     <RecapRow k="Statut" v="SOUMISE" />
                                 </RecapCard>
                                 {errors.submit && <Err>{errors.submit}</Err>}

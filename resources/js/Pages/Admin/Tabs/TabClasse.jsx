@@ -439,7 +439,9 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
         if (isOpen && member?.id) {
             const loadMemberData = async () => {
                 try {
-                    const response = await fetch(`/admin/membres/${member.id}`);
+                    const response = await fetch(
+                        withBasePath("", `/admin/membres/${member.id}`),
+                    );
                     if (response.ok) {
                         const freshData = await response.json();
                         setDisplayMember({
@@ -490,6 +492,7 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
     const displayData = displayMember || member;
     const normalizedData = {
         ...displayData,
+        code_membre: displayData?.code_membre || "-",
         identifier: displayData?.identifier || displayData?.identifiant || "-",
         adresse: displayData?.adresse || displayData?.famille?.adresse || "-",
         relation: displayData?.relation || displayData?.lien_parente || "-",
@@ -616,8 +619,8 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
                                 }
                             />
                             <InfoItem
-                                label="Identifiant"
-                                value={displayValue(normalizedData.identifier)}
+                                label="Code membre"
+                                value={displayValue(normalizedData.code_membre)}
                                 icon={
                                     <Award className="w-4 h-4 text-blue-500" />
                                 }
@@ -1233,7 +1236,11 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                             placeholder="ex: Jean"
                                         />
                                     </FormField>
-                                    <FormField label="Genre" icon={Users} required>
+                                    <FormField
+                                        label="Genre"
+                                        icon={Users}
+                                        required
+                                    >
                                         <Select2Single
                                             name="genre"
                                             value={formData.genre || ""}
@@ -1346,7 +1353,11 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                             placeholder="Sélectionner une fonction..."
                                         />
                                     </FormField>
-                                    <FormField label="Relation de Famille" icon={Users} required>
+                                    <FormField
+                                        label="Relation de Famille"
+                                        icon={Users}
+                                        required
+                                    >
                                         <Select2Single
                                             name="relation"
                                             value={formData.relation || ""}
@@ -1372,12 +1383,20 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
                                     Situation Matrimoniale
                                 </h3>
                                 <div className="space-y-4">
-                                    <FormField label="Statut Marital" icon={Heart} required>
+                                    <FormField
+                                        label="Statut Marital"
+                                        icon={Heart}
+                                        required
+                                    >
                                         <Select2Single
                                             name="statut_marital"
-                                            value={formData.statut_marital || ""}
+                                            value={
+                                                formData.statut_marital || ""
+                                            }
                                             onChange={handleChange}
-                                            options={MEMBER_MARITAL_STATUS_OPTIONS}
+                                            options={
+                                                MEMBER_MARITAL_STATUS_OPTIONS
+                                            }
                                             placeholder="Sélectionner..."
                                         />
                                     </FormField>
@@ -1825,9 +1844,6 @@ const ClasseDetailsModal = ({
                                             Prénom
                                         </th>
                                         <th className="px-3 py-3 text-xs font-extrabold text-white uppercase tracking-wider text-center">
-                                            Identifiant
-                                        </th>
-                                        <th className="px-3 py-3 text-xs font-extrabold text-white uppercase tracking-wider text-center">
                                             Genre
                                         </th>
                                         <th className="px-3 py-3 text-xs font-extrabold text-white uppercase tracking-wider text-center">
@@ -1913,9 +1929,6 @@ const ClasseDetailsModal = ({
                                                 </td>
                                                 <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700 text-center">
                                                     {m.prenom || "-"}
-                                                </td>
-                                                <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-600 text-center">
-                                                    {m.identifiant || "-"}
                                                 </td>
                                                 <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-600 text-center">
                                                     <span className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded text-xs font-bold">

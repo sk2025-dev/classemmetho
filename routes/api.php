@@ -3,7 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\InscriptionController;
-use App\Http\Controllers\Api\PayDunyaWebhookController;
+use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ClasseController;
 use App\Http\Controllers\Api\FamilleController;
 use App\Http\Controllers\Api\VilleController;
@@ -14,6 +14,7 @@ use App\Http\Controllers\API\MemberController;
 use App\Http\Controllers\AuthenticatedRegistrationController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\ExcelImportController;
+use App\Http\Controllers\Api\PresenceController;
 use App\Http\Controllers\Admin\TresorerieController as AdminTresorerieController;
 use App\Http\Controllers\Conducteur\TresorerieController as ConducteurTresorerieController;
 use App\Http\Controllers\MembreFamille\FinancesController as MembreFamilleFinancesController;
@@ -27,6 +28,12 @@ Route::get('/fonctions', [FonctionController::class, 'index']);
 
 // Route publique pour uploader des photos lors de l'inscription (avant authentification)
 Route::post('/photo/upload-inscription', [PhotoUploadController::class, 'uploadInscriptionPhoto']);
+
+// Paiement public (don en ligne depuis Welcome)
+Route::post('/payment', [PaymentController::class, 'store']);
+
+// Présence publique via QR code
+Route::post('/presence', [PresenceController::class, 'store']);
 
 // Route API standard documentée pour upload photo (authentifié)
 Route::middleware(['auth:web'])->post('/photo/upload', [PhotoController::class, 'upload']);
@@ -92,9 +99,15 @@ Route::middleware(['auth:web'])->group(function () {
         ->group(function () {
             Route::post('/cotisations', [ConducteurTresorerieController::class, 'storeCotisation']);
         });
+
+    Route::middleware('role:conducteur')
+        ->prefix('conducteur/programmes')
+        ->group(function () {
+            Route::get('/{event}/presences', [PresenceController::class, 'programmeSummary']);
+        });
 });
 
 // Inclure les routes d'approbation des inscriptions
 require_once __DIR__ . '/api_inscriptions_approval.php';
 // === WEBHOOKS (sans authentification) ===
-Route::post('/paydunya/webhook', [PayDunyaWebhookController::class, 'handle'])->name('paydunya.webhook');
+Route::post('/paydunya/webhook', [PaymentController::class, 'webhook'])->name('paydunya.webhook');

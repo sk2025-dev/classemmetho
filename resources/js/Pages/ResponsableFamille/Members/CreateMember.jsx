@@ -336,7 +336,10 @@ export default function CreateMember({ family, errors }) {
 
         try {
             const res = await axios.post(
-                `/responsable-famille/members/store?family_id=${family.id}`,
+                withBasePath(
+                    "",
+                    `/responsable-famille/members/store?family_id=${family.id}`,
+                ),
                 formData,
                 {
                     headers: { "Content-Type": "multipart/form-data" },
@@ -400,7 +403,10 @@ export default function CreateMember({ family, errors }) {
             // Revenir automatiquement à la page des inscriptions après courte pause
             setTimeout(() => {
                 Inertia.get(
-                    `/responsable-famille/inscriptions?family_id=${family.id}`,
+                    withBasePath(
+                        "",
+                        `/responsable-famille/inscriptions?family_id=${family.id}`,
+                    ),
                 );
             }, 1500);
         } catch (err) {
@@ -435,7 +441,10 @@ export default function CreateMember({ family, errors }) {
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                     <div className="flex items-center gap-4">
                         <Link
-                            href={`/responsable-famille/inscriptions?family_id=${family.id}`}
+                            href={withBasePath(
+                                "",
+                                `/responsable-famille/inscriptions?family_id=${family.id}`,
+                            )}
                             className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur-md"
                         >
                             <ArrowLeft className="w-5 h-5" />
@@ -584,7 +593,9 @@ export default function CreateMember({ family, errors }) {
                                             }
                                             options={GENDER_OPTIONS}
                                             placeholder="Sélectionner..."
-                                            hasError={Boolean(fieldErrors.genre)}
+                                            hasError={Boolean(
+                                                fieldErrors.genre,
+                                            )}
                                         />
                                         {fieldErrors.genre && (
                                             <p className="text-red-500 text-xs mt-1">
@@ -808,9 +819,13 @@ export default function CreateMember({ family, errors }) {
                                                         e.target.value,
                                                 })
                                             }
-                                            options={MEMBER_MARITAL_STATUS_OPTIONS}
+                                            options={
+                                                MEMBER_MARITAL_STATUS_OPTIONS
+                                            }
                                             placeholder="Sélectionner..."
-                                            hasError={Boolean(errors.statut_marital)}
+                                            hasError={Boolean(
+                                                errors.statut_marital,
+                                            )}
                                         />
                                         {errors.statut_marital && (
                                             <p className="text-red-500 text-xs mt-1">
@@ -1061,7 +1076,10 @@ export default function CreateMember({ family, errors }) {
                     {/* Footer Actions */}
                     <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end gap-3 bg-gray-50/50 -mx-6 -mb-6 p-6 rounded-b-2xl">
                         <Link
-                            href={`/responsable-famille/inscriptions?family_id=${family.id}`}
+                            href={withBasePath(
+                                "",
+                                `/responsable-famille/inscriptions?family_id=${family.id}`,
+                            )}
                             className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2"
                         >
                             <X className="w-4 h-4" /> Annuler

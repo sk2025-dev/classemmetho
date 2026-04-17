@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
@@ -36,8 +37,8 @@ class PhotoController extends Controller
             $type = $request->input('type');
             $entityId = $request->input('entity_id') ?? 'temp-' . time();
 
-            // Créer un dossier unique par type
-            $path = "photos/{$type}/" . date('Y/m/d');
+            // Dossier unique pour les photos utilisateurs
+            $path = 'photos/users';
 
             // Générer un nom de fichier unique
             $filename = uniqid() . '_' . time() . '.' . $photo->getClientOriginalExtension();
@@ -70,9 +71,8 @@ class PhotoController extends Controller
                     'entity_id' => $entityId
                 ]
             ], 200);
-
         } catch (\Exception $e) {
-            \Log::error('Photo upload error: ' . $e->getMessage());
+            Log::error('Photo upload error: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
@@ -117,9 +117,8 @@ class PhotoController extends Controller
                 'success' => false,
                 'message' => 'Photo introuvable'
             ], 404);
-
         } catch (\Exception $e) {
-            \Log::error('Photo delete error: ' . $e->getMessage());
+            Log::error('Photo delete error: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
@@ -161,9 +160,21 @@ class PhotoController extends Controller
     public static function getColorFromName($name = '')
     {
         $colors = [
-            '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
-            '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B88B', '#95E1D3',
-            '#C9ADA7', '#9A8C98', '#C9ADA7', '#F1FAEE', '#A8DADC'
+            '#FF6B6B',
+            '#4ECDC4',
+            '#45B7D1',
+            '#FFA07A',
+            '#98D8C8',
+            '#F7DC6F',
+            '#BB8FCE',
+            '#85C1E2',
+            '#F8B88B',
+            '#95E1D3',
+            '#C9ADA7',
+            '#9A8C98',
+            '#C9ADA7',
+            '#F1FAEE',
+            '#A8DADC'
         ];
 
         $hash = crc32($name);

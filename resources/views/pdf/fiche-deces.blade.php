@@ -6,40 +6,34 @@ $createur = $acte->createur ?? $acte->membre ?? null;
 $famille = $createur?->family?->nom ?? $acte->family?->nom ?? 'Famille inconnue';
 $classe = $createur?->classe?->nom ?? $acte->classe?->nom ?? 'Classe inconnue';
 
-$nomDemandeur = trim(($createur?->prenom ?? '') . ' ' . ($createur?->nom ?? ''));
-$nomDemandeur = $nomDemandeur ?: '—';
-
 $nomDefunt = trim((string) ($details['nom_defunt'] ?? $details['nom_concerne'] ?? $details['nom'] ?? '—'));
 
 $dateDeces = !empty($details['date_deces'])
-? (function() use ($details) {
-try { return Carbon::parse($details['date_deces'])->locale('fr')->isoFormat('D MMMM YYYY'); }
-catch (\Throwable $e) { return $details['date_deces']; }
-})()
-: '—';
+    ? (function () use ($details) {
+        try {
+            return Carbon::parse($details['date_deces'])->locale('fr')->isoFormat('D MMMM YYYY');
+        } catch (\Throwable $e) {
+            return $details['date_deces'];
+        }
+    })()
+    : '—';
 
 $lieuDeces = trim((string) ($details['lieu_deces'] ?? $details['lieu'] ?? '—'));
 
-$dateAnnonce = !empty($acte->date_souhaitee)
-? (function() use ($acte) {
-try { return Carbon::parse($acte->date_souhaitee)->locale('fr')->isoFormat('DD/MM/YYYY'); }
-catch (\Throwable $e) { return '—'; }
-})()
-: '—';
+$dateCulte = !empty($acte->date_souhaitee)
+    ? (function () use ($acte) {
+        try {
+            return Carbon::parse($acte->date_souhaitee)->format('d/m/Y');
+        } catch (\Throwable $e) {
+            return '—';
+        }
+    })()
+    : '—';
 
-$dateAnnonceFull = !empty($acte->date_souhaitee)
-? (function() use ($acte) {
-try { return Carbon::parse($acte->date_souhaitee)->locale('fr')->isoFormat('dddd D MMMM YYYY'); }
-catch (\Throwable $e) { return '—'; }
-})()
-: '—';
-
-$lieuAnnonce = trim((string) ($details['lieu_annonce'] ?? $details['lieu'] ?? '—'));
-
-$motif = trim((string) ($details['contenu'] ?? $details['titre'] ?? $details['message'] ?? ''));
-if ($motif === '') {
-$motif = "La famille informe la communauté du rappel à Dieu de leur proche et sollicite ses prières et son soutien spirituel.";
-}
+$lieuAnnonce = trim((string) ($details['lieu_annonce'] ?? $details['lieu'] ?? ''));
+$culteDisplay = $dateCulte !== '—'
+    ? trim($dateCulte . ($lieuAnnonce !== '' ? ' a ' . $lieuAnnonce : ''))
+    : '—';
 
 $reference = $acte->reference ?? '—';
 $dateEmission = optional($acte->created_at)->format('d/m/Y') ?? now()->format('d/m/Y');
@@ -48,57 +42,101 @@ $conducteur = $acte->conducteur ?? null;
 $pasteur = $acte->pasteur ?? null;
 
 $nomConducteur = $conducteur
-? mb_strtoupper(trim(($conducteur->prenom ?? '') . ' ' . ($conducteur->nom ?? '')), 'UTF-8')
-: null;
+    ? mb_strtoupper(trim(($conducteur->prenom ?? '') . ' ' . ($conducteur->nom ?? '')), 'UTF-8')
+    : null;
 
 $nomPasteur = $pasteur
-? mb_strtoupper(trim(($pasteur->prenom ?? '') . ' ' . ($pasteur->nom ?? '')), 'UTF-8')
-: null;
+    ? mb_strtoupper(trim(($pasteur->prenom ?? '') . ' ' . ($pasteur->nom ?? '')), 'UTF-8')
+    : null;
 
-$logoSrc = $logoDataUri ?? null;
-$methoLogoSrc = $methoDataUri ?? null;
-if (!$methoLogoSrc && file_exists(public_path('images/metho.jpg'))) {
-$raw = @file_get_contents(public_path('images/metho.jpg'));
-if ($raw !== false) {
-$ext = strtolower(pathinfo(public_path('images/metho.jpg'), PATHINFO_EXTENSION) ?: 'jpg');
-$methoLogoSrc = 'data:image/' . $ext . ';base64,' . base64_encode($raw);
-}
-}
+$toStorageSignatureDataUri = function (?string $signaturePath): ?string {
+    if (empty($signaturePath) || !is_string($signaturePath)) {
+        return null;
+    }
+
+    if (str_starts_with($signaturePath, 'data:image/')) {
+        return $signaturePath;
+    }
+
+    $fullPath = storage_path('app/public/' . ltrim($signaturePath, '/'));
+    if (!is_file($fullPath)) {
+        return null;
+    }
+
+    $raw = @file_get_contents($fullPath);
+    if ($raw === false) {
+        return null;
+    }
+
+    $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION) ?: 'png');
+    $mime = match ($ext) {
+        'jpg', 'jpeg' => 'image/jpeg',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+        default => 'image/png',
+    };
+
+    return 'data:' . $mime . ';base64,' . base64_encode($raw);
+};
+
+$toPublicImageDataUri = function (string $absolutePath): ?string {
+    if (!is_file($absolutePath)) {
+        return null;
+    }
+
+    $raw = @file_get_contents($absolutePath);
+    if ($raw === false) {
+        return null;
+    }
+
+    $ext = strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION) ?: 'png');
+    $mime = match ($ext) {
+        'jpg', 'jpeg' => 'image/jpeg',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+        default => 'image/png',
+    };
+
+    return 'data:' . $mime . ';base64,' . base64_encode($raw);
+};
+
+$conducteurSignatureDataUri = $conducteurSignatureDataUri ?? $toStorageSignatureDataUri($conducteur->signature_path ?? null);
+$pasteurSignatureDataUri = $pasteurSignatureDataUri ?? $toStorageSignatureDataUri($pasteur->signature_path ?? null);
+
+$logoTempleSrc = $logoDataUri ?? $toPublicImageDataUri(public_path('images/logo.png'));
+$logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho.jpg'));
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
 
 <head>
     <meta charset="UTF-8">
-    <title>Avis de Décès — {{ $reference }}</title>
+    <title>Avis de Deces - {{ $reference }}</title>
     <style>
         @page {
             size: A4 portrait;
-            margin: 15mm 18mm 20mm 18mm;
+            margin: 14mm 16mm 16mm 16mm;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
+        /* Base document settings kept simple for dompdf reliability. */
         body {
-            font-family: DejaVu Sans, Arial, sans-serif;
-            color: #111111;
-            font-size: 11px;
+            margin: 0;
+            color: #1a1a1a;
             background: #ffffff;
-            line-height: 1.5;
+            font-family: DejaVu Serif, "Times New Roman", serif;
+            font-size: 11.2px;
+            line-height: 1.68;
         }
 
-        /* ══════════════════════════════
-           EN-TÊTE  (2 logos + texte centré)
-        ══════════════════════════════ */
+        .page {
+            padding: 6mm 8mm 4mm;
+        }
+
+        /* Header uses a table for stable PDF alignment with two logos and centered text. */
         .header-table {
-            width: 88%;
-            margin: 0 auto;
+            width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
+            margin: 4mm 0 7mm;
         }
 
         .header-table td {
@@ -106,389 +144,358 @@ $methoLogoSrc = 'data:image/' . $ext . ';base64,' . base64_encode($raw);
             padding: 0;
         }
 
-        .logo-cell {
-            width: 60px;
+        .logo-col {
+            width: 80px;
+        }
+
+        .logo-col.left {
             text-align: left;
         }
 
-        .logo-cell img {
-            width: 56px;
-            height: 56px;
-            object-fit: contain;
-        }
-
-        .logo-cell-right {
-            width: 60px;
+        .logo-col.right {
             text-align: right;
         }
 
-        .logo-cell-right img {
-            width: 56px;
-            height: 56px;
+        .logo {
+            width: 80px;
+            height: 80px;
             object-fit: contain;
         }
 
-        .church-center {
+        .header-center {
             text-align: center;
-            padding: 0 8px;
+            padding: 0 12px;
         }
 
-        .church-center .line1 {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #1a1a1a;
-        }
-
-        .church-center .separator {
-            color: #888;
-            margin: 1px 0;
-            font-size: 10px;
-        }
-
-        .church-center .line2 {
-            font-size: 10.5px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-            color: #1a1a1a;
-        }
-
-        .church-center .line3 {
+        .header-kicker {
+            font-family: DejaVu Sans, Arial, sans-serif;
             font-size: 15px;
             font-weight: 700;
-            color: #1a1a1a;
-            margin-top: 3px;
+            letter-spacing: 1.1px;
+            text-transform: uppercase;
+            color: #2e3742;
         }
 
-        /* ══════════════════════════════
-           TITRE PRINCIPAL
-        ══════════════════════════════ */
-        .main-title {
+        .header-rule {
+            width: 74px;
+            height: 1px;
+            margin: 5px auto;
+            background: #b5bfce;
+        }
+
+        .header-sub {
+            font-family: DejaVu Sans, Arial, sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #5f6875;
+        }
+
+        .header-temple {
+            margin-top: 8px;
+            font-size: 18.5px;
+            font-weight: 700;
+            color: #1d2736;
+        }
+
+        /* Strong title band gives the document an official identity. */
+        .title-band {
+            margin: 0 0 7mm;
+            padding: 2.5mm 0 3.5mm;
             text-align: center;
-            font-size: 18px;
+        }
+
+        .title-label {
+            font-family: DejaVu Sans, Arial, sans-serif;
+            font-size: 25px;
             font-weight: 800;
+            letter-spacing: 1.8px;
             text-transform: uppercase;
-            color: #1a52a8;
-            letter-spacing: 1.5px;
-            margin: 14px 0 16px 0;
+            color: #C90714;
         }
 
-        /* ══════════════════════════════
-           CHAMPS PRINCIPAUX
-        ══════════════════════════════ */
-        .field-line {
-            margin-bottom: 8px;
-            font-size: 11.5px;
-            line-height: 1.5;
+        /* Metadata block keeps the top information compact and aligned. */
+        .meta-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 7mm;
         }
 
-        .field-line .label {
+        .meta-table td {
+            padding: 6px 4px;
+            vertical-align: top;
+        }
+
+        .meta-label {
+            width: 155px;
+            font-family: DejaVu Sans, Arial, sans-serif;
+            font-size: 9.3px;
             font-weight: 700;
-            color: #111;
+            letter-spacing: .8px;
+            text-transform: uppercase;
+            color: #4b5563;
         }
 
-        .field-line .value {
-            color: #111;
+        .meta-value {
+            font-size: 11.3px;
+            font-weight: 600;
+            color: #1f2937;
         }
 
-        /* ══════════════════════════════
-           VERSET BIBLIQUE (encadré italique)
-        ══════════════════════════════ */
-        .verset-block {
-            margin: 14px 0 4px 24px;
+        /* Quote section introduces the notice and adds hierarchy. */
+        .verse-card {
+            margin: 0 0 7mm;
+            padding: 4.5mm 5mm 4mm 7mm;
+            border-left: 3px solid #264f9e;
+            background: #f8fafc;
+        }
+
+        .verse-text {
             font-style: italic;
-            font-size: 11.5px;
-            color: #222;
-            line-height: 1.6;
+            color: #374151;
         }
 
-        .verset-ref {
+        .verse-ref {
+            margin-top: 5px;
             text-align: right;
-            font-size: 11px;
-            color: #333;
-            margin-bottom: 14px;
-        }
-
-        /* ══════════════════════════════
-           ANNONCE FAMILLE
-        ══════════════════════════════ */
-        .famille-annonce {
-            font-size: 11.5px;
-            margin-bottom: 10px;
-            line-height: 1.6;
-        }
-
-        .famille-annonce .nom-famille {
-            font-weight: 800;
-            text-transform: uppercase;
-        }
-
-        /* ══════════════════════════════
-           BLOC MESSAGE
-        ══════════════════════════════ */
-        .message-bold {
+            font-family: DejaVu Sans, Arial, sans-serif;
+            font-size: 9.3px;
             font-weight: 700;
-            font-size: 11.5px;
-            margin-bottom: 4px;
-            line-height: 1.5;
+            color: #6b7280;
         }
 
-        .message-ref {
+        /* Main notice block mirrors an official church circular. */
+        .notice-block {
+            margin-bottom: 6mm;
+            padding: 0;
+            background: #ffffff;
+        }
+
+        .notice-paragraph {
+            margin: 0 0 4.2mm;
+            text-align: justify;
+        }
+
+        .notice-paragraph:last-child {
+            margin-bottom: 0;
+        }
+
+        .family-name,
+        .deceased-name {
+            font-weight: 700;
+        }
+
+        .support-block {
+            margin-bottom: 6mm;
+            padding: 1mm 0 0;
+        }
+
+        .support-line {
+            margin: 0 0 3mm;
+            font-weight: 700;
+        }
+
+        .support-ref {
             text-align: right;
-            font-size: 11px;
-            color: #333;
-            margin-bottom: 16px;
+            font-family: DejaVu Sans, Arial, sans-serif;
+            font-size: 9.3px;
+            font-weight: 700;
+            color: #6b7280;
         }
 
-        /* ══════════════════════════════
-           SÉPARATEUR
-        ══════════════════════════════ */
-        .divider {
-            border: none;
-            border-top: 1px solid #cccccc;
-            margin: 10px 0;
-        }
-
-        /* ══════════════════════════════
-           WRAPPER CONTENU CENTRÉ
-        ══════════════════════════════ */
-        .content-wrapper {
-            width: 88%;
-            margin: 0 auto;
-        }
-
-        /* ══════════════════════════════
-           SIGNATURES
-        ══════════════════════════════ */
+        /* Signatures are table-based for robust PDF placement and consistent alignment. */
         .signature-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 28px;
+            margin-top: 18mm;
         }
 
         .signature-table td {
             width: 33.33%;
+            padding: 0 10px;
             text-align: center;
             vertical-align: top;
-            padding: 0 4px;
         }
 
-        .sig-stack {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .sig-label {
-            font-size: 11px;
+        .signature-role {
+            font-family: DejaVu Sans, Arial, sans-serif;
+            font-size: 9.6px;
             font-weight: 700;
-            text-decoration: underline;
-            color: #111;
-            margin-bottom: 18px;
-            display: block;
-        }
-
-        .sig-space {
-            height: 54px;
-            width: 100%;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            margin-bottom: 8px;
-            overflow: hidden;
-        }
-
-        .sig-name {
-            font-size: 11px;
-            font-weight: 700;
-            color: #111;
             text-transform: uppercase;
-            min-height: 14px;
+            letter-spacing: .8px;
+            color: #374151;
         }
 
-        .sig-image {
+        .signature-rule {
+            width: 120px;
+            height: 1px;
+            margin: 9px auto 16px;
+            background: transparent;
+        }
+
+        .signature-box {
+            height: 64px;
+            text-align: center;
+        }
+
+        .signature-image {
             display: block;
-            max-height: 44px;
             max-width: 120px;
+            max-height: 46px;
+            margin: 0 auto;
             object-fit: contain;
         }
 
-        .sig-missing {
+        .signature-name {
+            margin-top: 12px;
+            font-family: DejaVu Sans, Arial, sans-serif;
             font-size: 10px;
-            color: #ef4444;
-            font-style: italic;
-            display: block;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #1f2937;
         }
 
-        /* ══════════════════════════════
-           PIED DE PAGE
-        ══════════════════════════════ */
+        .signature-missing {
+            margin-top: 18px;
+            font-family: DejaVu Sans, Arial, sans-serif;
+            font-size: 8.9px;
+            font-style: italic;
+            color: #8b95a5;
+        }
+
         .footer {
-            position: fixed;
-            bottom: -14mm;
-            left: 0;
-            right: 0;
+            margin-top: 10mm;
+            padding-top: 3mm;
+            border-top: 1px solid #dce2eb;
             text-align: center;
-            font-size: 8px;
-            color: #aaaaaa;
-            border-top: 1px solid #e5e7eb;
-            padding-top: 3px;
+            font-family: DejaVu Sans, Arial, sans-serif;
+            font-size: 8.6px;
+            color: #7b8697;
         }
     </style>
 </head>
 
 <body>
-
-    {{-- ═══ EN-TÊTE ═══ --}}
-    <table class="header-table">
-        <tr>
-            {{-- Logo gauche (Temple Jubilé) --}}
-            <td class="logo-cell">
-                @if($logoSrc)
-                <img src="{{ $logoSrc }}" alt="Logo Temple">
-                @elseif($methoLogoSrc)
-                <img src="{{ $methoLogoSrc }}" alt="Logo Méthodiste">
-                @endif
-            </td>
-
-            {{-- Texte centré --}}
-            <td class="church-center">
-                <div class="line1">Eglise Méthodiste de Côte d'Ivoire</div>
-                <div class="line2">District Abidjan Nord</div>
-                <div class="line3">Temple du JUBILE de Cocody</div>
-            </td>
-
-            {{-- Logo droit (Méthodiste) --}}
-            <td class="logo-cell-right">
-                @if($methoLogoSrc)
-                <img src="{{ $methoLogoSrc }}" alt="Logo Méthodiste">
-                @elseif(!empty($logoDataUriNational))
-                <img src="{{ $logoDataUriNational }}" alt="Logo EMUCI">
-                @elseif($logoSrc)
-                <img src="{{ $logoSrc }}" alt="Logo EMUCI">
-                @endif
-            </td>
-        </tr>
-    </table>
-
-    <div class="content-wrapper">
-
-        {{-- ═══ TITRE ═══ --}}
-        <div class="main-title">Avis de Décès</div>
-
-        {{-- ═══ CLASSE & DATE CULTE ═══ --}}
-        <div class="field-line">
-            <span class="label">Classe Méthodiste :</span>
-            <span class="value"> {{ $classe }}</span>
-        </div>
-
-        <div class="field-line">
-            <span class="label">Pour le culte du :</span>
-            <span class="value"> {{ $dateAnnonce }}</span>
-            @if($dateAnnonceFull !== '—')
-            <span class="value"> {{ $lieuAnnonce }}</span>
-            @endif
-        </div>
-
-        {{-- ═══ VERSET D'OUVERTURE ═══ --}}
-        <div class="verset-block">
-            « Bien-aimés du Seigneur, nous vous faisons part du rappel à Dieu de notre frère / sœur.<br>
-            Que son âme repose en paix dans la lumière éternelle de Dieu. »
-        </div>
-        <div class="verset-ref">Jean 11 : 25</div>
-
-        {{-- ═══ ANNONCE FAMILLE ═══ --}}
-        <div class="famille-annonce">
-            La famille : <span class="nom-famille">{{ mb_strtoupper($famille, 'UTF-8') }}</span>
-            a la douleur de vous annoncer le rappel à Dieu de son proche et sollicite vos prières.
-        </div>
-
-        {{-- ═══ MESSAGE / MOTIF ═══ --}}
-        <div class="message-bold">
-            {!! nl2br(e($motif)) !!}
-        </div>
-        <div class="message-ref">Cf. 1 Thessaloniciens 4 : 13-14</div>
-
-        {{-- ═══ DÉTAILS ═══ --}}
-        <div class="field-line">
-            <span class="label">Nom et prénoms du défunt :</span>
-            <span class="value"> {{ $nomDefunt }}</span>
-        </div>
-
-        <div class="field-line">
-            <span class="label">Date du décès :</span>
-            <span class="value"> {{ $dateDeces }}</span>
-        </div>
-
-        <div class="field-line">
-            <span class="label">Lieu du décès :</span>
-            <span class="value"> {{ $lieuDeces }}</span>
-        </div>
-
-        <div class="field-line">
-            <span class="label">Demandeur / Responsable :</span>
-            <span class="value"> {{ $nomDemandeur }}</span>
-        </div>
-
-        <div class="field-line">
-            <span class="label">Référence :</span>
-            <span class="value"> {{ $reference }} — émis le {{ $dateEmission }}</span>
-        </div>
-
-        {{-- ═══ SIGNATURES ═══ --}}
-        <table class="signature-table">
+    <div class="page">
+        <!-- Official church header: logo / institution / logo -->
+        <table class="header-table">
             <tr>
-                <td>
-                    <div class="sig-stack">
-                        <span class="sig-label">Conducteur de la Classe</span>
-                        <div class="sig-space">
-                            @if($conducteurSignatureDataUri)
-                            <img src="{{ $conducteurSignatureDataUri }}" alt="Signature Conducteur" class="sig-image">
-                            @endif
-                        </div>
-                        @if($nomConducteur)
-                        <span class="sig-name">{{ $nomConducteur }}</span>
-                        @else
-                        <span class="sig-missing">Non renseigne</span>
-                        @endif
-                    </div>
+                <td class="logo-col left">
+                    @if($logoMethoSrc)
+                    <img src="{{ $logoMethoSrc }}" alt="Logo Methodiste" class="logo">
+                    @endif
                 </td>
-                <td>
-                    <div class="sig-stack">
-                        <span class="sig-label">Bureau des Conducteurs</span>
-                        <div class="sig-space"></div>
-                        <span class="sig-name">&nbsp;</span>
-                    </div>
+                <td class="header-center">
+                    <div class="header-kicker">Eglise Methodiste de Cote d'Ivoire</div>
+                    <div class="header-rule"></div>
+                   
+                    <div class="header-temple">Temple du JUBILE de Cocody</div>
                 </td>
-                <td>
-                    <div class="sig-stack">
-                        <span class="sig-label">Pasteur</span>
-                        <div class="sig-space">
-                            @if($pasteurSignatureDataUri)
-                            <img src="{{ $pasteurSignatureDataUri }}" alt="Signature Pasteur" class="sig-image">
-                            @endif
-                        </div>
-                        @if($nomPasteur)
-                        <span class="sig-name">{{ $nomPasteur }}</span>
-                        @else
-                        <span class="sig-missing">Non renseigne</span>
-                        @endif
-                    </div>
+                <td class="logo-col right">
+                    @if($logoTempleSrc)
+                    <img src="{{ $logoTempleSrc }}" alt="Logo Temple" class="logo">
+                    @endif
                 </td>
             </tr>
         </table>
 
-    </div>{{-- fin .content-wrapper --}}
+        <!-- Main title band -->
+        <div class="title-band">
+            <div class="title-label">Avis de Deces</div>
+        </div>
 
-    {{-- ═══ PIED DE PAGE ═══ --}}
-    <div class="footer">
-        EMUCI – Temple du Jubilé de Cocody &nbsp;|&nbsp;
-        Généré par GesParoisse &nbsp;|&nbsp;
-        Réf. {{ $reference }}
+        <!-- Compact metadata keeps the first reading level clean -->
+        <table class="meta-table">
+            <tr>
+                <td class="meta-label">Classe Methodiste</td>
+                <td class="meta-value">{{ $classe }}</td>
+            </tr>
+            <tr>
+                <td class="meta-label">Pour le culte du</td>
+                <td class="meta-value">{{ $culteDisplay }}</td>
+            </tr>
+        </table>
+
+        <!-- Opening verse -->
+        <div class="verse-card">
+            <div class="verse-text">
+                &laquo; Bien-aim&eacute;s du Seigneur, nous vous faisons part du rappel &agrave; Dieu de notre fr&egrave;re / soeur.<br>
+                Que son &acirc;me repose en paix dans la lumi&egrave;re &eacute;ternelle de Dieu. &raquo;
+            </div>
+            <div class="verse-ref">Jean 11 : 25</div>
+        </div>
+
+        <!-- Main notice body -->
+        <div class="notice-block">
+            <p class="notice-paragraph">
+                C'est avec une profonde tristesse que la famille
+                <span class="family-name">{{ mb_strtoupper($famille, 'UTF-8') }}</span>
+                annonce &agrave; l'ensemble de la communaut&eacute; chr&eacute;tienne le rappel &agrave; Dieu de leur bien-aim&eacute;
+                <span class="deceased-name">{{ $nomDefunt }}</span>,
+                d&eacute;c&eacute;d&eacute;(e) le <strong>{{ $dateDeces }}</strong> &agrave; <strong>{{ $lieuDeces }}</strong>.
+            </p>
+            <p class="notice-paragraph">
+                La famille, dans cette douloureuse &eacute;preuve, sollicite vos pri&egrave;res et votre soutien spirituel.
+            </p>
+            <p class="notice-paragraph">
+                Les informations relatives aux c&eacute;r&eacute;monies fun&egrave;bres vous seront communiqu&eacute;es ult&eacute;rieurement.
+            </p>
+        </div>
+
+        <!-- Supporting faith statement -->
+        <div class="support-block">
+            <div class="support-line">
+                En cette circonstance douloureuse, la famille demeure dans l'esp&eacute;rance chr&eacute;tienne et confie le d&eacute;funt &agrave; la mis&eacute;ricorde du Seigneur.
+            </div>
+            <!-- <div class="support-ref">Cf. 1 Thessaloniciens 4 : 13-14</div> -->
+        </div>
+
+        <!-- Signature area -->
+        <table class="signature-table">
+            <tr>
+                <td>
+                    <div class="signature-role">Conducteur de la Classe</div>
+                    <div class="signature-rule"></div>
+                    <div class="signature-box">
+                        @if($conducteurSignatureDataUri)
+                        <img src="{{ $conducteurSignatureDataUri }}" alt="Signature conducteur" class="signature-image">
+                        @endif
+                    </div>
+                    @if($nomConducteur)
+                    <div class="signature-name">{{ $nomConducteur }}</div>
+                    @else
+                    <div class="signature-missing">Non renseigne</div>
+                    @endif
+                </td>
+                <td>
+                    <div class="signature-role">Bureau des Conducteurs</div>
+                    <div class="signature-rule"></div>
+                    <div class="signature-box"></div>
+                    <div class="signature-name">&nbsp;</div>
+                </td>
+                <td>
+                    <div class="signature-role">Pasteur</div>
+                    <div class="signature-rule"></div>
+                    <div class="signature-box">
+                        @if($pasteurSignatureDataUri)
+                        <img src="{{ $pasteurSignatureDataUri }}" alt="Signature pasteur" class="signature-image">
+                        @endif
+                    </div>
+                    @if($nomPasteur)
+                    <div class="signature-name">{{ $nomPasteur }}</div>
+                    @else
+                    <div class="signature-missing">Non renseigne</div>
+                    @endif
+                </td>
+            </tr>
+        </table>
+
+        <!-- Footer for traceability -->
+        <div class="footer">
+            EMUCI - Temple du JUBILE de Cocody | Avis de deces | Ref. {{ $reference }} | Emis le {{ $dateEmission }}
+        </div>
     </div>
-
 </body>
 
 </html>
