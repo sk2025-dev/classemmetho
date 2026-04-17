@@ -28,20 +28,33 @@ class ProgrammesClasseController extends Controller
             return redirect()->back()->with('error', 'Aucune classe associée à votre compte.');
         }
         
+        // MODIFIÉ: utilisation de start_date et start_time
         $evenementsActuels = SpecialEvent::where('is_parish', false)
             ->where('class_id', $classe->id)
-            ->where('date', '>=', now()->startOfDay())
-            ->orderBy('date', 'asc')
-            ->orderBy('time', 'asc')
-            ->get();
+            ->where('start_date', '>=', now()->startOfDay())
+            ->orderBy('start_date', 'asc')
+            ->orderBy('start_time', 'asc')
+            ->get()
+            ->map(function($event) {
+                // Ajouter les champs compatibles pour le frontend
+                $event->date = $event->start_date;
+                $event->time = $event->start_time;
+                return $event;
+            });
 
+        // MODIFIÉ: utilisation de start_date et start_time - SUPPRESSION DU limit(10)
         $evenementsHistorique = SpecialEvent::where('is_parish', false)
             ->where('class_id', $classe->id)
-            ->where('date', '<', now()->startOfDay())
-            ->orderBy('date', 'desc')
-            ->orderBy('time', 'desc')
-            ->limit(10)
-            ->get();
+            ->where('start_date', '<', now()->startOfDay())
+            ->orderBy('start_date', 'desc')
+            ->orderBy('start_time', 'desc')
+            ->get()
+            ->map(function($event) {
+                // Ajouter les champs compatibles pour le frontend
+                $event->date = $event->start_date;
+                $event->time = $event->start_time;
+                return $event;
+            });
         
         $galleryMedia = Media::where('class_id', $classe->id)
             ->with('specialEvent')
@@ -68,12 +81,18 @@ class ProgrammesClasseController extends Controller
             return redirect()->back()->with('error', 'Aucune classe associée à votre compte.');
         }
         
+        // MODIFIÉ: utilisation de start_date
         $allProgrammes = SpecialEvent::where('is_parish', false)
             ->where('class_id', $classe->id)
-            ->whereYear('date', now()->year)
-            ->orderBy('date', 'asc')
-            ->orderBy('time', 'asc')
-            ->get();
+            ->whereYear('start_date', now()->year)
+            ->orderBy('start_date', 'asc')
+            ->orderBy('start_time', 'asc')
+            ->get()
+            ->map(function($event) {
+                $event->date = $event->start_date;
+                $event->time = $event->start_time;
+                return $event;
+            });
         
         return Inertia::render('Conducteur/AllProgrammes', [
             'allProgrammes' => $allProgrammes,
@@ -93,13 +112,19 @@ class ProgrammesClasseController extends Controller
             return redirect()->back()->with('error', 'Aucune classe associée à votre compte.');
         }
         
+        // MODIFIÉ: utilisation de start_date
         $historyProgrammes = SpecialEvent::where('is_parish', false)
             ->where('class_id', $classe->id)
-            ->where('date', '<', now()->startOfDay())
-            ->whereYear('date', now()->year)
-            ->orderBy('date', 'desc')
-            ->orderBy('time', 'desc')
-            ->get();
+            ->where('start_date', '<', now()->startOfDay())
+            ->whereYear('start_date', now()->year)
+            ->orderBy('start_date', 'desc')
+            ->orderBy('start_time', 'desc')
+            ->get()
+            ->map(function($event) {
+                $event->date = $event->start_date;
+                $event->time = $event->start_time;
+                return $event;
+            });
         
         $galleryMedia = Media::where('class_id', $classe->id)
             ->with('specialEvent')
@@ -114,7 +139,181 @@ class ProgrammesClasseController extends Controller
     }
     
     /**
-     * Créer un événement (un seul)
+     * Récupérer l'historique des programmes avec filtres (API)
+     */
+    public function getHistoryProgrammes(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            $classe = $user->classe;
+            
+            if (!$classe) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Aucune classe associée'
+                ], 403);
+            }
+            
+            $query = SpecialEvent::where('is_parish', false)
+                ->where('class_id', $classe->id)
+                ->where('start_date', '<', now()->startOfDay());
+            
+            // Filtre par recherche (titre, orateur, moderateur, lieu, famille_reception)
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhere('orateur', 'like', "%{$search}%")
+                      ->orWhere('moderateur', 'like', "%{$search}%")
+                      ->orWhere('lieu', 'like', "%{$search}%")
+                      ->orWhere('famille_reception', 'like', "%{$search}%");
+                });
+            }
+            
+            // Filtre par année
+            if ($request->filled('year') && $request->year !== 'all') {
+                $query->whereYear('start_date', $request->year);
+            }
+            
+            // Filtre par mois
+            if ($request->filled('month') && $request->month !== 'all') {
+                $query->whereMonth('start_date', $request->month);
+            }
+            
+            // Tri (desc = plus récentes d'abord, asc = plus anciennes d'abord)
+            $sortOrder = $request->get('sort_order', 'desc');
+            $query->orderBy('start_date', $sortOrder)
+                  ->orderBy('start_time', $sortOrder);
+            
+            // Pagination
+            $perPage = $request->get('per_page', 6);
+            $historyProgrammes = $query->paginate($perPage);
+            
+            // Ajouter les champs compatibles pour le frontend
+            $historyProgrammes->getCollection()->transform(function($event) {
+                $event->date = $event->start_date;
+                $event->time = $event->start_time;
+                return $event;
+            });
+            
+            return response()->json([
+                'success' => true,
+                'data' => $historyProgrammes->items(),
+                'pagination' => [
+                    'current_page' => $historyProgrammes->currentPage(),
+                    'last_page' => $historyProgrammes->lastPage(),
+                    'per_page' => $historyProgrammes->perPage(),
+                    'total' => $historyProgrammes->total(),
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Erreur récupération historique filtré', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Récupérer les médias de la galerie avec filtres (API)
+     */
+    public function getGalleryMediaFiltered(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            $classe = $user->classe;
+            
+            if (!$classe) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Aucune classe associée'
+                ], 403);
+            }
+            
+            $query = Media::where('class_id', $classe->id)
+                ->with('specialEvent');
+            
+            // Filtre par recherche (titre ou description)
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%");
+                });
+            }
+            
+            // Filtre par mois
+            if ($request->filled('month')) {
+                $monthNum = $this->getMonthNumber($request->month);
+                if ($monthNum) {
+                    $query->whereMonth('date', $monthNum);
+                }
+            }
+            
+            // Filtre par année
+            if ($request->filled('year')) {
+                $query->whereYear('date', $request->year);
+            }
+            
+            // Filtre par type (photo/video)
+            if ($request->filled('type') && $request->type !== 'all') {
+                $query->where('type', $request->type);
+            }
+            
+            // Tri par date
+            $sortOrder = $request->get('sort_order', 'desc');
+            $query->orderBy('date', $sortOrder);
+            
+            // Pagination
+            $perPage = $request->get('per_page', 12);
+            $medias = $query->paginate($perPage);
+            
+            return response()->json([
+                'success' => true,
+                'data' => $medias->items(),
+                'pagination' => [
+                    'current_page' => $medias->currentPage(),
+                    'last_page' => $medias->lastPage(),
+                    'per_page' => $medias->perPage(),
+                    'total' => $medias->total(),
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Erreur récupération galerie filtrée', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Convertir le nom du mois en numéro
+     */
+    private function getMonthNumber($monthName)
+    {
+        $months = [
+            'Janvier' => 1, 'Février' => 2, 'Mars' => 3, 'Avril' => 4,
+            'Mai' => 5, 'Juin' => 6, 'Juillet' => 7, 'Août' => 8,
+            'Septembre' => 9, 'Octobre' => 10, 'Novembre' => 11, 'Décembre' => 12
+        ];
+        
+        return $months[$monthName] ?? null;
+    }
+    
+    /**
+     * Créer un événement (un seul) - AVEC RESTRICTION D'ANNÉE
      */
     public function storeEvent(Request $request)
     {
@@ -131,18 +330,33 @@ class ProgrammesClasseController extends Controller
             
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
-                'date' => 'required|date',
-                'time' => 'nullable|date_format:H:i',
+                'start_date' => 'required|date',
+                'end_date' => 'nullable|date|after_or_equal:start_date',
+                'start_time' => 'nullable|date_format:H:i',
+                'end_time' => 'nullable|date_format:H:i',
                 'orateur' => 'nullable|string|max:255',
                 'moderateur' => 'nullable|string|max:255',
                 'famille_reception' => 'nullable|string|max:255',
                 'lieu' => 'nullable|string|max:500',
             ]);
             
+            $currentYear = now()->year;
+            $activityYear = date('Y', strtotime($validated['start_date']));
+            
+            // Vérification de l'année
+            if ($activityYear < $currentYear) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Vérifiez l'année de l'activité que vous essayez de créer. L'année {$activityYear} est antérieure à l'année en cours ({$currentYear})."
+                ], 422);
+            }
+            
             $event = SpecialEvent::create([
                 'title' => $validated['title'],
-                'date' => $validated['date'],
-                'time' => $validated['time'] ?? null,
+                'start_date' => $validated['start_date'],
+                'end_date' => $validated['end_date'] ?? null,
+                'start_time' => $validated['start_time'] ?? null,
+                'end_time' => $validated['end_time'] ?? null,
                 'orateur' => $validated['orateur'] ?? null,
                 'moderateur' => $validated['moderateur'] ?? null,
                 'famille_reception' => $validated['famille_reception'] ?? null,
@@ -152,6 +366,11 @@ class ProgrammesClasseController extends Controller
                 'is_parish' => false,
             ]);
             
+            // Ajouter les champs compatibles pour le frontend
+            $eventArray = $event->toArray();
+            $eventArray['date'] = $event->start_date;
+            $eventArray['time'] = $event->start_time;
+            
             Log::info('Événement créé avec succès', [
                 'event_id' => $event->id,
                 'user_id' => $user->id
@@ -160,7 +379,7 @@ class ProgrammesClasseController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Événement créé avec succès',
-                'event' => $event
+                'event' => $eventArray
             ]);
             
         } catch (ValidationException $e) {
@@ -182,8 +401,7 @@ class ProgrammesClasseController extends Controller
     }
     
     /**
-     * Créer plusieurs événements en une seule requête
-     * Accepte désormais les dates passées pour l'historique
+     * Créer plusieurs événements en une seule requête - AVEC RESTRICTION D'ANNÉE
      */
     public function storeMultipleEvents(Request $request)
     {
@@ -201,8 +419,10 @@ class ProgrammesClasseController extends Controller
             $validated = $request->validate([
                 'activities' => 'required|array|min:1',
                 'activities.*.title' => 'required|string|max:255',
-                'activities.*.date' => 'required|date',
-                'activities.*.time' => 'nullable|date_format:H:i',
+                'activities.*.start_date' => 'required|date',
+                'activities.*.end_date' => 'nullable|date|after_or_equal:activities.*.start_date',
+                'activities.*.start_time' => 'nullable|date_format:H:i',
+                'activities.*.end_time' => 'nullable|date_format:H:i',
                 'activities.*.orateur' => 'nullable|string|max:255',
                 'activities.*.moderateur' => 'nullable|string|max:255',
                 'activities.*.famille_reception' => 'nullable|string|max:255',
@@ -210,28 +430,78 @@ class ProgrammesClasseController extends Controller
             ]);
             
             $activities = $validated['activities'];
+            $currentYear = now()->year;
+            
+            // Vérification des années des activités
+            $invalidYearActivities = [];
+            $validActivities = [];
+            
+            foreach ($activities as $index => $activity) {
+                $activityYear = date('Y', strtotime($activity['start_date']));
+                
+                if ($activityYear < $currentYear) {
+                    $invalidYearActivities[] = [
+                        'index' => $index + 1,
+                        'title' => $activity['title'],
+                        'year' => $activityYear
+                    ];
+                } else {
+                    $validActivities[] = $activity;
+                }
+            }
+            
+            // Si des activités ont une année invalide, retourner une erreur
+            if (count($invalidYearActivities) > 0) {
+                $errorMessage = "Vérifiez l'année de l'activité que vous essayez de créer. ";
+                $errorMessage .= "Les activités suivantes ont une année antérieure à {$currentYear} : ";
+                
+                $activityNames = array_map(function($item) {
+                    return "{$item['title']} ({$item['year']})";
+                }, $invalidYearActivities);
+                
+                $errorMessage .= implode(', ', $activityNames);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage,
+                    'invalid_activities' => $invalidYearActivities,
+                    'current_year' => $currentYear
+                ], 422);
+            }
+            
+            // Si aucune activité valide, retourner une erreur
+            if (count($validActivities) === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Aucune activité valide. Toutes les activités ont une année antérieure à {$currentYear}."
+                ], 422);
+            }
+            
+            $createdEvents = [];
             $createdCount = 0;
             $errors = [];
             $pastDates = [];
             
             Log::info('Début création multiple', [
                 'user_id' => $user->id,
-                'total' => count($activities)
+                'total' => count($validActivities)
             ]);
             
             DB::beginTransaction();
             
             try {
-                foreach ($activities as $index => $activity) {
-                    // Vérifier si la date est dans le passé (juste pour information, pas pour bloquer)
-                    $eventDateTime = $activity['date'] . ' ' . ($activity['time'] ?? '00:00');
+                foreach ($validActivities as $index => $activity) {
+                    // Vérifier si la date est dans le passé (mais même année ou future)
+                    $eventDateTime = $activity['start_date'] . ' ' . ($activity['start_time'] ?? '00:00');
                     $isPast = $eventDateTime < now()->format('Y-m-d H:i');
                     
-                    // Créer l'événement même si la date est passée (pour l'historique)
+                    // Créer l'événement
                     $event = SpecialEvent::create([
                         'title' => $activity['title'],
-                        'date' => $activity['date'],
-                        'time' => $activity['time'] ?? null,
+                        'start_date' => $activity['start_date'],
+                        'end_date' => $activity['end_date'] ?? null,
+                        'start_time' => $activity['start_time'] ?? null,
+                        'end_time' => $activity['end_time'] ?? null,
                         'orateur' => $activity['orateur'] ?? null,
                         'moderateur' => $activity['moderateur'] ?? null,
                         'famille_reception' => $activity['famille_reception'] ?? null,
@@ -241,10 +511,15 @@ class ProgrammesClasseController extends Controller
                         'is_parish' => false,
                     ]);
                     
+                    // Ajouter les champs compatibles pour le frontend
+                    $eventArray = $event->toArray();
+                    $eventArray['date'] = $event->start_date;
+                    $eventArray['time'] = $event->start_time;
+                    $createdEvents[] = $eventArray;
                     $createdCount++;
                     
                     if ($isPast) {
-                        $pastDates[] = "Activité " . ($index + 1) . " (" . $activity['title'] . "): Date dans le passé (" . $activity['date'] . ")";
+                        $pastDates[] = "Activité " . ($index + 1) . " (" . $activity['title'] . "): Date dans le passé (" . $activity['start_date'] . ")";
                     }
                 }
                 
@@ -252,13 +527,14 @@ class ProgrammesClasseController extends Controller
                 
                 $message = "{$createdCount} événement(s) créé(s) avec succès.";
                 if (count($pastDates) > 0) {
-                    $message .= " Attention: " . count($pastDates) . " événement(s) ont des dates passées.";
+                    $message .= " Attention: " . count($pastDates) . " événement(s) ont des dates passées mais dans l'année en cours.";
                 }
                 
                 return response()->json([
                     'success' => true,
                     'created_count' => $createdCount,
                     'message' => $message,
+                    'events' => $createdEvents,
                     'past_dates' => $pastDates,
                     'errors' => $errors
                 ]);
@@ -287,7 +563,7 @@ class ProgrammesClasseController extends Controller
     }
     
     /**
-     * Mettre à jour un événement
+     * Mettre à jour un événement - VERSION ULTRA COMPATIBLE
      */
     public function updateEvent(Request $request, $id)
     {
@@ -320,34 +596,109 @@ class ProgrammesClasseController extends Controller
                 ], 403);
             }
             
-            $validated = $request->validate([
-                'title' => 'required|string|max:255',
-                'date' => 'required|date',
-                'time' => 'nullable|date_format:H:i',
-                'orateur' => 'nullable|string|max:255',
-                'moderateur' => 'nullable|string|max:255',
-                'famille_reception' => 'nullable|string|max:255',
-                'lieu' => 'nullable|string|max:500',
-            ]);
+            // Récupérer TOUTES les données
+            $data = $request->all();
             
-            $event->update($validated);
+            // Log détaillé
+            Log::info('UPDATE EVENT - RAW DATA:', $data);
+            
+            // Construction des données de mise à jour en acceptant TOUS les formats
+            $updateData = [];
+            
+            // Titre
+            if (isset($data['title'])) {
+                $updateData['title'] = $data['title'];
+            }
+            
+            // Date de début - accepte 'start_date' ou 'date'
+            if (isset($data['start_date'])) {
+                $updateData['start_date'] = $data['start_date'];
+            } elseif (isset($data['date'])) {
+                $updateData['start_date'] = $data['date'];
+            }
+            
+            // Date de fin
+            if (isset($data['end_date'])) {
+                $updateData['end_date'] = $data['end_date'];
+            }
+            
+            // Heure de début - accepte 'start_time' ou 'time'
+            if (isset($data['start_time'])) {
+                $updateData['start_time'] = $data['start_time'];
+            } elseif (isset($data['time'])) {
+                $updateData['start_time'] = $data['time'];
+            }
+            
+            // Heure de fin
+            if (isset($data['end_time'])) {
+                $updateData['end_time'] = $data['end_time'];
+            }
+            
+            // Autres champs
+            $otherFields = ['orateur', 'moderateur', 'famille_reception', 'lieu'];
+            foreach ($otherFields as $field) {
+                if (isset($data[$field])) {
+                    $updateData[$field] = $data[$field];
+                }
+            }
+            
+            // Validation basique
+            if (empty($updateData['title'])) {
+                Log::warning('UPDATE EVENT - Titre manquant');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Le titre est requis'
+                ], 422);
+            }
+            
+            if (empty($updateData['start_date'])) {
+                Log::warning('UPDATE EVENT - Date de début manquante');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La date de début est requise'
+                ], 422);
+            }
+            
+            // Vérification date de fin
+            if (!empty($updateData['end_date']) && $updateData['end_date'] < $updateData['start_date']) {
+                Log::warning('UPDATE EVENT - Date de fin antérieure', [
+                    'start_date' => $updateData['start_date'],
+                    'end_date' => $updateData['end_date']
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La date de fin ne peut pas être antérieure à la date de début'
+                ], 422);
+            }
+            
+            Log::info('UPDATE EVENT - UPDATE DATA:', $updateData);
+            
+            // Mise à jour
+            $event->update($updateData);
+            $event->refresh();
+            
+            // Format de retour
+            $eventArray = $event->toArray();
+            $eventArray['date'] = $event->start_date;
+            $eventArray['time'] = $event->start_time;
+            
+            Log::info('Événement modifié avec succès', [
+                'event_id' => $event->id,
+                'user_id' => $user->id
+            ]);
             
             return response()->json([
                 'success' => true,
                 'message' => 'Événement modifié avec succès',
-                'event' => $event
+                'event' => $eventArray
             ]);
             
-        } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur de validation',
-                'errors' => $e->errors()
-            ], 422);
         } catch (\Exception $e) {
             Log::error('Erreur modification', [
                 'error' => $e->getMessage(),
-                'event_id' => $id
+                'trace' => $e->getTraceAsString(),
+                'event_id' => $id,
+                'request_data' => $request->all()
             ]);
             
             return response()->json([
@@ -358,8 +709,7 @@ class ProgrammesClasseController extends Controller
     }
     
     /**
-     * Importer plusieurs événements
-     * Accepte désormais les dates passées pour l'historique
+     * Importer plusieurs événements - AVEC RESTRICTION D'ANNÉE
      */
     public function importEvents(Request $request)
     {
@@ -377,8 +727,10 @@ class ProgrammesClasseController extends Controller
             $validated = $request->validate([
                 'events' => 'required|array',
                 'events.*.title' => 'required|string|max:255',
-                'events.*.date' => 'required|date',
-                'events.*.time' => 'nullable|date_format:H:i',
+                'events.*.start_date' => 'required|date',
+                'events.*.end_date' => 'nullable|date',
+                'events.*.start_time' => 'nullable|date_format:H:i',
+                'events.*.end_time' => 'nullable|date_format:H:i',
                 'events.*.orateur' => 'nullable|string|max:255',
                 'events.*.moderateur' => 'nullable|string|max:255',
                 'events.*.famille_reception' => 'nullable|string|max:255',
@@ -386,6 +738,54 @@ class ProgrammesClasseController extends Controller
             ]);
             
             $events = $validated['events'];
+            $currentYear = now()->year;
+            
+            // Vérification des années des événements
+            $invalidYearEvents = [];
+            $validEvents = [];
+            
+            foreach ($events as $index => $eventData) {
+                $eventYear = date('Y', strtotime($eventData['start_date']));
+                
+                if ($eventYear < $currentYear) {
+                    $invalidYearEvents[] = [
+                        'line' => $index + 2,
+                        'title' => $eventData['title'],
+                        'year' => $eventYear
+                    ];
+                } else {
+                    $validEvents[] = $eventData;
+                }
+            }
+            
+            // Si des événements ont une année invalide, retourner une erreur
+            if (count($invalidYearEvents) > 0) {
+                $errorMessage = "Vérifiez l'année des activités que vous essayez d'importer. ";
+                $errorMessage .= "Les activités suivantes ont une année antérieure à {$currentYear} : ";
+                
+                $eventNames = array_map(function($item) {
+                    return "Ligne {$item['line']}: {$item['title']} ({$item['year']})";
+                }, $invalidYearEvents);
+                
+                $errorMessage .= implode(', ', $eventNames);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage,
+                    'invalid_events' => $invalidYearEvents,
+                    'current_year' => $currentYear
+                ], 422);
+            }
+            
+            // Si aucun événement valide, retourner une erreur
+            if (count($validEvents) === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Aucune activité valide. Toutes les activités ont une année antérieure à {$currentYear}."
+                ], 422);
+            }
+            
+            $importedEvents = [];
             $importedCount = 0;
             $errors = [];
             $pastDates = [];
@@ -393,16 +793,18 @@ class ProgrammesClasseController extends Controller
             DB::beginTransaction();
             
             try {
-                foreach ($events as $index => $eventData) {
-                    // Vérifier si la date est dans le passé (juste pour information)
-                    $eventDateTime = $eventData['date'] . ' ' . ($eventData['time'] ?? '00:00');
+                foreach ($validEvents as $index => $eventData) {
+                    // Vérifier si la date est dans le passé (mais même année ou future)
+                    $eventDateTime = $eventData['start_date'] . ' ' . ($eventData['start_time'] ?? '00:00');
                     $isPast = $eventDateTime < now()->format('Y-m-d H:i');
                     
-                    // Créer l'événement même si la date est passée (pour l'historique)
-                    SpecialEvent::create([
+                    // Créer l'événement
+                    $event = SpecialEvent::create([
                         'title' => $eventData['title'],
-                        'date' => $eventData['date'],
-                        'time' => $eventData['time'] ?? null,
+                        'start_date' => $eventData['start_date'],
+                        'end_date' => $eventData['end_date'] ?? null,
+                        'start_time' => $eventData['start_time'] ?? null,
+                        'end_time' => $eventData['end_time'] ?? null,
                         'orateur' => $eventData['orateur'] ?? null,
                         'moderateur' => $eventData['moderateur'] ?? null,
                         'famille_reception' => $eventData['famille_reception'] ?? null,
@@ -412,10 +814,15 @@ class ProgrammesClasseController extends Controller
                         'is_parish' => false,
                     ]);
                     
+                    // Ajouter les champs compatibles pour le frontend
+                    $eventArray = $event->toArray();
+                    $eventArray['date'] = $event->start_date;
+                    $eventArray['time'] = $event->start_time;
+                    $importedEvents[] = $eventArray;
                     $importedCount++;
                     
                     if ($isPast) {
-                        $pastDates[] = "Ligne " . ($index + 2) . ": Date dans le passé (" . $eventData['date'] . ")";
+                        $pastDates[] = "Ligne " . ($index + 2) . ": Date dans le passé (" . $eventData['start_date'] . ")";
                     }
                 }
                 
@@ -423,13 +830,14 @@ class ProgrammesClasseController extends Controller
                 
                 $message = "{$importedCount} événement(s) importé(s) avec succès.";
                 if (count($pastDates) > 0) {
-                    $message .= " Attention: " . count($pastDates) . " événement(s) ont des dates passées.";
+                    $message .= " Attention: " . count($pastDates) . " événement(s) ont des dates passées mais dans l'année en cours.";
                 }
                 
                 return response()->json([
                     'success' => true,
                     'imported_count' => $importedCount,
                     'message' => $message,
+                    'events' => $importedEvents,
                     'past_dates' => $pastDates,
                     'errors' => $errors
                 ]);
@@ -560,6 +968,7 @@ class ProgrammesClasseController extends Controller
                     'class_id' => $classe->id,
                     'special_event_id' => $validated['special_event_id'] ?? null,
                     'created_by' => $user->id,
+                    'is_featured' => false,
                 ]);
                 $uploadedMedia[] = $media;
                 
@@ -584,6 +993,7 @@ class ProgrammesClasseController extends Controller
                         'class_id' => $classe->id,
                         'special_event_id' => $validated['special_event_id'] ?? null,
                         'created_by' => $user->id,
+                        'is_featured' => false,
                     ]);
                     
                     $uploadedMedia[] = $media;
@@ -723,9 +1133,15 @@ class ProgrammesClasseController extends Controller
                 return redirect()->route('conducteur.programmes')->with('error', 'Média non trouvé.');
             }
             
+            // MODIFIÉ: utilisation de start_date
             $events = SpecialEvent::where('class_id', $classe->id)
-                ->orderBy('date', 'desc')
-                ->get();
+                ->orderBy('start_date', 'desc')
+                ->get()
+                ->map(function($event) {
+                    $event->date = $event->start_date;
+                    $event->time = $event->start_time;
+                    return $event;
+                });
             
             return Inertia::render('Conducteur/EditMedia', [
                 'media' => $media,
@@ -872,11 +1288,16 @@ class ProgrammesClasseController extends Controller
             
             $events = SpecialEvent::where('class_id', $classe->id)
                 ->where('is_parish', false)
-                ->whereYear('date', $year)
-                ->whereMonth('date', $month)
-                ->orderBy('date', 'asc')
-                ->orderBy('time', 'asc')
-                ->get();
+                ->whereYear('start_date', $year)
+                ->whereMonth('start_date', $month)
+                ->orderBy('start_date', 'asc')
+                ->orderBy('start_time', 'asc')
+                ->get()
+                ->map(function($event) {
+                    $event->date = $event->start_date;
+                    $event->time = $event->start_time;
+                    return $event;
+                });
             
             return response()->json([
                 'success' => true,
@@ -891,7 +1312,7 @@ class ProgrammesClasseController extends Controller
     }
     
     /**
-     * Récupérer tous les médias
+     * Récupérer tous les médias (version simple sans filtres)
      */
     public function getGalleryMedia()
     {

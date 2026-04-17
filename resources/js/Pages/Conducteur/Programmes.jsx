@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
 import axios from 'axios';
 
@@ -1678,6 +1678,105 @@ textarea {
     background: #4b5563;
 }
 
+/* Filtres pour l'historique */
+.history-filters {
+    background: white;
+    border-radius: 20px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border: 1px solid #eef2ff;
+}
+
+.history-filter-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+}
+
+.history-filter-item {
+    flex: 1;
+    min-width: 180px;
+}
+
+.history-filter-item label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.history-filter-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    background: #f8fafc;
+    transition: all 0.2s;
+}
+
+.history-filter-input:focus {
+    outline: none;
+    border-color: #f59e0b;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+
+.history-filter-select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    background: #f8fafc;
+    cursor: pointer;
+}
+
+.history-filter-select:focus {
+    outline: none;
+    border-color: #f59e0b;
+}
+
+.history-filter-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.btn-history-filter-reset {
+    background: #6b7280;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-history-filter-reset:hover {
+    background: #4b5563;
+    transform: translateY(-1px);
+}
+
+.history-filter-stats {
+    margin-top: 15px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+    font-size: 0.85rem;
+    color: #6b7280;
+    text-align: right;
+}
+
 /* Styles pour les actions de groupe dans la galerie */
 .group-actions {
     display: flex;
@@ -2204,6 +2303,22 @@ textarea {
         flex-direction: column;
         text-align: center;
     }
+    .history-filters {
+        padding: 15px;
+    }
+    .history-filter-group {
+        flex-direction: column;
+    }
+    .history-filter-item {
+        width: 100%;
+    }
+    .history-filter-actions {
+        width: 100%;
+    }
+    .btn-history-filter-reset {
+        flex: 1;
+        justify-content: center;
+    }
 }
 
 @media (max-width: 600px) {
@@ -2308,6 +2423,8 @@ const IconChevronRight = () => (<svg xmlns="http://www.w3.org/2000/svg" width="2
 const IconTrash2 = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>);
 const IconAlertTriangle = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>);
 const IconStar = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>);
+const IconFilter = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 13 10 21 14 18 14 13 22 3"></polygon></svg>);
+const IconRefresh = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path></svg>);
 
 // --- FONCTIONS DE FORMATAGE DE DATE ---
 const getLocalDateString = (date) => {
@@ -2390,104 +2507,59 @@ const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText
           <p className="confirm-warning">Cette action est irréversible.</p>
         </div>
         <div className="confirm-dialog-footer">
-          <button className="btn-confirm-cancel" onClick={onClose}>
-            {cancelText}
-          </button>
-          <button className="btn-confirm-delete" onClick={onConfirm}>
-            {confirmText}
-          </button>
+          <button className="btn-confirm-cancel" onClick={onClose}>{cancelText}</button>
+          <button className="btn-confirm-delete" onClick={onConfirm}>{confirmText}</button>
         </div>
       </div>
     </div>
   );
 };
 
-// --- CAROUSEL COMPONENT MODIFIÉ ---
+// --- CAROUSEL COMPONENT ---
 const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const autoPlayIntervalRef = useRef(null);
 
-  // Slides par défaut (si pas de médias)
   const defaultSlides = [
     { id: 1, image: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1200&h=500&fit=crop', title: 'Bienvenue', description: 'Gérez les activités de votre classe', date: new Date().toISOString() },
     { id: 2, image: 'https://images.unsplash.com/photo-1504052434569-70ad5836ab61?w=1200&h=500&fit=crop', title: 'Programmes', description: 'Créez et organisez vos activités', date: new Date().toISOString() },
     { id: 3, image: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&h=500&fit=crop', title: 'Galerie', description: 'Partagez vos moments forts', date: new Date().toISOString() },
   ];
 
-  // Fonction pour obtenir l'image à la une ou la première photo
   const getActivityImage = (activityId) => {
     if (!mediaImages) return null;
-    
-    // Chercher d'abord une image à la une
-    const featuredImage = mediaImages.find(media => 
-      media.special_event_id === activityId && 
-      media.type === 'photo' && 
-      media.is_featured === true
-    );
-    
+    const featuredImage = mediaImages.find(media => media.special_event_id === activityId && media.type === 'photo' && media.is_featured === true);
     if (featuredImage) return featuredImage.url;
-    
-    // Sinon, prendre la première photo
-    const firstPhoto = mediaImages.find(media => 
-      media.special_event_id === activityId && media.type === 'photo'
-    );
-    
+    const firstPhoto = mediaImages.find(media => media.special_event_id === activityId && media.type === 'photo');
     return firstPhoto ? firstPhoto.url : null;
   };
 
-  // Construire les slides à partir des photos des 4 dernières activités PASSÉES
   const slides = useMemo(() => {
-    // Vérifier si on a des activités passées
-    if (!pastEvents || pastEvents.length === 0) {
-      return defaultSlides;
-    }
-    
-    // Trier les activités passées par date (les plus récentes d'abord) et prendre les 4 dernières
-    const sortedPastEvents = [...pastEvents]
-      .sort((a, b) => new Date(b.date) - new Date(a.date))
-      .slice(0, 4);
-    
-    if (sortedPastEvents.length === 0) {
-      return defaultSlides;
-    }
-    
-    // Pour chaque activité, trouver la première photo
+    if (!pastEvents || pastEvents.length === 0) return defaultSlides;
+    const sortedPastEvents = [...pastEvents].sort((a, b) => new Date(b.start_date) - new Date(a.start_date)).slice(0, 4);
+    if (sortedPastEvents.length === 0) return defaultSlides;
     const activitySlides = [];
-    
     for (const activity of sortedPastEvents) {
       const activityImage = getActivityImage(activity.id);
-      
       if (activityImage) {
-        const hasFeaturedImage = mediaImages?.some(m => m.special_event_id === activity.id && m.type === 'photo' && m.is_featured === true) || false;
-        
         activitySlides.push({
           id: activity.id,
           image: activityImage,
           title: activity.title,
-          description: activity.lieu || activity.orateur 
-            ? `${activity.lieu || ''} ${activity.orateur ? '· ' + activity.orateur : ''}` 
-            : 'Moment de partage',
-          date: activity.date,
-          hasFeaturedImage: hasFeaturedImage
+          description: activity.lieu || activity.orateur ? `${activity.lieu || ''} ${activity.orateur ? '· ' + activity.orateur : ''}` : 'Moment de partage',
+          date: activity.start_date,
         });
       }
     }
-    
-    // Si aucune activité n'a de photo, utiliser les slides par défaut
     return activitySlides.length > 0 ? activitySlides : defaultSlides;
   }, [pastEvents, mediaImages]);
 
-  const startAutoPlay = () => {
-    if (autoPlayIntervalRef.current) clearInterval(autoPlayIntervalRef.current);
-    autoPlayIntervalRef.current = setInterval(
-      () => setCurrentSlide((prev) => (prev + 1) % slides.length), 
-      5000
-    );
-  };
-
   useEffect(() => {
-    if (isAutoPlaying && slides.length > 0) startAutoPlay();
+    if (isAutoPlaying && slides.length > 0) {
+      if (autoPlayIntervalRef.current) clearInterval(autoPlayIntervalRef.current);
+      autoPlayIntervalRef.current = setInterval(() => setCurrentSlide((prev) => (prev + 1) % slides.length), 5000);
+    }
     return () => { if (autoPlayIntervalRef.current) clearInterval(autoPlayIntervalRef.current); };
   }, [isAutoPlaying, slides.length]);
 
@@ -2501,35 +2573,21 @@ const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
       <div className="carousel-simple-wrapper">
         <div className="carousel-simple-image">
           <div className="carousel-simple-image-bg" style={{ backgroundImage: `url(${currentSlideData.image})` }} />
-          {currentSlideData.hasFeaturedImage && (
-            <div className="absolute top-4 left-4 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 z-20 shadow-lg">
-              <IconStar /> À la une
-            </div>
-          )}
         </div>
         <div className="carousel-simple-info">
-          <div className="carousel-simple-header">
-            ACTIVITÉ RÉCENTES
-          </div>
+          <div className="carousel-simple-header">ACTIVITÉ RÉCENTES</div>
           <h3 className="carousel-simple-title">{currentSlideData.title}</h3>
           <p className="carousel-simple-description">{currentSlideData.description}</p>
-          <div className="carousel-simple-date">
-            <IconCalendar /> {formattedDate}
-          </div>
+          <div className="carousel-simple-date"><IconCalendar /> {formattedDate}</div>
         </div>
       </div>
-      
       {slides.length > 1 && (
         <>
           <button className="carousel-simple-nav carousel-simple-nav-left" onClick={() => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)}>‹</button>
           <button className="carousel-simple-nav carousel-simple-nav-right" onClick={() => setCurrentSlide((prev) => (prev + 1) % slides.length)}>›</button>
           <div className="carousel-simple-dots">
             {slides.map((_, index) => (
-              <button 
-                key={index} 
-                className={`carousel-simple-dot ${currentSlide === index ? 'active' : ''}`} 
-                onClick={() => setCurrentSlide(index)} 
-              />
+              <button key={index} className={`carousel-simple-dot ${currentSlide === index ? 'active' : ''}`} onClick={() => setCurrentSlide(index)} />
             ))}
           </div>
         </>
@@ -2558,12 +2616,26 @@ const MiniCalendar = ({ eventsDates = [], eventsData = [], onDateClick, activeDa
 
   const getEventsOnDate = (date) => {
     const localDateStr = getLocalDateString(date);
-    return eventsData.filter(event => getLocalDateString(event.date) === localDateStr);
+    return eventsData.filter(event => {
+      const eventStartDate = getLocalDateString(event.start_date);
+      if (event.end_date) {
+        const eventEndDate = getLocalDateString(event.end_date);
+        return localDateStr >= eventStartDate && localDateStr <= eventEndDate;
+      }
+      return getLocalDateString(event.start_date) === localDateStr;
+    });
   };
 
   const hasEventOnDate = (date) => {
     const localDateStr = getLocalDateString(date);
-    return eventsDates.includes(localDateStr);
+    return eventsData.some(event => {
+      const eventStartDate = getLocalDateString(event.start_date);
+      if (event.end_date) {
+        const eventEndDate = getLocalDateString(event.end_date);
+        return localDateStr >= eventStartDate && localDateStr <= eventEndDate;
+      }
+      return getLocalDateString(event.start_date) === localDateStr;
+    });
   };
   
   const getEventTitles = (date) => {
@@ -2612,417 +2684,69 @@ const MiniCalendar = ({ eventsDates = [], eventsData = [], onDateClick, activeDa
   );
 };
 
-// --- PAST EVENT CONTENT MODAL CORRIGÉ ---
-const PastEventContentModal = ({ isOpen, onClose, date, events, mediaData }) => {
-  const [selectedMedia, setSelectedMedia] = useState(null);
-  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
-  const [currentMediaList, setCurrentMediaList] = useState([]);
-  const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false);
-
-  if (!isOpen || !date) return null;
-
-  const dateStr = getLocalDateString(date);
-  const eventsOnDate = events.filter(event => getLocalDateString(event.date) === dateStr);
-  const eventIds = eventsOnDate.map(e => e.id);
-  const relatedMedia = mediaData.filter(media => media.special_event_id && eventIds.includes(media.special_event_id));
-  const generalMedia = mediaData.filter(media => !media.special_event_id && getLocalDateString(media.date) === dateStr);
-  const formattedDate = formatDateFrench(date);
-
-  const getVideoEmbedUrl = (url) => {
-    if (!url) return null;
-    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-    const youtubeMatch = url.match(youtubeRegex);
-    if (youtubeMatch) {
-      return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
-    }
-    const vimeoRegex = /vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|)(\d+)(?:$|\/|\?)/;
-    const vimeoMatch = url.match(vimeoRegex);
-    if (vimeoMatch) {
-      return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
-    }
-    return url;
-  };
-
-  const openMediaViewer = (media, mediaArray) => {
-    const index = mediaArray.findIndex(m => m.id === media.id);
-    setCurrentMediaList(mediaArray);
-    setCurrentMediaIndex(index);
-    setSelectedMedia(media);
-    setIsMediaViewerOpen(true);
-  };
-
-  const handleNavigateMedia = (newIndex) => {
-    setCurrentMediaIndex(newIndex);
-    setSelectedMedia(currentMediaList[newIndex]);
-  };
-
-  const closeMediaViewer = () => {
-    setIsMediaViewerOpen(false);
-    setSelectedMedia(null);
-    setCurrentMediaList([]);
-    setCurrentMediaIndex(0);
-  };
-
-  return (
-    <>
-      <div className="modal-overlay past-event-modal" onClick={onClose}>
-        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-          <div className="modal-header"><h2>📅 {formattedDate}</h2><button onClick={onClose}>✕</button></div>
-          <div className="modal-body">
-            {eventsOnDate.length === 0 && generalMedia.length === 0 ? (
-              <div className="no-media"><p>Aucune activité programmée et aucun média à cette date.</p></div>
-            ) : (
-              <>
-                {eventsOnDate.map(event => {
-                  const eventMedia = relatedMedia.filter(m => m.special_event_id === event.id);
-                  return (
-                    <div key={event.id} className="past-event-item">
-                      <h3 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '0.5rem' }}>{event.title}</h3>
-                      {event.time && <p style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280', fontSize: '0.85rem' }}><IconClock /> {event.time.substring(0, 5)}</p>}
-                      {event.lieu && <p style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280', fontSize: '0.85rem' }}><IconLocation /> {event.lieu}</p>}
-                      {event.orateur && <p style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}><strong>Orateur :</strong> {event.orateur}</p>}
-                      {event.moderateur && <p style={{ fontSize: '0.85rem' }}><strong>Modérateur :</strong> {event.moderateur}</p>}
-                      {event.famille_reception && <p style={{ fontSize: '0.85rem' }}><strong>Famille de réception :</strong> {event.famille_reception}</p>}
-                      {eventMedia.length > 0 && (
-                        <div className="past-event-media">
-                          <h4>📸 Médias associés</h4>
-                          <div className="media-gallery">
-                            {eventMedia.map(media => {
-                              let mediaUrl = '';
-                              let thumbnailUrl = '';
-                              
-                              if (media.type === 'video') {
-                                mediaUrl = media.video_url || media.url;
-                                thumbnailUrl = media.thumbnail || getVideoEmbedUrl(mediaUrl) || '/default-video-thumb.jpg';
-                              } else {
-                                mediaUrl = media.url;
-                                thumbnailUrl = media.url;
-                              }
-                              
-                              return (
-                                <div key={media.id} className="media-gallery-item" onClick={() => openMediaViewer(media, eventMedia)}>
-                                  {media.type === 'video' ? (
-                                    <div className="relative">
-                                      <img 
-                                        src={thumbnailUrl} 
-                                        alt={media.title} 
-                                        style={{ width: '100%', height: '120px', objectFit: 'cover' }}
-                                        onError={(e) => { e.target.src = '/default-video-thumb.jpg'; }}
-                                      />
-                                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40">
-                                        <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                          <path d="M8 5v14l11-7z"/>
-                                        </svg>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <img src={media.url} alt={media.title} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
-                                  )}
-                                  <div style={{ padding: '6px', fontSize: '0.7rem', textAlign: 'center', background: 'white' }}>
-                                    {media.title.length > 20 ? media.title.substring(0, 20) + '...' : media.title}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                {generalMedia.length > 0 && (
-                  <div className="past-event-media">
-                    <h4>📸 Médias du jour</h4>
-                    <div className="media-gallery">
-                      {generalMedia.map(media => {
-                        let mediaUrl = '';
-                        let thumbnailUrl = '';
-                        
-                        if (media.type === 'video') {
-                          mediaUrl = media.video_url || media.url;
-                          thumbnailUrl = media.thumbnail || getVideoEmbedUrl(mediaUrl) || '/default-video-thumb.jpg';
-                        } else {
-                          mediaUrl = media.url;
-                          thumbnailUrl = media.url;
-                        }
-                        
-                        return (
-                          <div key={media.id} className="media-gallery-item" onClick={() => openMediaViewer(media, generalMedia)}>
-                            {media.type === 'video' ? (
-                              <div className="relative">
-                                <img 
-                                  src={thumbnailUrl} 
-                                  alt={media.title} 
-                                  style={{ width: '100%', height: '120px', objectFit: 'cover' }}
-                                  onError={(e) => { e.target.src = '/default-video-thumb.jpg'; }}
-                                />
-                                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40">
-                                  <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M8 5v14l11-7z"/>
-                                  </svg>
-                                </div>
-                              </div>
-                            ) : (
-                              <img src={media.url} alt={media.title} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
-                            )}
-                            <div style={{ padding: '6px', fontSize: '0.7rem', textAlign: 'center', background: 'white' }}>
-                              {media.title.length > 20 ? media.title.substring(0, 20) + '...' : media.title}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-          <div className="modal-footer"><button className="btn-cancel" onClick={onClose}>Fermer</button></div>
-        </div>
-      </div>
-      <MediaViewerModal 
-        isOpen={isMediaViewerOpen} 
-        onClose={closeMediaViewer} 
-        media={selectedMedia}
-        mediaList={currentMediaList}
-        currentIndex={currentMediaIndex}
-        onNavigate={handleNavigateMedia}
-      />
-    </>
-  );
-};
-
-// --- MEDIA VIEWER MODAL AVEC SUPPORT YOUTUBE, VIMEO, FACEBOOK ---
-const MediaViewerModal = ({ isOpen, onClose, media, mediaList = [], currentIndex = 0, onNavigate }) => {
-  if (!isOpen || !media) return null;
-
-  const handlePrevious = () => {
-    if (onNavigate && currentIndex > 0) {
-      onNavigate(currentIndex - 1);
-    }
-  };
-
-  const handleNext = () => {
-    if (onNavigate && currentIndex < mediaList.length - 1) {
-      onNavigate(currentIndex + 1);
-    }
-  };
-
-  const currentMedia = mediaList[currentIndex] || media;
-
-  const getYouTubeEmbedUrl = (url) => {
-    if (!url) return null;
-    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-    const match = url.match(regex);
-    if (match) {
-      return `https://www.youtube.com/embed/${match[1]}`;
-    }
-    return null;
-  };
-
-  const getVimeoEmbedUrl = (url) => {
-    if (!url) return null;
-    const regex = /vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|)(\d+)(?:$|\/|\?)/;
-    const match = url.match(regex);
-    if (match) {
-      return `https://player.vimeo.com/video/${match[1]}`;
-    }
-    return null;
-  };
-
-  const getFacebookEmbedUrl = (url) => {
-    if (!url) return null;
-    let videoId = null;
-    const watchRegex = /facebook\.com\/watch\/?\?v=(\d+)/;
-    const watchMatch = url.match(watchRegex);
-    if (watchMatch) {
-      videoId = watchMatch[1];
-    }
-    const videosRegex = /facebook\.com\/(?:[^\/]+\/)?videos\/(?:[^\/]+\/)?(\d+)/;
-    const videosMatch = url.match(videosRegex);
-    if (videosMatch) {
-      videoId = videosMatch[1];
-    }
-    const fbWatchRegex = /fb\.watch\/([a-zA-Z0-9?=&]+)/;
-    const fbWatchMatch = url.match(fbWatchRegex);
-    if (fbWatchMatch) {
-      return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&mute=0`;
-    }
-    if (videoId) {
-      return `https://www.facebook.com/plugins/video.php?href=https://www.facebook.com/watch/?v=${videoId}&show_text=0&mute=0`;
-    }
-    if (url.includes('facebook.com')) {
-      return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&mute=0`;
-    }
-    return null;
-  };
-
-  const getEmbedUrl = (url) => {
-    if (!url) return null;
-    return getYouTubeEmbedUrl(url) || getVimeoEmbedUrl(url) || getFacebookEmbedUrl(url) || url;
-  };
-
-  const getPlatform = (url) => {
-    if (!url) return 'unknown';
-    if (url.includes('youtube') || url.includes('youtu.be')) return 'youtube';
-    if (url.includes('vimeo')) return 'vimeo';
-    if (url.includes('facebook') || url.includes('fb.watch')) return 'facebook';
-    return 'unknown';
-  };
-
-  const embedUrl = getEmbedUrl(currentMedia.video_url || currentMedia.url);
-  const platform = getPlatform(currentMedia.video_url || currentMedia.url);
-  
-  const getPlatformName = (url) => {
-    if (!url) return 'la plateforme';
-    if (url.includes('youtube') || url.includes('youtu.be')) return 'YouTube';
-    if (url.includes('vimeo')) return 'Vimeo';
-    if (url.includes('facebook') || url.includes('fb.watch')) return 'Facebook';
-    return 'la plateforme';
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content modal-content-media" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{currentMedia.title}</h2>
-          <button onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-body">
-          <div className="media-viewer">
-            {currentMedia.type === 'video' ? (
-              embedUrl && (embedUrl.includes('youtube') || embedUrl.includes('vimeo') || embedUrl.includes('facebook')) ? (
-                platform === 'facebook' ? (
-                  <div className="text-center p-8 bg-gray-100 rounded-lg">
-                    <div className="mb-4">
-                      <img 
-                        src={currentMedia.thumbnail || '/default-video-thumb.jpg'} 
-                        alt={currentMedia.title} 
-                        className="max-h-64 mx-auto rounded-lg mb-4"
-                      />
-                    </div>
-                    <p className="text-gray-600 mb-4">La vidéo Facebook ne peut pas être intégrée directement.</p>
-                    <a 
-                      href={currentMedia.video_url || currentMedia.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                    >
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z"/>
-                      </svg>
-                      Ouvrir sur Facebook
-                    </a>
-                  </div>
-                ) : (
-                  <div className="relative" style={{ paddingBottom: '56.25%', height: 0 }}>
-                    <iframe
-                      src={embedUrl}
-                      title={currentMedia.title}
-                      className="absolute top-0 left-0 w-full h-full rounded-lg"
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      allowFullScreen
-                    />
-                  </div>
-                )
-              ) : (
-                <div className="text-center p-8 bg-gray-100 rounded-lg cursor-pointer" onClick={() => window.open(currentMedia.video_url || currentMedia.url, '_blank')}>
-                  <img 
-                    src={currentMedia.thumbnail || '/default-video-thumb.jpg'} 
-                    alt={currentMedia.title} 
-                    className="max-h-64 mx-auto rounded-lg mb-4"
-                  />
-                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z"/>
-                    </svg>
-                    Regarder sur {getPlatformName(currentMedia.video_url || currentMedia.url)}
-                  </div>
-                </div>
-              )
-            ) : (
-              <img src={currentMedia.url} alt={currentMedia.title} className="max-h-[70vh] mx-auto object-contain" />
-            )}
-            
-            {mediaList.length > 1 && (
-              <div className="media-viewer-nav">
-                <button 
-                  className="media-viewer-nav-btn media-viewer-prev" 
-                  onClick={handlePrevious}
-                  disabled={currentIndex === 0}
-                >
-                  ‹
-                </button>
-                <button 
-                  className="media-viewer-nav-btn media-viewer-next" 
-                  onClick={handleNext}
-                  disabled={currentIndex === mediaList.length - 1}
-                >
-                  ›
-                </button>
-              </div>
-            )}
-            
-            {mediaList.length > 1 && (
-              <div className="media-viewer-counter">
-                {currentIndex + 1} / {mediaList.length}
-              </div>
-            )}
-            
-            <div className="media-viewer-info">
-              <p><strong>Date:</strong> {formatDateFrench(currentMedia.date)}</p>
-              {currentMedia.description && <p><strong>Description:</strong> {currentMedia.description}</p>}
-              {currentMedia.type === 'video' && (currentMedia.video_url || currentMedia.url) && (
-                <p className="text-blue-600 text-sm mt-2">
-                  <a href={currentMedia.video_url || currentMedia.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                    🔗 Ouvrir sur {getPlatformName(currentMedia.video_url || currentMedia.url)}
-                  </a>
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// --- EVENT PLANNER MODAL AVEC RÉINITIALISATION CORRIGÉE ---
+// --- EVENT PLANNER MODAL ---
 const EventPlannerModal = ({ isOpen, onClose, onSave, editingEvent = null, isLoading = false }) => {
-  const [activities, setActivities] = useState([{ title: '', date: '', time: '', orateur: '', moderateur: '', famille_reception: '', lieu: '' }]);
+  const [activities, setActivities] = useState([{ 
+    title: '', 
+    start_date: '', 
+    end_date: '', 
+    start_time: '', 
+    end_time: '',
+    orateur: '', 
+    moderateur: '', 
+    famille_reception: '', 
+    lieu: '' 
+  }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const getCurrentDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   useEffect(() => {
     if (isOpen && editingEvent) {
       setActivities([{ 
         title: editingEvent.title || '', 
-        date: editingEvent.date ? getLocalDateString(editingEvent.date) : '', 
-        time: editingEvent.time || '', 
+        start_date: editingEvent.start_date ? getLocalDateString(editingEvent.start_date) : getCurrentDate(), 
+        end_date: editingEvent.end_date ? getLocalDateString(editingEvent.end_date) : '', 
+        start_time: editingEvent.start_time || '', 
+        end_time: editingEvent.end_time || '',
         orateur: editingEvent.orateur || '', 
         moderateur: editingEvent.moderateur || '', 
         famille_reception: editingEvent.famille_reception || '', 
         lieu: editingEvent.lieu || '' 
       }]);
     } else if (isOpen && !editingEvent) {
-      setActivities([{ title: '', date: '', time: '', orateur: '', moderateur: '', famille_reception: '', lieu: '' }]);
+      setActivities([{ 
+        title: '', 
+        start_date: getCurrentDate(), 
+        end_date: '', 
+        start_time: '', 
+        end_time: '',
+        orateur: '', 
+        moderateur: '', 
+        famille_reception: '', 
+        lieu: '' 
+      }]);
     }
-    if (!isOpen) {
-      setIsSubmitting(false);
-    }
+    if (!isOpen) setIsSubmitting(false);
   }, [isOpen, editingEvent]);
 
   useEffect(() => {
-    if (!isLoading) {
-      setIsSubmitting(false);
-    }
+    if (!isLoading) setIsSubmitting(false);
   }, [isLoading]);
 
   const cleanActivityData = (activity) => {
     return {
       title: activity.title.trim(),
-      date: activity.date,
-      time: activity.time && activity.time.trim() !== '' ? activity.time : null,
+      start_date: activity.start_date,
+      end_date: activity.end_date && activity.end_date.trim() !== '' ? activity.end_date : null,
+      start_time: activity.start_time && activity.start_time.trim() !== '' ? activity.start_time : null,
+      end_time: activity.end_time && activity.end_time.trim() !== '' ? activity.end_time : null,
       orateur: activity.orateur && activity.orateur.trim() !== '' ? activity.orateur : null,
       moderateur: activity.moderateur && activity.moderateur.trim() !== '' ? activity.moderateur : null,
       famille_reception: activity.famille_reception && activity.famille_reception.trim() !== '' ? activity.famille_reception : null,
@@ -3032,23 +2756,38 @@ const EventPlannerModal = ({ isOpen, onClose, onSave, editingEvent = null, isLoa
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const validActivities = activities.filter(a => a.title.trim() !== '' && a.date !== '');
+    const validActivities = activities.filter(a => a.title.trim() !== '' && a.start_date !== '');
     if (validActivities.length === 0) { 
-      alert('Veuillez remplir au moins une activité avec un titre et une date'); 
+      alert('Veuillez remplir au moins une activité avec un titre et une date de début'); 
       return; 
     }
-    
+    for (const activity of validActivities) {
+      if (activity.end_date && activity.end_date < activity.start_date) {
+        alert(`L'activité "${activity.title}" a une date de fin antérieure à la date de début`);
+        return;
+      }
+    }
     setIsSubmitting(true);
     const cleanedActivities = validActivities.map(cleanActivityData);
-    
     try {
       await onSave(cleanedActivities, editingEvent?.id);
       if (!editingEvent) {
-        setActivities([{ title: '', date: '', time: '', orateur: '', moderateur: '', famille_reception: '', lieu: '' }]);
+        setActivities([{ 
+          title: '', 
+          start_date: getCurrentDate(), 
+          end_date: '', 
+          start_time: '', 
+          end_time: '',
+          orateur: '', 
+          moderateur: '', 
+          famille_reception: '', 
+          lieu: '' 
+        }]);
       }
     } catch (error) {
       console.error('Erreur lors de la soumission:', error);
     } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -3069,9 +2808,7 @@ const EventPlannerModal = ({ isOpen, onClose, onSave, editingEvent = null, isLoa
                   <div className="activity-item-header">
                     <span className="activity-number">Activité {index + 1}</span>
                     {activities.length > 1 && !editingEvent && (
-                      <button type="button" className="btn-remove-activity" onClick={() => setActivities(activities.filter((_, i) => i !== index))}>
-                        ✕
-                      </button>
+                      <button type="button" className="btn-remove-activity" onClick={() => setActivities(activities.filter((_, i) => i !== index))}>✕</button>
                     )}
                   </div>
                   <div className="modal-form-grid">
@@ -3081,14 +2818,25 @@ const EventPlannerModal = ({ isOpen, onClose, onSave, editingEvent = null, isLoa
                       <input type="text" placeholder="Ex: Étude biblique..." value={activity.title} onChange={(e) => { const updated = [...activities]; updated[index].title = e.target.value; setActivities(updated); }} required />
                     </div>
                     <div className="form-group">
-                      <label>Date *</label>
+                      <label>Date de début *</label>
                       <span className="input-icon"><IconCalendar /></span>
-                      <input type="date" value={activity.date} onChange={(e) => { const updated = [...activities]; updated[index].date = e.target.value; setActivities(updated); }} required />
+                      <input type="date" value={activity.start_date} onChange={(e) => { const updated = [...activities]; updated[index].start_date = e.target.value; setActivities(updated); }} required />
                     </div>
                     <div className="form-group">
-                      <label>Heure</label>
+                      <label>Date de fin</label>
+                      <span className="input-icon"><IconCalendar /></span>
+                      <input type="date" value={activity.end_date} onChange={(e) => { const updated = [...activities]; updated[index].end_date = e.target.value; setActivities(updated); }} />
+                      <p style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '4px' }}>Optionnelle - laisse vide pour une activité d'un jour</p>
+                    </div>
+                    <div className="form-group">
+                      <label>Heure de début</label>
                       <span className="input-icon"><IconClock /></span>
-                      <input type="time" value={activity.time} onChange={(e) => { const updated = [...activities]; updated[index].time = e.target.value; setActivities(updated); }} />
+                      <input type="time" value={activity.start_time} onChange={(e) => { const updated = [...activities]; updated[index].start_time = e.target.value; setActivities(updated); }} />
+                    </div>
+                    <div className="form-group">
+                      <label>Heure de fin</label>
+                      <span className="input-icon"><IconClock /></span>
+                      <input type="time" value={activity.end_time} onChange={(e) => { const updated = [...activities]; updated[index].end_time = e.target.value; setActivities(updated); }} />
                     </div>
                     <div className="form-group">
                       <label>Orateur</label>
@@ -3115,7 +2863,17 @@ const EventPlannerModal = ({ isOpen, onClose, onSave, editingEvent = null, isLoa
               ))}
             </div>
             {!editingEvent && (
-              <button type="button" className="btn-add-activity" onClick={() => setActivities([...activities, { title: '', date: '', time: '', orateur: '', moderateur: '', famille_reception: '', lieu: '' }])}>
+              <button type="button" className="btn-add-activity" onClick={() => setActivities([...activities, { 
+                title: '', 
+                start_date: getCurrentDate(), 
+                end_date: '', 
+                start_time: '', 
+                end_time: '',
+                orateur: '', 
+                moderateur: '', 
+                famille_reception: '', 
+                lieu: '' 
+              }])}>
                 <IconPlus /> Ajouter une autre activité
               </button>
             )}
@@ -3144,8 +2902,8 @@ const ImportExcelModal = ({ isOpen, onClose, onImport, isLoading = false, progre
   const handleFileSelect = (selectedFile) => {
     setFile(selectedFile);
     setPreviewData([
-      { title: 'Étude biblique', date: '2026-04-15', time: '18:30', lieu: 'Salle 101', orateur: 'Fr. Jean', moderateur: 'Fr. Paul', famille_reception: 'Famille Dupont' },
-      { title: 'Réunion de prière', date: '2026-04-16', time: '19:00', lieu: 'Église', orateur: 'Fr. Marc', moderateur: 'Fr. Pierre', famille_reception: 'Famille Martin' },
+      { title: 'Étude biblique', start_date: '2026-04-15', end_date: '', start_time: '18:30', end_time: '', lieu: 'Salle 101', orateur: 'Fr. Jean', moderateur: 'Fr. Paul', famille_reception: 'Famille Dupont' },
+      { title: 'Réunion de prière', start_date: '2026-04-16', end_date: '2026-04-18', start_time: '19:00', end_time: '21:00', lieu: 'Église', orateur: 'Fr. Marc', moderateur: 'Fr. Pierre', famille_reception: 'Famille Martin' },
     ]);
   };
 
@@ -3157,52 +2915,22 @@ const ImportExcelModal = ({ isOpen, onClose, onImport, isLoading = false, progre
           <button onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
-          <div 
-            className={`import-area ${isDragActive ? 'drag-active' : ''}`} 
-            onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }} 
-            onDragLeave={(e) => { e.preventDefault(); setIsDragActive(false); }} 
-            onDrop={(e) => { e.preventDefault(); setIsDragActive(false); const droppedFile = e.dataTransfer.files[0]; if (droppedFile) handleFileSelect(droppedFile); }} 
-            onClick={() => fileInputRef.current?.click()}
-          >
+          <div className={`import-area ${isDragActive ? 'drag-active' : ''}`} onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }} onDragLeave={(e) => { e.preventDefault(); setIsDragActive(false); }} onDrop={(e) => { e.preventDefault(); setIsDragActive(false); const droppedFile = e.dataTransfer.files[0]; if (droppedFile) handleFileSelect(droppedFile); }} onClick={() => fileInputRef.current?.click()}>
             <div className="import-icon">📊</div>
             <div className="import-title">Glissez-déposez votre fichier Excel ici</div>
             <div className="import-subtitle">ou cliquez pour parcourir</div>
             <input ref={fileInputRef} type="file" className="file-input" accept=".xlsx,.xls,.csv" onChange={(e) => e.target.files[0] && handleFileSelect(e.target.files[0])} />
-            <button className="import-btn-select" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>
-              <IconFileExcel /> Sélectionner un fichier
-            </button>
-            {file && (
-              <div className="file-info">
-                <IconFileExcel /> {file.name} ({(file.size / 1024).toFixed(2)} KB)
-              </div>
-            )}
+            <button className="import-btn-select" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}><IconFileExcel /> Sélectionner un fichier</button>
+            {file && <div className="file-info"><IconFileExcel /> {file.name} ({(file.size / 1024).toFixed(2)} KB)</div>}
           </div>
-          
-          {isLoading && (
-            <div className="progress-bar">
-              <div className="progress-fill" style={{ width: `${progress}%` }}></div>
-            </div>
-          )}
-          
+          {isLoading && <div className="progress-bar"><div className="progress-fill" style={{ width: `${progress}%` }}></div></div>}
           {previewData.length > 0 && !isLoading && (
             <div className="preview-table">
               <table className="w-full">
-                <thead>
-                  <tr>
-                    <th className="text-left p-2">Titre</th>
-                    <th className="text-left p-2">Date</th>
-                    <th className="text-left p-2">Heure</th>
-                    <th className="text-left p-2">Lieu</th>
-                  </tr>
-                </thead>
+                <thead><tr><th className="text-left p-2">Titre</th><th className="text-left p-2">Date début</th><th className="text-left p-2">Date fin</th><th className="text-left p-2">Heure début</th><th className="text-left p-2">Heure fin</th><th className="text-left p-2">Lieu</th></tr></thead>
                 <tbody>
                   {previewData.map((item, idx) => (
-                    <tr key={idx}>
-                      <td className="p-2 border-t">{item.title}</td>
-                      <td className="p-2 border-t">{item.date}</td>
-                      <td className="p-2 border-t">{item.time}</td>
-                      <td className="p-2 border-t">{item.lieu}</td>
-                    </tr>
+                    <tr key={idx}><td className="p-2 border-t">{item.title}</td><td className="p-2 border-t">{item.start_date}</td><td className="p-2 border-t">{item.end_date || '-'}</td><td className="p-2 border-t">{item.start_time || '-'}</td><td className="p-2 border-t">{item.end_time || '-'}</td><td className="p-2 border-t">{item.lieu}</td></tr>
                   ))}
                 </tbody>
               </table>
@@ -3211,16 +2939,14 @@ const ImportExcelModal = ({ isOpen, onClose, onImport, isLoading = false, progre
         </div>
         <div className="modal-footer">
           <button className="btn-cancel" onClick={onClose}>Annuler</button>
-          <button className="btn-add" onClick={() => onImport(previewData)} disabled={!file || isLoading}>
-            {isLoading ? `Import en cours... ${progress}%` : 'Importer'}
-          </button>
+          <button className="btn-add" onClick={() => onImport(previewData)} disabled={!file || isLoading}>{isLoading ? `Import en cours... ${progress}%` : 'Importer'}</button>
         </div>
       </div>
     </div>
   );
 };
 
-// --- ADD MEDIA MODALE ---
+// --- ADD MEDIA MODALE AVEC OPTION "IMAGE À LA UNE" ---
 const AddMediaModal = ({ isOpen, onClose, onAdd, isLoading = false, events = [], preselectedEventId = null }) => {
   const [mediaType, setMediaType] = useState('photo');
   const [title, setTitle] = useState('');
@@ -3231,37 +2957,45 @@ const AddMediaModal = ({ isOpen, onClose, onAdd, isLoading = false, events = [],
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [isDragActive, setIsDragActive] = useState(false);
+  const [setAsFeatured, setSetAsFeatured] = useState(false);
+  const [selectedFeaturedIndex, setSelectedFeaturedIndex] = useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    if (preselectedEventId) {
-      setSelectedEventId(preselectedEventId);
-    }
+    if (preselectedEventId) setSelectedEventId(preselectedEventId);
   }, [preselectedEventId]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSetAsFeatured(false);
+      setSelectedFeaturedIndex(null);
+      setFiles([]);
+      setPreviews([]);
+      setTitle('');
+      setDescription('');
+      setDate(new Date().toISOString().split('T')[0]);
+      setSelectedEventId(preselectedEventId || '');
+      setVideoUrl('');
+    }
+  }, [isOpen, preselectedEventId]);
 
   if (!isOpen) return null;
 
   const getYouTubeThumbnail = (url) => {
     const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const match = url.match(regex);
-    if (match) {
-      return `https://img.youtube.com/vi/${match[1]}/mqdefault.jpg`;
-    }
+    if (match) return `https://img.youtube.com/vi/${match[1]}/mqdefault.jpg`;
     return null;
   };
 
   const getVimeoThumbnail = (url) => {
     const regex = /vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|)(\d+)(?:$|\/|\?)/;
     const match = url.match(regex);
-    if (match) {
-      return `https://vumbnail.com/${match[1]}.jpg`;
-    }
+    if (match) return `https://vumbnail.com/${match[1]}.jpg`;
     return null;
   };
 
-  const getVideoThumbnail = (url) => {
-    return getYouTubeThumbnail(url) || getVimeoThumbnail(url) || null;
-  };
+  const getVideoThumbnail = (url) => getYouTubeThumbnail(url) || getVimeoThumbnail(url) || null;
 
   const handleFilesSelect = (selectedFiles) => {
     const validFiles = selectedFiles.filter(file => (mediaType === 'photo' && file.type.startsWith('image/')));
@@ -3269,28 +3003,35 @@ const AddMediaModal = ({ isOpen, onClose, onAdd, isLoading = false, events = [],
     validFiles.forEach(file => { 
       const reader = new FileReader(); 
       reader.onloadend = () => { 
-        setPreviews(prev => [...prev, { url: reader.result, name: file.name, type: file.type }]); 
+        setPreviews(prev => [...prev, { url: reader.result, name: file.name, type: file.type, index: prev.length }]); 
       }; 
       reader.readAsDataURL(file); 
     });
   };
 
+  const handleSelectFeatured = (index) => {
+    setSelectedFeaturedIndex(index);
+    setSetAsFeatured(true);
+  };
+
+  const handleUnselectFeatured = () => {
+    setSelectedFeaturedIndex(null);
+    setSetAsFeatured(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (mediaType === 'video' && !videoUrl.trim()) {
-      alert('Veuillez saisir l\'URL de la vidéo (YouTube, Vimeo, etc.)');
-      return;
+    if (mediaType === 'video' && !videoUrl.trim()) { 
+      alert('Veuillez saisir l\'URL de la vidéo (YouTube, Vimeo, etc.)'); 
+      return; 
     }
-    
-    if (mediaType === 'photo' && files.length === 0) {
-      alert('Veuillez sélectionner au moins une photo');
-      return;
+    if (mediaType === 'photo' && files.length === 0) { 
+      alert('Veuillez sélectionner au moins une photo'); 
+      return; 
     }
-    
-    if (!title.trim()) {
-      alert('Veuillez saisir un titre');
-      return;
+    if (!title.trim()) { 
+      alert('Veuillez saisir un titre'); 
+      return; 
     }
     
     const formData = new FormData();
@@ -3300,12 +3041,22 @@ const AddMediaModal = ({ isOpen, onClose, onAdd, isLoading = false, events = [],
     formData.append('type', mediaType);
     if (selectedEventId) formData.append('special_event_id', selectedEventId);
     
+    formData.append('set_as_featured', setAsFeatured);
+    if (setAsFeatured && selectedFeaturedIndex !== null) {
+      formData.append('featured_index', selectedFeaturedIndex);
+    }
+    
     if (mediaType === 'video') {
       formData.append('video_url', videoUrl);
       const thumbnail = getVideoThumbnail(videoUrl);
       if (thumbnail) formData.append('thumbnail', thumbnail);
     } else {
-      files.forEach((file, index) => formData.append(`media[${index}]`, file));
+      files.forEach((file, index) => {
+        formData.append(`media[${index}]`, file);
+        if (setAsFeatured && selectedFeaturedIndex === index) {
+          formData.append(`featured_file_index`, index);
+        }
+      });
     }
     
     await onAdd(formData);
@@ -3318,6 +3069,8 @@ const AddMediaModal = ({ isOpen, onClose, onAdd, isLoading = false, events = [],
     setVideoUrl('');
     setFiles([]);
     setPreviews([]);
+    setSetAsFeatured(false);
+    setSelectedFeaturedIndex(null);
   };
 
   return (
@@ -3327,88 +3080,81 @@ const AddMediaModal = ({ isOpen, onClose, onAdd, isLoading = false, events = [],
         <div className="modal-body">
           <form onSubmit={handleSubmit} id="add-media-form">
             <div className="media-type-selector">
-              <button type="button" className={`media-type-btn ${mediaType === 'photo' ? 'active' : ''}`} onClick={() => { setMediaType('photo'); setFiles([]); setPreviews([]); setVideoUrl(''); }}>
-                <IconPhoto /> Photos
-              </button>
-              <button type="button" className={`media-type-btn ${mediaType === 'video' ? 'active' : ''}`} onClick={() => { setMediaType('video'); setFiles([]); setPreviews([]); setVideoUrl(''); }}>
-                <IconVideo /> Vidéos externes
-              </button>
+              <button type="button" className={`media-type-btn ${mediaType === 'photo' ? 'active' : ''}`} onClick={() => { setMediaType('photo'); setFiles([]); setPreviews([]); setVideoUrl(''); setSetAsFeatured(false); setSelectedFeaturedIndex(null); }}><IconPhoto /> Photos</button>
+              <button type="button" className={`media-type-btn ${mediaType === 'video' ? 'active' : ''}`} onClick={() => { setMediaType('video'); setFiles([]); setPreviews([]); setVideoUrl(''); setSetAsFeatured(false); setSelectedFeaturedIndex(null); }}><IconVideo /> Vidéos externes</button>
             </div>
             
-            <div className="form-group modal-full">
-              <label>Titre *</label>
-              <span className="input-icon"><IconEdit /></span>
-              <input type="text" placeholder="Titre du contenu..." value={title} onChange={(e) => setTitle(e.target.value)} required />
-            </div>
-            
-            <div className="form-group modal-full">
-              <label>Description</label>
-              <span className="input-icon"><IconEdit /></span>
-              <textarea rows="3" placeholder="Description..." value={description} onChange={(e) => setDescription(e.target.value)} />
-            </div>
-            
-            <div className="form-group">
-              <label>Date</label>
-              <span className="input-icon"><IconCalendar /></span>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-            </div>
-            
-            <div className="form-group modal-full">
-              <label>Activité associée</label>
-              <span className="input-icon"><IconActivity /></span>
-              <select value={selectedEventId} onChange={(e) => setSelectedEventId(e.target.value)} style={{ appearance: 'auto', paddingLeft: '42px' }}>
-                <option value="">-- Aucune activité --</option>
-                {events.map(event => (
-                  <option key={event.id} value={event.id}>{event.title} - {formatDateFrench(event.date)}</option>
-                ))}
-              </select>
-            </div>
+            <div className="form-group modal-full"><label>Titre *</label><span className="input-icon"><IconEdit /></span><input type="text" placeholder="Titre du contenu..." value={title} onChange={(e) => setTitle(e.target.value)} required /></div>
+            <div className="form-group modal-full"><label>Description</label><span className="input-icon"><IconEdit /></span><textarea rows="3" placeholder="Description..." value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+            <div className="form-group"><label>Date</label><span className="input-icon"><IconCalendar /></span><input type="date" value={date} onChange={(e) => setDate(e.target.value)} required /></div>
+            <div className="form-group modal-full"><label>Activité associée</label><span className="input-icon"><IconActivity /></span><select value={selectedEventId} onChange={(e) => setSelectedEventId(e.target.value)} style={{ appearance: 'auto', paddingLeft: '42px' }}><option value="">-- Aucune activité --</option>{events.map(event => (<option key={event.id} value={event.id}>{event.title} - {formatDateFrench(event.start_date)}</option>))}</select></div>
             
             {mediaType === 'video' ? (
               <div className="form-group modal-full">
                 <label>URL de la vidéo *</label>
                 <span className="input-icon"><IconVideo /></span>
-                <input 
-                  type="url" 
-                  placeholder="https://www.youtube.com/watch?v=... ou https://vimeo.com/..." 
-                  value={videoUrl} 
-                  onChange={(e) => setVideoUrl(e.target.value)} 
-                  required 
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Supporte: YouTube, Vimeo, Dailymotion, Facebook (copiez l'URL de la vidéo)
-                </p>
-                {videoUrl && getVideoThumbnail(videoUrl) && (
-                  <div className="mt-3 p-3 bg-gray-100 rounded-lg">
-                    <p className="text-sm text-gray-600 mb-2">Aperçu de la miniature:</p>
-                    <img src={getVideoThumbnail(videoUrl)} alt="Aperçu" className="max-h-32 rounded-lg shadow" />
-                  </div>
-                )}
+                <input type="url" placeholder="https://www.youtube.com/watch?v=... ou https://vimeo.com/..." value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} required />
+                <p className="text-xs text-gray-500 mt-1">Supporte: YouTube, Vimeo, Dailymotion, Facebook (copiez l'URL de la vidéo)</p>
+                {videoUrl && getVideoThumbnail(videoUrl) && (<div className="mt-3 p-3 bg-gray-100 rounded-lg"><p className="text-sm text-gray-600 mb-2">Aperçu de la miniature:</p><img src={getVideoThumbnail(videoUrl)} alt="Aperçu" className="max-h-32 rounded-lg shadow" /></div>)}
               </div>
             ) : (
               <div className="form-group modal-full">
                 <label>Photos *</label>
-                <div className={`media-upload-area ${isDragActive ? 'drag-active' : ''}`} 
-                  onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }} 
-                  onDragLeave={(e) => { e.preventDefault(); setIsDragActive(false); }} 
-                  onDrop={(e) => { e.preventDefault(); setIsDragActive(false); const droppedFiles = Array.from(e.dataTransfer.files); if (droppedFiles.length > 0) handleFilesSelect(droppedFiles); }} 
-                  onClick={() => fileInputRef.current?.click()}>
+                <div className={`media-upload-area ${isDragActive ? 'drag-active' : ''}`} onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }} onDragLeave={(e) => { e.preventDefault(); setIsDragActive(false); }} onDrop={(e) => { e.preventDefault(); setIsDragActive(false); const droppedFiles = Array.from(e.dataTransfer.files); if (droppedFiles.length > 0) handleFilesSelect(droppedFiles); }} onClick={() => fileInputRef.current?.click()}>
                   <div className="import-icon">🖼️</div>
                   <div className="import-title">Glissez-déposez vos photos ici</div>
                   <div className="import-subtitle">ou cliquez pour parcourir</div>
                   <input ref={fileInputRef} type="file" className="file-input" accept="image/*" multiple onChange={(e) => e.target.files && handleFilesSelect(Array.from(e.target.files))} />
                   <button type="button" className="import-btn-select" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>Sélectionner des photos</button>
                 </div>
+                
                 {previews.length > 0 && (
-                  <div className="files-preview-grid">
+                  <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <div className="flex items-center gap-2 mb-3">
+                      <IconStar style={{ color: '#d97706' }} />
+                      <label className="font-semibold text-amber-700" style={{ textTransform: 'none' }}>Image à la une</label>
+                      <span className="text-xs text-gray-500">(Optionnel - sera mise en avant dans le carrousel)</span>
+                    </div>
+                    <div className="preview-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))' }}>
+                      {previews.map((preview, index) => (
+                        <div key={index} className={`preview-item cursor-pointer transition-all ${selectedFeaturedIndex === index ? 'ring-2 ring-amber-500 shadow-lg' : ''}`} onClick={() => handleSelectFeatured(index)}>
+                          <div className="preview-thumbnail relative">
+                            <img src={preview.url} alt={preview.name} />
+                            {selectedFeaturedIndex === index && (
+                              <div className="absolute inset-0 bg-amber-500 bg-opacity-20 flex items-center justify-center">
+                                <div className="bg-amber-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1"><IconStar /> À la une</div>
+                              </div>
+                            )}
+                          </div>
+                          <p className="preview-filename">{preview.name.length > 20 ? preview.name.substring(0, 20) + '...' : preview.name}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {selectedFeaturedIndex !== null && (
+                      <div className="mt-3 flex justify-end">
+                        <button type="button" className="text-sm text-amber-600 hover:text-amber-800 flex items-center gap-1" onClick={handleUnselectFeatured}>✖ Retirer la sélection</button>
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-500 mt-2">{selectedFeaturedIndex !== null ? `⭐ "${previews[selectedFeaturedIndex]?.name}" sera l'image à la une de cette activité` : 'Cliquez sur une photo pour la définir comme image à la une'}</p>
+                  </div>
+                )}
+                
+                {previews.length > 0 && (
+                  <div className="files-preview-grid mt-3">
                     <h4>{files.length} photo(s) sélectionnée(s)</h4>
                     <div className="preview-grid">
                       {previews.map((preview, index) => (
                         <div key={index} className="preview-item">
                           <div className="preview-thumbnail">
                             <img src={preview.url} alt={preview.name} />
+                            {selectedFeaturedIndex === index && (<div className="absolute top-2 left-2 bg-amber-500 text-white px-1 py-0.5 rounded text-xs font-bold flex items-center gap-1"><IconStar style={{ width: '10px', height: '10px' }} /> Une</div>)}
                           </div>
-                          <button type="button" className="preview-remove" onClick={() => { setFiles(prev => prev.filter((_, i) => i !== index)); setPreviews(prev => prev.filter((_, i) => i !== index)); }}>✕</button>
+                          <button type="button" className="preview-remove" onClick={() => { 
+                            setFiles(prev => prev.filter((_, i) => i !== index)); 
+                            setPreviews(prev => prev.filter((_, i) => i !== index));
+                            if (selectedFeaturedIndex === index) { setSelectedFeaturedIndex(null); setSetAsFeatured(false); } 
+                            else if (selectedFeaturedIndex > index) { setSelectedFeaturedIndex(prev => prev - 1); }
+                          }}>✕</button>
                           <p className="preview-filename">{preview.name.length > 20 ? preview.name.substring(0, 20) + '...' : preview.name}</p>
                         </div>
                       ))}
@@ -3421,41 +3167,228 @@ const AddMediaModal = ({ isOpen, onClose, onAdd, isLoading = false, events = [],
         </div>
         <div className="modal-footer">
           <button className="btn-cancel" onClick={onClose}>Annuler</button>
-          <button type="submit" form="add-media-form" className="btn-add" disabled={isLoading}>
-            <IconPlus /> {isLoading ? 'Ajout en cours...' : (mediaType === 'video' ? 'Ajouter la vidéo' : `Ajouter ${files.length} photo(s)`)}
-          </button>
+          <button type="submit" form="add-media-form" className="btn-add" disabled={isLoading}><IconPlus /> {isLoading ? 'Ajout en cours...' : (mediaType === 'video' ? 'Ajouter la vidéo' : `Ajouter ${files.length} photo(s)`)}</button>
         </div>
       </div>
     </div>
   );
 };
 
-// Composant de pagination
+// --- PAGINATION COMPONENT ---
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   return (
     <div className="pagination">
-      <button className="pagination-btn" onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1}>
-        ‹
-      </button>
+      <button className="pagination-btn" onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1}>‹</button>
       <span className="pagination-info">Page {currentPage} sur {totalPages}</span>
-      <button className="pagination-btn" onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages}>
-        ›
-      </button>
+      <button className="pagination-btn" onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages}>›</button>
     </div>
   );
 };
 
-// Composant de navigation pour le défilement horizontal
+// --- GALLERY SCROLL NAV ---
 const GalleryScrollNav = ({ onScrollLeft, onScrollRight, hasLeftScroll, hasRightScroll }) => {
   return (
     <div className="gallery-nav">
-      <button className="gallery-nav-btn" onClick={onScrollLeft} disabled={!hasLeftScroll}>
-        <IconChevronLeft />
-      </button>
-      <button className="gallery-nav-btn" onClick={onScrollRight} disabled={!hasRightScroll}>
-        <IconChevronRight />
-      </button>
+      <button className="gallery-nav-btn" onClick={onScrollLeft} disabled={!hasLeftScroll}><IconChevronLeft /></button>
+      <button className="gallery-nav-btn" onClick={onScrollRight} disabled={!hasRightScroll}><IconChevronRight /></button>
     </div>
+  );
+};
+
+// --- MEDIA VIEWER MODAL ---
+const MediaViewerModal = ({ isOpen, onClose, media, mediaList = [], currentIndex = 0, onNavigate }) => {
+  if (!isOpen || !media) return null;
+
+  const handlePrevious = () => { if (onNavigate && currentIndex > 0) onNavigate(currentIndex - 1); };
+  const handleNext = () => { if (onNavigate && currentIndex < mediaList.length - 1) onNavigate(currentIndex + 1); };
+  const currentMedia = mediaList[currentIndex] || media;
+
+  const getYouTubeEmbedUrl = (url) => {
+    if (!url) return null;
+    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = url.match(regex);
+    if (match) return `https://www.youtube.com/embed/${match[1]}`;
+    return null;
+  };
+
+  const getVimeoEmbedUrl = (url) => {
+    if (!url) return null;
+    const regex = /vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|)(\d+)(?:$|\/|\?)/;
+    const match = url.match(regex);
+    if (match) return `https://player.vimeo.com/video/${match[1]}`;
+    return null;
+  };
+
+  const getFacebookEmbedUrl = (url) => {
+    if (!url) return null;
+    let videoId = null;
+    const watchRegex = /facebook\.com\/watch\/?\?v=(\d+)/;
+    const watchMatch = url.match(watchRegex);
+    if (watchMatch) videoId = watchMatch[1];
+    const videosRegex = /facebook\.com\/(?:[^\/]+\/)?videos\/(?:[^\/]+\/)?(\d+)/;
+    const videosMatch = url.match(videosRegex);
+    if (videosMatch) videoId = videosMatch[1];
+    const fbWatchRegex = /fb\.watch\/([a-zA-Z0-9?=&]+)/;
+    const fbWatchMatch = url.match(fbWatchRegex);
+    if (fbWatchMatch) return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&mute=0`;
+    if (videoId) return `https://www.facebook.com/plugins/video.php?href=https://www.facebook.com/watch/?v=${videoId}&show_text=0&mute=0`;
+    if (url.includes('facebook.com')) return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&mute=0`;
+    return null;
+  };
+
+  const getEmbedUrl = (url) => {
+    if (!url) return null;
+    return getYouTubeEmbedUrl(url) || getVimeoEmbedUrl(url) || getFacebookEmbedUrl(url) || url;
+  };
+
+  const getPlatformName = (url) => {
+    if (!url) return 'la plateforme';
+    if (url.includes('youtube') || url.includes('youtu.be')) return 'YouTube';
+    if (url.includes('vimeo')) return 'Vimeo';
+    if (url.includes('facebook') || url.includes('fb.watch')) return 'Facebook';
+    return 'la plateforme';
+  };
+
+  const embedUrl = getEmbedUrl(currentMedia.video_url || currentMedia.url);
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content modal-content-media" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>{currentMedia.title}</h2>
+          <button onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          <div className="media-viewer">
+            {currentMedia.type === 'video' ? (
+              embedUrl && (embedUrl.includes('youtube') || embedUrl.includes('vimeo') || embedUrl.includes('facebook')) ? (
+                embedUrl.includes('facebook') ? (
+                  <div className="text-center p-8 bg-gray-100 rounded-lg">
+                    <img src={currentMedia.thumbnail || '/default-video-thumb.jpg'} alt={currentMedia.title} className="max-h-64 mx-auto rounded-lg mb-4" />
+                    <a href={currentMedia.video_url || currentMedia.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">▶️ Ouvrir sur Facebook</a>
+                  </div>
+                ) : (
+                  <div className="relative" style={{ paddingBottom: '56.25%', height: 0 }}>
+                    <iframe src={embedUrl} title={currentMedia.title} className="absolute top-0 left-0 w-full h-full rounded-lg" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
+                  </div>
+                )
+              ) : (
+                <div className="text-center p-8 bg-gray-100 rounded-lg cursor-pointer" onClick={() => window.open(currentMedia.video_url || currentMedia.url, '_blank')}>
+                  <img src={currentMedia.thumbnail || '/default-video-thumb.jpg'} alt={currentMedia.title} className="max-h-64 mx-auto rounded-lg mb-4" />
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">▶️ Regarder sur {getPlatformName(currentMedia.video_url || currentMedia.url)}</div>
+                </div>
+              )
+            ) : (
+              <img src={currentMedia.url} alt={currentMedia.title} className="max-h-[70vh] mx-auto object-contain" />
+            )}
+            
+            {mediaList.length > 1 && (
+              <div className="media-viewer-nav">
+                <button className="media-viewer-nav-btn media-viewer-prev" onClick={handlePrevious} disabled={currentIndex === 0}>‹</button>
+                <button className="media-viewer-nav-btn media-viewer-next" onClick={handleNext} disabled={currentIndex === mediaList.length - 1}>›</button>
+              </div>
+            )}
+            
+            {mediaList.length > 1 && (<div className="media-viewer-counter">{currentIndex + 1} / {mediaList.length}</div>)}
+            
+            <div className="media-viewer-info">
+              <p><strong>Date:</strong> {formatDateFrench(currentMedia.date)}</p>
+              {currentMedia.description && <p><strong>Description:</strong> {currentMedia.description}</p>}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- PAST EVENT CONTENT MODAL ---
+const PastEventContentModal = ({ isOpen, onClose, date, events, mediaData }) => {
+  const [selectedMedia, setSelectedMedia] = useState(null);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+  const [currentMediaList, setCurrentMediaList] = useState([]);
+  const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false);
+
+  if (!isOpen || !date) return null;
+
+  const dateStr = getLocalDateString(date);
+  const eventsOnDate = events.filter(event => {
+    const eventStartDate = getLocalDateString(event.start_date);
+    if (event.end_date) {
+      const eventEndDate = getLocalDateString(event.end_date);
+      return dateStr >= eventStartDate && dateStr <= eventEndDate;
+    }
+    return getLocalDateString(event.start_date) === dateStr;
+  });
+  const formattedDate = formatDateFrench(date);
+
+  const openMediaViewer = (media, mediaArray) => {
+    const index = mediaArray.findIndex(m => m.id === media.id);
+    setCurrentMediaList(mediaArray);
+    setCurrentMediaIndex(index);
+    setSelectedMedia(media);
+    setIsMediaViewerOpen(true);
+  };
+
+  const closeMediaViewer = () => {
+    setIsMediaViewerOpen(false);
+    setSelectedMedia(null);
+    setCurrentMediaList([]);
+    setCurrentMediaIndex(0);
+  };
+
+  return (
+    <>
+      <div className="modal-overlay past-event-modal" onClick={onClose}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header"><h2>📅 {formattedDate}</h2><button onClick={onClose}>✕</button></div>
+          <div className="modal-body">
+            {eventsOnDate.length === 0 ? (
+              <div className="no-media"><p>Aucune activité programmée à cette date.</p></div>
+            ) : (
+              eventsOnDate.map(event => {
+                const eventMedia = mediaData.filter(m => m.special_event_id === event.id);
+                const eventStartDate = formatDateFrench(event.start_date);
+                const eventEndDate = event.end_date ? formatDateFrench(event.end_date) : null;
+                const isMultiDay = event.end_date && getLocalDateString(event.start_date) !== getLocalDateString(event.end_date);
+                return (
+                  <div key={event.id} className="past-event-item">
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '0.5rem' }}>{event.title}</h3>
+                    <p style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280', fontSize: '0.85rem' }}><IconCalendar /> {isMultiDay ? `${eventStartDate} → ${eventEndDate}` : eventStartDate}</p>
+                    {event.start_time && <p style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280', fontSize: '0.85rem' }}><IconClock /> {event.start_time.substring(0, 5)}{event.end_time ? ` → ${event.end_time.substring(0, 5)}` : ''}</p>}
+                    {event.lieu && <p style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280', fontSize: '0.85rem' }}><IconLocation /> {event.lieu}</p>}
+                    {event.orateur && <p style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}><strong>Orateur :</strong> {event.orateur}</p>}
+                    {event.moderateur && <p style={{ fontSize: '0.85rem' }}><strong>Modérateur :</strong> {event.moderateur}</p>}
+                    {eventMedia.length > 0 && (
+                      <div className="past-event-media">
+                        <h4>📸 Médias associés</h4>
+                        <div className="media-gallery">
+                          {eventMedia.map(media => (
+                            <div key={media.id} className="media-gallery-item" onClick={() => openMediaViewer(media, eventMedia)}>
+                              <img src={media.type === 'video' ? (media.thumbnail || '/default-video-thumb.jpg') : media.url} alt={media.title} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
+                              <div style={{ padding: '6px', fontSize: '0.7rem', textAlign: 'center', background: 'white' }}>{media.title.length > 20 ? media.title.substring(0, 20) + '...' : media.title}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+          <div className="modal-footer"><button className="btn-cancel" onClick={onClose}>Fermer</button></div>
+        </div>
+      </div>
+      <MediaViewerModal 
+        isOpen={isMediaViewerOpen} 
+        onClose={closeMediaViewer} 
+        media={selectedMedia}
+        mediaList={currentMediaList}
+        currentIndex={currentMediaIndex}
+        onNavigate={(newIndex) => { setCurrentMediaIndex(newIndex); setSelectedMedia(currentMediaList[newIndex]); }}
+      />
+    </>
   );
 };
 
@@ -3463,6 +3396,10 @@ const GalleryScrollNav = ({ onScrollLeft, onScrollRight, hasLeftScroll, hasRight
 export default function Programmes() {
   const { props } = usePage();
   const { initialClassList = [], initialClassHistory = [], currentClass = null, galleryMedia = [] } = props;
+
+  const [classList, setClassList] = useState(initialClassList || []);
+  const [classHistory, setClassHistory] = useState(initialClassHistory || []);
+  const [mediaData, setMediaData] = useState(galleryMedia || []);
 
   const [activeTab, setActiveTab] = useState('programmes');
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
@@ -3477,185 +3414,287 @@ export default function Programmes() {
   const [toast, setToast] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
-  const [mediaData, setMediaData] = useState(galleryMedia || []);
   const [isDateContentModalOpen, setIsDateContentModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [activeCalendarDate, setActiveCalendarDate] = useState(null);
-  const [galleryFilter, setGalleryFilter] = useState({ search: '', month: '', year: '' });
   const [selectedGalleryMediaIds, setSelectedGalleryMediaIds] = useState([]);
   const [isGallerySelectionMode, setIsGallerySelectionMode] = useState(false);
   const [openGalleryMenuId, setOpenGalleryMenuId] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, mediaToDelete: null, isMultiple: false, count: 0 });
   
   const [isEditMediaModalOpen, setIsEditMediaModalOpen] = useState(false);
   const [editingMedia, setEditingMedia] = useState(null);
-  const [editMediaForm, setEditMediaForm] = useState({
-    title: '',
-    description: '',
-    date: '',
-    special_event_id: ''
-  });
+  const [editMediaForm, setEditMediaForm] = useState({ title: '', description: '', date: '', special_event_id: '' });
   const [editMediaErrors, setEditMediaErrors] = useState({});
   const [isEditMediaLoading, setIsEditMediaLoading] = useState(false);
   
+  // États pour l'historique avec filtrage backend
+  const [historyData, setHistoryData] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyPagination, setHistoryPagination] = useState({
+    current_page: 1,
+    last_page: 1,
+    per_page: 6,
+    total: 0
+  });
+  const [historyFilters, setHistoryFilters] = useState({ search: '', year: 'all', month: 'all' });
+  const [historySortOrder, setHistorySortOrder] = useState('desc');
   const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
   const historyItemsPerPage = 6;
   
-  const itemsPerPage = 6;
+  // États pour la galerie avec filtrage backend
+  const [galleryData, setGalleryData] = useState([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryPagination, setGalleryPagination] = useState({
+    current_page: 1,
+    last_page: 1,
+    per_page: 12,
+    total: 0
+  });
+  const [galleryFilters, setGalleryFilters] = useState({ 
+    search: '', 
+    month: '', 
+    year: '', 
+    type: 'all',
+    sort_order: 'desc'
+  });
+  const [galleryCurrentPage, setGalleryCurrentPage] = useState(1);
+  const galleryItemsPerPage = 12;
+  
   const scrollRefs = useRef({});
 
-  const currentMonthEvents = initialClassList.filter(event => isDateInCurrentMonth(event.date));
-  const pastEvents = initialClassHistory.filter(event => isDateInPastMonth(event.date));
-  const allEvents = [...currentMonthEvents, ...pastEvents];
-  const allEventsData = [...currentMonthEvents, ...pastEvents];
+  const currentMonthEvents = classList.filter(event => isDateInCurrentMonth(event.start_date));
+  const pastEvents = classHistory.filter(event => isDateInPastMonth(event.start_date));
+  const allEvents = [...classList, ...classHistory];
+  const allEventsData = [...classList, ...classHistory];
 
-  const getFilteredEventsByActiveDate = () => {
-    if (!activeCalendarDate) return currentMonthEvents;
-    const activeDateStr = getLocalDateString(activeCalendarDate);
-    return currentMonthEvents.filter(event => {
-      const eventDateStr = getLocalDateString(event.date);
-      return eventDateStr === activeDateStr;
+  // Années disponibles pour l'historique
+  const historyAvailableYears = useMemo(() => {
+    const years = historyData.map(event => new Date(event.start_date).getFullYear());
+    return ['all', ...new Set(years)].sort((a, b) => {
+      if (a === 'all') return -1;
+      if (b === 'all') return 1;
+      return b - a;
     });
-  };
+  }, [historyData]);
 
-  const filteredEvents = getFilteredEventsByActiveDate();
-
-  const galleryAvailableMonths = [
-    'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+  const months = [
+    { value: 'all', label: 'Tous les mois' },
+    { value: '1', label: 'Janvier' }, { value: '2', label: 'Février' }, { value: '3', label: 'Mars' },
+    { value: '4', label: 'Avril' }, { value: '5', label: 'Mai' }, { value: '6', label: 'Juin' },
+    { value: '7', label: 'Juillet' }, { value: '8', label: 'Août' }, { value: '9', label: 'Septembre' },
+    { value: '10', label: 'Octobre' }, { value: '11', label: 'Novembre' }, { value: '12', label: 'Décembre' }
   ];
-  
-  const galleryAvailableYears = useMemo(() => {
-    const years = mediaData.map(m => new Date(m.date).getFullYear());
-    return [...new Set(years)].sort((a, b) => b - a);
-  }, [mediaData]);
 
-  const filteredGalleryMedia = useMemo(() => {
-    let filtered = [...mediaData];
-    
-    if (galleryFilter.search !== '') {
-      filtered = filtered.filter(m => 
-        m.title.toLowerCase().includes(galleryFilter.search.toLowerCase()) ||
-        (m.description && m.description.toLowerCase().includes(galleryFilter.search.toLowerCase()))
-      );
-    }
-    
-    if (galleryFilter.month !== '') {
-      filtered = filtered.filter(m => {
-        const month = new Date(m.date).toLocaleString('fr-FR', { month: 'long' });
-        const monthCapitalized = month.charAt(0).toUpperCase() + month.slice(1);
-        return monthCapitalized === galleryFilter.month;
-      });
-    }
-    
-    if (galleryFilter.year !== '') {
-      filtered = filtered.filter(m => new Date(m.date).getFullYear() === parseInt(galleryFilter.year));
-    }
-    
-    return filtered;
-  }, [mediaData, galleryFilter]);
-
-  const groupedGalleryMedia = useMemo(() => {
-    const groups = [];
-    const mediaByActivity = new Map();
-    
-    filteredGalleryMedia.forEach(media => {
-      const key = media.special_event_id || 'without_event';
-      if (!mediaByActivity.has(key)) {
-        mediaByActivity.set(key, []);
+  // Mois disponibles pour la galerie (depuis les données chargées)
+  const galleryAvailableMonths = useMemo(() => {
+    const monthsSet = new Set();
+    galleryData.forEach(media => {
+      if (media.date) {
+        const month = new Date(media.date).toLocaleString('fr-FR', { month: 'long' });
+        monthsSet.add(month.charAt(0).toUpperCase() + month.slice(1));
       }
-      mediaByActivity.get(key).push(media);
+    });
+    return Array.from(monthsSet).sort();
+  }, [galleryData]);
+
+  // Années disponibles pour la galerie
+  const galleryAvailableYears = useMemo(() => {
+    const years = new Set();
+    galleryData.forEach(media => {
+      if (media.date) {
+        years.add(new Date(media.date).getFullYear());
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  }, [galleryData]);
+
+  // Regrouper les médias par activité pour l'affichage
+  const groupedGalleryMedia = useMemo(() => {
+    const groups = new Map();
+    
+    galleryData.forEach(media => {
+      const eventId = media.special_event_id || 'without_event';
+      if (!groups.has(eventId)) {
+        groups.set(eventId, {
+          id: eventId,
+          title: media.special_event?.title || 'Sans activité associée',
+          date: media.special_event?.start_date || null,
+          medias: []
+        });
+      }
+      groups.get(eventId).medias.push(media);
     });
     
-    for (const [activityId, medias] of mediaByActivity) {
-      let activity = null;
-      if (activityId !== 'without_event') {
-        activity = allEvents.find(e => e.id === parseInt(activityId));
-      }
-      
-      const images = medias.filter(m => m.type === 'photo');
-      const videos = medias.filter(m => m.type === 'video');
-      const sortedImages = images.sort((a, b) => new Date(b.date) - new Date(a.date));
-      const sortedVideos = videos.sort((a, b) => new Date(b.date) - new Date(a.date));
-      const sortedMedias = [...sortedImages, ...sortedVideos];
-      
-      groups.push({
-        id: activityId,
-        title: activity ? activity.title : 'Sans activité associée',
-        date: activity ? activity.date : null,
-        medias: sortedMedias,
-        imagesCount: sortedImages.length,
-        videosCount: sortedVideos.length
-      });
+    // Trier les médias dans chaque groupe par date décroissante
+    for (const group of groups.values()) {
+      group.medias.sort((a, b) => new Date(b.date) - new Date(a.date));
     }
     
-    return groups.sort((a, b) => {
+    // Trier les groupes par date d'activité (les plus récentes d'abord)
+    return Array.from(groups.values()).sort((a, b) => {
       if (a.date && b.date) return new Date(b.date) - new Date(a.date);
       if (a.date) return -1;
       if (b.date) return 1;
       return 0;
     });
-  }, [filteredGalleryMedia, allEvents]);
+  }, [galleryData]);
 
-  const totalPages = Math.ceil(groupedGalleryMedia.length / itemsPerPage);
-  const paginatedGroups = groupedGalleryMedia.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-  const totalHistoryPages = Math.ceil(pastEvents.length / historyItemsPerPage);
-  const paginatedHistoryEvents = pastEvents.slice(
-    (historyCurrentPage - 1) * historyItemsPerPage,
-    historyCurrentPage * historyItemsPerPage
-  );
-
-  useEffect(() => {
-    if (historyCurrentPage > totalHistoryPages && totalHistoryPages > 0) {
-      setHistoryCurrentPage(totalHistoryPages);
+  // Charger l'historique depuis le backend
+  const loadHistoryProgrammes = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const params = {};
+      if (historyFilters.search && historyFilters.search.trim() !== '') {
+        params.search = historyFilters.search.trim();
+      }
+      if (historyFilters.year && historyFilters.year !== 'all') {
+        params.year = historyFilters.year;
+      }
+      if (historyFilters.month && historyFilters.month !== 'all') {
+        params.month = historyFilters.month;
+      }
+      params.sort_order = historySortOrder;
+      params.page = historyCurrentPage;
+      params.per_page = historyItemsPerPage;
+      
+      const response = await axios.get('/conducteur/programmes/history/filter', { params });
+      
+      if (response.data.success) {
+        setHistoryData(response.data.data);
+        setHistoryPagination(response.data.pagination);
+      } else {
+        showToast(response.data.message || 'Erreur lors du chargement', 'error');
+      }
+    } catch (error) {
+      console.error('Erreur chargement historique:', error);
+      showToast('Erreur lors du chargement des données', 'error');
+    } finally {
+      setHistoryLoading(false);
     }
-  }, [pastEvents.length]);
+  }, [historyFilters, historySortOrder, historyCurrentPage, historyItemsPerPage]);
+
+  // Charger la galerie depuis le backend
+  const loadGalleryMedia = useCallback(async () => {
+    setGalleryLoading(true);
+    try {
+      const params = {};
+      if (galleryFilters.search && galleryFilters.search.trim() !== '') {
+        params.search = galleryFilters.search.trim();
+      }
+      if (galleryFilters.month && galleryFilters.month !== '') {
+        params.month = galleryFilters.month;
+      }
+      if (galleryFilters.year && galleryFilters.year !== '') {
+        params.year = galleryFilters.year;
+      }
+      if (galleryFilters.type && galleryFilters.type !== 'all') {
+        params.type = galleryFilters.type;
+      }
+      params.sort_order = galleryFilters.sort_order;
+      params.page = galleryCurrentPage;
+      params.per_page = galleryItemsPerPage;
+      
+      const response = await axios.get('/conducteur/galerie/filter', { params });
+      
+      if (response.data.success) {
+        setGalleryData(response.data.data);
+        setGalleryPagination(response.data.pagination);
+      } else {
+        showToast(response.data.message || 'Erreur lors du chargement', 'error');
+      }
+    } catch (error) {
+      console.error('Erreur chargement galerie:', error);
+      showToast('Erreur lors du chargement de la galerie', 'error');
+    } finally {
+      setGalleryLoading(false);
+    }
+  }, [galleryFilters, galleryCurrentPage, galleryItemsPerPage]);
+
+  // Recharger quand les filtres ou la page changent
+  useEffect(() => {
+    loadHistoryProgrammes();
+  }, [historyFilters, historySortOrder, historyCurrentPage]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [galleryFilter]);
+    loadGalleryMedia();
+  }, [galleryFilters, galleryCurrentPage]);
+
+  // Réinitialiser la page quand les filtres changent
+  useEffect(() => {
+    setHistoryCurrentPage(1);
+  }, [historyFilters, historySortOrder]);
+
+  useEffect(() => {
+    setGalleryCurrentPage(1);
+  }, [galleryFilters]);
+
+  const resetHistoryFilters = () => {
+    setHistoryFilters({ search: '', year: 'all', month: 'all' });
+    setHistorySortOrder('desc');
+    setHistoryCurrentPage(1);
+  };
+
+  const resetGalleryFilters = () => {
+    setGalleryFilters({ 
+      search: '', 
+      month: '', 
+      year: '', 
+      type: 'all',
+      sort_order: 'desc'
+    });
+    setGalleryCurrentPage(1);
+  };
+
+  const getFilteredEventsByActiveDate = () => {
+    if (!activeCalendarDate) return currentMonthEvents;
+    const activeDateStr = getLocalDateString(activeCalendarDate);
+    return currentMonthEvents.filter(event => {
+      const eventStartDate = getLocalDateString(event.start_date);
+      if (event.end_date) {
+        const eventEndDate = getLocalDateString(event.end_date);
+        return activeDateStr >= eventStartDate && activeDateStr <= eventEndDate;
+      }
+      return getLocalDateString(event.start_date) === activeDateStr;
+    });
+  };
+
+  const filteredEvents = getFilteredEventsByActiveDate();
 
   const showToast = (message, type = 'success') => setToast({ message, type });
   const hideToast = () => setToast(null);
-  const getAllEventDates = () => allEvents.map(event => getLocalDateString(event.date));
   
-  const handleDateClick = (date) => { 
-    setActiveCalendarDate(date);
-    setSelectedDate(date); 
-    setIsDateContentModalOpen(true); 
+  const getAllEventDates = () => {
+    const dates = [];
+    allEvents.forEach(event => {
+      const startDate = getLocalDateString(event.start_date);
+      dates.push(startDate);
+      if (event.end_date) {
+        const endDate = new Date(event.end_date);
+        const start = new Date(event.start_date);
+        let current = new Date(start);
+        while (current < endDate) {
+          current.setDate(current.getDate() + 1);
+          dates.push(getLocalDateString(current));
+        }
+      }
+    });
+    return [...new Set(dates)];
   };
   
-  const handleHistoricalCardClick = (event) => { 
-    setSelectedDate(new Date(event.date)); 
-    setIsDateContentModalOpen(true); 
-  };
-  
-  const closeDateContentModal = () => { 
-    setIsDateContentModalOpen(false); 
-    setSelectedDate(null);
-    setActiveCalendarDate(null);
-  };
-  
+  const handleDateClick = (date) => { setActiveCalendarDate(date); setSelectedDate(date); setIsDateContentModalOpen(true); };
+  const handleHistoricalCardClick = (event) => { setSelectedDate(new Date(event.start_date)); setIsDateContentModalOpen(true); };
+  const closeDateContentModal = () => { setIsDateContentModalOpen(false); setSelectedDate(null); setActiveCalendarDate(null); };
   const handleClearDateFilter = () => setActiveCalendarDate(null);
-  
   const openEventModal = (event = null) => { setEditingEvent(event); setIsEventModalOpen(true); };
   const closeEventModal = () => { setIsEventModalOpen(false); setEditingEvent(null); };
   const openImportModal = () => setIsImportModalOpen(true);
   const closeImportModal = () => { setIsImportModalOpen(false); setImportProgress(0); };
-  
-  const openAddMediaModal = (eventId = null) => { 
-    setPreselectedEventId(eventId);
-    setIsAddMediaModalOpen(true); 
-  };
-  const closeAddMediaModal = () => { 
-    setIsAddMediaModalOpen(false); 
-    setPreselectedEventId(null);
-  };
+  const openAddMediaModal = (eventId = null) => { setPreselectedEventId(eventId); setIsAddMediaModalOpen(true); };
+  const closeAddMediaModal = () => { setIsAddMediaModalOpen(false); setPreselectedEventId(null); };
   
   const openMediaViewer = (media, mediaArray = null) => {
-    const list = mediaArray || mediaData;
+    const list = mediaArray || galleryData;
     const index = list.findIndex(m => m.id === media.id);
     setCurrentMediaList(list);
     setCurrentMediaIndex(index >= 0 ? index : 0);
@@ -3663,76 +3702,40 @@ export default function Programmes() {
     setIsMediaViewerOpen(true);
   };
   
-  const handleNavigateMedia = (newIndex) => {
-    if (currentMediaList[newIndex]) {
-      setCurrentMediaIndex(newIndex);
-      setSelectedMedia(currentMediaList[newIndex]);
-    }
-  };
-  
-  const closeMediaViewer = () => { 
-    setIsMediaViewerOpen(false); 
-    setSelectedMedia(null);
-    setCurrentMediaList([]);
-    setCurrentMediaIndex(0);
-  };
+  const handleNavigateMedia = (newIndex) => { if (currentMediaList[newIndex]) { setCurrentMediaIndex(newIndex); setSelectedMedia(currentMediaList[newIndex]); } };
+  const closeMediaViewer = () => { setIsMediaViewerOpen(false); setSelectedMedia(null); setCurrentMediaList([]); setCurrentMediaIndex(0); };
 
   const openEditMediaModal = (media) => {
     setEditingMedia(media);
-    setEditMediaForm({
-      title: media.title || '',
-      description: media.description || '',
-      date: media.date ? new Date(media.date).toISOString().split('T')[0] : '',
-      special_event_id: media.special_event_id || '',
-    });
+    setEditMediaForm({ title: media.title || '', description: media.description || '', date: media.date ? new Date(media.date).toISOString().split('T')[0] : '', special_event_id: media.special_event_id || '' });
     setEditMediaErrors({});
     setIsEditMediaModalOpen(true);
   };
 
-  const closeEditMediaModal = () => {
-    setIsEditMediaModalOpen(false);
-    setEditingMedia(null);
-    setEditMediaForm({
-      title: '',
-      description: '',
-      date: '',
-      special_event_id: ''
-    });
-    setEditMediaErrors({});
-  };
-
-  const handleEditMediaFormChange = (e) => {
-    const { name, value } = e.target;
-    setEditMediaForm(prev => ({ ...prev, [name]: value }));
-    if (editMediaErrors[name]) {
-      setEditMediaErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  };
+  const closeEditMediaModal = () => { setIsEditMediaModalOpen(false); setEditingMedia(null); setEditMediaForm({ title: '', description: '', date: '', special_event_id: '' }); setEditMediaErrors({}); };
+  const handleEditMediaFormChange = (e) => { const { name, value } = e.target; setEditMediaForm(prev => ({ ...prev, [name]: value })); if (editMediaErrors[name]) setEditMediaErrors(prev => ({ ...prev, [name]: '' })); };
 
   const handleUpdateMedia = async (e) => {
     e.preventDefault();
     if (!editingMedia) return;
-    
     setIsEditMediaLoading(true);
     setEditMediaErrors({});
-    
     try {
       const response = await axios.put(`/conducteur/galerie/update/${editingMedia.id}`, editMediaForm);
       if (response.data.success) {
+        const updatedMedia = response.data.media;
+        setGalleryData(prev => prev.map(m => m.id === editingMedia.id ? { ...m, ...updatedMedia } : m));
+        setMediaData(prev => prev.map(m => m.id === editingMedia.id ? { ...m, ...updatedMedia } : m));
         showToast('Média mis à jour avec succès', 'success');
         closeEditMediaModal();
-        setTimeout(() => router.reload(), 1500);
       } else {
         showToast('Erreur lors de la mise à jour', 'error');
       }
     } catch (error) {
-      if (error.response?.status === 422) {
-        setEditMediaErrors(error.response.data.errors || {});
-      } else {
-        showToast('Erreur: ' + (error.response?.data?.message || error.message), 'error');
-      }
-    } finally {
-      setIsEditMediaLoading(false);
+      if (error.response?.status === 422) setEditMediaErrors(error.response.data.errors || {});
+      else showToast('Erreur: ' + (error.response?.data?.message || error.message), 'error');
+    } finally { 
+      setIsEditMediaLoading(false); 
     }
   };
 
@@ -3740,247 +3743,167 @@ export default function Programmes() {
     setIsLoading(true);
     try {
       const response = await axios.post('/conducteur/galerie/add', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      if (response.data.success) { 
-        showToast(`${response.data.media?.length || 1} contenu(s) ajouté(s) !`, 'success'); 
+      if (response.data.success) {
+        const newMedia = response.data.media || [];
+        setGalleryData(prev => [...newMedia, ...prev]);
+        setMediaData(prev => [...newMedia, ...prev]);
+        showToast(`${newMedia.length || 1} contenu(s) ajouté(s) !`, 'success');
         closeAddMediaModal();
-        setTimeout(() => router.reload(), 1500);
+      } else {
+        showToast('Erreur lors de l\'ajout', 'error');
       }
-      else showToast('Erreur lors de l\'ajout', 'error');
     } catch (error) { 
-      console.error('Erreur ajout média:', error);
-      const errorMessage = error.response?.data?.message || 'Erreur lors de l\'ajout';
-      showToast(errorMessage, 'error'); 
+      console.error('Erreur ajout média:', error); 
+      showToast(error.response?.data?.message || 'Erreur lors de l\'ajout', 'error'); 
+    } finally { 
+      setIsLoading(false); 
     }
-    finally { setIsLoading(false); }
   };
 
   const handleDeleteSingleMedia = async (media) => {
-    setConfirmDialog({
-      isOpen: true,
-      mediaToDelete: media,
-      isMultiple: false,
-      count: 1,
-      onConfirm: async () => {
-        setIsLoading(true);
-        try {
-          const response = await axios.delete(`/conducteur/galerie/${media.id}`);
-          if (response.data.success) { 
-            showToast('Média supprimé', 'success');
-            setTimeout(() => router.reload(), 1500);
-          }
-          else showToast('Erreur lors de la suppression', 'error');
-        } catch (error) { 
-          console.error('Erreur suppression:', error);
-          showToast('Erreur lors de la suppression', 'error'); 
+    setConfirmDialog({ isOpen: true, mediaToDelete: media, isMultiple: false, count: 1, onConfirm: async () => {
+      setIsLoading(true);
+      try {
+        const response = await axios.delete(`/conducteur/galerie/${media.id}`);
+        if (response.data.success) { 
+          setGalleryData(prev => prev.filter(m => m.id !== media.id));
+          setMediaData(prev => prev.filter(m => m.id !== media.id));
+          showToast('Média supprimé', 'success'); 
+        } else {
+          showToast('Erreur lors de la suppression', 'error');
         }
-        finally { 
-          setIsLoading(false);
-          setConfirmDialog({ isOpen: false, mediaToDelete: null, isMultiple: false, count: 0 });
-        }
+      } catch (error) { 
+        console.error('Erreur suppression:', error); 
+        showToast('Erreur lors de la suppression', 'error'); 
+      } finally { 
+        setIsLoading(false); 
+        setConfirmDialog({ isOpen: false, mediaToDelete: null, isMultiple: false, count: 0 }); 
       }
-    });
+    } });
   };
 
-  // Fonction pour définir une image comme "à la une"
   const setAsFeaturedMedia = async (media) => {
     setIsLoading(true);
     try {
       const response = await axios.put(`/conducteur/galerie/set-featured/${media.id}`);
-      
       if (response.data.success) {
-        // Mettre à jour localement l'état des médias
-        setMediaData(prev => prev.map(m => {
+        // Mettre à jour galleryData
+        setGalleryData(prev => prev.map(m => { 
           if (m.special_event_id === media.special_event_id && m.type === 'photo') {
             return { ...m, is_featured: m.id === media.id };
           }
           return m;
         }));
+        
+        // Mettre à jour mediaData pour le carrousel
+        setMediaData(prev => prev.map(m => { 
+          if (m.special_event_id === media.special_event_id && m.type === 'photo') {
+            return { ...m, is_featured: m.id === media.id };
+          }
+          return m;
+        }));
+        
         showToast('⭐ Image à la une définie avec succès', 'success');
-        setTimeout(() => router.reload(), 1000);
       } else {
         showToast(response.data.message || 'Erreur lors de la mise à jour', 'error');
       }
-    } catch (error) {
-      console.error('Erreur:', error);
-      showToast('Erreur lors de la définition de l\'image à la une', 'error');
-    } finally {
-      setIsLoading(false);
+    } catch (error) { 
+      console.error('Erreur:', error); 
+      showToast('Erreur lors de la définition de l\'image à la une', 'error'); 
+    } finally { 
+      setIsLoading(false); 
     }
   };
 
-  const handleAddMediaToHistory = (eventId) => {
-    openAddMediaModal(eventId);
-  };
-
-  const toggleGalleryMediaSelection = (mediaId) => {
-    setSelectedGalleryMediaIds(prev => 
-      prev.includes(mediaId) ? prev.filter(id => id !== mediaId) : [...prev, mediaId]
-    );
-  };
-
-  const cancelGallerySelection = () => {
-    setSelectedGalleryMediaIds([]);
-    setIsGallerySelectionMode(false);
-  };
+  const handleAddMediaToHistory = (eventId) => openAddMediaModal(eventId);
+  const toggleGalleryMediaSelection = (mediaId) => setSelectedGalleryMediaIds(prev => prev.includes(mediaId) ? prev.filter(id => id !== mediaId) : [...prev, mediaId]);
+  const cancelGallerySelection = () => { setSelectedGalleryMediaIds([]); setIsGallerySelectionMode(false); };
 
   const handleDeleteSelectedGalleryMedia = async () => {
-    if (selectedGalleryMediaIds.length === 0) {
-      showToast('Aucun média sélectionné', 'error');
-      return;
+    if (selectedGalleryMediaIds.length === 0) { 
+      showToast('Aucun média sélectionné', 'error'); 
+      return; 
     }
-    setConfirmDialog({
-      isOpen: true,
-      mediaToDelete: null,
-      isMultiple: true,
-      count: selectedGalleryMediaIds.length,
-      onConfirm: async () => {
-        setIsLoading(true);
-        let successCount = 0;
-        for (const mediaId of selectedGalleryMediaIds) {
-          try {
-            const response = await axios.delete(`/conducteur/galerie/${mediaId}`);
-            if (response.data.success) successCount++;
-          } catch (error) {}
+    setConfirmDialog({ isOpen: true, mediaToDelete: null, isMultiple: true, count: selectedGalleryMediaIds.length, onConfirm: async () => {
+      setIsLoading(true);
+      let successCount = 0;
+      const deletedIds = [];
+      for (const mediaId of selectedGalleryMediaIds) {
+        try { 
+          const response = await axios.delete(`/conducteur/galerie/${mediaId}`); 
+          if (response.data.success) { 
+            successCount++; 
+            deletedIds.push(mediaId); 
+          } 
+        } catch (error) { 
+          console.error(`Erreur suppression média ${mediaId}:`, error); 
         }
-        if (successCount > 0) {
-          showToast(`${successCount} média(s) supprimé(s)`, 'success');
-          setTimeout(() => router.reload(), 1500);
-        }
-        setSelectedGalleryMediaIds([]);
-        setIsGallerySelectionMode(false);
-        setIsLoading(false);
-        setConfirmDialog({ isOpen: false, mediaToDelete: null, isMultiple: false, count: 0 });
       }
-    });
+      if (successCount > 0) { 
+        setGalleryData(prev => prev.filter(m => !deletedIds.includes(m.id)));
+        setMediaData(prev => prev.filter(m => !deletedIds.includes(m.id)));
+        showToast(`${successCount} média(s) supprimé(s)`, 'success'); 
+      }
+      setSelectedGalleryMediaIds([]); 
+      setIsGallerySelectionMode(false); 
+      setIsLoading(false); 
+      setConfirmDialog({ isOpen: false, mediaToDelete: null, isMultiple: false, count: 0 });
+    } });
   };
 
-  const handleAddMediaToGroup = (group) => {
-    if (group.id !== 'without_event') {
-      openAddMediaModal(parseInt(group.id));
-    } else {
-      openAddMediaModal();
-    }
-  };
-
-  const handleSelectAllMediaInGroup = (group) => {
-    const groupMediaIds = group.medias.map(m => m.id);
-    setSelectedGalleryMediaIds(groupMediaIds);
-    setIsGallerySelectionMode(true);
-  };
-
-  const handleScrollLeft = (groupId) => {
-    const container = scrollRefs.current[groupId];
-    if (container) {
-      container.scrollBy({ left: -300, behavior: 'smooth' });
-    }
-  };
-
-  const handleScrollRight = (groupId) => {
-    const container = scrollRefs.current[groupId];
-    if (container) {
-      container.scrollBy({ left: 300, behavior: 'smooth' });
-    }
-  };
-
-  const checkScrollButtons = (groupId) => {
-    const container = scrollRefs.current[groupId];
-    if (!container) return { hasLeftScroll: false, hasRightScroll: false };
-    const hasLeftScroll = container.scrollLeft > 0;
-    const hasRightScroll = container.scrollLeft + container.clientWidth < container.scrollWidth - 10;
-    return { hasLeftScroll, hasRightScroll };
-  };
-
+  const handleAddMediaToGroup = (group) => { if (group.id !== 'without_event') openAddMediaModal(parseInt(group.id)); else openAddMediaModal(); };
+  const handleSelectAllMediaInGroup = (group) => { setSelectedGalleryMediaIds(group.medias.map(m => m.id)); setIsGallerySelectionMode(true); };
+  const handleScrollLeft = (groupId) => { const container = scrollRefs.current[groupId]; if (container) container.scrollBy({ left: -300, behavior: 'smooth' }); };
+  const handleScrollRight = (groupId) => { const container = scrollRefs.current[groupId]; if (container) container.scrollBy({ left: 300, behavior: 'smooth' }); };
+  const checkScrollButtons = (groupId) => { const container = scrollRefs.current[groupId]; if (!container) return { hasLeftScroll: false, hasRightScroll: false }; return { hasLeftScroll: container.scrollLeft > 0, hasRightScroll: container.scrollLeft + container.clientWidth < container.scrollWidth - 10 }; };
   const [scrollStates, setScrollStates] = useState({});
-
-  const updateScrollState = (groupId) => {
-    setScrollStates(prev => ({
-      ...prev,
-      [groupId]: checkScrollButtons(groupId)
-    }));
-  };
+  const updateScrollState = (groupId) => setScrollStates(prev => ({ ...prev, [groupId]: checkScrollButtons(groupId) }));
 
   useEffect(() => {
     const intervals = {};
-    Object.keys(scrollRefs.current).forEach(groupId => {
-      updateScrollState(groupId);
-      intervals[groupId] = setInterval(() => updateScrollState(groupId), 500);
-    });
-    return () => {
-      Object.values(intervals).forEach(interval => clearInterval(interval));
-    };
-  }, [paginatedGroups]);
+    Object.keys(scrollRefs.current).forEach(groupId => { updateScrollState(groupId); intervals[groupId] = setInterval(() => updateScrollState(groupId), 500); });
+    return () => { Object.values(intervals).forEach(interval => clearInterval(interval)); };
+  }, [groupedGalleryMedia]);
 
   const handleSaveEventModal = async (activities, eventId = null) => {
-    console.log('Données envoyées:', activities, 'eventId:', eventId);
     setIsLoading(true);
-    
     if (eventId && activities.length === 1) {
       try {
         const response = await axios.put(`/conducteur/programmes/event/${eventId}`, activities[0]);
-        console.log('Réponse modification:', response.data);
-        
         if (response.data.success) {
-          showToast(response.data.message || 'Événement modifié avec succès !', 'success');
-          closeEventModal();
-          setTimeout(() => {
-            router.reload();
-          }, 1500);
-        } else {
-          showToast(response.data.message || 'Erreur lors de la modification', 'error');
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error('Erreur modification:', error);
-        const errorMessage = error.response?.data?.message || 'Erreur lors de la modification';
-        showToast(errorMessage, 'error');
-        setIsLoading(false);
-      }
+          const updatedEvent = response.data.event;
+          const eventDate = new Date(updatedEvent.start_date);
+          const now = new Date();
+          if (eventDate < now) { setClassHistory(prev => { const filtered = prev.filter(event => event.id !== eventId); return [updatedEvent, ...filtered]; }); setClassList(prev => prev.filter(event => event.id !== eventId)); }
+          else { setClassList(prev => { const filtered = prev.filter(event => event.id !== eventId); return [updatedEvent, ...filtered]; }); setClassHistory(prev => prev.filter(event => event.id !== eventId)); }
+          showToast(response.data.message || 'Événement modifié avec succès !', 'success'); closeEventModal();
+        } else showToast(response.data.message || 'Erreur lors de la modification', 'error');
+      } catch (error) { console.error('Erreur modification:', error); showToast(error.response?.data?.message || 'Erreur lors de la modification', 'error'); } finally { setIsLoading(false); }
     } else {
       try {
         const response = await axios.post('/conducteur/programmes/events-multiple', { activities });
-        console.log('Réponse serveur:', response.data);
-        
         if (response.data.success) {
-          showToast(response.data.message, 'success');
-          closeEventModal();
-          setTimeout(() => {
-            router.reload();
-          }, 1500);
-        } else {
-          showToast(response.data.message || 'Erreur lors de la création', 'error');
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error('Erreur création:', error.response?.data || error.message);
-        const errorMessage = error.response?.data?.message || 'Erreur lors de la création';
-        showToast(errorMessage, 'error');
-        setIsLoading(false);
-      }
+          const newEvents = response.data.events || [];
+          const now = new Date();
+          newEvents.forEach(event => { const eventDate = new Date(event.start_date); if (eventDate < now) setClassHistory(prev => [event, ...prev]); else setClassList(prev => [event, ...prev]); });
+          showToast(response.data.message, 'success'); closeEventModal();
+        } else showToast(response.data.message || 'Erreur lors de la création', 'error');
+      } catch (error) { console.error('Erreur création:', error.response?.data || error.message); showToast(error.response?.data?.message || 'Erreur lors de la création', 'error'); } finally { setIsLoading(false); }
     }
   };
 
   const handleImportEvents = async (events) => {
-    setIsLoading(true);
-    setImportProgress(0);
+    setIsLoading(true); setImportProgress(0);
     try {
-      for (let i = 0; i <= 100; i += 20) { 
-        await new Promise(resolve => setTimeout(resolve, 300)); 
-        setImportProgress(i); 
-      }
+      for (let i = 0; i <= 100; i += 20) { await new Promise(resolve => setTimeout(resolve, 300)); setImportProgress(i); }
       const response = await axios.post('/conducteur/programmes/import-events', { events });
-      if (response.data.success) { 
-        showToast(response.data.message, 'success'); 
-        closeImportModal(); 
-        setTimeout(() => router.reload(), 1500);
-      } else {
-        showToast('Erreur lors de l\'import', 'error');
-        setIsLoading(false);
-      }
-    } catch (error) { 
-      console.error('Erreur import:', error);
-      showToast('Erreur lors de l\'import', 'error');
-      setIsLoading(false);
-    }
+      if (response.data.success) {
+        const importedEvents = response.data.events || [];
+        const now = new Date();
+        importedEvents.forEach(event => { const eventDate = new Date(event.start_date); if (eventDate < now) setClassHistory(prev => [...prev, event]); else setClassList(prev => [...prev, event]); });
+        showToast(response.data.message, 'success'); closeImportModal();
+      } else showToast('Erreur lors de l\'import', 'error');
+    } catch (error) { console.error('Erreur import:', error); showToast('Erreur lors de l\'import', 'error'); } finally { setIsLoading(false); }
   };
 
   const handleEditEvent = (event) => openEventModal(event);
@@ -3988,201 +3911,214 @@ export default function Programmes() {
   const handleViewAllProgrammes = () => router.visit('/conducteur/programmes/all');
   const handleViewAllHistory = () => router.visit('/conducteur/programmes/history');
 
+  // Composant EmptyDialog
+  const EmptyDialog = ({ onCreateClick }) => {
+    const currentMonthName = new Date().toLocaleString('fr-FR', { month: 'long' });
+    const currentMonthCapitalized = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
+    return (
+      <div className="empty-dialog" onClick={onCreateClick}>
+        <div className="empty-dialog-icon">📋</div>
+        <div className="empty-dialog-title">✨ Programme de la classe</div>
+        <div className="empty-dialog-message">
+          {activeCalendarDate 
+            ? `Aucun programme pour le ${formatDateFrench(activeCalendarDate)}. Créez-en un !`
+            : `Aucun programme pour le mois de ${currentMonthCapitalized} ${new Date().getFullYear()}. Créez votre premier programme !`}
+        </div>
+        <button className="empty-dialog-button" onClick={(e) => { e.stopPropagation(); onCreateClick(); }}><IconPlus /> Créer un programme</button>
+      </div>
+    );
+  };
+
+  // Rendu du contenu selon l'onglet actif
   const renderContent = () => {
     switch (activeTab) {
       case 'programmes':
         const currentMonthName = new Date().toLocaleString('fr-FR', { month: 'long' });
         const currentMonthCapitalized = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
-        
         return (
           <>
-            <HeroCarousel 
-              mediaImages={mediaData} 
-              pastEvents={pastEvents}
-            />
-            
+            <HeroCarousel mediaImages={mediaData} pastEvents={pastEvents} />
             <div className="action-bar">
-              <h2>🔥 ACTIVITÉS EN COURS
-                <span className="badge-count">
-                  {filteredEvents.length} activité(s)
-                  {!activeCalendarDate && ` - ${currentMonthCapitalized} ${new Date().getFullYear()}`}
-                  {activeCalendarDate && ` - ${formatDateFrench(activeCalendarDate)}`}
-                </span>
-              </h2>
+              <h2>🔥 ACTIVITÉS EN COURS<span className="badge-count">{filteredEvents.length} activité(s){!activeCalendarDate && ` - ${currentMonthCapitalized} ${new Date().getFullYear()}`}{activeCalendarDate && ` - ${formatDateFrench(activeCalendarDate)}`}</span></h2>
               <div className="action-buttons">
                 <button className="btn-import" onClick={openImportModal}><IconUpload /> Import Excel</button>
                 <button className="btn-agenda" onClick={() => openEventModal()}><IconPlus /> Créer un programme</button>
               </div>
             </div>
-            
             <div className="glass-container">
               <div className="main-layout">
                 <div className="cards-container">
                   {filteredEvents.length > 0 ? (
                     <div className="horizontal-scroller">
                       <div className="cards-wrapper">
-                        {filteredEvents.map(event => (
-                          <div key={event.id} className="special-card">
-                            <button className="edit-btn-card" onClick={(e) => { e.stopPropagation(); handleEditEvent(event); }}>
-                              <IconEdit />
-                            </button>
-                            <div>
-                              <div className="special-header">
-                                <span className="special-date">{formatDateFrench(event.date)}</span>
-                              </div>
-                              <h4 className="special-title">{event.title}</h4>
-                              {event.lieu && <p className="special-lieu"><IconLocation /> {event.lieu}</p>}
-                              {event.time && <p><IconClock /> {event.time.substring(0, 5)}</p>}
-                              <div className="special-meta">
-                                {event.orateur && <div><span className="special-meta-label">Orateur:</span> {event.orateur}</div>}
-                                {event.moderateur && <div><span className="special-meta-label">Modérateur:</span> {event.moderateur}</div>}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <EmptyDialog onCreateClick={() => openEventModal()} />
-                  )}
-                </div>
-                <div className="calendar-container">
-                  <MiniCalendar 
-                    eventsDates={getAllEventDates()} 
-                    eventsData={allEventsData} 
-                    onDateClick={handleDateClick}
-                    activeDate={activeCalendarDate}
-                  />
-                </div>
-              </div>
-            </div>
-            
-            {currentMonthEvents.length > 0 && (
-              <div className="btn-view-all-wrapper">
-                <button className="btn-view-all" onClick={handleViewAllProgrammes}>
-                  <IconEye /> Voir tout les programmes
-                </button>
-              </div>
-            )}
-          </>
-        );
-      case 'historique':
-        const currentYear = new Date().getFullYear();
-        
-        return (
-          <>
-            <div className="action-bar">
-              <h2>📜 DERNIÈRES ACTIVITÉS</h2>
-              <div className="action-buttons">
-                <span className="badge-count">
-                  {pastEvents.length} activité(s) - {currentYear}
-                </span>
-              </div>
-            </div>
-            <div className="glass-container">
-              <div className="main-layout">
-                <div className="cards-container">
-                  {paginatedHistoryEvents.length > 0 ? (
-                    <>
-                      <div className="history-grid">
-                        {paginatedHistoryEvents.map(item => {
-                          const eventMedia = mediaData.filter(media => media.special_event_id === item.id);
-                          const hasMedia = eventMedia.length > 0;
-                          
+                        {filteredEvents.map(event => {
+                          const eventStartDate = formatDateFrench(event.start_date);
+                          const eventEndDate = event.end_date ? formatDateFrench(event.end_date) : null;
+                          const isMultiDay = event.end_date && getLocalDateString(event.start_date) !== getLocalDateString(event.end_date);
                           return (
-                            <div key={item.id} className="history-card-v2">
-                              <div className="history-card-v2-header" onClick={() => handleHistoricalCardClick(item)}>
-                                <h3 className="history-card-v2-title">{item.title}</h3>
-                                <div className="history-card-v2-date">
-                                  <IconCalendar />
-                                  {formatDateFrench(item.date)}
-                                  {item.time && (
-                                    <>
-                                      <span style={{ margin: '0 4px' }}>•</span>
-                                      <IconClock />
-                                      {item.time.substring(0, 5)}
-                                    </>
-                                  )}
+                            <div key={event.id} className="special-card">
+                              <button className="edit-btn-card" onClick={(e) => { e.stopPropagation(); handleEditEvent(event); }}><IconEdit /></button>
+                              <div>
+                                <div className="special-header">
+                                  <span className="special-date">{isMultiDay ? `${eventStartDate} → ${eventEndDate}` : eventStartDate}</span>
                                 </div>
-                              </div>
-                              <div className="history-card-v2-body" onClick={() => handleHistoricalCardClick(item)}>
-                                <div className="history-card-v2-info">
-                                  {item.lieu && (
-                                    <div className="history-card-v2-info-item">
-                                      <IconLocation className="history-card-v2-info-icon" />
-                                      <span className="history-card-v2-info-label">Lieu :</span>
-                                      <span className="history-card-v2-info-value">{item.lieu}</span>
-                                    </div>
-                                  )}
-                                  {item.orateur && (
-                                    <div className="history-card-v2-info-item">
-                                      <IconMic className="history-card-v2-info-icon" />
-                                      <span className="history-card-v2-info-label">Orateur :</span>
-                                      <span className="history-card-v2-info-value">{item.orateur}</span>
-                                    </div>
-                                  )}
-                                  {item.moderateur && (
-                                    <div className="history-card-v2-info-item">
-                                      <IconUser className="history-card-v2-info-icon" />
-                                      <span className="history-card-v2-info-label">Modérateur :</span>
-                                      <span className="history-card-v2-info-value">{item.moderateur}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="history-card-v2-footer">
-                                <span className="history-card-v2-badge">
-                                  {new Date(item.date).getFullYear()}
-                                </span>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                  {hasMedia && (
-                                    <span 
-                                      className="history-card-v2-media-badge" 
-                                      onClick={() => handleHistoricalCardClick(item)}
-                                    >
-                                      <IconGallery /> {eventMedia.length} média(s)
-                                    </span>
-                                  )}
-                                  <button 
-                                    className="history-card-v2-add-btn"
-                                    onClick={() => handleAddMediaToHistory(item.id)}
-                                  >
-                                    <IconPlus /> Ajouter un contenu
-                                  </button>
+                                <h4 className="special-title">{event.title}</h4>
+                                {event.lieu && <p className="special-lieu"><IconLocation /> {event.lieu}</p>}
+                                {event.start_time && (<p><IconClock /> {event.start_time.substring(0, 5)}{event.end_time ? ` → ${event.end_time.substring(0, 5)}` : ''}</p>)}
+                                <div className="special-meta">
+                                  {event.orateur && <div><span className="special-meta-label">Orateur:</span> {event.orateur}</div>}
+                                  {event.moderateur && <div><span className="special-meta-label">Modérateur:</span> {event.moderateur}</div>}
                                 </div>
                               </div>
                             </div>
                           );
                         })}
                       </div>
-                      
-                      {totalHistoryPages > 1 && (
+                    </div>
+                  ) : (<EmptyDialog onCreateClick={() => openEventModal()} />)}
+                </div>
+                <div className="calendar-container">
+                  <MiniCalendar eventsDates={getAllEventDates()} eventsData={allEventsData} onDateClick={handleDateClick} activeDate={activeCalendarDate} />
+                </div>
+              </div>
+            </div>
+            {currentMonthEvents.length > 0 && (
+              <div className="btn-view-all-wrapper">
+                <button className="btn-view-all" onClick={handleViewAllProgrammes}><IconEye /> Voir tout les programmes</button>
+              </div>
+            )}
+          </>
+        );
+        
+      case 'historique':
+        return (
+          <>
+            <div className="action-bar">
+              <h2>📜 DERNIÈRES ACTIVITÉS</h2>
+              <div className="action-buttons">
+                <span className="badge-count">{historyPagination.total} activité(s)</span>
+              </div>
+            </div>
+            
+            <div className="history-filters">
+              <div className="history-filter-group">
+                <div className="history-filter-item" style={{ flex: 2 }}>
+                  <label><IconFilter style={{ display: 'inline', marginRight: '4px' }} /> Recherche</label>
+                  <input 
+                    type="text" 
+                    className="history-filter-input" 
+                    placeholder="Rechercher par titre, orateur, modérateur, lieu..." 
+                    value={historyFilters.search} 
+                    onChange={(e) => setHistoryFilters(prev => ({ ...prev, search: e.target.value }))} 
+                  />
+                </div>
+                <div className="history-filter-item">
+                  <label>Année</label>
+                  <select 
+                    className="history-filter-select" 
+                    value={historyFilters.year} 
+                    onChange={(e) => setHistoryFilters(prev => ({ ...prev, year: e.target.value }))}
+                  >
+                    {historyAvailableYears.map(year => (<option key={year} value={year}>{year === 'all' ? 'Toutes les années' : year}</option>))}
+                  </select>
+                </div>
+                <div className="history-filter-item">
+                  <label>Mois</label>
+                  <select 
+                    className="history-filter-select" 
+                    value={historyFilters.month} 
+                    onChange={(e) => setHistoryFilters(prev => ({ ...prev, month: e.target.value }))}
+                  >
+                    {months.map(month => (<option key={month.value} value={month.value}>{month.label}</option>))}
+                  </select>
+                </div>
+                <div className="history-filter-item" style={{ minWidth: '150px' }}>
+                  <label>Trier par</label>
+                  <select 
+                    className="history-filter-select" 
+                    value={historySortOrder} 
+                    onChange={(e) => setHistorySortOrder(e.target.value)}
+                  >
+                    <option value="desc">Plus récentes d'abord</option>
+                    <option value="asc">Plus anciennes d'abord</option>
+                  </select>
+                </div>
+                <div className="history-filter-actions">
+                  <button className="btn-history-filter-reset" onClick={resetHistoryFilters}><IconRefresh /> Réinitialiser</button>
+                </div>
+              </div>
+              <div className="history-filter-stats">
+                {historyPagination.total} activité(s) au total
+              </div>
+            </div>
+            
+            <div className="glass-container">
+              <div className="main-layout">
+                <div className="cards-container">
+                  {historyLoading ? (
+                    <div className="empty-state">
+                      <div className="empty-icon">⏳</div>
+                      <div className="empty-title">Chargement...</div>
+                      <div className="empty-message">Veuillez patienter pendant le chargement des données.</div>
+                    </div>
+                  ) : historyData.length > 0 ? (
+                    <>
+                      <div className="history-grid">
+                        {historyData.map(item => {
+                          const eventMedia = mediaData.filter(media => media.special_event_id === item.id);
+                          const hasMedia = eventMedia.length > 0;
+                          const eventStartDate = formatDateFrench(item.start_date);
+                          const eventEndDate = item.end_date ? formatDateFrench(item.end_date) : null;
+                          const isMultiDay = item.end_date && getLocalDateString(item.start_date) !== getLocalDateString(item.end_date);
+                          return (
+                            <div key={item.id} className="history-card-v2">
+                              <div className="history-card-v2-header" onClick={() => handleHistoricalCardClick(item)}>
+                                <h3 className="history-card-v2-title">{item.title}</h3>
+                                <div className="history-card-v2-date">
+                                  <IconCalendar /> {isMultiDay ? `${eventStartDate} → ${eventEndDate}` : eventStartDate}
+                                  {item.start_time && (<span> • <IconClock /> {item.start_time.substring(0, 5)}{item.end_time ? ` → ${item.end_time.substring(0, 5)}` : ''}</span>)}
+                                </div>
+                              </div>
+                              <div className="history-card-v2-body" onClick={() => handleHistoricalCardClick(item)}>
+                                <div className="history-card-v2-info">
+                                  {item.lieu && (<div className="history-card-v2-info-item"><IconLocation className="history-card-v2-info-icon" /><span className="history-card-v2-info-label">Lieu :</span><span className="history-card-v2-info-value">{item.lieu}</span></div>)}
+                                  {item.orateur && (<div className="history-card-v2-info-item"><IconMic className="history-card-v2-info-icon" /><span className="history-card-v2-info-label">Orateur :</span><span className="history-card-v2-info-value">{item.orateur}</span></div>)}
+                                  {item.moderateur && (<div className="history-card-v2-info-item"><IconUser className="history-card-v2-info-icon" /><span className="history-card-v2-info-label">Modérateur :</span><span className="history-card-v2-info-value">{item.moderateur}</span></div>)}
+                                </div>
+                              </div>
+                              <div className="history-card-v2-footer">
+                                <span className="history-card-v2-badge">{new Date(item.start_date).getFullYear()}</span>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  {hasMedia && (<span className="history-card-v2-media-badge" onClick={() => handleHistoricalCardClick(item)}><IconGallery /> {eventMedia.length} média(s)</span>)}
+                                  <button className="history-card-v2-add-btn" onClick={() => handleAddMediaToHistory(item.id)}><IconPlus /> Ajouter un contenu</button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {historyPagination.last_page > 1 && (
                         <div className="pagination">
                           <button 
                             className="pagination-btn" 
-                            onClick={() => setHistoryCurrentPage(prev => Math.max(1, prev - 1))}
+                            onClick={() => setHistoryCurrentPage(prev => Math.max(1, prev - 1))} 
                             disabled={historyCurrentPage === 1}
-                          >
-                            ‹
-                          </button>
-                          <span className="pagination-info">
-                            Page {historyCurrentPage} sur {totalHistoryPages}
-                          </span>
+                          >‹</button>
+                          <span className="pagination-info">Page {historyCurrentPage} sur {historyPagination.last_page}</span>
                           <button 
                             className="pagination-btn" 
-                            onClick={() => setHistoryCurrentPage(prev => Math.min(totalHistoryPages, prev + 1))}
-                            disabled={historyCurrentPage === totalHistoryPages}
-                          >
-                            ›
-                          </button>
+                            onClick={() => setHistoryCurrentPage(prev => Math.min(historyPagination.last_page, prev + 1))} 
+                            disabled={historyCurrentPage === historyPagination.last_page}
+                          >›</button>
                         </div>
                       )}
                     </>
                   ) : (
                     <div className="empty-state">
                       <div className="empty-icon">📜</div>
-                      <div className="empty-title">Aucune activité récente</div>
-                      <div className="empty-message">Aucune activité passée n'est disponible pour le moment.</div>
+                      <div className="empty-title">Aucune activité trouvée</div>
+                      <div className="empty-message">Aucune activité ne correspond à vos critères de recherche.</div>
+                      <button className="btn-clear" onClick={resetHistoryFilters} style={{ marginTop: '20px' }}>Réinitialiser les filtres</button>
                     </div>
                   )}
                 </div>
@@ -4190,90 +4126,123 @@ export default function Programmes() {
             </div>
           </>
         );
+        
       case 'parcours':
         return (
           <>
+            {/* Barre "GALERIE MULTIMÉDIA" supprimée */}
+            
             <div className="gallery-filters">
               <div className="gallery-filter-group">
-                <input
-                  type="text"
-                  className="gallery-filter-input"
-                  placeholder="🔍 Rechercher par titre, description ou activité..."
-                  value={galleryFilter.search}
-                  onChange={(e) => setGalleryFilter(prev => ({ ...prev, search: e.target.value }))}
+                <input 
+                  type="text" 
+                  className="gallery-filter-input" 
+                  placeholder="🔍 Rechercher par titre ou description..." 
+                  value={galleryFilters.search} 
+                  onChange={(e) => setGalleryFilters(prev => ({ ...prev, search: e.target.value }))} 
                 />
-                <select
-                  className="gallery-filter-select"
-                  value={galleryFilter.month}
-                  onChange={(e) => setGalleryFilter(prev => ({ ...prev, month: e.target.value }))}
+                <select 
+                  className="gallery-filter-select" 
+                  value={galleryFilters.month} 
+                  onChange={(e) => setGalleryFilters(prev => ({ ...prev, month: e.target.value }))}
                 >
                   <option value="">Tous les mois</option>
                   {galleryAvailableMonths.map(month => (
                     <option key={month} value={month}>{month}</option>
                   ))}
                 </select>
-                <select
-                  className="gallery-filter-select"
-                  value={galleryFilter.year}
-                  onChange={(e) => setGalleryFilter(prev => ({ ...prev, year: e.target.value }))}
+                <select 
+                  className="gallery-filter-select" 
+                  value={galleryFilters.year} 
+                  onChange={(e) => setGalleryFilters(prev => ({ ...prev, year: e.target.value }))}
                 >
                   <option value="">Toutes les années</option>
                   {galleryAvailableYears.map(year => (
                     <option key={year} value={year}>{year}</option>
                   ))}
                 </select>
-                {(galleryFilter.search || galleryFilter.month || galleryFilter.year) && (
-                  <button className="btn-clear" onClick={() => setGalleryFilter({ search: '', month: '', year: '' })}>
-                    ✖ Réinitialiser
-                  </button>
-                )}
+                <select 
+                  className="gallery-filter-select" 
+                  value={galleryFilters.type} 
+                  onChange={(e) => setGalleryFilters(prev => ({ ...prev, type: e.target.value }))}
+                >
+                  <option value="all">📷 Tous les types</option>
+                  <option value="photo">🖼️ Photos uniquement</option>
+                  <option value="video">🎬 Vidéos uniquement</option>
+                </select>
+                <select 
+                  className="gallery-filter-select" 
+                  value={galleryFilters.sort_order} 
+                  onChange={(e) => setGalleryFilters(prev => ({ ...prev, sort_order: e.target.value }))}
+                >
+                  <option value="desc">Plus récents d'abord</option>
+                  <option value="asc">Plus anciens d'abord</option>
+                </select>
+                <button className="btn-clear" onClick={resetGalleryFilters}>
+                  <IconRefresh /> Réinitialiser
+                </button>
               </div>
               <div className="gallery-filter-stats">
-                {filteredGalleryMedia.length} média(s) affiché(s) sur {mediaData.length} total
+                {galleryPagination.total} média(s) trouvé(s)
               </div>
             </div>
-
+            
             <div className="glass-container">
-              {paginatedGroups.length > 0 ? (
-                paginatedGroups.map(group => {
-                  const scrollKey = group.id;
+              {galleryLoading ? (
+                <div className="empty-state">
+                  <div className="empty-icon">⏳</div>
+                  <div className="empty-title">Chargement...</div>
+                  <div className="empty-message">Veuillez patienter pendant le chargement de la galerie.</div>
+                </div>
+              ) : groupedGalleryMedia.length > 0 ? (
+                groupedGalleryMedia.map(group => {
+                  const scrollKey = `gallery_${group.id}`;
                   const scrollState = scrollStates[scrollKey] || { hasLeftScroll: false, hasRightScroll: false };
+                  const imagesCount = group.medias.filter(m => m.type === 'photo').length;
+                  const videosCount = group.medias.filter(m => m.type === 'video').length;
                   
                   return (
                     <div key={group.id} className="gallery-section">
                       <div className="gallery-group">
                         <div className="gallery-group-title">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', flex: 1 }}>
-                            <IconGallery />
-                            {group.title}
+                            <IconGallery /> {group.title}
                             {group.date && (
                               <span className="gallery-group-date">
-                                <IconCalendar style={{ width: '12px', height: '12px', marginLeft: '10px' }} />
+                                <IconCalendar style={{ width: '12px', height: '12px', marginLeft: '10px' }} /> 
                                 {formatDateFrench(group.date)}
                               </span>
                             )}
                             <span className="text-xs text-gray-500 ml-2">
-                              📷 {group.imagesCount} | 🎬 {group.videosCount}
+                              📷 {imagesCount} | 🎬 {videosCount}
                             </span>
                           </div>
                           <div className="group-actions">
                             <button 
                               className="btn-add-media-group" 
-                              onClick={() => handleAddMediaToGroup(group)}
+                              onClick={() => {
+                                if (group.id !== 'without_event') {
+                                  openAddMediaModal(parseInt(group.id));
+                                } else {
+                                  openAddMediaModal();
+                                }
+                              }}
                             >
                               <IconPlus /> Ajouter un contenu
                             </button>
-                            {group.medias.length > 0 && (
-                              <button 
-                                className="btn-select-group" 
-                                onClick={() => handleSelectAllMediaInGroup(group)}
-                              >
-                                <IconTrash /> Tout sélectionner
-                              </button>
-                            )}
+                            <button 
+                              className="btn-select-group" 
+                              onClick={() => {
+                                setSelectedGalleryMediaIds(group.medias.map(m => m.id));
+                                setIsGallerySelectionMode(true);
+                              }}
+                            >
+                              <IconTrash /> Tout sélectionner
+                            </button>
                           </div>
                         </div>
                         
+                        {/* Barre d'actions de sélection */}
                         {isGallerySelectionMode && selectedGalleryMediaIds.filter(id => group.medias.some(m => m.id === id)).length > 0 && (
                           <div className="group-selection-bar">
                             <div className="selection-info">
@@ -4285,6 +4254,20 @@ export default function Programmes() {
                               </button>
                               <button className="btn-cancel-selection" onClick={cancelGallerySelection}>
                                 Annuler
+                              </button>
+                              <button 
+                                className="btn-select-group" 
+                                onClick={() => {
+                                  if (selectedGalleryMediaIds.filter(id => group.medias.some(m => m.id === id)).length === group.medias.length) {
+                                    setSelectedGalleryMediaIds(prev => prev.filter(id => !group.medias.some(m => m.id === id)));
+                                  } else {
+                                    setSelectedGalleryMediaIds(prev => [...new Set([...prev, ...group.medias.map(m => m.id)])]);
+                                  }
+                                }}
+                              >
+                                {selectedGalleryMediaIds.filter(id => group.medias.some(m => m.id === id)).length === group.medias.length 
+                                  ? 'Tout désélectionner' 
+                                  : 'Tout sélectionner'}
                               </button>
                             </div>
                           </div>
@@ -4298,8 +4281,8 @@ export default function Programmes() {
                         />
                         
                         <div 
-                          className="gallery-scroll-container"
-                          ref={el => scrollRefs.current[scrollKey] = el}
+                          className="gallery-scroll-container" 
+                          ref={el => scrollRefs.current[scrollKey] = el} 
                           onScroll={() => updateScrollState(scrollKey)}
                         >
                           <div className="gallery-group-grid-scroll">
@@ -4313,16 +4296,13 @@ export default function Programmes() {
                                     </div>
                                   )}
                                   <div className="media-thumbnail">
-                                    <img 
-                                      src={media.type === 'video' ? (media.thumbnail || '/default-video-thumb.jpg') : media.url} 
-                                      alt={media.title} 
-                                    />
+                                    {media.type === 'photo' ? (
+                                      <img src={media.url} alt={media.title} />
+                                    ) : (
+                                      <img src={media.thumbnail || media.url || '/default-video-thumb.jpg'} alt={media.title} />
+                                    )}
                                     {media.type === 'video' && (
-                                      <div className="media-play-icon">
-                                        <svg className="w-8 h-8" fill="white" viewBox="0 0 24 24">
-                                          <path d="M8 5v14l11-7z"/>
-                                        </svg>
-                                      </div>
+                                      <div className="media-play-icon"><IconPlay /></div>
                                     )}
                                     {media.type === 'photo' && media.is_featured && (
                                       <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 z-20 shadow-md">
@@ -4336,35 +4316,40 @@ export default function Programmes() {
                                   </div>
                                   <div className="media-info">
                                     <h4 className="media-title">{media.title}</h4>
-                                    <p className="media-date"><IconCalendar />{formatDateFrench(media.date)}</p>
+                                    <p className="media-date">
+                                      <IconCalendar />{formatDateFrench(media.date)}
+                                    </p>
                                   </div>
                                 </div>
                                 <div className="more-menu-container" style={{ position: 'absolute', bottom: '10px', right: '10px', zIndex: 15 }}>
                                   <button 
                                     className="more-btn" 
-                                    onClick={(e) => { e.stopPropagation(); setOpenGalleryMenuId(openGalleryMenuId === media.id ? null : media.id); }}
+                                    onClick={(e) => { 
+                                      e.stopPropagation(); 
+                                      setOpenGalleryMenuId(openGalleryMenuId === media.id ? null : media.id); 
+                                    }}
                                   >
                                     <IconMoreVert />
                                   </button>
                                   {openGalleryMenuId === media.id && (
                                     <div className="more-menu">
                                       <div className="more-menu-item edit" onClick={() => { 
-                                        setOpenGalleryMenuId(null);
-                                        openEditMediaModal(media);
+                                        setOpenGalleryMenuId(null); 
+                                        openEditMediaModal(media); 
                                       }}>
                                         <IconEdit /> Modifier
                                       </div>
                                       {media.type === 'photo' && media.special_event_id && (
                                         <div className="more-menu-item featured" onClick={() => { 
-                                          setOpenGalleryMenuId(null);
-                                          setAsFeaturedMedia(media);
+                                          setOpenGalleryMenuId(null); 
+                                          setAsFeaturedMedia(media); 
                                         }}>
                                           <IconStar /> Définir comme image à la une
                                         </div>
                                       )}
                                       <div className="more-menu-item delete" onClick={() => { 
-                                        setOpenGalleryMenuId(null);
-                                        handleDeleteSingleMedia(media);
+                                        setOpenGalleryMenuId(null); 
+                                        handleDeleteSingleMedia(media); 
                                       }}>
                                         <IconTrash /> Supprimer
                                       </div>
@@ -4384,12 +4369,16 @@ export default function Programmes() {
                   <div className="empty-icon">📸</div>
                   <div className="empty-title">Aucun média trouvé</div>
                   <div className="empty-message">
-                    {mediaData.length === 0 
+                    {galleryPagination.total === 0 && !galleryFilters.search && !galleryFilters.month && !galleryFilters.year && galleryFilters.type === 'all'
                       ? "Aucun média disponible. Ajoutez vos premiers contenus !"
                       : "Aucun média ne correspond à vos critères de recherche."}
                   </div>
-                  {mediaData.length > 0 && (
-                    <button className="btn-clear" onClick={() => setGalleryFilter({ search: '', month: '', year: '' })} style={{ marginTop: '20px' }}>
+                  {galleryPagination.total === 0 && !galleryFilters.search && !galleryFilters.month && !galleryFilters.year && galleryFilters.type === 'all' ? (
+                    <button className="btn-agenda" onClick={() => openAddMediaModal()} style={{ marginTop: '20px' }}>
+                      <IconPlus /> Ajouter des contenus
+                    </button>
+                  ) : (
+                    <button className="btn-clear" onClick={resetGalleryFilters} style={{ marginTop: '20px' }}>
                       Réinitialiser les filtres
                     </button>
                   )}
@@ -4397,37 +4386,50 @@ export default function Programmes() {
               )}
             </div>
             
-            {totalPages > 1 && (
-              <Pagination 
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
+            {/* PAGINATION */}
+            {galleryPagination.last_page > 1 && (
+              <div className="pagination">
+                <button 
+                  className="pagination-btn" 
+                  onClick={() => setGalleryCurrentPage(prev => Math.max(1, prev - 1))} 
+                  disabled={galleryCurrentPage === 1}
+                >
+                  ‹
+                </button>
+                <div className="pagination-info">
+                  Page {galleryCurrentPage} sur {galleryPagination.last_page}
+                </div>
+                <button 
+                  className="pagination-btn" 
+                  onClick={() => setGalleryCurrentPage(prev => Math.min(galleryPagination.last_page, prev + 1))} 
+                  disabled={galleryCurrentPage === galleryPagination.last_page}
+                >
+                  ›
+                </button>
+              </div>
+            )}
+            
+            {/* Indicateur supplémentaire */}
+            {galleryPagination.last_page > 1 && (
+              <div style={{ textAlign: 'center', marginTop: '10px', marginBottom: '20px' }}>
+                <span style={{ 
+                  background: 'rgba(0,0,0,0.5)', 
+                  color: 'white', 
+                  padding: '4px 12px', 
+                  borderRadius: '20px', 
+                  fontSize: '0.75rem',
+                  backdropFilter: 'blur(4px)'
+                }}>
+                  {galleryPagination.total} média(s) au total
+                </span>
+              </div>
             )}
           </>
         );
-      default: return null;
+        
+      default:
+        return null;
     }
-  };
-
-  const EmptyDialog = ({ onCreateClick }) => {
-    const currentMonthName = new Date().toLocaleString('fr-FR', { month: 'long' });
-    const currentMonthCapitalized = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
-    
-    return (
-      <div className="empty-dialog" onClick={onCreateClick}>
-        <div className="empty-dialog-icon">📋</div>
-        <div className="empty-dialog-title">✨ Programme de la classe</div>
-        <div className="empty-dialog-message">
-          {activeCalendarDate 
-            ? `Aucun programme pour le ${formatDateFrench(activeCalendarDate)}. Créez-en un !`
-            : `Aucun programme pour le mois de ${currentMonthCapitalized} ${new Date().getFullYear()}. Créez votre premier programme !`}
-        </div>
-        <button className="empty-dialog-button" onClick={(e) => { e.stopPropagation(); onCreateClick(); }}>
-          <IconPlus /> Créer un programme
-        </button>
-      </div>
-    );
   };
 
   return (
@@ -4441,9 +4443,7 @@ export default function Programmes() {
         onClose={() => setConfirmDialog({ isOpen: false, mediaToDelete: null, isMultiple: false, count: 0 })}
         onConfirm={confirmDialog.onConfirm}
         title={confirmDialog.isMultiple ? "Suppression multiple" : "Supprimer le média"}
-        message={confirmDialog.isMultiple 
-          ? `Voulez-vous vraiment supprimer ${confirmDialog.count} média(s) ?` 
-          : `Voulez-vous vraiment supprimer "${confirmDialog.mediaToDelete?.title}" ?`}
+        message={confirmDialog.isMultiple ? `Voulez-vous vraiment supprimer ${confirmDialog.count} média(s) ?` : `Voulez-vous vraiment supprimer "${confirmDialog.mediaToDelete?.title}" ?`}
       />
       
       {isEditMediaModalOpen && editingMedia && (
@@ -4459,88 +4459,44 @@ export default function Programmes() {
                   <h3 className="font-semibold text-gray-700 mb-3">Aperçu actuel</h3>
                   <div className="flex justify-center">
                     {editingMedia.type === 'video' ? (
-                      <img 
-                        src={editingMedia.thumbnail || editingMedia.url || '/default-video-thumb.jpg'} 
-                        alt={editingMedia.title} 
-                        className="max-h-48 rounded-lg shadow object-contain"
-                      />
+                      <img src={editingMedia.thumbnail || editingMedia.url || '/default-video-thumb.jpg'} alt={editingMedia.title} className="max-h-48 rounded-lg shadow object-contain" />
                     ) : (
                       <img src={editingMedia.url} alt={editingMedia.title} className="max-h-48 rounded-lg shadow object-contain" />
                     )}
                   </div>
-                  <p className="text-center text-sm text-gray-500 mt-2">
-                    Type: {editingMedia.type === 'video' ? 'Vidéo externe' : 'Photo'} | 
-                    ID: {editingMedia.id}
-                  </p>
                 </div>
-                
                 <div className="modal-form-grid">
                   <div className="form-group modal-full">
                     <label>Titre *</label>
                     <span className="input-icon"><IconEdit /></span>
-                    <input 
-                      type="text" 
-                      name="title"
-                      value={editMediaForm.title} 
-                      onChange={handleEditMediaFormChange}
-                      className={editMediaErrors.title ? 'border-red-500' : ''}
-                      required 
-                    />
+                    <input type="text" name="title" value={editMediaForm.title} onChange={handleEditMediaFormChange} required />
                     {editMediaErrors.title && <p className="text-red-500 text-sm mt-1">{editMediaErrors.title}</p>}
                   </div>
-                  
                   <div className="form-group modal-full">
                     <label>Description</label>
                     <span className="input-icon"><IconEdit /></span>
-                    <textarea 
-                      name="description"
-                      rows="3"
-                      value={editMediaForm.description} 
-                      onChange={handleEditMediaFormChange}
-                    />
-                    {editMediaErrors.description && <p className="text-red-500 text-sm mt-1">{editMediaErrors.description}</p>}
+                    <textarea name="description" rows="3" value={editMediaForm.description} onChange={handleEditMediaFormChange} />
                   </div>
-                  
                   <div className="form-group">
                     <label>Date *</label>
                     <span className="input-icon"><IconCalendar /></span>
-                    <input 
-                      type="date" 
-                      name="date"
-                      value={editMediaForm.date} 
-                      onChange={handleEditMediaFormChange}
-                      className={editMediaErrors.date ? 'border-red-500' : ''}
-                      required 
-                    />
+                    <input type="date" name="date" value={editMediaForm.date} onChange={handleEditMediaFormChange} required />
                     {editMediaErrors.date && <p className="text-red-500 text-sm mt-1">{editMediaErrors.date}</p>}
                   </div>
-                  
                   <div className="form-group">
                     <label>Activité associée</label>
                     <span className="input-icon"><IconActivity /></span>
-                    <select 
-                      name="special_event_id"
-                      value={editMediaForm.special_event_id} 
-                      onChange={handleEditMediaFormChange}
-                      style={{ appearance: 'auto', paddingLeft: '42px' }}
-                    >
+                    <select name="special_event_id" value={editMediaForm.special_event_id} onChange={handleEditMediaFormChange} style={{ appearance: 'auto', paddingLeft: '42px' }}>
                       <option value="">-- Aucune activité --</option>
-                      {allEvents.map(event => (
-                        <option key={event.id} value={event.id}>
-                          {event.title} - {formatDateFrench(event.date)}
-                        </option>
-                      ))}
+                      {allEvents.map(event => (<option key={event.id} value={event.id}>{event.title} - {formatDateFrench(event.start_date)}</option>))}
                     </select>
-                    {editMediaErrors.special_event_id && <p className="text-red-500 text-sm mt-1">{editMediaErrors.special_event_id}</p>}
                   </div>
                 </div>
               </form>
             </div>
             <div className="modal-footer">
               <button className="btn-cancel" onClick={closeEditMediaModal}>Annuler</button>
-              <button type="submit" form="edit-media-form" className="btn-add" disabled={isEditMediaLoading}>
-                <IconPlus /> {isEditMediaLoading ? 'Enregistrement...' : 'Enregistrer'}
-              </button>
+              <button type="submit" form="edit-media-form" className="btn-add" disabled={isEditMediaLoading}><IconPlus /> {isEditMediaLoading ? 'Enregistrement...' : 'Enregistrer'}</button>
             </div>
           </div>
         </div>
@@ -4548,22 +4504,8 @@ export default function Programmes() {
       
       <EventPlannerModal isOpen={isEventModalOpen} onClose={closeEventModal} onSave={handleSaveEventModal} editingEvent={editingEvent} isLoading={isLoading} />
       <ImportExcelModal isOpen={isImportModalOpen} onClose={closeImportModal} onImport={handleImportEvents} isLoading={isLoading} progress={importProgress} />
-      <AddMediaModal 
-        isOpen={isAddMediaModalOpen} 
-        onClose={closeAddMediaModal} 
-        onAdd={handleAddMedia} 
-        isLoading={isLoading} 
-        events={allEvents}
-        preselectedEventId={preselectedEventId}
-      />
-      <MediaViewerModal 
-        isOpen={isMediaViewerOpen} 
-        onClose={closeMediaViewer} 
-        media={selectedMedia}
-        mediaList={currentMediaList}
-        currentIndex={currentMediaIndex}
-        onNavigate={handleNavigateMedia}
-      />
+      <AddMediaModal isOpen={isAddMediaModalOpen} onClose={closeAddMediaModal} onAdd={handleAddMedia} isLoading={isLoading} events={allEvents} preselectedEventId={preselectedEventId} />
+      <MediaViewerModal isOpen={isMediaViewerOpen} onClose={closeMediaViewer} media={selectedMedia} mediaList={currentMediaList} currentIndex={currentMediaIndex} onNavigate={handleNavigateMedia} />
       <PastEventContentModal isOpen={isDateContentModalOpen} onClose={closeDateContentModal} date={selectedDate} events={allEvents} mediaData={mediaData} />
       
       <div className="min-h-screen animate-fade-in-up" style={{ background: "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)", paddingBottom: '40px' }}>

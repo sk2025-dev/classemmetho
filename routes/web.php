@@ -317,7 +317,7 @@ Route::middleware(['auth'])->group(function () {
             ->name('conducteur.tresorerie.paiements.store');
         Route::post('/conducteur/tresorerie/assign-tresorier', [ConducteurTresorerieController::class, 'assignTresorier'])
             ->name('conducteur.tresorerie.assign-tresorier');
-
+ 
         // ===== ROUTES PROGRAMMES CONDUCTEUR =====
         Route::get('/conducteur/programmes', [ProgrammesClasseController::class, 'index'])->name('conducteur.programmes');
         Route::get('/conducteur/programmes/all', [ProgrammesClasseController::class, 'allProgrammes'])->name('conducteur.programmes.all');
@@ -328,6 +328,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/conducteur/programmes/import-events', [ProgrammesClasseController::class, 'importEvents'])->name('conducteur.programmes.import');
         Route::get('/conducteur/programmes/events-by-month', [ProgrammesClasseController::class, 'getEventsByMonth'])->name('conducteur.programmes.events.by-month');
         Route::get('/conducteur/programmes/history', [ProgrammesClasseController::class, 'historyProgrammes'])->name('conducteur.programmes.history');
+        Route::get('/conducteur/programmes/history/filter', [ProgrammesClasseController::class, 'getHistoryProgrammes'])->name('conducteur.programmes.history.filter');
         // ===== ROUTES GALERIE CONDUCTEUR =====
         Route::post('/conducteur/galerie/add', [ProgrammesClasseController::class, 'addMedia'])->name('conducteur.galerie.add');
         Route::get('/conducteur/galerie', [ProgrammesClasseController::class, 'getGalleryMedia'])->name('conducteur.galerie');
@@ -335,6 +336,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/conducteur/galerie/edit/{id}', [ProgrammesClasseController::class, 'editMedia'])->name('galerie.edit');
         Route::put('/conducteur/galerie/update/{id}', [ProgrammesClasseController::class, 'updateMedia'])->name('galerie.update');
         Route::put('/conducteur/galerie/set-featured/{id}', [ProgrammesClasseController::class, 'setFeaturedMedia']);
+        Route::get('/conducteur/galerie/filter', [ProgrammesClasseController::class, 'getGalleryMediaFiltered'])->name('conducteur.galerie.filter');
     });
 
     // Tableau de bord Responsable de Famille
@@ -402,6 +404,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/responsable-famille/api/gallery/media', [ProgrammesController::class, 'getGalleryMedia'])->name('responsable_famille.api.gallery.index');
         Route::get('/responsable-famille/api/gallery/media/{id}', [ProgrammesController::class, 'showMedia'])->name('responsable_famille.api.gallery.show');
         Route::get('/responsable-famille/api/events/{eventId}/media', [ProgrammesController::class, 'getMediaByEvent'])->name('responsable_famille.api.events.media');
+        Route::get('/responsable-famille/galerie/filter', [ProgrammesController::class, 'getGalleryMediaFiltered'])->name('responsable_famille.galerie.filter');
+        Route::get('/responsable-famille/programmes/history/filter', [ProgrammesController::class, 'getHistoryProgrammes'])->name('responsable_famille.programmes.history.filter');
     });
 
     // Tableau de bord Pasteur
@@ -503,6 +507,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/membre-famille/api/gallery/media', [ProgrammesController::class, 'getGalleryMedia'])->name('membre_famille.api.gallery.index');
         Route::get('/membre-famille/api/gallery/media/{id}', [ProgrammesController::class, 'showMedia'])->name('membre_famille.api.gallery.show');
         Route::get('/membre-famille/api/events/{eventId}/media', [ProgrammesController::class, 'getMediaByEvent'])->name('membre_famille.api.events.media');
+        Route::get('/membre-famille/programmes/history/filter', [ProgrammesController::class, 'getHistoryProgrammes'])->name('membre_famille.programmes.history.filter');
+        Route::get('/membre-famille/galerie/filter', [ProgrammesController::class, 'getGalleryMediaFiltered'])->name('membre_famille.galerie.filter');
     });
 
     // Route pour changer le mot de passe

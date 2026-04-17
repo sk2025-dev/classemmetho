@@ -36,8 +36,8 @@ class ProgrammesPasteurController extends Controller
             foreach ($conducteurs as $conducteur) {
                 $conducteur->classe->programmes = SpecialEvent::where('class_id', $conducteur->classe->id)
                     ->where('is_parish', false)
-                    ->orderBy('date', 'desc')
-                    ->orderBy('time', 'desc')
+                    ->orderBy('start_date', 'desc')
+                    ->orderBy('start_time', 'desc')
                     ->get();
             }
             
@@ -89,10 +89,15 @@ class ProgrammesPasteurController extends Controller
             
             $programmes = SpecialEvent::where('class_id', $classeId)
                 ->where('is_parish', false)
-                ->orderBy('date', 'desc')
-                ->orderBy('time', 'desc')
-                ->get();
-            
+                ->orderBy('start_date', 'asc')
+                ->orderBy('start_time', 'asc')
+                ->get()
+                ->map(function($programme) {
+                // Ajouter les champs compatibles pour le frontend
+                $programme->date = $programme->start_date;
+                $programme->time = $programme->start_time;
+                return $programme;
+              });
             return response()->json([
                 'success' => true,
                 'classe' => $classe,

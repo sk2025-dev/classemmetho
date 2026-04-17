@@ -1,7 +1,11 @@
-// pages/Membre/Programmes.jsx
+// pages/ResponsableFamille/Programmes.jsx
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
+import axios from 'axios';
+
+// Configuration d'axios avec le token CSRF
+axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
 // --- STYLES INTÉGRÉS ---
 const styles = `
@@ -47,6 +51,56 @@ const styles = `
     to { transform: translateX(100%); opacity: 0; }
 }
 .animate-fade-in-up { animation: fade-in-up 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+
+/* Toast Notification */
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    animation: slideIn 0.3s ease forwards;
+}
+.toast-notification.exit {
+    animation: slideOut 0.3s ease forwards;
+}
+.toast-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    min-width: 300px;
+    max-width: 450px;
+}
+.toast-success {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+.toast-error {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+}
+.toast-info {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+}
+.toast-icon {
+    font-size: 1.5rem;
+}
+.toast-message {
+    flex: 1;
+    font-weight: 500;
+}
+.toast-close {
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+.toast-close:hover {
+    opacity: 1;
+}
 
 /* Bouton Retour */
 .btn-back {
@@ -126,7 +180,7 @@ const styles = `
     transform: none;
 }
 
-/* Bouton Voir Plus - conservé pour les autres onglets */
+/* Bouton Voir Plus */
 .btn-view-more {
     background: linear-gradient(135deg, #f59e0b, #d97706);
     color: white;
@@ -418,7 +472,6 @@ const styles = `
     margin-bottom: 1rem;
 }
 
-/* Style pour la date du carrousel - taille agrandie */
 .carousel-simple-date {
     display: flex;
     align-items: center;
@@ -914,6 +967,105 @@ const styles = `
     gap: 1rem;
 }
 
+/* History Filters */
+.history-filters {
+    background: white;
+    border-radius: 20px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border: 1px solid #eef2ff;
+}
+
+.history-filter-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+}
+
+.history-filter-item {
+    flex: 1;
+    min-width: 180px;
+}
+
+.history-filter-item label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.history-filter-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    background: #f8fafc;
+    transition: all 0.2s;
+}
+
+.history-filter-input:focus {
+    outline: none;
+    border-color: #f59e0b;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+
+.history-filter-select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    background: #f8fafc;
+    cursor: pointer;
+}
+
+.history-filter-select:focus {
+    outline: none;
+    border-color: #f59e0b;
+}
+
+.history-filter-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.btn-history-filter-reset {
+    background: #6b7280;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-history-filter-reset:hover {
+    background: #4b5563;
+    transform: translateY(-1px);
+}
+
+.history-filter-stats {
+    margin-top: 15px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+    font-size: 0.85rem;
+    color: #6b7280;
+    text-align: right;
+}
+
 /* History Cards */
 .history-grid {
     display: grid;
@@ -1133,7 +1285,6 @@ const styles = `
     margin-bottom: 2rem;
 }
 
-/* Section activité en blanc */
 .gallery-group {
     margin-bottom: 2rem;
     background: white;
@@ -1143,7 +1294,6 @@ const styles = `
     border: 1px solid #e5e7eb;
 }
 
-/* Titre de l'activité en bleu */
 .gallery-group-title {
     font-size: 1.1rem;
     font-weight: 700;
@@ -1164,7 +1314,6 @@ const styles = `
     color: #6b7280;
 }
 
-/* Navigation dans la galerie - flèches gauche/droite */
 .gallery-nav {
     display: flex;
     justify-content: flex-end;
@@ -1194,7 +1343,6 @@ const styles = `
     cursor: not-allowed;
 }
 
-/* Conteneur de défilement horizontal pour les médias */
 .gallery-scroll-container {
     position: relative;
     overflow-x: auto;
@@ -1220,7 +1368,7 @@ const styles = `
     min-width: min-content;
 }
 
-/* Media Cards - Version défilante avec taille corrigée */
+/* Media Cards */
 .media-card-wrapper {
     position: relative;
     width: 220px;
@@ -1437,8 +1585,10 @@ const IconVideo = () => (<svg xmlns="http://www.w3.org/2000/svg" width="14" heig
 const IconChevronLeft = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>);
 const IconChevronRight = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>);
 const IconStar = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>);
+const IconFilter = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 13 10 21 14 18 14 13 22 3"></polygon></svg>);
+const IconRefresh = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path></svg>);
 
-// --- FONCTION DE FORMATAGE DE DATE CORRIGÉE ---
+// --- FONCTIONS DE FORMATAGE DE DATE ---
 const getLocalDateString = (date) => {
   if (!date) return '';
   const d = new Date(date);
@@ -1462,18 +1612,51 @@ const formatDateFrench = (dateString) => {
 
 // --- FONCTIONS DE FILTRAGE ---
 const isDateInCurrentMonth = (dateString) => {
+  if (!dateString) return false;
   const date = new Date(dateString);
   const now = new Date();
   return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
 };
 
 const isDateInPastMonth = (dateString) => {
+  if (!dateString) return false;
   const date = new Date(dateString);
   const now = new Date();
   return date < now;
 };
 
-// --- CAROUSEL COMPONENT MODIFIÉ AVEC IMAGES DES 4 DERNIÈRES ACTIVITÉS ---
+// --- TOAST COMPONENT ---
+const Toast = ({ message, type = 'success', onClose }) => {
+  const [isExiting, setIsExiting] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsExiting(true);
+      setTimeout(onClose, 300);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const getIcon = () => {
+    switch (type) {
+      case 'success': return <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>;
+      case 'error': return <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/></svg>;
+      default: return <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/></svg>;
+    }
+  };
+
+  return (
+    <div className={`toast-notification ${isExiting ? 'exit' : ''}`}>
+      <div className={`toast-content toast-${type}`}>
+        <div className="toast-icon">{getIcon()}</div>
+        <div className="toast-message">{message}</div>
+        <div className="toast-close" onClick={() => { setIsExiting(true); setTimeout(onClose, 300); }}>✕</div>
+      </div>
+    </div>
+  );
+};
+
+// --- CAROUSEL COMPONENT ---
 const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
@@ -1487,23 +1670,16 @@ const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
 
   const getActivityImage = (activityId) => {
     if (!mediaImages) return null;
-    const activityPhotos = mediaImages.filter(media => media.special_event_id === activityId && media.type === 'photo');
-    if (activityPhotos.length > 0) {
-      const firstPhoto = activityPhotos[0];
-      return firstPhoto.url;
-    }
-    return null;
+    const featuredImage = mediaImages.find(media => media.special_event_id === activityId && media.type === 'photo' && media.is_featured === true);
+    if (featuredImage) return featuredImage.url;
+    const firstPhoto = mediaImages.find(media => media.special_event_id === activityId && media.type === 'photo');
+    return firstPhoto ? firstPhoto.url : null;
   };
 
   const slides = useMemo(() => {
     if (!pastEvents || pastEvents.length === 0) return defaultSlides;
-    
-    const sortedPastEvents = [...pastEvents]
-      .sort((a, b) => new Date(b.date) - new Date(a.date))
-      .slice(0, 4);
-    
+    const sortedPastEvents = [...pastEvents].sort((a, b) => new Date(b.start_date) - new Date(a.start_date)).slice(0, 4);
     if (sortedPastEvents.length === 0) return defaultSlides;
-    
     const activitySlides = [];
     for (const activity of sortedPastEvents) {
       const activityImage = getActivityImage(activity.id);
@@ -1512,23 +1688,19 @@ const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
           id: activity.id,
           image: activityImage,
           title: activity.title,
-          description: activity.lieu || activity.orateur 
-            ? `${activity.lieu || ''} ${activity.orateur ? '· ' + activity.orateur : ''}` 
-            : 'Moment de partage',
-          date: activity.date,
+          description: activity.lieu || activity.orateur ? `${activity.lieu || ''} ${activity.orateur ? '· ' + activity.orateur : ''}` : 'Moment de partage',
+          date: activity.start_date,
         });
       }
     }
     return activitySlides.length > 0 ? activitySlides : defaultSlides;
   }, [pastEvents, mediaImages]);
 
-  const startAutoPlay = () => {
-    if (autoPlayIntervalRef.current) clearInterval(autoPlayIntervalRef.current);
-    autoPlayIntervalRef.current = setInterval(() => setCurrentSlide((prev) => (prev + 1) % slides.length), 5000);
-  };
-
   useEffect(() => {
-    if (isAutoPlaying && slides.length > 0) startAutoPlay();
+    if (isAutoPlaying && slides.length > 0) {
+      if (autoPlayIntervalRef.current) clearInterval(autoPlayIntervalRef.current);
+      autoPlayIntervalRef.current = setInterval(() => setCurrentSlide((prev) => (prev + 1) % slides.length), 5000);
+    }
     return () => { if (autoPlayIntervalRef.current) clearInterval(autoPlayIntervalRef.current); };
   }, [isAutoPlaying, slides.length]);
 
@@ -1547,9 +1719,7 @@ const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
           <div className="carousel-simple-header">ACTIVITÉ RÉCENTES</div>
           <h3 className="carousel-simple-title">{currentSlideData.title}</h3>
           <p className="carousel-simple-description">{currentSlideData.description}</p>
-          <div className="carousel-simple-date">
-            <IconCalendar /> {formattedDate}
-          </div>
+          <div className="carousel-simple-date"><IconCalendar /> {formattedDate}</div>
         </div>
       </div>
       {slides.length > 1 && (
@@ -1557,7 +1727,9 @@ const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
           <button className="carousel-simple-nav carousel-simple-nav-left" onClick={() => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)}>‹</button>
           <button className="carousel-simple-nav carousel-simple-nav-right" onClick={() => setCurrentSlide((prev) => (prev + 1) % slides.length)}>›</button>
           <div className="carousel-simple-dots">
-            {slides.map((_, index) => (<button key={index} className={`carousel-simple-dot ${currentSlide === index ? 'active' : ''}`} onClick={() => setCurrentSlide(index)} />))}
+            {slides.map((_, index) => (
+              <button key={index} className={`carousel-simple-dot ${currentSlide === index ? 'active' : ''}`} onClick={() => setCurrentSlide(index)} />
+            ))}
           </div>
         </>
       )}
@@ -1565,7 +1737,7 @@ const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
   );
 };
 
-// --- MINI CALENDAR COMPONENT CORRIGÉ ---
+// --- MINI CALENDAR COMPONENT ---
 const MiniCalendar = ({ eventsDates = [], eventsData = [], onDateClick, activeDate }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -1585,12 +1757,26 @@ const MiniCalendar = ({ eventsDates = [], eventsData = [], onDateClick, activeDa
 
   const getEventsOnDate = (date) => {
     const localDateStr = getLocalDateString(date);
-    return eventsData.filter(event => getLocalDateString(event.date) === localDateStr);
+    return eventsData.filter(event => {
+      const eventStartDate = getLocalDateString(event.start_date);
+      if (event.end_date) {
+        const eventEndDate = getLocalDateString(event.end_date);
+        return localDateStr >= eventStartDate && localDateStr <= eventEndDate;
+      }
+      return getLocalDateString(event.start_date) === localDateStr;
+    });
   };
 
   const hasEventOnDate = (date) => {
     const localDateStr = getLocalDateString(date);
-    return eventsDates.includes(localDateStr);
+    return eventsData.some(event => {
+      const eventStartDate = getLocalDateString(event.start_date);
+      if (event.end_date) {
+        const eventEndDate = getLocalDateString(event.end_date);
+        return localDateStr >= eventStartDate && localDateStr <= eventEndDate;
+      }
+      return getLocalDateString(event.start_date) === localDateStr;
+    });
   };
   
   const getEventTitles = (date) => {
@@ -1609,10 +1795,6 @@ const MiniCalendar = ({ eventsDates = [], eventsData = [], onDateClick, activeDa
     return getLocalDateString(date) === getLocalDateString(activeDate);
   };
 
-  const isToday = (date) => {
-    return getLocalDateString(date) === getLocalDateString(today);
-  };
-
   return (
     <div className="mini-calendar">
       <div className="cal-header">
@@ -1625,12 +1807,12 @@ const MiniCalendar = ({ eventsDates = [], eventsData = [], onDateClick, activeDa
         {days.map((day, idx) => {
           const hasEvent = hasEventOnDate(day.date);
           const eventTitles = getEventTitles(day.date);
-          const isTodayDate = isToday(day.date);
+          const isToday = getLocalDateString(day.date) === getLocalDateString(today);
           const isActive = isActiveDate(day.date);
           return (
             <div 
               key={idx} 
-              className={`cal-day ${!day.isCurrentMonth ? 'empty' : ''} ${isTodayDate ? 'today' : ''} ${hasEvent && day.isCurrentMonth ? 'has-event' : ''} ${isActive && day.isCurrentMonth ? 'active-selected' : ''}`}
+              className={`cal-day ${!day.isCurrentMonth ? 'empty' : ''} ${isToday ? 'today' : ''} ${hasEvent && day.isCurrentMonth ? 'has-event' : ''} ${isActive && day.isCurrentMonth ? 'active-selected' : ''}`}
               onClick={() => day.isCurrentMonth && onDateClick && onDateClick(day.date)}
             >
               {day.date.getDate()}
@@ -1643,7 +1825,7 @@ const MiniCalendar = ({ eventsDates = [], eventsData = [], onDateClick, activeDa
   );
 };
 
-// --- PAST EVENT CONTENT MODAL CORRIGÉ AVEC VIDÉOS ---
+// --- PAST EVENT CONTENT MODAL ---
 const PastEventContentModal = ({ isOpen, onClose, date, events, mediaData }) => {
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
@@ -1653,27 +1835,15 @@ const PastEventContentModal = ({ isOpen, onClose, date, events, mediaData }) => 
   if (!isOpen || !date) return null;
 
   const dateStr = getLocalDateString(date);
-  const eventsOnDate = events.filter(event => getLocalDateString(event.date) === dateStr);
-  const eventIds = eventsOnDate.map(e => e.id);
-  const relatedMedia = mediaData.filter(media => media.special_event_id && eventIds.includes(media.special_event_id));
-  const generalMedia = mediaData.filter(media => !media.special_event_id && getLocalDateString(media.date) === dateStr);
+  const eventsOnDate = events.filter(event => {
+    const eventStartDate = getLocalDateString(event.start_date);
+    if (event.end_date) {
+      const eventEndDate = getLocalDateString(event.end_date);
+      return dateStr >= eventStartDate && dateStr <= eventEndDate;
+    }
+    return getLocalDateString(event.start_date) === dateStr;
+  });
   const formattedDate = formatDateFrench(date);
-
-  // Fonction pour obtenir l'URL de la vidéo (embed ou directe)
-  const getVideoEmbedUrl = (url) => {
-    if (!url) return null;
-    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-    const youtubeMatch = url.match(youtubeRegex);
-    if (youtubeMatch) {
-      return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
-    }
-    const vimeoRegex = /vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|)(\d+)(?:$|\/|\?)/;
-    const vimeoMatch = url.match(vimeoRegex);
-    if (vimeoMatch) {
-      return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
-    }
-    return url;
-  };
 
   const openMediaViewer = (media, mediaArray) => {
     const index = mediaArray.findIndex(m => m.id === media.id);
@@ -1681,11 +1851,6 @@ const PastEventContentModal = ({ isOpen, onClose, date, events, mediaData }) => 
     setCurrentMediaIndex(index);
     setSelectedMedia(media);
     setIsMediaViewerOpen(true);
-  };
-
-  const handleNavigateMedia = (newIndex) => {
-    setCurrentMediaIndex(newIndex);
-    setSelectedMedia(currentMediaList[newIndex]);
   };
 
   const closeMediaViewer = () => {
@@ -1701,112 +1866,38 @@ const PastEventContentModal = ({ isOpen, onClose, date, events, mediaData }) => 
         <div className="modal-content" onClick={(e) => e.stopPropagation()}>
           <div className="modal-header"><h2>📅 {formattedDate}</h2><button onClick={onClose}>✕</button></div>
           <div className="modal-body">
-            {eventsOnDate.length === 0 && generalMedia.length === 0 ? (
-              <div className="no-media"><p>Aucune activité programmée et aucun média à cette date.</p></div>
+            {eventsOnDate.length === 0 ? (
+              <div className="no-media"><p>Aucune activité programmée à cette date.</p></div>
             ) : (
-              <>
-                {eventsOnDate.map(event => {
-                  const eventMedia = relatedMedia.filter(m => m.special_event_id === event.id);
-                  return (
-                    <div key={event.id} className="past-event-item">
-                      <h3 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '0.5rem' }}>{event.title}</h3>
-                      {event.time && <p style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280', fontSize: '0.85rem' }}><IconClock /> {event.time.substring(0, 5)}</p>}
-                      {event.lieu && <p style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280', fontSize: '0.85rem' }}><IconLocation /> {event.lieu}</p>}
-                      {event.orateur && <p style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}><strong>Orateur :</strong> {event.orateur}</p>}
-                      {event.moderateur && <p style={{ fontSize: '0.85rem' }}><strong>Modérateur :</strong> {event.moderateur}</p>}
-                      {event.famille_reception && <p style={{ fontSize: '0.85rem' }}><strong>Famille de réception :</strong> {event.famille_reception}</p>}
-                      {eventMedia.length > 0 && (
-                        <div className="past-event-media">
-                          <h4>📸 Médias associés</h4>
-                          <div className="media-gallery">
-                            {eventMedia.map(media => {
-                              let mediaUrl = '';
-                              let thumbnailUrl = '';
-                              
-                              if (media.type === 'video') {
-                                mediaUrl = media.video_url || media.url;
-                                thumbnailUrl = media.thumbnail || getVideoEmbedUrl(mediaUrl) || '/default-video-thumb.jpg';
-                              } else {
-                                mediaUrl = media.url;
-                                thumbnailUrl = media.url;
-                              }
-                              
-                              return (
-                                <div key={media.id} className="media-gallery-item" onClick={() => openMediaViewer(media, eventMedia)}>
-                                  {media.type === 'video' ? (
-                                    <div className="relative">
-                                      <img 
-                                        src={thumbnailUrl} 
-                                        alt={media.title} 
-                                        style={{ width: '100%', height: '120px', objectFit: 'cover' }}
-                                        onError={(e) => { e.target.src = '/default-video-thumb.jpg'; }}
-                                      />
-                                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40">
-                                        <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                          <path d="M8 5v14l11-7z"/>
-                                        </svg>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <img src={media.url} alt={media.title} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
-                                  )}
-                                  <div style={{ padding: '6px', fontSize: '0.7rem', textAlign: 'center', background: 'white' }}>
-                                    {media.title.length > 20 ? media.title.substring(0, 20) + '...' : media.title}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                {generalMedia.length > 0 && (
-                  <div className="past-event-media">
-                    <h4>📸 Médias du jour</h4>
-                    <div className="media-gallery">
-                      {generalMedia.map(media => {
-                        let mediaUrl = '';
-                        let thumbnailUrl = '';
-                        
-                        if (media.type === 'video') {
-                          mediaUrl = media.video_url || media.url;
-                          thumbnailUrl = media.thumbnail || getVideoEmbedUrl(mediaUrl) || '/default-video-thumb.jpg';
-                        } else {
-                          mediaUrl = media.url;
-                          thumbnailUrl = media.url;
-                        }
-                        
-                        return (
-                          <div key={media.id} className="media-gallery-item" onClick={() => openMediaViewer(media, generalMedia)}>
-                            {media.type === 'video' ? (
-                              <div className="relative">
-                                <img 
-                                  src={thumbnailUrl} 
-                                  alt={media.title} 
-                                  style={{ width: '100%', height: '120px', objectFit: 'cover' }}
-                                  onError={(e) => { e.target.src = '/default-video-thumb.jpg'; }}
-                                />
-                                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40">
-                                  <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M8 5v14l11-7z"/>
-                                  </svg>
-                                </div>
-                              </div>
-                            ) : (
-                              <img src={media.url} alt={media.title} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
-                            )}
-                            <div style={{ padding: '6px', fontSize: '0.7rem', textAlign: 'center', background: 'white' }}>
-                              {media.title.length > 20 ? media.title.substring(0, 20) + '...' : media.title}
+              eventsOnDate.map(event => {
+                const eventMedia = mediaData.filter(m => m.special_event_id === event.id);
+                const eventStartDate = formatDateFrench(event.start_date);
+                const eventEndDate = event.end_date ? formatDateFrench(event.end_date) : null;
+                const isMultiDay = event.end_date && getLocalDateString(event.start_date) !== getLocalDateString(event.end_date);
+                return (
+                  <div key={event.id} className="past-event-item">
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '0.5rem' }}>{event.title}</h3>
+                    <p style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280', fontSize: '0.85rem' }}><IconCalendar /> {isMultiDay ? `${eventStartDate} → ${eventEndDate}` : eventStartDate}</p>
+                    {event.start_time && <p style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280', fontSize: '0.85rem' }}><IconClock /> {event.start_time.substring(0, 5)}{event.end_time ? ` → ${event.end_time.substring(0, 5)}` : ''}</p>}
+                    {event.lieu && <p style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280', fontSize: '0.85rem' }}><IconLocation /> {event.lieu}</p>}
+                    {event.orateur && <p style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}><strong>Orateur :</strong> {event.orateur}</p>}
+                    {event.moderateur && <p style={{ fontSize: '0.85rem' }}><strong>Modérateur :</strong> {event.moderateur}</p>}
+                    {eventMedia.length > 0 && (
+                      <div className="past-event-media">
+                        <h4>📸 Médias associés</h4>
+                        <div className="media-gallery">
+                          {eventMedia.map(media => (
+                            <div key={media.id} className="media-gallery-item" onClick={() => openMediaViewer(media, eventMedia)}>
+                              <img src={media.type === 'video' ? (media.thumbnail || '/default-video-thumb.jpg') : media.url} alt={media.title} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
+                              <div style={{ padding: '6px', fontSize: '0.7rem', textAlign: 'center', background: 'white' }}>{media.title.length > 20 ? media.title.substring(0, 20) + '...' : media.title}</div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </>
+                );
+              })
             )}
           </div>
           <div className="modal-footer"><button className="btn-cancel" onClick={onClose}>Fermer</button></div>
@@ -1818,66 +1909,49 @@ const PastEventContentModal = ({ isOpen, onClose, date, events, mediaData }) => 
         media={selectedMedia}
         mediaList={currentMediaList}
         currentIndex={currentMediaIndex}
-        onNavigate={handleNavigateMedia}
+        onNavigate={(newIndex) => { setCurrentMediaIndex(newIndex); setSelectedMedia(currentMediaList[newIndex]); }}
       />
     </>
   );
 };
 
-// --- MEDIA VIEWER MODAL AVEC SUPPORT YOUTUBE, VIMEO ---
+// --- MEDIA VIEWER MODAL ---
 const MediaViewerModal = ({ isOpen, onClose, media, mediaList = [], currentIndex = 0, onNavigate }) => {
   if (!isOpen || !media) return null;
 
-  const handlePrevious = () => {
-    if (onNavigate && currentIndex > 0) {
-      onNavigate(currentIndex - 1);
-    }
-  };
-
-  const handleNext = () => {
-    if (onNavigate && currentIndex < mediaList.length - 1) {
-      onNavigate(currentIndex + 1);
-    }
-  };
-
+  const handlePrevious = () => { if (onNavigate && currentIndex > 0) onNavigate(currentIndex - 1); };
+  const handleNext = () => { if (onNavigate && currentIndex < mediaList.length - 1) onNavigate(currentIndex + 1); };
   const currentMedia = mediaList[currentIndex] || media;
 
-  // Extraire l'ID YouTube de l'URL
   const getYouTubeEmbedUrl = (url) => {
     if (!url) return null;
     const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const match = url.match(regex);
-    if (match) {
-      return `https://www.youtube.com/embed/${match[1]}`;
-    }
+    if (match) return `https://www.youtube.com/embed/${match[1]}`;
     return null;
   };
 
-  // Extraire l'ID Vimeo de l'URL
   const getVimeoEmbedUrl = (url) => {
     if (!url) return null;
     const regex = /vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|)(\d+)(?:$|\/|\?)/;
     const match = url.match(regex);
-    if (match) {
-      return `https://player.vimeo.com/video/${match[1]}`;
-    }
+    if (match) return `https://player.vimeo.com/video/${match[1]}`;
     return null;
   };
 
-  // Obtenir l'URL embed pour la vidéo
   const getEmbedUrl = (url) => {
     if (!url) return null;
     return getYouTubeEmbedUrl(url) || getVimeoEmbedUrl(url) || url;
   };
 
-  const embedUrl = getEmbedUrl(currentMedia.video_url || currentMedia.url);
-  
   const getPlatformName = (url) => {
     if (!url) return 'la plateforme';
-    if (url.includes('youtube')) return 'YouTube';
+    if (url.includes('youtube') || url.includes('youtu.be')) return 'YouTube';
     if (url.includes('vimeo')) return 'Vimeo';
     return 'la plateforme';
   };
+
+  const embedUrl = getEmbedUrl(currentMedia.video_url || currentMedia.url);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -1891,28 +1965,12 @@ const MediaViewerModal = ({ isOpen, onClose, media, mediaList = [], currentIndex
             {currentMedia.type === 'video' ? (
               embedUrl && (embedUrl.includes('youtube') || embedUrl.includes('vimeo')) ? (
                 <div className="relative" style={{ paddingBottom: '56.25%', height: 0 }}>
-                  <iframe
-                    src={embedUrl}
-                    title={currentMedia.title}
-                    className="absolute top-0 left-0 w-full h-full rounded-lg"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                  />
+                  <iframe src={embedUrl} title={currentMedia.title} className="absolute top-0 left-0 w-full h-full rounded-lg" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
                 </div>
               ) : (
                 <div className="text-center p-8 bg-gray-100 rounded-lg cursor-pointer" onClick={() => window.open(currentMedia.video_url || currentMedia.url, '_blank')}>
-                  <img 
-                    src={currentMedia.thumbnail || '/default-video-thumb.jpg'} 
-                    alt={currentMedia.title} 
-                    className="max-h-64 mx-auto rounded-lg mb-4"
-                  />
-                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z"/>
-                    </svg>
-                    Regarder sur {getPlatformName(currentMedia.video_url || currentMedia.url)}
-                  </div>
+                  <img src={currentMedia.thumbnail || '/default-video-thumb.jpg'} alt={currentMedia.title} className="max-h-64 mx-auto rounded-lg mb-4" />
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">▶️ Regarder sur {getPlatformName(currentMedia.video_url || currentMedia.url)}</div>
                 </div>
               )
             ) : (
@@ -1921,39 +1979,16 @@ const MediaViewerModal = ({ isOpen, onClose, media, mediaList = [], currentIndex
             
             {mediaList.length > 1 && (
               <div className="media-viewer-nav">
-                <button 
-                  className="media-viewer-nav-btn media-viewer-prev" 
-                  onClick={handlePrevious}
-                  disabled={currentIndex === 0}
-                >
-                  ‹
-                </button>
-                <button 
-                  className="media-viewer-nav-btn media-viewer-next" 
-                  onClick={handleNext}
-                  disabled={currentIndex === mediaList.length - 1}
-                >
-                  ›
-                </button>
+                <button className="media-viewer-nav-btn media-viewer-prev" onClick={handlePrevious} disabled={currentIndex === 0}>‹</button>
+                <button className="media-viewer-nav-btn media-viewer-next" onClick={handleNext} disabled={currentIndex === mediaList.length - 1}>›</button>
               </div>
             )}
             
-            {mediaList.length > 1 && (
-              <div className="media-viewer-counter">
-                {currentIndex + 1} / {mediaList.length}
-              </div>
-            )}
+            {mediaList.length > 1 && (<div className="media-viewer-counter">{currentIndex + 1} / {mediaList.length}</div>)}
             
             <div className="media-viewer-info">
               <p><strong>Date:</strong> {formatDateFrench(currentMedia.date)}</p>
               {currentMedia.description && <p><strong>Description:</strong> {currentMedia.description}</p>}
-              {currentMedia.type === 'video' && (currentMedia.video_url || currentMedia.url) && (
-                <p className="text-blue-600 text-sm mt-2">
-                  <a href={currentMedia.video_url || currentMedia.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                    🔗 Ouvrir sur {getPlatformName(currentMedia.video_url || currentMedia.url)}
-                  </a>
-                </p>
-              )}
             </div>
           </div>
         </div>
@@ -1966,12 +2001,8 @@ const MediaViewerModal = ({ isOpen, onClose, media, mediaList = [], currentIndex
 const GalleryScrollNav = ({ onScrollLeft, onScrollRight, hasLeftScroll, hasRightScroll }) => {
   return (
     <div className="gallery-nav">
-      <button className="gallery-nav-btn" onClick={onScrollLeft} disabled={!hasLeftScroll}>
-        <IconChevronLeft />
-      </button>
-      <button className="gallery-nav-btn" onClick={onScrollRight} disabled={!hasRightScroll}>
-        <IconChevronRight />
-      </button>
+      <button className="gallery-nav-btn" onClick={onScrollLeft} disabled={!hasLeftScroll}><IconChevronLeft /></button>
+      <button className="gallery-nav-btn" onClick={onScrollRight} disabled={!hasRightScroll}><IconChevronRight /></button>
     </div>
   );
 };
@@ -1980,23 +2011,9 @@ const GalleryScrollNav = ({ onScrollLeft, onScrollRight, hasLeftScroll, hasRight
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   return (
     <div className="pagination">
-      <button 
-        className="pagination-btn" 
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1}
-      >
-        ‹
-      </button>
-      <span className="pagination-info">
-        Page {currentPage} sur {totalPages}
-      </span>
-      <button 
-        className="pagination-btn" 
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage === totalPages}
-      >
-        ›
-      </button>
+      <button className="pagination-btn" onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1}>‹</button>
+      <span className="pagination-info">Page {currentPage} sur {totalPages}</span>
+      <button className="pagination-btn" onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages}>›</button>
     </div>
   );
 };
@@ -2004,171 +2021,281 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 // --- MAIN PAGE ---
 export default function Programmes() {
   const { props } = usePage();
-  const { initialClassList = [], initialClassHistory = [], galleryMedia = [] } = props;
+  const { initialClassList = [], initialClassHistory = [], currentClass = null, galleryMedia = [] } = props;
+
+  const [classList, setClassList] = useState(initialClassList || []);
+  const [classHistory, setClassHistory] = useState(initialClassHistory || []);
+  const [mediaData, setMediaData] = useState(galleryMedia || []);
 
   const [activeTab, setActiveTab] = useState('programmes');
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [currentMediaList, setCurrentMediaList] = useState([]);
   const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false);
-  const [mediaData] = useState(galleryMedia || []);
   const [isDateContentModalOpen, setIsDateContentModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [activeCalendarDate, setActiveCalendarDate] = useState(null);
-  const [galleryFilter, setGalleryFilter] = useState({ search: '', month: '', year: '' });
-  const [currentPage, setCurrentPage] = useState(1);
+  const [toast, setToast] = useState(null);
+  
+  // États pour l'historique avec filtrage backend
+  const [historyData, setHistoryData] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyPagination, setHistoryPagination] = useState({
+    current_page: 1,
+    last_page: 1,
+    per_page: 6,
+    total: 0
+  });
+  const [historyFilters, setHistoryFilters] = useState({ search: '', year: 'all', month: 'all' });
+  const [historySortOrder, setHistorySortOrder] = useState('desc');
   const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
-  const itemsPerPage = 4;
   const historyItemsPerPage = 6;
+  
+  // États pour la galerie avec filtrage backend
+  const [galleryData, setGalleryData] = useState([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryPagination, setGalleryPagination] = useState({
+    current_page: 1,
+    last_page: 1,
+    per_page: 12,
+    total: 0
+  });
+  const [galleryFilters, setGalleryFilters] = useState({ 
+    search: '', 
+    month: '', 
+    year: '', 
+    type: 'all',
+    sort_order: 'desc'
+  });
+  const [galleryCurrentPage, setGalleryCurrentPage] = useState(1);
+  const galleryItemsPerPage = 12;
+  
   const scrollRefs = useRef({});
 
-  // Filtrer les événements pour n'afficher que ceux du mois en cours
-  const currentMonthEvents = initialClassList.filter(event => isDateInCurrentMonth(event.date));
-  const pastEvents = initialClassHistory.filter(event => isDateInPastMonth(event.date));
-  const allEvents = [...currentMonthEvents, ...pastEvents];
-  const allEventsData = [...currentMonthEvents, ...pastEvents];
+  const currentMonthEvents = classList.filter(event => isDateInCurrentMonth(event.start_date));
+  const pastEvents = classHistory.filter(event => isDateInPastMonth(event.start_date));
+  const allEvents = [...classList, ...classHistory];
+  const allEventsData = [...classList, ...classHistory];
 
-  const getFilteredEventsByActiveDate = () => {
-    if (!activeCalendarDate) return currentMonthEvents;
-    const activeDateStr = getLocalDateString(activeCalendarDate);
-    return currentMonthEvents.filter(event => {
-      const eventDateStr = getLocalDateString(event.date);
-      return eventDateStr === activeDateStr;
+  // Années disponibles pour l'historique
+  const historyAvailableYears = useMemo(() => {
+    const years = historyData.map(event => new Date(event.start_date).getFullYear());
+    return ['all', ...new Set(years)].sort((a, b) => {
+      if (a === 'all') return -1;
+      if (b === 'all') return 1;
+      return b - a;
     });
-  };
+  }, [historyData]);
 
-  const filteredEvents = getFilteredEventsByActiveDate();
-
-  // Pagination pour l'historique
-  const totalHistoryPages = Math.ceil(pastEvents.length / historyItemsPerPage);
-  const paginatedHistoryEvents = pastEvents.slice(
-    (historyCurrentPage - 1) * historyItemsPerPage,
-    historyCurrentPage * historyItemsPerPage
-  );
-
-  useEffect(() => {
-    if (historyCurrentPage > totalHistoryPages && totalHistoryPages > 0) {
-      setHistoryCurrentPage(totalHistoryPages);
-    }
-  }, [pastEvents.length]);
-
-  // Récupérer les années disponibles pour les filtres de la galerie
-  const galleryAvailableMonths = [
-    'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+  const months = [
+    { value: 'all', label: 'Tous les mois' },
+    { value: '1', label: 'Janvier' }, { value: '2', label: 'Février' }, { value: '3', label: 'Mars' },
+    { value: '4', label: 'Avril' }, { value: '5', label: 'Mai' }, { value: '6', label: 'Juin' },
+    { value: '7', label: 'Juillet' }, { value: '8', label: 'Août' }, { value: '9', label: 'Septembre' },
+    { value: '10', label: 'Octobre' }, { value: '11', label: 'Novembre' }, { value: '12', label: 'Décembre' }
   ];
-  
-  const galleryAvailableYears = useMemo(() => {
-    const years = mediaData.map(m => new Date(m.date).getFullYear());
-    return [...new Set(years)].sort((a, b) => b - a);
-  }, [mediaData]);
 
-  // Filtrer les médias pour la galerie
-  const filteredGalleryMedia = useMemo(() => {
-    let filtered = [...mediaData];
-    
-    if (galleryFilter.search !== '') {
-      filtered = filtered.filter(m => 
-        m.title.toLowerCase().includes(galleryFilter.search.toLowerCase()) ||
-        (m.description && m.description.toLowerCase().includes(galleryFilter.search.toLowerCase()))
-      );
-    }
-    
-    if (galleryFilter.month !== '') {
-      filtered = filtered.filter(m => {
-        const month = new Date(m.date).toLocaleString('fr-FR', { month: 'long' });
-        const monthCapitalized = month.charAt(0).toUpperCase() + month.slice(1);
-        return monthCapitalized === galleryFilter.month;
-      });
-    }
-    
-    if (galleryFilter.year !== '') {
-      filtered = filtered.filter(m => new Date(m.date).getFullYear() === parseInt(galleryFilter.year));
-    }
-    
-    return filtered;
-  }, [mediaData, galleryFilter]);
-
-  // Grouper les médias par activité après filtrage - CLASSEMENT IMAGES À GAUCHE, VIDÉOS À DROITE
-  const groupedGalleryMedia = useMemo(() => {
-    const groups = [];
-    const mediaByActivity = new Map();
-    
-    filteredGalleryMedia.forEach(media => {
-      const key = media.special_event_id || 'without_event';
-      if (!mediaByActivity.has(key)) {
-        mediaByActivity.set(key, []);
+  // Mois disponibles pour la galerie
+  const galleryAvailableMonths = useMemo(() => {
+    const monthsSet = new Set();
+    galleryData.forEach(media => {
+      if (media.date) {
+        const month = new Date(media.date).toLocaleString('fr-FR', { month: 'long' });
+        monthsSet.add(month.charAt(0).toUpperCase() + month.slice(1));
       }
-      mediaByActivity.get(key).push(media);
+    });
+    return Array.from(monthsSet).sort();
+  }, [galleryData]);
+
+  // Années disponibles pour la galerie
+  const galleryAvailableYears = useMemo(() => {
+    const years = new Set();
+    galleryData.forEach(media => {
+      if (media.date) {
+        years.add(new Date(media.date).getFullYear());
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  }, [galleryData]);
+
+  // Regrouper les médias par activité pour l'affichage
+  const groupedGalleryMedia = useMemo(() => {
+    const groups = new Map();
+    
+    galleryData.forEach(media => {
+      const eventId = media.special_event_id || 'without_event';
+      if (!groups.has(eventId)) {
+        groups.set(eventId, {
+          id: eventId,
+          title: media.special_event?.title || 'Sans activité associée',
+          date: media.special_event?.start_date || null,
+          medias: []
+        });
+      }
+      groups.get(eventId).medias.push(media);
     });
     
-    for (const [activityId, medias] of mediaByActivity) {
-      let activity = null;
-      if (activityId !== 'without_event') {
-        activity = allEvents.find(e => e.id === activityId);
-      }
-      
-      // Séparer les images et les vidéos
-      const images = medias.filter(m => m.type === 'photo');
-      const videos = medias.filter(m => m.type === 'video');
-      
-      // Trier chaque catégorie par date décroissante
-      const sortedImages = images.sort((a, b) => new Date(b.date) - new Date(a.date));
-      const sortedVideos = videos.sort((a, b) => new Date(b.date) - new Date(a.date));
-      
-      // Concaténer : images d'abord, puis vidéos
-      const sortedMedias = [...sortedImages, ...sortedVideos];
-      
-      groups.push({
-        id: activityId,
-        title: activity ? activity.title : 'Sans activité associée',
-        date: activity ? activity.date : null,
-        medias: sortedMedias,
-        imagesCount: sortedImages.length,
-        videosCount: sortedVideos.length
-      });
+    for (const group of groups.values()) {
+      group.medias.sort((a, b) => new Date(b.date) - new Date(a.date));
     }
     
-    return groups.sort((a, b) => {
+    return Array.from(groups.values()).sort((a, b) => {
       if (a.date && b.date) return new Date(b.date) - new Date(a.date);
       if (a.date) return -1;
       if (b.date) return 1;
       return 0;
     });
-  }, [filteredGalleryMedia, allEvents]);
+  }, [galleryData]);
 
-  // Pagination des groupes
-  const totalPages = Math.ceil(groupedGalleryMedia.length / itemsPerPage);
-  const paginatedGroups = groupedGalleryMedia.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  // Charger l'historique depuis le backend
+  const loadHistoryProgrammes = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const params = {};
+      if (historyFilters.search && historyFilters.search.trim() !== '') {
+        params.search = historyFilters.search.trim();
+      }
+      if (historyFilters.year && historyFilters.year !== 'all') {
+        params.year = historyFilters.year;
+      }
+      if (historyFilters.month && historyFilters.month !== 'all') {
+        params.month = historyFilters.month;
+      }
+      params.sort_order = historySortOrder;
+      params.page = historyCurrentPage;
+      params.per_page = historyItemsPerPage;
+      
+      const response = await axios.get('/responsable-famille/programmes/history/filter', { params });
+      
+      if (response.data.success) {
+        setHistoryData(response.data.data);
+        setHistoryPagination(response.data.pagination);
+      } else {
+        showToast(response.data.message || 'Erreur lors du chargement', 'error');
+      }
+    } catch (error) {
+      console.error('Erreur chargement historique:', error);
+      showToast('Erreur lors du chargement des données', 'error');
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [historyFilters, historySortOrder, historyCurrentPage, historyItemsPerPage]);
+
+  // Charger la galerie depuis le backend
+  const loadGalleryMedia = useCallback(async () => {
+    setGalleryLoading(true);
+    try {
+      const params = {};
+      if (galleryFilters.search && galleryFilters.search.trim() !== '') {
+        params.search = galleryFilters.search.trim();
+      }
+      if (galleryFilters.month && galleryFilters.month !== '') {
+        params.month = galleryFilters.month;
+      }
+      if (galleryFilters.year && galleryFilters.year !== '') {
+        params.year = galleryFilters.year;
+      }
+      if (galleryFilters.type && galleryFilters.type !== 'all') {
+        params.type = galleryFilters.type;
+      }
+      params.sort_order = galleryFilters.sort_order;
+      params.page = galleryCurrentPage;
+      params.per_page = galleryItemsPerPage;
+      
+      const response = await axios.get('/responsable-famille/galerie/filter', { params });
+      
+      if (response.data.success) {
+        setGalleryData(response.data.data);
+        setGalleryPagination(response.data.pagination);
+      } else {
+        showToast(response.data.message || 'Erreur lors du chargement', 'error');
+      }
+    } catch (error) {
+      console.error('Erreur chargement galerie:', error);
+      showToast('Erreur lors du chargement de la galerie', 'error');
+    } finally {
+      setGalleryLoading(false);
+    }
+  }, [galleryFilters, galleryCurrentPage, galleryItemsPerPage]);
+
+  // Recharger quand les filtres ou la page changent
+  useEffect(() => {
+    loadHistoryProgrammes();
+  }, [historyFilters, historySortOrder, historyCurrentPage]);
+
+  useEffect(() => {
+    loadGalleryMedia();
+  }, [galleryFilters, galleryCurrentPage]);
 
   // Réinitialiser la page quand les filtres changent
   useEffect(() => {
-    setCurrentPage(1);
-  }, [galleryFilter]);
+    setHistoryCurrentPage(1);
+  }, [historyFilters, historySortOrder]);
 
-  const getAllEventDates = () => allEvents.map(event => getLocalDateString(event.date));
-  
-  const handleDateClick = (date) => { 
-    setActiveCalendarDate(date);
-    setSelectedDate(date); 
-    setIsDateContentModalOpen(true); 
+  useEffect(() => {
+    setGalleryCurrentPage(1);
+  }, [galleryFilters]);
+
+  const showToast = (message, type = 'success') => setToast({ message, type });
+  const hideToast = () => setToast(null);
+
+  const resetHistoryFilters = () => {
+    setHistoryFilters({ search: '', year: 'all', month: 'all' });
+    setHistorySortOrder('desc');
+    setHistoryCurrentPage(1);
+  };
+
+  const resetGalleryFilters = () => {
+    setGalleryFilters({ 
+      search: '', 
+      month: '', 
+      year: '', 
+      type: 'all',
+      sort_order: 'desc'
+    });
+    setGalleryCurrentPage(1);
+  };
+
+  const getFilteredEventsByActiveDate = () => {
+    if (!activeCalendarDate) return currentMonthEvents;
+    const activeDateStr = getLocalDateString(activeCalendarDate);
+    return currentMonthEvents.filter(event => {
+      const eventStartDate = getLocalDateString(event.start_date);
+      if (event.end_date) {
+        const eventEndDate = getLocalDateString(event.end_date);
+        return activeDateStr >= eventStartDate && activeDateStr <= eventEndDate;
+      }
+      return getLocalDateString(event.start_date) === activeDateStr;
+    });
+  };
+
+  const filteredEvents = getFilteredEventsByActiveDate();
+
+  const getAllEventDates = () => {
+    const dates = [];
+    allEvents.forEach(event => {
+      const startDate = getLocalDateString(event.start_date);
+      dates.push(startDate);
+      if (event.end_date) {
+        const endDate = new Date(event.end_date);
+        const start = new Date(event.start_date);
+        let current = new Date(start);
+        while (current < endDate) {
+          current.setDate(current.getDate() + 1);
+          dates.push(getLocalDateString(current));
+        }
+      }
+    });
+    return [...new Set(dates)];
   };
   
-  const handleHistoricalCardClick = (event) => { 
-    setSelectedDate(new Date(event.date)); 
-    setIsDateContentModalOpen(true); 
-  };
-  
-  const closeDateContentModal = () => { 
-    setIsDateContentModalOpen(false); 
-    setSelectedDate(null);
-    setActiveCalendarDate(null);
-  };
-  
+  const handleDateClick = (date) => { setActiveCalendarDate(date); setSelectedDate(date); setIsDateContentModalOpen(true); };
+  const handleHistoricalCardClick = (event) => { setSelectedDate(new Date(event.start_date)); setIsDateContentModalOpen(true); };
+  const closeDateContentModal = () => { setIsDateContentModalOpen(false); setSelectedDate(null); setActiveCalendarDate(null); };
   const handleClearDateFilter = () => setActiveCalendarDate(null);
   
   const openMediaViewer = (media, mediaArray = null) => {
-    const list = mediaArray || mediaData;
+    const list = mediaArray || galleryData;
     const index = list.findIndex(m => m.id === media.id);
     setCurrentMediaList(list);
     setCurrentMediaIndex(index >= 0 ? index : 0);
@@ -2176,24 +2303,12 @@ export default function Programmes() {
     setIsMediaViewerOpen(true);
   };
   
-  const handleNavigateMedia = (newIndex) => {
-    if (currentMediaList[newIndex]) {
-      setCurrentMediaIndex(newIndex);
-      setSelectedMedia(currentMediaList[newIndex]);
-    }
-  };
-  
-  const closeMediaViewer = () => { 
-    setIsMediaViewerOpen(false); 
-    setSelectedMedia(null);
-    setCurrentMediaList([]);
-    setCurrentMediaIndex(0);
-  };
+  const handleNavigateMedia = (newIndex) => { if (currentMediaList[newIndex]) { setCurrentMediaIndex(newIndex); setSelectedMedia(currentMediaList[newIndex]); } };
+  const closeMediaViewer = () => { setIsMediaViewerOpen(false); setSelectedMedia(null); setCurrentMediaList([]); setCurrentMediaIndex(0); };
 
   const handleGoBack = () => router.visit('/responsable-famille/dashboard');
   const handleViewAllProgrammes = () => router.visit('/responsable-famille/programmes/all');
   const handleViewAllHistory = () => router.visit('/responsable-famille/programmes/history');
-  const handleViewAllMedia = () => router.visit('/responsable-famille/galerie');
 
   // Fonctions de défilement horizontal pour chaque groupe
   const handleScrollLeft = (groupId) => {
@@ -2227,6 +2342,11 @@ export default function Programmes() {
     }));
   };
 
+  // Pagination des groupes
+  const itemsPerPage = 6;
+  const totalPages = Math.ceil(groupedGalleryMedia.length / itemsPerPage);
+  const paginatedGroups = groupedGalleryMedia.slice((galleryCurrentPage - 1) * itemsPerPage, galleryCurrentPage * itemsPerPage);
+
   useEffect(() => {
     const intervals = {};
     Object.keys(scrollRefs.current).forEach(groupId => {
@@ -2238,343 +2358,7 @@ export default function Programmes() {
     };
   }, [paginatedGroups]);
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'programmes':
-        const currentMonthName = new Date().toLocaleString('fr-FR', { month: 'long' });
-        const currentMonthCapitalized = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
-        
-        return (
-          <>
-            <HeroCarousel 
-              mediaImages={mediaData} 
-              pastEvents={pastEvents}
-            />
-            
-            <div className="action-bar">
-              <h2>🔥 ACTIVITÉS EN COURS
-                <span className="badge-count">
-                  {filteredEvents.length} activité(s)
-                  {!activeCalendarDate && ` - ${currentMonthCapitalized} ${new Date().getFullYear()}`}
-                  {activeCalendarDate && ` - ${formatDateFrench(activeCalendarDate)}`}
-                </span>
-              </h2>
-            </div>
-            
-            <div className="glass-container">
-              <div className="main-layout">
-                <div className="cards-container">
-                  {filteredEvents.length > 0 ? (
-                    <div className="horizontal-scroller">
-                      <div className="cards-wrapper">
-                        {filteredEvents.map(event => (
-                          <div key={event.id} className="special-card">
-                            <div>
-                              <div className="special-header">
-                                <span className="special-date">{formatDateFrench(event.date)}</span>
-                              </div>
-                              <h4 className="special-title">{event.title}</h4>
-                              {event.lieu && <p className="special-lieu"><IconLocation /> {event.lieu}</p>}
-                              {event.time && <p><IconClock /> {event.time.substring(0, 5)}</p>}
-                              <div className="special-meta">
-                                {event.orateur && <div><span className="special-meta-label">Orateur:</span> {event.orateur}</div>}
-                                {event.moderateur && <div><span className="special-meta-label">Modérateur:</span> {event.moderateur}</div>}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <EmptyDialog />
-                  )}
-                </div>
-                <div className="calendar-container">
-                  <MiniCalendar 
-                    eventsDates={getAllEventDates()} 
-                    eventsData={allEventsData} 
-                    onDateClick={handleDateClick}
-                    activeDate={activeCalendarDate}
-                  />
-                </div>
-              </div>
-            </div>
-            
-            {currentMonthEvents.length > 0 && (
-              <div className="btn-view-more-wrapper">
-                <button className="btn-view-more" onClick={handleViewAllProgrammes}>
-                  <IconEye /> Voir tout les programmes
-                </button>
-              </div>
-            )}
-          </>
-        );
-      case 'historique':
-        const currentYear = new Date().getFullYear();
-        
-        return (
-          <>
-            <div className="action-bar">
-              <h2>📜 DERNIÈRES ACTIVITÉS</h2>
-              <div className="action-buttons">
-                <span className="badge-count">
-                  {pastEvents.length} activité(s) - {currentYear}
-                </span>
-              </div>
-            </div>
-            <div className="glass-container">
-              <div className="main-layout">
-                <div className="cards-container">
-                  {paginatedHistoryEvents.length > 0 ? (
-                    <>
-                      <div className="history-grid">
-                        {paginatedHistoryEvents.map(item => {
-                          const eventMedia = mediaData.filter(media => media.special_event_id === item.id);
-                          const hasMedia = eventMedia.length > 0;
-                          
-                          return (
-                            <div key={item.id} className="history-card-v2" onClick={() => handleHistoricalCardClick(item)}>
-                              <div className="history-card-v2-header">
-                                <h3 className="history-card-v2-title">{item.title}</h3>
-                                <div className="history-card-v2-date">
-                                  <IconCalendar />
-                                  {formatDateFrench(item.date)}
-                                  {item.time && (
-                                    <>
-                                      <span style={{ margin: '0 4px' }}>•</span>
-                                      <IconClock />
-                                      {item.time.substring(0, 5)}
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="history-card-v2-body">
-                                <div className="history-card-v2-info">
-                                  {item.lieu && (
-                                    <div className="history-card-v2-info-item">
-                                      <IconLocation className="history-card-v2-info-icon" />
-                                      <span className="history-card-v2-info-label">Lieu :</span>
-                                      <span className="history-card-v2-info-value">{item.lieu}</span>
-                                    </div>
-                                  )}
-                                  {item.orateur && (
-                                    <div className="history-card-v2-info-item">
-                                      <IconMic className="history-card-v2-info-icon" />
-                                      <span className="history-card-v2-info-label">Orateur :</span>
-                                      <span className="history-card-v2-info-value">{item.orateur}</span>
-                                    </div>
-                                  )}
-                                  {item.moderateur && (
-                                    <div className="history-card-v2-info-item">
-                                      <IconUser className="history-card-v2-info-icon" />
-                                      <span className="history-card-v2-info-label">Modérateur :</span>
-                                      <span className="history-card-v2-info-value">{item.moderateur}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="history-card-v2-footer">
-                                <span className="history-card-v2-badge">
-                                  {new Date(item.date).getFullYear()}
-                                </span>
-                                {hasMedia && (
-                                  <span className="history-card-v2-media-badge">
-                                    <IconGallery /> {eventMedia.length} média(s)
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      
-                      {/* Pagination pour l'historique */}
-                      {totalHistoryPages > 1 && (
-                        <div className="pagination">
-                          <button 
-                            className="pagination-btn" 
-                            onClick={() => setHistoryCurrentPage(prev => Math.max(1, prev - 1))}
-                            disabled={historyCurrentPage === 1}
-                          >
-                            ‹
-                          </button>
-                          <span className="pagination-info">
-                            Page {historyCurrentPage} sur {totalHistoryPages}
-                          </span>
-                          <button 
-                            className="pagination-btn" 
-                            onClick={() => setHistoryCurrentPage(prev => Math.min(totalHistoryPages, prev + 1))}
-                            disabled={historyCurrentPage === totalHistoryPages}
-                          >
-                            ›
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="empty-state">
-                      <div className="empty-icon">📜</div>
-                      <div className="empty-title">Aucune activité récente</div>
-                      <div className="empty-message">Aucune activité passée n'est disponible pour le moment.</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </>
-        );
-      case 'parcours':
-        return (
-          <>
-            {/* Barre de filtres pour la galerie - sans titre */}
-            <div className="gallery-filters">
-              <div className="gallery-filter-group">
-                <input
-                  type="text"
-                  className="filter-input"
-                  placeholder="🔍 Rechercher par titre, description ou activité..."
-                  value={galleryFilter.search}
-                  onChange={(e) => setGalleryFilter(prev => ({ ...prev, search: e.target.value }))}
-                  style={{ flex: 2 }}
-                />
-                <select
-                  className="gallery-filter-select"
-                  value={galleryFilter.month}
-                  onChange={(e) => setGalleryFilter(prev => ({ ...prev, month: e.target.value }))}
-                >
-                  <option value="">Tous les mois</option>
-                  {galleryAvailableMonths.map(month => (
-                    <option key={month} value={month}>{month}</option>
-                  ))}
-                </select>
-                <select
-                  className="gallery-filter-select"
-                  value={galleryFilter.year}
-                  onChange={(e) => setGalleryFilter(prev => ({ ...prev, year: e.target.value }))}
-                >
-                  <option value="">Toutes les années</option>
-                  {galleryAvailableYears.map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
-                {(galleryFilter.search || galleryFilter.month || galleryFilter.year) && (
-                  <button className="btn-clear" onClick={() => setGalleryFilter({ search: '', month: '', year: '' })}>
-                    ✖ Réinitialiser
-                  </button>
-                )}
-              </div>
-              <div className="gallery-filter-stats">
-                {filteredGalleryMedia.length} média(s) affiché(s) sur {mediaData.length} total
-              </div>
-            </div>
-
-            <div className="glass-container">
-              {paginatedGroups.length > 0 ? (
-                paginatedGroups.map(group => {
-                  const scrollKey = group.id;
-                  const scrollState = scrollStates[scrollKey] || { hasLeftScroll: false, hasRightScroll: false };
-                  
-                  return (
-                    <div key={group.id} className="gallery-section">
-                      <div className="gallery-group">
-                        <div className="gallery-group-title">
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', flex: 1 }}>
-                            <IconGallery />
-                            {group.title}
-                            {group.date && (
-                              <span className="gallery-group-date">
-                                <IconCalendar style={{ width: '12px', height: '12px', marginLeft: '10px' }} />
-                                {formatDateFrench(group.date)}
-                              </span>
-                            )}
-                            <span className="text-xs text-gray-500 ml-2">
-                              📷 {group.imagesCount} | 🎬 {group.videosCount}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        {/* Navigation flèches gauche/droite */}
-                        <GalleryScrollNav 
-                          onScrollLeft={() => handleScrollLeft(scrollKey)}
-                          onScrollRight={() => handleScrollRight(scrollKey)}
-                          hasLeftScroll={scrollState.hasLeftScroll}
-                          hasRightScroll={scrollState.hasRightScroll}
-                        />
-                        
-                        {/* Conteneur de défilement horizontal */}
-                        <div 
-                          className="gallery-scroll-container"
-                          ref={el => scrollRefs.current[scrollKey] = el}
-                          onScroll={() => updateScrollState(scrollKey)}
-                        >
-                          <div className="gallery-group-grid-scroll">
-                            {group.medias.map(media => (
-                              <div key={media.id} className="media-card-wrapper">
-                                <div className="media-card" onClick={() => openMediaViewer(media, group.medias)}>
-                                  <div className="media-thumbnail">
-                                    <img 
-                                      src={media.type === 'video' ? (media.thumbnail || '/default-video-thumb.jpg') : media.url} 
-                                      alt={media.title} 
-                                    />
-                                    {media.type === 'video' && (
-                                      <div className="media-play-icon">
-                                        <IconPlay />
-                                      </div>
-                                    )}
-                                    <div className="media-badge">
-                                      {media.type === 'video' ? <IconVideo /> : <IconPhoto />}
-                                      {media.type === 'video' ? 'Vidéo' : 'Photo'}
-                                    </div>
-                                  </div>
-                                  <div className="media-info">
-                                    <h4 className="media-title">{media.title}</h4>
-                                    <p className="media-date"><IconCalendar />{formatDateFrench(media.date)}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="empty-state" style={{ margin: 0 }}>
-                  <div className="empty-icon">📸</div>
-                  <div className="empty-title">Aucun média trouvé</div>
-                  <div className="empty-message">
-                    {mediaData.length === 0 
-                      ? "Aucun média disponible pour le moment."
-                      : "Aucun média ne correspond à vos critères de recherche."}
-                  </div>
-                  {mediaData.length > 0 && (
-                    <button 
-                      className="btn-clear" 
-                      onClick={() => setGalleryFilter({ search: '', month: '', year: '' })} 
-                      style={{ marginTop: '20px' }}
-                    >
-                      ✖ Réinitialiser les filtres
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-            
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <Pagination 
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
-            )}
-          </>
-        );
-      default: return null;
-    }
-  };
-
+  // Composant EmptyDialog
   const EmptyDialog = () => {
     const currentMonthName = new Date().toLocaleString('fr-FR', { month: 'long' });
     const currentMonthCapitalized = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
@@ -2592,10 +2376,428 @@ export default function Programmes() {
     );
   };
 
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'programmes':
+        const currentMonthName = new Date().toLocaleString('fr-FR', { month: 'long' });
+        const currentMonthCapitalized = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
+        
+        return (
+          <>
+            <HeroCarousel mediaImages={mediaData} pastEvents={pastEvents} />
+            
+            <div className="action-bar">
+              <h2>🔥 ACTIVITÉS EN COURS
+                <span className="badge-count">
+                  {filteredEvents.length} activité(s)
+                  {!activeCalendarDate && ` - ${currentMonthCapitalized} ${new Date().getFullYear()}`}
+                  {activeCalendarDate && ` - ${formatDateFrench(activeCalendarDate)}`}
+                </span>
+              </h2>
+            </div>
+            
+            <div className="glass-container">
+              <div className="main-layout">
+                <div className="cards-container">
+                  {filteredEvents.length > 0 ? (
+                    <div className="horizontal-scroller">
+                      <div className="cards-wrapper">
+                        {filteredEvents.map(event => {
+                          const eventStartDate = formatDateFrench(event.start_date);
+                          const eventEndDate = event.end_date ? formatDateFrench(event.end_date) : null;
+                          const isMultiDay = event.end_date && getLocalDateString(event.start_date) !== getLocalDateString(event.end_date);
+                          
+                          // Formatage de l'heure de début et de fin
+                          const startTimeFormatted = event.start_time ? event.start_time.substring(0, 5) : '';
+                          const endTimeFormatted = event.end_time ? event.end_time.substring(0, 5) : '';
+                          const hasTimeRange = startTimeFormatted && endTimeFormatted;
+                          const hasStartTimeOnly = startTimeFormatted && !endTimeFormatted;
+                          
+                          return (
+                            <div key={event.id} className="special-card">
+                              <div>
+                                <div className="special-header">
+                                  <span className="special-date">{isMultiDay ? `${eventStartDate} → ${eventEndDate}` : eventStartDate}</span>
+                                </div>
+                                <h4 className="special-title">{event.title}</h4>
+                                {event.lieu && <p className="special-lieu"><IconLocation /> {event.lieu}</p>}
+                                
+                                {/* Affichage des horaires avec gestion de l'heure de fin */}
+                                {(startTimeFormatted || endTimeFormatted) && (
+                                  <p style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280', fontSize: '0.85rem', marginBottom: '10px' }}>
+                                    <IconClock />
+                                    {hasTimeRange && `${startTimeFormatted} → ${endTimeFormatted}`}
+                                    {hasStartTimeOnly && startTimeFormatted}
+                                    {!hasTimeRange && !hasStartTimeOnly && 'Horaire non défini'}
+                                  </p>
+                                )}
+                                
+                                <div className="special-meta">
+                                  {event.orateur && <div><span className="special-meta-label">Orateur:</span> {event.orateur}</div>}
+                                  {event.moderateur && <div><span className="special-meta-label">Modérateur:</span> {event.moderateur}</div>}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <EmptyDialog />
+                  )}
+                </div>
+                <div className="calendar-container">
+                  <MiniCalendar 
+                    eventsDates={getAllEventDates()} 
+                    eventsData={allEventsData} 
+                    onDateClick={handleDateClick}
+                    activeDate={activeCalendarDate}
+                  />
+                </div>
+              </div>
+            </div>
+            
+            {classList.length > 0 && (
+              <div className="btn-view-more-wrapper">
+                <button className="btn-view-more" onClick={handleViewAllProgrammes}>
+                  <IconEye /> Voir tout les programmes
+                </button>
+              </div>
+            )}
+          </>
+        );
+        
+      case 'historique':
+        return (
+          <>
+            <div className="action-bar">
+              <h2>📜 DERNIÈRES ACTIVITÉS</h2>
+            </div>
+            
+            <div className="history-filters">
+              <div className="history-filter-group">
+                <div className="history-filter-item" style={{ flex: 2 }}>
+                  <label><IconFilter style={{ display: 'inline', marginRight: '4px' }} /> Recherche</label>
+                  <input 
+                    type="text" 
+                    className="history-filter-input" 
+                    placeholder="Rechercher par titre, orateur, modérateur, lieu..." 
+                    value={historyFilters.search} 
+                    onChange={(e) => setHistoryFilters(prev => ({ ...prev, search: e.target.value }))} 
+                  />
+                </div>
+                <div className="history-filter-item">
+                  <label>Année</label>
+                  <select 
+                    className="history-filter-select" 
+                    value={historyFilters.year} 
+                    onChange={(e) => setHistoryFilters(prev => ({ ...prev, year: e.target.value }))}
+                  >
+                    {historyAvailableYears.map(year => (<option key={year} value={year}>{year === 'all' ? 'Toutes les années' : year}</option>))}
+                  </select>
+                </div>
+                <div className="history-filter-item">
+                  <label>Mois</label>
+                  <select 
+                    className="history-filter-select" 
+                    value={historyFilters.month} 
+                    onChange={(e) => setHistoryFilters(prev => ({ ...prev, month: e.target.value }))}
+                  >
+                    {months.map(month => (<option key={month.value} value={month.value}>{month.label}</option>))}
+                  </select>
+                </div>
+                <div className="history-filter-item" style={{ minWidth: '150px' }}>
+                  <label>Trier par</label>
+                  <select 
+                    className="history-filter-select" 
+                    value={historySortOrder} 
+                    onChange={(e) => setHistorySortOrder(e.target.value)}
+                  >
+                    <option value="desc">Plus récentes d'abord</option>
+                    <option value="asc">Plus anciennes d'abord</option>
+                  </select>
+                </div>
+                <div className="history-filter-actions">
+                  <button className="btn-history-filter-reset" onClick={resetHistoryFilters}><IconRefresh /> Réinitialiser</button>
+                </div>
+              </div>
+              <div className="history-filter-stats">
+                {historyPagination.total} activité(s) au total
+              </div>
+            </div>
+            
+            <div className="glass-container">
+              <div className="main-layout">
+                <div className="cards-container">
+                  {historyLoading ? (
+                    <div className="empty-state">
+                      <div className="empty-icon">⏳</div>
+                      <div className="empty-title">Chargement...</div>
+                      <div className="empty-message">Veuillez patienter pendant le chargement des données.</div>
+                    </div>
+                  ) : historyData.length > 0 ? (
+                    <>
+                      <div className="history-grid">
+                        {historyData.map(item => {
+                          const eventMedia = mediaData.filter(media => media.special_event_id === item.id);
+                          const hasMedia = eventMedia.length > 0;
+                          const eventStartDate = formatDateFrench(item.start_date);
+                          const eventEndDate = item.end_date ? formatDateFrench(item.end_date) : null;
+                          const isMultiDay = item.end_date && getLocalDateString(item.start_date) !== getLocalDateString(item.end_date);
+                          
+                          const startTimeFormatted = item.start_time ? item.start_time.substring(0, 5) : '';
+                          const endTimeFormatted = item.end_time ? item.end_time.substring(0, 5) : '';
+                          const hasTimeRange = startTimeFormatted && endTimeFormatted;
+                          const hasStartTimeOnly = startTimeFormatted && !endTimeFormatted;
+                          
+                          return (
+                            <div key={item.id} className="history-card-v2" onClick={() => handleHistoricalCardClick(item)}>
+                              <div className="history-card-v2-header">
+                                <h3 className="history-card-v2-title">{item.title}</h3>
+                                <div className="history-card-v2-date">
+                                  <IconCalendar /> {isMultiDay ? `${eventStartDate} → ${eventEndDate}` : eventStartDate}
+                                  {(startTimeFormatted || endTimeFormatted) && (
+                                    <>
+                                      <span style={{ margin: '0 4px' }}>•</span>
+                                      <IconClock />
+                                      {hasTimeRange && `${startTimeFormatted} → ${endTimeFormatted}`}
+                                      {hasStartTimeOnly && startTimeFormatted}
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="history-card-v2-body">
+                                <div className="history-card-v2-info">
+                                  {item.lieu && (<div className="history-card-v2-info-item"><IconLocation className="history-card-v2-info-icon" /><span className="history-card-v2-info-label">Lieu :</span><span className="history-card-v2-info-value">{item.lieu}</span></div>)}
+                                  {item.orateur && (<div className="history-card-v2-info-item"><IconMic className="history-card-v2-info-icon" /><span className="history-card-v2-info-label">Orateur :</span><span className="history-card-v2-info-value">{item.orateur}</span></div>)}
+                                  {item.moderateur && (<div className="history-card-v2-info-item"><IconUser className="history-card-v2-info-icon" /><span className="history-card-v2-info-label">Modérateur :</span><span className="history-card-v2-info-value">{item.moderateur}</span></div>)}
+                                </div>
+                              </div>
+                              <div className="history-card-v2-footer">
+                                <span className="history-card-v2-badge">{new Date(item.start_date).getFullYear()}</span>
+                                {hasMedia && (<span className="history-card-v2-media-badge"><IconGallery /> {eventMedia.length} média(s)</span>)}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {historyPagination.last_page > 1 && (
+                        <div className="pagination">
+                          <button 
+                            className="pagination-btn" 
+                            onClick={() => setHistoryCurrentPage(prev => Math.max(1, prev - 1))} 
+                            disabled={historyCurrentPage === 1}
+                          >‹</button>
+                          <span className="pagination-info">Page {historyCurrentPage} sur {historyPagination.last_page}</span>
+                          <button 
+                            className="pagination-btn" 
+                            onClick={() => setHistoryCurrentPage(prev => Math.min(historyPagination.last_page, prev + 1))} 
+                            disabled={historyCurrentPage === historyPagination.last_page}
+                          >›</button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="empty-state">
+                      <div className="empty-icon">📜</div>
+                      <div className="empty-title">Aucune activité trouvée</div>
+                      <div className="empty-message">Aucune activité ne correspond à vos critères de recherche.</div>
+                      <button className="btn-clear" onClick={resetHistoryFilters} style={{ marginTop: '20px' }}>Réinitialiser les filtres</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
+        );
+        
+      case 'parcours':
+        return (
+          <>
+            <div className="gallery-filters">
+              <div className="gallery-filter-group">
+                <input 
+                  type="text" 
+                  className="filter-input" 
+                  placeholder="🔍 Rechercher par titre ou description..." 
+                  value={galleryFilters.search} 
+                  onChange={(e) => setGalleryFilters(prev => ({ ...prev, search: e.target.value }))} 
+                />
+                <select 
+                  className="gallery-filter-select" 
+                  value={galleryFilters.month} 
+                  onChange={(e) => setGalleryFilters(prev => ({ ...prev, month: e.target.value }))}
+                >
+                  <option value="">Tous les mois</option>
+                  {galleryAvailableMonths.map(month => (
+                    <option key={month} value={month}>{month}</option>
+                  ))}
+                </select>
+                <select 
+                  className="gallery-filter-select" 
+                  value={galleryFilters.year} 
+                  onChange={(e) => setGalleryFilters(prev => ({ ...prev, year: e.target.value }))}
+                >
+                  <option value="">Toutes les années</option>
+                  {galleryAvailableYears.map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+                <select 
+                  className="gallery-filter-select" 
+                  value={galleryFilters.type} 
+                  onChange={(e) => setGalleryFilters(prev => ({ ...prev, type: e.target.value }))}
+                >
+                  <option value="all">📷 Tous les types</option>
+                  <option value="photo">🖼️ Photos uniquement</option>
+                  <option value="video">🎬 Vidéos uniquement</option>
+                </select>
+                <select 
+                  className="gallery-filter-select" 
+                  value={galleryFilters.sort_order} 
+                  onChange={(e) => setGalleryFilters(prev => ({ ...prev, sort_order: e.target.value }))}
+                >
+                  <option value="desc">Plus récents d'abord</option>
+                  <option value="asc">Plus anciens d'abord</option>
+                </select>
+                <button className="btn-clear" onClick={resetGalleryFilters}>
+                  <IconRefresh /> Réinitialiser
+                </button>
+              </div>
+              <div className="gallery-filter-stats">
+                {galleryPagination.total} média(s) trouvé(s)
+              </div>
+            </div>
+            
+            <div className="glass-container">
+              {galleryLoading ? (
+                <div className="empty-state">
+                  <div className="empty-icon">⏳</div>
+                  <div className="empty-title">Chargement...</div>
+                  <div className="empty-message">Veuillez patienter pendant le chargement de la galerie.</div>
+                </div>
+              ) : paginatedGroups.length > 0 ? (
+                paginatedGroups.map(group => {
+                  const scrollKey = `gallery_${group.id}`;
+                  const scrollState = scrollStates[scrollKey] || { hasLeftScroll: false, hasRightScroll: false };
+                  const imagesCount = group.medias.filter(m => m.type === 'photo').length;
+                  const videosCount = group.medias.filter(m => m.type === 'video').length;
+                  
+                  return (
+                    <div key={group.id} className="gallery-section">
+                      <div className="gallery-group">
+                        <div className="gallery-group-title">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', flex: 1 }}>
+                            <IconGallery /> {group.title}
+                            {group.date && (
+                              <span className="gallery-group-date">
+                                <IconCalendar style={{ width: '12px', height: '12px', marginLeft: '10px' }} /> 
+                                {formatDateFrench(group.date)}
+                              </span>
+                            )}
+                            <span className="text-xs text-gray-500 ml-2">
+                              📷 {imagesCount} | 🎬 {videosCount}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <GalleryScrollNav 
+                          onScrollLeft={() => handleScrollLeft(scrollKey)}
+                          onScrollRight={() => handleScrollRight(scrollKey)}
+                          hasLeftScroll={scrollState.hasLeftScroll}
+                          hasRightScroll={scrollState.hasRightScroll}
+                        />
+                        
+                        <div 
+                          className="gallery-scroll-container" 
+                          ref={el => scrollRefs.current[scrollKey] = el} 
+                          onScroll={() => updateScrollState(scrollKey)}
+                        >
+                          <div className="gallery-group-grid-scroll">
+                            {group.medias.map(media => (
+                              <div key={media.id} className="media-card-wrapper">
+                                <div className="media-card" onClick={() => openMediaViewer(media, group.medias)}>
+                                  <div className="media-thumbnail">
+                                    {media.type === 'photo' ? (
+                                      <img src={media.url} alt={media.title} />
+                                    ) : (
+                                      <img src={media.thumbnail || media.url || '/default-video-thumb.jpg'} alt={media.title} />
+                                    )}
+                                    {media.type === 'video' && (
+                                      <div className="media-play-icon"><IconPlay /></div>
+                                    )}
+                                    {media.type === 'photo' && media.is_featured && (
+                                      <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 z-20 shadow-md">
+                                        <IconStar /> À la une
+                                      </div>
+                                    )}
+                                    <div className="media-badge">
+                                      {media.type === 'video' ? <IconVideo /> : <IconPhoto />}
+                                      {media.type === 'video' ? 'Vidéo' : 'Photo'}
+                                    </div>
+                                  </div>
+                                  <div className="media-info">
+                                    <h4 className="media-title">{media.title}</h4>
+                                    <p className="media-date">
+                                      <IconCalendar />{formatDateFrench(media.date)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="empty-state" style={{ margin: 0 }}>
+                  <div className="empty-icon">📸</div>
+                  <div className="empty-title">Aucun média trouvé</div>
+                  <div className="empty-message">
+                    {galleryPagination.total === 0 && !galleryFilters.search && !galleryFilters.month && !galleryFilters.year && galleryFilters.type === 'all'
+                      ? "Aucun média disponible pour le moment."
+                      : "Aucun média ne correspond à vos critères de recherche."}
+                  </div>
+                  {galleryPagination.total > 0 && (
+                    <button className="btn-clear" onClick={resetGalleryFilters} style={{ marginTop: '20px' }}>
+                      Réinitialiser les filtres
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            {galleryPagination.last_page > 1 && (
+              <div className="pagination">
+                <button 
+                  className="pagination-btn" 
+                  onClick={() => setGalleryCurrentPage(prev => Math.max(1, prev - 1))} 
+                  disabled={galleryCurrentPage === 1}
+                >‹</button>
+                <span className="pagination-info">Page {galleryCurrentPage} sur {galleryPagination.last_page}</span>
+                <button 
+                  className="pagination-btn" 
+                  onClick={() => setGalleryCurrentPage(prev => Math.min(galleryPagination.last_page, prev + 1))} 
+                  disabled={galleryCurrentPage === galleryPagination.last_page}
+                >›</button>
+              </div>
+            )}
+          </>
+        );
+        
+      default:
+        return null;
+    }
+  };
+
   return (
     <>
       <Head title="Programme et Activités" />
       <style>{styles}</style>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
+      
       <MediaViewerModal 
         isOpen={isMediaViewerOpen} 
         onClose={closeMediaViewer} 

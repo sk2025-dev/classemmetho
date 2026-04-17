@@ -1,7 +1,9 @@
+// pages/MembreFamille/AllProgrammes.jsx
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
-import axios from 'axios';
 import html2pdf from 'html2pdf.js';
+import * as XLSX from 'xlsx';
 
 // Styles pour le tableau (conservés identiques)
 const tableStyles = `
@@ -43,64 +45,11 @@ const tableStyles = `
 .programmes-table tr:last-child td {
     border-bottom: none;
 }
-.table-actions {
-    display: flex;
-    gap: 8px;
-}
-.btn-table-edit {
-    background: #3b82f6;
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.75rem;
-    transition: all 0.2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-.btn-table-edit:hover:not(:disabled) {
-    background: #2563eb;
-    transform: translateY(-1px);
-}
-.btn-table-edit:disabled {
-    background: #9ca3af;
-    cursor: not-allowed;
-    opacity: 0.6;
-}
-.btn-table-delete {
-    background: #ef4444;
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.75rem;
-    transition: all 0.2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-.btn-table-delete:hover:not(:disabled) {
-    background: #dc2626;
-    transform: translateY(-1px);
-}
-.btn-table-delete:disabled {
-    background: #9ca3af;
-    cursor: not-allowed;
-    opacity: 0.6;
-}
-tr.past-row td:last-child,
-tr.past-row td.actions-cell {
+tr.past-row td {
     background-color: #f3f4f6;
 }
-tr.past-row td:last-child .btn-table-edit,
-tr.past-row td:last-child .btn-table-delete,
-tr.past-row td.actions-cell .btn-table-edit,
-tr.past-row td.actions-cell .btn-table-delete {
-    opacity: 0.5;
-    cursor: not-allowed;
+tr.past-row td {
+    color: #9ca3af;
 }
 .btn-back-table {
     background: rgba(255, 255, 255, 0.2);
@@ -140,6 +89,26 @@ tr.past-row td.actions-cell .btn-table-delete {
     transform: translateY(-2px);
     background: linear-gradient(135deg, #fbbf24, #f59e0b);
     box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+.btn-excel {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 2rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+.btn-excel:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, #059669, #047857);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 .page-header {
     display: flex;
@@ -415,241 +384,6 @@ tr.past-row td.actions-cell .btn-table-delete {
     from { transform: translateX(0); opacity: 1; }
     to { transform: translateX(100%); opacity: 0; }
 }
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(8px);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: fadeIn 0.2s ease;
-}
-.modal-content {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(12px);
-    width: 95%;
-    max-width: 600px;
-    max-height: 90vh;
-    border-radius: 1.5rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-}
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-@keyframes scaleIn {
-    from { transform: scale(0.95); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-}
-.modal-header {
-    padding: 1.5rem 2rem;
-    border-bottom: 1px solid rgba(229, 231, 235, 0.5);
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    color: white;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.modal-header h2 {
-    font-weight: 700;
-    font-size: 1.5rem;
-    margin: 0;
-    color: white;
-}
-.modal-header button {
-    background: white;
-    border: none;
-    border-radius: 50%;
-    width: 2.5rem;
-    height: 2.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #374151;
-    transition: all 0.2s;
-    cursor: pointer;
-}
-.modal-header button:hover {
-    background: #f3f4f6;
-    transform: scale(1.1);
-}
-.modal-body {
-    padding: 2rem;
-    overflow-y: auto;
-    flex: 1;
-}
-.modal-footer {
-    padding: 1rem 2rem;
-    border-top: 1px solid rgba(229, 231, 235, 0.5);
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(8px);
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-}
-.modal-form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
-.modal-full {
-    grid-column: span 2;
-}
-.form-group {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-label {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-.input-icon {
-    position: absolute;
-    left: 14px;
-    top: 42px;
-    color: #9ca3af;
-    width: 18px;
-    height: 18px;
-    pointer-events: none;
-    z-index: 2;
-}
-input, select, textarea {
-    padding: 14px 14px 14px 42px;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    font-size: 0.95rem;
-    width: 100%;
-    background: #f8fafc;
-    transition: all 0.2s;
-    color: #111827;
-    font-weight: 500;
-}
-input:focus, select:focus, textarea:focus {
-    outline: none;
-    border-color: #2563eb;
-    background: white;
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
-}
-textarea {
-    resize: vertical;
-    min-height: 100px;
-}
-.btn-cancel {
-    background: white;
-    color: #6b7280;
-    border: 2px solid #e2e8f0;
-    padding: 12px 24px;
-    border-radius: 12px;
-    cursor: pointer;
-    font-weight: 700;
-}
-.btn-cancel:hover {
-    background: #f1f5f9;
-    color: #111827;
-    border-color: #cbd5e1;
-}
-.btn-save {
-    background: linear-gradient(135deg, #10b981, #059669);
-    color: white;
-    border: none;
-    padding: 12px 28px;
-    border-radius: 12px;
-    cursor: pointer;
-    font-weight: 700;
-    transition: all 0.2s;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.btn-save:hover {
-    transform: translateY(-2px);
-    background: linear-gradient(135deg, #059669, #047857);
-    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
-}
-.btn-save:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-}
-.confirm-modal-content {
-    max-width: 450px;
-}
-.confirm-icon {
-    font-size: 4rem;
-    text-align: center;
-    margin-bottom: 1rem;
-}
-.confirm-title {
-    text-align: center;
-    font-size: 1.3rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-}
-.confirm-message {
-    text-align: center;
-    color: #6b7280;
-    margin-bottom: 1.5rem;
-}
-.confirm-buttons {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-}
-.btn-confirm {
-    background: #ef4444;
-    color: white;
-    border: none;
-    padding: 10px 24px;
-    border-radius: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-.btn-confirm:hover {
-    background: #dc2626;
-    transform: translateY(-1px);
-}
-.btn-confirm-edit {
-    background: #f59e0b;
-    color: white;
-    border: none;
-    padding: 10px 24px;
-    border-radius: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-.btn-confirm-edit:hover {
-    background: #d97706;
-    transform: translateY(-1px);
-}
-.btn-cancel-confirm {
-    background: #9ca3af;
-    color: white;
-    border: none;
-    padding: 10px 24px;
-    border-radius: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-.btn-cancel-confirm:hover {
-    background: #6b7280;
-    transform: translateY(-1px);
-}
 @media (max-width: 768px) {
     .page-header {
         flex-direction: column;
@@ -670,21 +404,6 @@ textarea {
     .programmes-table td {
         padding: 12px 16px;
         font-size: 0.8rem;
-    }
-    .table-actions {
-        flex-direction: column;
-        gap: 5px;
-    }
-    .btn-table-edit,
-    .btn-table-delete {
-        padding: 4px 8px;
-        font-size: 0.7rem;
-    }
-    .modal-form-grid {
-        grid-template-columns: 1fr;
-    }
-    .modal-full {
-        grid-column: auto;
     }
     .filter-bar {
         flex-direction: column;
@@ -752,23 +471,17 @@ const IconUser = () => (
 const IconFamily = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle><path d="M17 3.5a4 4 0 0 1 0 7"></path><path d="M21 21v-2a4 4 0 0 0-3-3.85"></path></svg>
 );
-const IconEdit = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-);
-const IconTrash = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-);
 const IconDownload = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+);
+const IconExcel = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M10 14l4 4m0-4l-4 4"></path></svg>
 );
 const IconCheckCircle = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
 );
 const IconXCircle = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
-);
-const IconPlus = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
 );
 const IconFilter = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 13 10 21 14 18 14 13 22 3"></polygon></svg>
@@ -819,202 +532,17 @@ const Toast = ({ message, type = 'success', onClose }) => {
   );
 };
 
-// Modal de confirmation
-const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirmer", cancelText = "Annuler", icon = "⚠️", confirmButtonClass = "btn-confirm" }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content confirm-modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Confirmation</h2>
-          <button onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-body">
-          <div className="confirm-icon">{icon}</div>
-          <div className="confirm-title">{title}</div>
-          <div className="confirm-message">{message}</div>
-          <div className="confirm-buttons">
-            <button className="btn-cancel-confirm" onClick={onClose}>{cancelText}</button>
-            <button className={confirmButtonClass} onClick={onConfirm}>{confirmText}</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Modal d'alerte
-const AlertModal = ({ isOpen, onClose, title, message, icon = "⚠️" }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content confirm-modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Information</h2>
-          <button onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-body">
-          <div className="confirm-icon">{icon}</div>
-          <div className="confirm-title">{title}</div>
-          <div className="confirm-message">{message}</div>
-          <div className="confirm-buttons">
-            <button className="btn-confirm-edit" onClick={onClose}>Fermer</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Modal d'édition
-const EditProgrammeModal = ({ isOpen, onClose, event, onSave }) => {
-  const [formData, setFormData] = useState({
-    title: '',
-    date: '',
-    time: '',
-    orateur: '',
-    moderateur: '',
-    famille_reception: '',
-    lieu: ''
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState({});
-
-  useEffect(() => {
-    if (isOpen && event) {
-      setFormData({
-        title: event.title || '',
-        date: event.date ? event.date.split('T')[0] : '',
-        time: event.time?.substring(0, 5) || '',
-        orateur: event.orateur || '',
-        moderateur: event.moderateur || '',
-        famille_reception: event.famille_reception || '',
-        lieu: event.lieu || ''
-      });
-      setErrors({});
-    }
-  }, [isOpen, event]);
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    if (errors[e.target.name]) {
-      setErrors({ ...errors, [e.target.name]: null });
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    
-    try {
-      await onSave(formData, event.id);
-    } catch (error) {
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors);
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Modifier le programme</h2>
-          <button onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-body">
-          <form onSubmit={handleSubmit} id="edit-event-form">
-            <div className="modal-form-grid">
-              <div className="form-group modal-full">
-                <label>Activité / Titre *</label>
-                <span className="input-icon"><IconEdit /></span>
-                <input type="text" name="title" placeholder="Ex: Étude biblique, Réunion de prière..." value={formData.title} onChange={handleChange} required />
-                {errors.title && <small style={{ color: '#dc2626', marginTop: '4px' }}>{errors.title}</small>}
-              </div>
-              <div className="form-group">
-                <label>Date *</label>
-                <span className="input-icon"><IconCalendar /></span>
-                <input type="date" name="date" value={formData.date} onChange={handleChange} required />
-                {errors.date && <small style={{ color: '#dc2626', marginTop: '4px' }}>{errors.date}</small>}
-              </div>
-              <div className="form-group">
-                <label>Heure *</label>
-                <span className="input-icon"><IconClock /></span>
-                <input type="time" name="time" value={formData.time} onChange={handleChange} required />
-                {errors.time && <small style={{ color: '#dc2626', marginTop: '4px' }}>{errors.time}</small>}
-              </div>
-              <div className="form-group">
-                <label>Orateur</label>
-                <span className="input-icon"><IconMic /></span>
-                <input type="text" name="orateur" placeholder="Nom de l'orateur..." value={formData.orateur} onChange={handleChange} />
-              </div>
-              <div className="form-group">
-                <label>Modérateur</label>
-                <span className="input-icon"><IconUser /></span>
-                <input type="text" name="moderateur" placeholder="Nom du modérateur..." value={formData.moderateur} onChange={handleChange} />
-              </div>
-              <div className="form-group modal-full">
-                <label>Famille de réception</label>
-                <span className="input-icon"><IconFamily /></span>
-                <input type="text" name="famille_reception" placeholder="Nom de la famille de réception..." value={formData.famille_reception} onChange={handleChange} />
-              </div>
-              <div className="form-group modal-full">
-                <label>Lieu de l'événement</label>
-                <span className="input-icon" style={{ top: '42px' }}><IconLocation /></span>
-                <textarea name="lieu" rows="3" placeholder="Adresse, salle, lieu de rendez-vous..." value={formData.lieu} onChange={handleChange} />
-              </div>
-            </div>
-          </form>
-        </div>
-        <div className="modal-footer">
-          <button type="button" className="btn-cancel" onClick={onClose}>Annuler</button>
-          <button type="submit" form="edit-event-form" className="btn-save" disabled={isSubmitting}>
-            <IconPlus /> {isSubmitting ? 'Enregistrement...' : 'Enregistrer les modifications'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 export default function AllProgrammes() {
   const { props } = usePage();
   const { allProgrammes = [], currentClass = null } = props;
   const [toast, setToast] = useState(null);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
   const tableRef = useRef(null);
   
   // Pagination - 15 éléments par page
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
-  
-  // États pour les modales de confirmation
-  const [confirmModal, setConfirmModal] = useState({
-    isOpen: false,
-    action: null,
-    event: null,
-    title: '',
-    message: '',
-    confirmText: '',
-    icon: '',
-    confirmButtonClass: 'btn-confirm'
-  });
-  
-  // État pour la modale d'alerte des activités passées
-  const [alertModal, setAlertModal] = useState({
-    isOpen: false,
-    title: '',
-    message: '',
-    icon: '⚠️'
-  });
   
   // États pour les filtres
   const [filters, setFilters] = useState({
@@ -1024,36 +552,82 @@ export default function AllProgrammes() {
     year: new Date().getFullYear().toString()
   });
   
-  // Années disponibles
-  const availableYears = [...new Set(allProgrammes.map(event => new Date(event.date).getFullYear()))].sort((a, b) => b - a);
+  // Années disponibles - utilise start_date
+  const availableYears = [...new Set(allProgrammes.map(event => new Date(event.start_date || event.date).getFullYear()))].sort((a, b) => b - a);
 
-  // Calcul des statistiques avec correction du fuseau horaire
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().split('T')[0];
-  
-  // Fonction pour vérifier si une date est aujourd'hui (indépendante du fuseau horaire)
-  const isToday = (eventDate) => {
-    const eventDateObj = new Date(eventDate);
-    eventDateObj.setHours(0, 0, 0, 0);
-    return eventDateObj.getTime() === today.getTime();
+  // ========== FONCTIONS DE GESTION DES DATES ==========
+  const getDateOnly = (date) => {
+    if (!date) return null;
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
   };
-  
-  const totalCount = allProgrammes.length;
-  const upcomingCount = allProgrammes.filter(event => new Date(event.date) >= today).length;
-  const pastCount = allProgrammes.filter(event => new Date(event.date) < today).length;
-  const todayCount = allProgrammes.filter(event => isToday(event.date)).length;
 
-  // Fonction pour vérifier si un événement est passé
+  const today = getDateOnly(new Date());
+
+  const getEventStartDate = (event) => {
+    return event.start_date || event.date;
+  };
+
   const isPastEvent = (event) => {
-    const eventDate = new Date(event.date);
+    const eventDate = getDateOnly(getEventStartDate(event));
     return eventDate < today;
   };
 
+  const isUpcomingEvent = (event) => {
+    const eventDate = getDateOnly(getEventStartDate(event));
+    return eventDate > today;
+  };
+
+  const isToday = (eventDate) => {
+    if (!eventDate) return false;
+    const eventDateObj = getDateOnly(eventDate);
+    return eventDateObj.getTime() === today.getTime();
+  };
+
+  const getStatus = (event) => {
+    const eventDate = getEventStartDate(event);
+    if (isToday(eventDate)) return 'Aujourd\'hui';
+    if (isUpcomingEvent(event)) return 'À venir';
+    return 'Passé';
+  };
+
+  const getStatusClass = (event) => {
+    const eventDate = getEventStartDate(event);
+    if (isToday(eventDate)) return 'status-today';
+    if (isUpcomingEvent(event)) return 'status-upcoming';
+    return 'status-past';
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('fr-FR', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+  };
+
+  const formatDateRange = (event) => {
+    const startDate = getEventStartDate(event);
+    const endDate = event.end_date;
+    
+    if (endDate && startDate !== endDate) {
+      return `${formatDate(startDate)} → ${formatDate(endDate)}`;
+    }
+    return formatDate(startDate);
+  };
+  // ========== FIN DES FONCTIONS ==========
+
+  // Calcul des statistiques
+  const totalCount = allProgrammes.length;
+  const upcomingCount = allProgrammes.filter(event => isUpcomingEvent(event)).length;
+  const pastCount = allProgrammes.filter(event => isPastEvent(event)).length;
+  const todayCount = allProgrammes.filter(event => isToday(getEventStartDate(event))).length;
+
   // Fonction de filtrage des programmes
   const filteredProgrammes = allProgrammes.filter(event => {
-    const eventDate = new Date(event.date);
-    const eventDateStr = event.date;
+    const eventStartDate = getEventStartDate(event);
     
     // Filtre par recherche
     if (filters.search) {
@@ -1069,24 +643,20 @@ export default function AllProgrammes() {
     
     // Filtre par statut
     if (filters.status !== 'all') {
-      const isUpcoming = eventDate >= today;
-      const isPast = eventDate < today;
-      const isTodayEvent = isToday(event.date);
-      
-      if (filters.status === 'upcoming' && !isUpcoming) return false;
-      if (filters.status === 'past' && !isPast) return false;
-      if (filters.status === 'today' && !isTodayEvent) return false;
+      if (filters.status === 'upcoming' && !isUpcomingEvent(event)) return false;
+      if (filters.status === 'past' && !isPastEvent(event)) return false;
+      if (filters.status === 'today' && !isToday(eventStartDate)) return false;
     }
     
     // Filtre par mois
     if (filters.month !== 'all') {
-      const eventMonth = eventDate.getMonth() + 1;
+      const eventMonth = new Date(eventStartDate).getMonth() + 1;
       if (eventMonth.toString() !== filters.month) return false;
     }
     
     // Filtre par année
     if (filters.year !== 'all') {
-      const eventYear = eventDate.getFullYear();
+      const eventYear = new Date(eventStartDate).getFullYear();
       if (eventYear.toString() !== filters.year) return false;
     }
     
@@ -1117,143 +687,40 @@ export default function AllProgrammes() {
     router.visit('/membre-famille/programmes');
   };
 
-  const openEditModal = (event) => {
-    if (isPastEvent(event)) {
-      setAlertModal({
-        isOpen: true,
-        title: 'Activité passée',
-        message: `Cette activité "${event.title}" est déjà passée et ne peut plus être modifiée.`,
-        icon: '📅'
-      });
-      return;
-    }
-    setConfirmModal({
-      isOpen: true,
-      action: 'edit',
-      event: event,
-      title: 'Confirmation de modification',
-      message: `Êtes-vous sûr de vouloir modifier l'activité "${event.title}" ?`,
-      confirmText: 'Oui, modifier',
-      icon: '✏️',
-      confirmButtonClass: 'btn-confirm-edit'
-    });
-  };
-
-  const closeEditModal = () => {
-    setIsEditModalOpen(false);
-    setSelectedEvent(null);
-  };
-
-  const openDeleteConfirm = (event) => {
-    if (isPastEvent(event)) {
-      setAlertModal({
-        isOpen: true,
-        title: 'Activité passée',
-        message: `Cette activité "${event.title}" est déjà passée et ne peut plus être supprimée.`,
-        icon: '📅'
-      });
-      return;
-    }
-    setConfirmModal({
-      isOpen: true,
-      action: 'delete',
-      event: event,
-      title: 'Supprimer le programme',
-      message: `Êtes-vous sûr de vouloir supprimer "${event.title}" ? Cette action est irréversible.`,
-      confirmText: 'Supprimer',
-      icon: '🗑️',
-      confirmButtonClass: 'btn-confirm'
-    });
-  };
-
-  const handleUpdateEvent = async (data, eventId) => {
-    try {
-      const response = await axios.put(`/conducteur/programmes/event/${eventId}`, data);
-      if (response.data.success) {
-        showToast('Événement modifié avec succès', 'success');
-        closeEditModal();
-        router.reload();
-      } else {
-        showToast('Erreur lors de la modification', 'error');
-      }
-    } catch (error) {
-      console.error('Erreur de modification', error);
-      if (error.response?.data?.errors) {
-        throw error;
-      }
-      showToast('Erreur lors de la modification', 'error');
-      throw error;
-    }
-  };
-
-  const handleConfirmAction = async () => {
-    const { action, event } = confirmModal;
-    
-    if (action === 'edit') {
-      setConfirmModal({ ...confirmModal, isOpen: false });
-      setSelectedEvent(event);
-      setIsEditModalOpen(true);
-    } else if (action === 'delete') {
-      try {
-        const response = await axios.delete(`/conducteur/programmes/event/${event.id}`);
-        if (response.data.success) {
-          showToast('Événement supprimé avec succès', 'success');
-          setConfirmModal({ ...confirmModal, isOpen: false });
-          router.reload();
-        } else {
-          showToast('Erreur lors de la suppression', 'error');
-          setConfirmModal({ ...confirmModal, isOpen: false });
-        }
-      } catch (error) {
-        console.error('Erreur de suppression', error);
-        showToast('Erreur lors de la suppression', 'error');
-        setConfirmModal({ ...confirmModal, isOpen: false });
-      }
-    }
-  };
-
-  const closeConfirmModal = () => {
-    setConfirmModal({ ...confirmModal, isOpen: false });
-  };
-
-  const closeAlertModal = () => {
-    setAlertModal({ ...alertModal, isOpen: false });
-  };
-
-  // Génération du PDF avec la colonne numéro
+  // Génération du PDF avec ajout de la classe
   const handleDownloadPDF = async () => {
     setIsDownloading(true);
     try {
-      // Créer un élément temporaire pour le PDF
       const pdfElement = document.createElement('div');
       pdfElement.style.padding = '20px';
       pdfElement.style.backgroundColor = 'white';
       pdfElement.style.fontFamily = 'Arial, sans-serif';
       
-      // Ajouter l'en-tête
+      const className = currentClass?.nom || currentClass?.name || 'Non spécifiée';
+      const classDisplay = currentClass ? `Classe : ${className}` : '';
+      
       pdfElement.innerHTML = `
         <div style="text-align: center; margin-bottom: 20px;">
           <h1 style="color: #f59e0b; margin-bottom: 5px;">📋 Tous les programmes d'activités</h1>
+          ${classDisplay ? `<h2 style="color: #6b7280; margin-bottom: 10px; font-size: 1.2rem;">${classDisplay}</h2>` : ''}
           <p style="color: #6b7280;">Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
           <hr style="border: 1px solid #e5e7eb; margin: 15px 0;">
         </div>
       `;
       
-      // Créer le tableau pour le PDF
       const table = document.createElement('table');
       table.style.width = '100%';
       table.style.borderCollapse = 'collapse';
       table.style.fontSize = '12px';
       
-      // En-tête du tableau avec la colonne #
       const thead = document.createElement('thead');
       const headerRow = document.createElement('tr');
-      const headers = ['#', 'Date', 'Activités', 'Heure', 'Lieu', 'Orateur', 'Modérateur', 'Famille de réception'];
+      const headers = ['#', 'Date', 'Activités', 'Heure', 'Lieu', 'Orateur', 'Modérateur', 'Famille de réception', 'Statut'];
       headers.forEach(header => {
         const th = document.createElement('th');
         th.textContent = header;
         th.style.padding = '12px';
-        th.style.textAlign = header === '#' ? 'center' : 'left';
+        th.style.textAlign = 'left';
         th.style.backgroundColor = '#f59e0b';
         th.style.color = 'white';
         th.style.border = '1px solid #e5e7eb';
@@ -1263,12 +730,10 @@ export default function AllProgrammes() {
       thead.appendChild(headerRow);
       table.appendChild(thead);
       
-      // Corps du tableau
       const tbody = document.createElement('tbody');
       filteredProgrammes.forEach((event, index) => {
         const row = document.createElement('tr');
         
-        // Numéro
         const numCell = document.createElement('td');
         numCell.textContent = (index + 1).toString();
         numCell.style.padding = '10px';
@@ -1276,14 +741,12 @@ export default function AllProgrammes() {
         numCell.style.textAlign = 'center';
         row.appendChild(numCell);
         
-        // Date
         const dateCell = document.createElement('td');
-        dateCell.textContent = formatDate(event.date);
+        dateCell.textContent = formatDateRange(event);
         dateCell.style.padding = '10px';
         dateCell.style.border = '1px solid #e5e7eb';
         row.appendChild(dateCell);
         
-        // Titre
         const titleCell = document.createElement('td');
         titleCell.textContent = event.title || '';
         titleCell.style.padding = '10px';
@@ -1291,57 +754,58 @@ export default function AllProgrammes() {
         titleCell.style.backgroundColor = '#ffffff';
         row.appendChild(titleCell);
         
-        // Heure
         const timeCell = document.createElement('td');
-        timeCell.textContent = event.time?.substring(0, 5) || '';
+        const startTime = event.start_time || event.time;
+        const endTime = event.end_time;
+        timeCell.textContent = startTime ? (endTime ? `${startTime.substring(0, 5)} → ${endTime.substring(0, 5)}` : startTime.substring(0, 5)) : '';
         timeCell.style.padding = '10px';
         timeCell.style.border = '1px solid #e5e7eb';
         row.appendChild(timeCell);
         
-        // Lieu
         const lieuCell = document.createElement('td');
         lieuCell.textContent = event.lieu || '';
         lieuCell.style.padding = '10px';
         lieuCell.style.border = '1px solid #e5e7eb';
         row.appendChild(lieuCell);
         
-        // Orateur
         const orateurCell = document.createElement('td');
         orateurCell.textContent = event.orateur || '';
         orateurCell.style.padding = '10px';
         orateurCell.style.border = '1px solid #e5e7eb';
         row.appendChild(orateurCell);
         
-        // Modérateur
         const moderateurCell = document.createElement('td');
         moderateurCell.textContent = event.moderateur || '';
         moderateurCell.style.padding = '10px';
         moderateurCell.style.border = '1px solid #e5e7eb';
         row.appendChild(moderateurCell);
         
-        // Famille de réception
         const familleCell = document.createElement('td');
         familleCell.textContent = event.famille_reception || '';
         familleCell.style.padding = '10px';
         familleCell.style.border = '1px solid #e5e7eb';
         row.appendChild(familleCell);
         
+        const statusCell = document.createElement('td');
+        statusCell.textContent = getStatus(event);
+        statusCell.style.padding = '10px';
+        statusCell.style.border = '1px solid #e5e7eb';
+        row.appendChild(statusCell);
+        
         tbody.appendChild(row);
       });
       table.appendChild(tbody);
       pdfElement.appendChild(table);
       
-      // Ajouter les statistiques en bas
       pdfElement.innerHTML += `
         <div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 11px;">
-          <p>Total: ${filteredProgrammes.length} programme(s) | À venir: ${filteredProgrammes.filter(e => new Date(e.date) >= today).length} | Passés: ${filteredProgrammes.filter(e => new Date(e.date) < today).length}</p>
+          <p>Total: ${filteredProgrammes.length} programme(s) | À venir: ${filteredProgrammes.filter(e => isUpcomingEvent(e)).length} | Aujourd'hui: ${filteredProgrammes.filter(e => isToday(getEventStartDate(e))).length} | Passés: ${filteredProgrammes.filter(e => isPastEvent(e)).length}</p>
         </div>
       `;
       
-      // Options pour html2pdf
       const opt = {
         margin: [0.5, 0.5, 0.5, 0.5],
-        filename: `programmes_${new Date().toISOString().split('T')[0]}.pdf`,
+        filename: `programmes_${className.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, letterRendering: true },
         jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
@@ -1357,32 +821,116 @@ export default function AllProgrammes() {
     }
   };
 
+  // Génération du fichier Excel avec ajout de la classe
+  const handleExportExcel = async () => {
+    setIsExportingExcel(true);
+    try {
+      const className = currentClass?.nom || currentClass?.name || 'Non spécifiée';
+      const classDisplay = currentClass ? `Classe : ${className}` : 'Classe : Non spécifiée';
+      const currentDate = new Date().toLocaleDateString('fr-FR');
+      const currentTime = new Date().toLocaleTimeString('fr-FR');
+      
+      const excelData = filteredProgrammes.map((event, index) => ({
+        '#': index + 1,
+        'Date': formatDateRange(event),
+        'Heure': (() => {
+          const startTime = event.start_time || event.time;
+          const endTime = event.end_time;
+          return startTime ? (endTime ? `${startTime.substring(0, 5)} → ${endTime.substring(0, 5)}` : startTime.substring(0, 5)) : '';
+        })(),
+        'Activités': event.title || '',
+        'Lieu': event.lieu || '',
+        'Orateur': event.orateur || '',
+        'Modérateur': event.moderateur || '',
+        'Famille de réception': event.famille_reception || '',
+        'Statut': getStatus(event)
+      }));
+
+      // Création d'une nouvelle feuille avec en-tête personnalisé
+      const ws = XLSX.utils.json_to_sheet([]);
+      
+      // Ajout des lignes d'en-tête avec la classe
+      XLSX.utils.sheet_add_aoa(ws, [
+        ['LISTE DES PROGRAMMES D\'ACTIVITÉS'],
+        [classDisplay],
+        [`Date de génération : ${currentDate} à ${currentTime}`],
+        [],
+        ['#', 'Date', 'Heure', 'Activités', 'Lieu', 'Orateur', 'Modérateur', 'Famille de réception', 'Statut']
+      ], { origin: 'A1' });
+      
+      // Ajout des données
+      const dataRows = excelData.map(item => [
+        item['#'],
+        item['Date'],
+        item['Heure'],
+        item['Activités'],
+        item['Lieu'],
+        item['Orateur'],
+        item['Modérateur'],
+        item['Famille de réception'],
+        item['Statut']
+      ]);
+      
+      if (dataRows.length > 0) {
+        XLSX.utils.sheet_add_aoa(ws, dataRows, { origin: 'A6' });
+      }
+      
+      // Ajustement des largeurs de colonnes
+      ws['!cols'] = [
+        { wch: 5 },   // #
+        { wch: 25 },  // Date
+        { wch: 15 },  // Heure
+        { wch: 35 },  // Activités
+        { wch: 25 },  // Lieu
+        { wch: 20 },  // Orateur
+        { wch: 20 },  // Modérateur
+        { wch: 25 },  // Famille de réception
+        { wch: 12 }   // Statut
+      ];
+      
+      // Fusion des cellules pour le titre
+      if (!ws['!merges']) ws['!merges'] = [];
+      ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } });
+      ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 8 } });
+      ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 8 } });
+      
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Programmes');
+      
+      // Feuille de statistiques avec les informations de la classe
+      const statsData = [
+        { 'Statistique': 'Classe', 'Valeur': className },
+        { 'Statistique': 'Total des programmes', 'Valeur': filteredProgrammes.length },
+        { 'Statistique': 'Programmes à venir', 'Valeur': filteredProgrammes.filter(e => isUpcomingEvent(e)).length },
+        { 'Statistique': 'Programmes aujourd\'hui', 'Valeur': filteredProgrammes.filter(e => isToday(getEventStartDate(e))).length },
+        { 'Statistique': 'Programmes passés', 'Valeur': filteredProgrammes.filter(e => isPastEvent(e)).length },
+        { 'Statistique': 'Date de génération', 'Valeur': new Date().toLocaleString('fr-FR') },
+        { 'Statistique': 'Filtres appliqués', 'Valeur': `Recherche: ${filters.search || 'Aucune'} | Statut: ${filters.status} | Mois: ${filters.month} | Année: ${filters.year}` }
+      ];
+      
+      const statsWs = XLSX.utils.json_to_sheet(statsData);
+      statsWs['!cols'] = [{ wch: 25 }, { wch: 30 }];
+      XLSX.utils.book_append_sheet(wb, statsWs, 'Statistiques');
+      
+      // Nom du fichier avec le nom de la classe
+      const fileName = `programmes_${className.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      
+      showToast('Excel téléchargé avec succès', 'success');
+    } catch (error) {
+      console.error('Erreur lors de la génération de l\'Excel', error);
+      showToast('Erreur lors de la génération de l\'Excel', 'error');
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
   const resetFilters = () => {
     setFilters({
       search: '',
       status: 'all',
       month: 'all',
       year: new Date().getFullYear().toString()
-    });
-  };
-
-  const getStatus = (date) => {
-    if (isToday(date)) return 'Aujourd\'hui';
-    if (date > todayStr) return 'À venir';
-    return 'Passé';
-  };
-
-  const getStatusClass = (date) => {
-    if (isToday(date)) return 'status-today';
-    if (date > todayStr) return 'status-upcoming';
-    return 'status-past';
-  };
-
-  const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('fr-FR', { 
-      day: 'numeric', 
-      month: 'long', 
-      year: 'numeric' 
     });
   };
 
@@ -1431,32 +979,6 @@ export default function AllProgrammes() {
         />
       )}
 
-      <ConfirmModal
-        isOpen={confirmModal.isOpen}
-        onClose={closeConfirmModal}
-        onConfirm={handleConfirmAction}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        confirmText={confirmModal.confirmText}
-        icon={confirmModal.icon}
-        confirmButtonClass={confirmModal.confirmButtonClass}
-      />
-
-      <AlertModal
-        isOpen={alertModal.isOpen}
-        onClose={closeAlertModal}
-        title={alertModal.title}
-        message={alertModal.message}
-        icon={alertModal.icon}
-      />
-
-      <EditProgrammeModal
-        isOpen={isEditModalOpen}
-        onClose={closeEditModal}
-        event={selectedEvent}
-        onSave={handleUpdateEvent}
-      />
-
       <div className="min-h-screen animate-fade-in-up" style={{ background: "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)", paddingBottom: '40px' }}>
         <main style={{ padding: '0 20px', width: '100%', margin: '0 auto' }}>
           <div className="page-header">
@@ -1467,6 +989,14 @@ export default function AllProgrammes() {
               📋 Tous les programmes d'activités
             </div>
             <div className="header-buttons">
+              <button 
+                className="btn-excel" 
+                onClick={handleExportExcel}
+                disabled={isExportingExcel}
+                style={{ opacity: isExportingExcel ? 0.6 : 1, cursor: isExportingExcel ? 'wait' : 'pointer' }}
+              >
+                <IconExcel /> {isExportingExcel ? 'Génération...' : 'Exporter Excel'}
+              </button>
               <button 
                 className="btn-pdf" 
                 onClick={handleDownloadPDF}
@@ -1568,7 +1098,7 @@ export default function AllProgrammes() {
             </div>
           </div>
 
-          {/* Tableau principal avec la colonne # en premier */}
+          {/* Tableau principal */}
           <div className="table-container" ref={tableRef}>
             <table className="programmes-table">
               <thead>
@@ -1582,7 +1112,6 @@ export default function AllProgrammes() {
                   <th>Modérateur</th>
                   <th>Famille de réception</th>
                   <th>Statut</th>
-                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1590,6 +1119,11 @@ export default function AllProgrammes() {
                   paginatedProgrammes.map((event, index) => {
                     const past = isPastEvent(event);
                     const rowNumber = (currentPage - 1) * itemsPerPage + index + 1;
+                    const startDate = getEventStartDate(event);
+                    const startTime = event.start_time || event.time;
+                    const endTime = event.end_time;
+                    const isMultiDay = event.end_date && startDate !== event.end_date;
+                    
                     return (
                       <tr key={event.id} className={past ? 'past-row' : ''}>
                         <td style={{ textAlign: 'center', fontWeight: 'bold', color: past ? '#9ca3af' : '#6b7280' }}>
@@ -1598,15 +1132,17 @@ export default function AllProgrammes() {
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: past ? '#9ca3af' : '#4b5563' }}>
                             <IconCalendar style={{ width: '14px', height: '14px', color: '#9ca3af' }} />
-                            {formatDate(event.date)}
+                            {isMultiDay ? `${formatDate(startDate)} → ${formatDate(event.end_date)}` : formatDate(startDate)}
                           </div>
                         </td>
                         <td style={{ fontWeight: '600', color: past ? '#9ca3af' : '#111827' }}>{event.title}</td>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: past ? '#9ca3af' : '#4b5563' }}>
-                            <IconClock style={{ width: '14px', height: '14px', color: '#9ca3af' }} />
-                            {event.time?.substring(0, 5)}
-                          </div>
+                          {startTime && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: past ? '#9ca3af' : '#4b5563' }}>
+                              <IconClock style={{ width: '14px', height: '14px', color: '#9ca3af' }} />
+                              {endTime ? `${startTime.substring(0, 5)} → ${endTime.substring(0, 5)}` : startTime.substring(0, 5)}
+                            </div>
+                          )}
                         </td>
                         <td>
                           {event.lieu && (
@@ -1641,36 +1177,16 @@ export default function AllProgrammes() {
                           )}
                         </td>
                         <td>
-                          <span className={`status-badge ${getStatusClass(event.date)}`}>
-                            {getStatus(event.date)}
+                          <span className={`status-badge ${getStatusClass(event)}`}>
+                            {getStatus(event)}
                           </span>
-                        </td>
-                        <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
-                          <div className="table-actions">
-                            <button 
-                              className="btn-table-edit" 
-                              onClick={() => openEditModal(event)}
-                              disabled={past}
-                              title={past ? "Impossible de modifier une activité passée" : "Modifier"}
-                            >
-                              <IconEdit style={{ width: '14px', height: '14px' }} /> Modifier
-                            </button>
-                            <button 
-                              className="btn-table-delete" 
-                              onClick={() => openDeleteConfirm(event)}
-                              disabled={past}
-                              title={past ? "Impossible de supprimer une activité passée" : "Supprimer"}
-                            >
-                              <IconTrash style={{ width: '14px', height: '14px' }} /> Supprimer
-                            </button>
-                          </div>
                         </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan="10" style={{ textAlign: 'center', padding: '60px 20px', color: '#9ca3af' }}>
+                    <td colSpan="9" style={{ textAlign: 'center', padding: '60px 20px', color: '#9ca3af' }}>
                       <div style={{ fontSize: '4rem', marginBottom: '1rem', opacity: 0.5 }}>📋</div>
                       <p style={{ fontSize: '1rem' }}>Aucun programme d'activité ne correspond à vos critères.</p>
                     </td>

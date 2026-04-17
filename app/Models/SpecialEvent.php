@@ -5,13 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Carbon\Carbon;
 
 class SpecialEvent extends Model
 {
     protected $fillable = [
         'title',
-        'date',
-        'time',
+        'start_date',      // NOUVEAU : date de début
+        'end_date',        // NOUVEAU : date de fin (nullable)
+        'start_time',      // NOUVEAU : heure de début (nullable)
+        'end_time',        // NOUVEAU : heure de fin (nullable)
         'orateur',
         'moderateur',
         'famille_reception',
@@ -22,12 +25,50 @@ class SpecialEvent extends Model
     ];
     
     protected $casts = [
-        'date' => 'date',
-        'time' => 'datetime:H:i',
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'start_time' => 'datetime:H:i',
+        'end_time' => 'datetime:H:i',
         'is_parish' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+    
+    // ========== ACCESSEURS POUR COMPATIBILITÉ AVEC L'ANCIEN CODE ==========
+    
+    /**
+     * Accesseur pour 'date' (compatibilité avec l'ancien code)
+     */
+    public function getDateAttribute()
+    {
+        return $this->start_date;
+    }
+    
+    /**
+     * Mutateur pour 'date' (compatibilité avec l'ancien code)
+     */
+    public function setDateAttribute($value)
+    {
+        $this->attributes['start_date'] = $value;
+    }
+    
+    /**
+     * Accesseur pour 'time' (compatibilité avec l'ancien code)
+     */
+    public function getTimeAttribute()
+    {
+        return $this->start_time;
+    }
+    
+    /**
+     * Mutateur pour 'time' (compatibilité avec l'ancien code)
+     */
+    public function setTimeAttribute($value)
+    {
+        $this->attributes['start_time'] = $value;
+    }
+    
+    // ========== RELATIONS ==========
     
     /**
      * Relation avec la classe
@@ -53,38 +94,93 @@ class SpecialEvent extends Model
         return $this->hasMany(Media::class, 'special_event_id');
     }
     
+    // ========== ACCESSEURS DE FORMATAGE ==========
+    
     /**
-     * Accesseur pour la date formatée
+     * Accesseur pour la date de début formatée
      */
-    public function getFormattedDateAttribute(): string
+    public function getFormattedStartDateAttribute(): string
     {
-        return $this->date->format('d/m/Y');
+        return $this->start_date ? $this->start_date->format('d/m/Y') : '';
     }
     
     /**
-     * Accesseur pour l'heure formatée
+     * Accesseur pour la date de fin formatée
      */
-    public function getFormattedTimeAttribute(): string
+    public function getFormattedEndDateAttribute(): string
     {
-        return $this->time ? \Carbon\Carbon::parse($this->time)->format('H:i') : '';
+        return $this->end_date ? $this->end_date->format('d/m/Y') : '';
     }
     
     /**
-     * Accesseur pour la date complète formatée
+     * Accesseur pour la plage de dates formatée
+     */
+    public function getFormattedDateRangeAttribute(): string
+    {
+        if (!$this->start_date) {
+            return '';
+        }
+        
+        if ($this->end_date && $this->start_date->format('Y-m-d') !== $this->end_date->format('Y-m-d')) {
+            return $this->start_date->format('d/m/Y') . ' → ' . $this->end_date->format('d/m/Y');
+        }
+        
+        return $this->start_date->format('d/m/Y');
+    }
+    
+    /**
+     * Accesseur pour l'heure de début formatée
+     */
+    public function getFormattedStartTimeAttribute(): string
+    {
+        return $this->start_time ? Carbon::parse($this->start_time)->format('H:i') : '';
+    }
+    
+    /**
+     * Accesseur pour l'heure de fin formatée
+     */
+    public function getFormattedEndTimeAttribute(): string
+    {
+        return $this->end_time ? Carbon::parse($this->end_time)->format('H:i') : '';
+    }
+    
+    /**
+     * Accesseur pour la plage horaire formatée
+     */
+    public function getFormattedTimeRangeAttribute(): string
+    {
+        if (!$this->start_time) {
+            return '';
+        }
+        
+        $start = Carbon::parse($this->start_time)->format('H:i');
+        
+        if ($this->end_time) {
+            $end = Carbon::parse($this->end_time)->format('H:i');
+            return $start . ' → ' . $end;
+        }
+        
+        return $start;
+    }
+    
+    /**
+     * Accesseur pour la date complète formatée (date de début)
      */
     public function getFullDateAttribute(): string
     {
-        return $this->date->translatedFormat('l d F Y');
+        return $this->start_date ? $this->start_date->translatedFormat('l d F Y') : '';
     }
+    
+    // ========== SCOPES ==========
     
     /**
      * Scope pour les événements à venir
      */
     public function scopeUpcoming($query)
     {
-        return $query->where('date', '>=', now()->startOfDay())
-            ->orderBy('date', 'asc')
-            ->orderBy('time', 'asc');
+        return $query->where('start_date', '>=', now()->startOfDay())
+            ->orderBy('start_date', 'asc')
+            ->orderBy('start_time', 'asc');
     }
     
     /**
@@ -92,9 +188,9 @@ class SpecialEvent extends Model
      */
     public function scopePast($query)
     {
-        return $query->where('date', '<', now()->startOfDay())
-            ->orderBy('date', 'desc')
-            ->orderBy('time', 'desc');
+        return $query->where('start_date', '<', now()->startOfDay())
+            ->orderBy('start_date', 'desc')
+            ->orderBy('start_time', 'desc');
     }
     
     /**
@@ -102,7 +198,7 @@ class SpecialEvent extends Model
      */
     public function scopeForYear($query, $year)
     {
-        return $query->whereYear('date', $year);
+        return $query->whereYear('start_date', $year);
     }
     
     /**
@@ -122,11 +218,21 @@ class SpecialEvent extends Model
     }
     
     /**
+     * Scope pour les événements d'un mois spécifique
+     */
+    public function scopeForMonth($query, $month)
+    {
+        return $query->whereMonth('start_date', $month);
+    }
+    
+    // ========== MÉTHODES UTILITAIRES ==========
+    
+    /**
      * Vérifier si l'événement est à venir
      */
     public function isUpcoming(): bool
     {
-        return $this->date >= now()->startOfDay();
+        return $this->start_date >= now()->startOfDay();
     }
     
     /**
@@ -134,7 +240,7 @@ class SpecialEvent extends Model
      */
     public function isPast(): bool
     {
-        return $this->date < now()->startOfDay();
+        return $this->start_date < now()->startOfDay();
     }
     
     /**
@@ -142,7 +248,15 @@ class SpecialEvent extends Model
      */
     public function isToday(): bool
     {
-        return $this->date->isToday();
+        return $this->start_date && $this->start_date->isToday();
+    }
+    
+    /**
+     * Vérifier si l'événement est multi-jours
+     */
+    public function isMultiDay(): bool
+    {
+        return $this->end_date && $this->start_date->format('Y-m-d') !== $this->end_date->format('Y-m-d');
     }
     
     /**
@@ -151,5 +265,17 @@ class SpecialEvent extends Model
     public function getMediaCountAttribute(): int
     {
         return $this->medias()->count();
+    }
+    
+    /**
+     * Obtenir la durée en jours de l'événement
+     */
+    public function getDurationInDaysAttribute(): int
+    {
+        if (!$this->end_date) {
+            return 1;
+        }
+        
+        return $this->start_date->diffInDays($this->end_date) + 1;
     }
 }

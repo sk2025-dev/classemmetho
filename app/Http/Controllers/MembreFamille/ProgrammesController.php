@@ -8,6 +8,7 @@ use App\Models\Media;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class ProgrammesController extends Controller
@@ -19,7 +20,6 @@ class ProgrammesController extends Controller
     {
         $user = Auth::user();
         
-        // Récupérer la classe du membre/responsable connecté
         $classe = $user->classe;
         
         if (!$classe) {
@@ -29,31 +29,40 @@ class ProgrammesController extends Controller
         // Récupérer les événements FUTURS de sa classe
         $evenementsActuels = SpecialEvent::where('is_parish', false)
             ->where('class_id', $classe->id)
-            ->where('date', '>=', now()->startOfDay())
-            ->orderBy('date', 'asc')
-            ->orderBy('time', 'asc')
-            ->get();
+            ->where('start_date', '>=', now()->startOfDay())
+            ->orderBy('start_date', 'asc')
+            ->orderBy('start_time', 'asc')
+            ->get()
+            ->map(function($event) {
+                // Ajouter les champs compatibles pour le frontend
+                $event->date = $event->start_date;
+                $event->time = $event->start_time;
+                return $event;
+            });
 
-        // Récupérer l'HISTORIQUE des événements de sa classe (limité à 10)
+        // Récupérer l'HISTORIQUE des événements de sa classe
         $evenementsHistorique = SpecialEvent::where('is_parish', false)
             ->where('class_id', $classe->id)
-            ->where('date', '<', now()->startOfDay())
-            ->orderBy('date', 'desc')
-            ->orderBy('time', 'desc')
-            ->limit(10)
-            ->get();
+            ->where('start_date', '<', now()->startOfDay())
+            ->orderBy('start_date', 'desc')
+            ->orderBy('start_time', 'desc')
+            ->get()
+            ->map(function($event) {
+                // Ajouter les champs compatibles pour le frontend
+                $event->date = $event->start_date;
+                $event->time = $event->start_time;
+                return $event;
+            });
         
-        // Récupérer les médias de la classe pour la galerie
         $galleryMedia = Media::where('class_id', $classe->id)
             ->with('specialEvent')
             ->orderBy('created_at', 'desc')
             ->get();
         
         // Déterminer le rôle pour le rendu de la vue
-        $role = $user->role; // 'membre_famille' ou 'responsable_famille'
+        $role = $user->role;
         $viewPath = $role === 'responsable_famille' ? 'ResponsableFamille/Programmes' : 'MembreFamille/Programmes';
         
-        // Passer les données à la vue
         return Inertia::render($viewPath, [
             'initialClassList' => $evenementsActuels,
             'initialClassHistory' => $evenementsHistorique,
@@ -74,15 +83,18 @@ class ProgrammesController extends Controller
             return redirect()->back()->with('error', 'Aucune classe associée à votre compte.');
         }
         
-        // Récupérer tous les événements de l'année en cours (non paroissiaux)
         $allProgrammes = SpecialEvent::where('is_parish', false)
             ->where('class_id', $classe->id)
-            ->whereYear('date', now()->year)
-            ->orderBy('date', 'asc')
-            ->orderBy('time', 'asc')
-            ->get();
+            ->whereYear('start_date', now()->year)
+            ->orderBy('start_date', 'asc')
+            ->orderBy('start_time', 'asc')
+            ->get()
+            ->map(function($event) {
+                $event->date = $event->start_date;
+                $event->time = $event->start_time;
+                return $event;
+            });
         
-        // Déterminer le rôle pour le rendu de la vue
         $role = $user->role;
         $viewPath = $role === 'responsable_famille' ? 'ResponsableFamille/AllProgrammes' : 'MembreFamille/AllProgrammes';
         
@@ -93,7 +105,7 @@ class ProgrammesController extends Controller
     }
     
     /**
-     * Afficher tout l'historique des programmes (activités passées de l'année) - Lecture seule
+     * Afficher tout l'historique des programmes (activités passées) - Lecture seule
      */
     public function historyProgrammes()
     {
@@ -104,22 +116,24 @@ class ProgrammesController extends Controller
             return redirect()->back()->with('error', 'Aucune classe associée à votre compte.');
         }
         
-        // Récupérer tous les événements PASSÉS de l'année en cours
         $historyProgrammes = SpecialEvent::where('is_parish', false)
             ->where('class_id', $classe->id)
-            ->where('date', '<', now()->startOfDay())
-            ->whereYear('date', now()->year)
-            ->orderBy('date', 'desc')
-            ->orderBy('time', 'desc')
-            ->get();
+            ->where('start_date', '<', now()->startOfDay())
+            ->whereYear('start_date', now()->year)
+            ->orderBy('start_date', 'desc')
+            ->orderBy('start_time', 'desc')
+            ->get()
+            ->map(function($event) {
+                $event->date = $event->start_date;
+                $event->time = $event->start_time;
+                return $event;
+            });
         
-        // Récupérer TOUS les médias de la classe pour l'historique
         $galleryMedia = Media::where('class_id', $classe->id)
             ->with('specialEvent')
             ->orderBy('created_at', 'desc')
             ->get();
         
-        // Déterminer le rôle pour le rendu de la vue
         $role = $user->role;
         $viewPath = $role === 'responsable_famille' ? 'ResponsableFamille/HistoryProgrammes' : 'MembreFamille/HistoryProgrammes';
         
@@ -131,7 +145,181 @@ class ProgrammesController extends Controller
     }
     
     /**
-     * Récupérer tous les événements de la classe (pour le calendrier) - Lecture seule
+     * Récupérer l'historique des programmes avec filtres (API) - Lecture seule
+     */
+    public function getHistoryProgrammes(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            $classe = $user->classe;
+            
+            if (!$classe) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Aucune classe associée'
+                ], 403);
+            }
+            
+            $query = SpecialEvent::where('is_parish', false)
+                ->where('class_id', $classe->id)
+                ->where('start_date', '<', now()->startOfDay());
+            
+            // Filtre par recherche (titre, orateur, moderateur, lieu, famille_reception)
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhere('orateur', 'like', "%{$search}%")
+                      ->orWhere('moderateur', 'like', "%{$search}%")
+                      ->orWhere('lieu', 'like', "%{$search}%")
+                      ->orWhere('famille_reception', 'like', "%{$search}%");
+                });
+            }
+            
+            // Filtre par année
+            if ($request->filled('year') && $request->year !== 'all') {
+                $query->whereYear('start_date', $request->year);
+            }
+            
+            // Filtre par mois
+            if ($request->filled('month') && $request->month !== 'all') {
+                $query->whereMonth('start_date', $request->month);
+            }
+            
+            // Tri (desc = plus récentes d'abord, asc = plus anciennes d'abord)
+            $sortOrder = $request->get('sort_order', 'desc');
+            $query->orderBy('start_date', $sortOrder)
+                  ->orderBy('start_time', $sortOrder);
+            
+            // Pagination
+            $perPage = $request->get('per_page', 6);
+            $historyProgrammes = $query->paginate($perPage);
+            
+            // Ajouter les champs compatibles pour le frontend
+            $historyProgrammes->getCollection()->transform(function($event) {
+                $event->date = $event->start_date;
+                $event->time = $event->start_time;
+                return $event;
+            });
+            
+            return response()->json([
+                'success' => true,
+                'data' => $historyProgrammes->items(),
+                'pagination' => [
+                    'current_page' => $historyProgrammes->currentPage(),
+                    'last_page' => $historyProgrammes->lastPage(),
+                    'per_page' => $historyProgrammes->perPage(),
+                    'total' => $historyProgrammes->total(),
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Erreur récupération historique filtré', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Récupérer les médias de la galerie avec filtres (API) - Lecture seule
+     */
+    public function getGalleryMediaFiltered(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            $classe = $user->classe;
+            
+            if (!$classe) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Aucune classe associée'
+                ], 403);
+            }
+            
+            $query = Media::where('class_id', $classe->id)
+                ->with('specialEvent');
+            
+            // Filtre par recherche (titre ou description)
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%");
+                });
+            }
+            
+            // Filtre par mois
+            if ($request->filled('month')) {
+                $monthNum = $this->getMonthNumber($request->month);
+                if ($monthNum) {
+                    $query->whereMonth('date', $monthNum);
+                }
+            }
+            
+            // Filtre par année
+            if ($request->filled('year')) {
+                $query->whereYear('date', $request->year);
+            }
+            
+            // Filtre par type (photo/video)
+            if ($request->filled('type') && $request->type !== 'all') {
+                $query->where('type', $request->type);
+            }
+            
+            // Tri par date
+            $sortOrder = $request->get('sort_order', 'desc');
+            $query->orderBy('date', $sortOrder);
+            
+            // Pagination
+            $perPage = $request->get('per_page', 12);
+            $medias = $query->paginate($perPage);
+            
+            return response()->json([
+                'success' => true,
+                'data' => $medias->items(),
+                'pagination' => [
+                    'current_page' => $medias->currentPage(),
+                    'last_page' => $medias->lastPage(),
+                    'per_page' => $medias->perPage(),
+                    'total' => $medias->total(),
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Erreur récupération galerie filtrée', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Convertir le nom du mois en numéro
+     */
+    private function getMonthNumber($monthName)
+    {
+        $months = [
+            'Janvier' => 1, 'Février' => 2, 'Mars' => 3, 'Avril' => 4,
+            'Mai' => 5, 'Juin' => 6, 'Juillet' => 7, 'Août' => 8,
+            'Septembre' => 9, 'Octobre' => 10, 'Novembre' => 11, 'Décembre' => 12
+        ];
+        
+        return $months[$monthName] ?? null;
+    }
+    
+    /**
+     * Récupérer les événements par mois (pour le calendrier) - Lecture seule
      */
     public function getEventsByMonth(Request $request)
     {
@@ -155,11 +343,16 @@ class ProgrammesController extends Controller
             
             $events = SpecialEvent::where('class_id', $classe->id)
                 ->where('is_parish', false)
-                ->whereYear('date', $year)
-                ->whereMonth('date', $month)
-                ->orderBy('date', 'asc')
-                ->orderBy('time', 'asc')
-                ->get();
+                ->whereYear('start_date', $year)
+                ->whereMonth('start_date', $month)
+                ->orderBy('start_date', 'asc')
+                ->orderBy('start_time', 'asc')
+                ->get()
+                ->map(function($event) {
+                    $event->date = $event->start_date;
+                    $event->time = $event->start_time;
+                    return $event;
+                });
             
             return response()->json([
                 'success' => true,
@@ -243,6 +436,10 @@ class ProgrammesController extends Controller
                     'message' => 'Événement non trouvé'
                 ], 404);
             }
+            
+            // Ajouter les champs compatibles pour le frontend
+            $event->date = $event->start_date;
+            $event->time = $event->start_time;
             
             return response()->json([
                 'success' => true,
