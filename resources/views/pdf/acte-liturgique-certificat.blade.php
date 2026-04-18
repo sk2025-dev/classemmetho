@@ -363,7 +363,7 @@
                     @endif
 
                     {{-- Texte d'attestation --}}
-                        <div style="font-size:{{ $acte->type_acte === 'mariage' ? '21px' : '18px' }}; color:#374151; line-height:{{ $acte->type_acte === 'mariage' ? '1.9' : '1.8' }};
+                    <div style="font-size:{{ $acte->type_acte === 'mariage' ? '21px' : '18px' }}; color:#374151; line-height:{{ $acte->type_acte === 'mariage' ? '1.9' : '1.8' }};
                             text-align:center; max-width:85%; margin:0 auto;">
                         @if($acte->type_acte === 'mariage')
                         L'Église Méthodiste Jubilé de Cocody atteste solennellement que

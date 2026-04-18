@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Head, usePage, router } from "@inertiajs/react";
 import axios from "axios";
+import Select2Single from "../../Components/Select2Single";
 
 // Configuration d'axios avec le token CSRF
 axios.defaults.headers.common["X-CSRF-TOKEN"] = document
@@ -467,9 +468,16 @@ const styles = `
     transition: all 0.2s ease;
     white-space: nowrap;
 }
-.btn-qr-inline:hover {
+.btn-qr-inline:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 8px 18px rgba(217, 119, 6, 0.35);
+}
+.btn-qr-inline:disabled {
+    background: #9ca3af;
+    color: #f3f4f6;
+    cursor: not-allowed;
+    opacity: 0.75;
+    box-shadow: none;
 }
 .special-meta {
     display: flex;
@@ -2859,6 +2867,72 @@ const formatDateFrench = (dateString) => {
     return `${day} ${monthCapitalized} ${year}`;
 };
 
+const buildEventDateTime = (eventDate, eventTime, useEndOfDay = false) => {
+    const date = new Date(eventDate);
+    if (isNaN(date.getTime())) return null;
+
+    if (!eventTime) {
+        if (useEndOfDay) {
+            date.setHours(23, 59, 59, 999);
+        } else {
+            date.setHours(0, 0, 0, 0);
+        }
+        return date;
+    }
+
+    const [hours = "0", minutes = "0", seconds = "0"] =
+        String(eventTime).split(":");
+
+    date.setHours(
+        Number.parseInt(hours, 10) || 0,
+        Number.parseInt(minutes, 10) || 0,
+        Number.parseInt(seconds, 10) || 0,
+        0,
+    );
+
+    return date;
+};
+
+const getQrAccessState = (event) => {
+    const startAt = buildEventDateTime(event?.date, event?.time, false);
+    const endAt = buildEventDateTime(
+        event?.date,
+        event?.end_time || event?.time,
+        !event?.end_time && !event?.time,
+    );
+
+    if (!startAt || !endAt) {
+        return {
+            enabled: false,
+            reason: "Date de l'activité invalide pour le QR code.",
+        };
+    }
+
+    const openingAt = new Date(startAt);
+    openingAt.setDate(openingAt.getDate() - 2);
+
+    const now = new Date();
+
+    if (now < openingAt) {
+        return {
+            enabled: false,
+            reason: `Le QR sera actif à partir du ${openingAt.toLocaleString("fr-FR")}.`,
+        };
+    }
+
+    if (now >= endAt) {
+        return {
+            enabled: false,
+            reason: "Cette activité est passée. Le scan n'est plus disponible.",
+        };
+    }
+
+    return {
+        enabled: true,
+        reason: "QR code actif.",
+    };
+};
+
 // --- FONCTIONS DE FILTRAGE ---
 const isDateInCurrentMonth = (dateString) => {
     const date = new Date(dateString);
@@ -3224,7 +3298,7 @@ const MiniCalendar = ({
         return `${events[0].title} + ${events.length - 1} autre(s)`;
     };
 
-    const daysOfWeek = ["L", "M", "M", "J", "V", "S", "D"];
+    const daysOfWeek = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"];
     const days = getDaysInMonth(currentDate);
     const today = new Date();
 
@@ -3270,8 +3344,8 @@ const MiniCalendar = ({
                 </button>
             </div>
             <div className="cal-grid">
-                {daysOfWeek.map((d) => (
-                    <div key={d} className="cal-day-label">
+                {daysOfWeek.map((d, idx) => (
+                    <div key={`${d}-${idx}`} className="cal-day-label">
                         {d}
                     </div>
                 ))}
@@ -4757,27 +4831,21 @@ const AddMediaModal = ({
 
                         <div className="form-group modal-full">
                             <label>Activité associée</label>
-                            <span className="input-icon">
-                                <IconActivity />
-                            </span>
-                            <select
+                            <Select2Single
+                                id="add-media-special-event-id"
+                                name="special_event_id"
                                 value={selectedEventId}
                                 onChange={(e) =>
-                                    setSelectedEventId(e.target.value)
+                                    setSelectedEventId(e?.target?.value || "")
                                 }
-                                style={{
-                                    appearance: "auto",
-                                    paddingLeft: "42px",
-                                }}
-                            >
-                                <option value="">-- Aucune activité --</option>
-                                {events.map((event) => (
-                                    <option key={event.id} value={event.id}>
-                                        {event.title} -{" "}
-                                        {formatDateFrench(event.date)}
-                                    </option>
-                                ))}
-                            </select>
+                                options={events.map((event) => ({
+                                    value: String(event.id),
+                                    label: event.title,
+                                    description: formatDateFrench(event.date),
+                                }))}
+                                placeholder="Rechercher une activité..."
+                                noOptionsMessage="Aucune activité trouvée"
+                            />
                         </div>
 
                         {mediaType === "video" ? (
@@ -5033,6 +5101,8 @@ export default function Programmes() {
     const [isDateContentModalOpen, setIsDateContentModalOpen] = useState(false);
     const [selectedDate, setSelectedDate] = useState(null);
     const [activeCalendarDate, setActiveCalendarDate] = useState(null);
+    const [showAllCurrentMonthEvents, setShowAllCurrentMonthEvents] =
+        useState(false);
     const [galleryFilter, setGalleryFilter] = useState({
         search: "",
         month: "",
@@ -5088,6 +5158,10 @@ export default function Programmes() {
     };
 
     const filteredEvents = getFilteredEventsByActiveDate();
+    const displayedEvents =
+        !activeCalendarDate && !showAllCurrentMonthEvents
+            ? filteredEvents.slice(0, 3)
+            : filteredEvents;
 
     const galleryAvailableMonths = [
         "Janvier",
@@ -5194,9 +5268,13 @@ export default function Programmes() {
     }, [filteredGalleryMedia, allEvents]);
 
     const totalPages = Math.ceil(groupedGalleryMedia.length / itemsPerPage);
-    const paginatedGroups = groupedGalleryMedia.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage,
+    const paginatedGroups = useMemo(
+        () =>
+            groupedGalleryMedia.slice(
+                (currentPage - 1) * itemsPerPage,
+                currentPage * itemsPerPage,
+            ),
+        [groupedGalleryMedia, currentPage, itemsPerPage],
     );
 
     const totalHistoryPages = Math.ceil(
@@ -5553,10 +5631,22 @@ export default function Programmes() {
     const [scrollStates, setScrollStates] = useState({});
 
     const updateScrollState = (groupId) => {
-        setScrollStates((prev) => ({
-            ...prev,
-            [groupId]: checkScrollButtons(groupId),
-        }));
+        const nextState = checkScrollButtons(groupId);
+        setScrollStates((prev) => {
+            const current = prev[groupId];
+            if (
+                current &&
+                current.hasLeftScroll === nextState.hasLeftScroll &&
+                current.hasRightScroll === nextState.hasRightScroll
+            ) {
+                return prev;
+            }
+
+            return {
+                ...prev,
+                [groupId]: nextState,
+            };
+        });
     };
 
     useEffect(() => {
@@ -5573,14 +5663,14 @@ export default function Programmes() {
                 clearInterval(interval),
             );
         };
-    }, [paginatedGroups]);
+    }, [currentPage, groupedGalleryMedia.length]);
 
     const handleSaveEventModal = async (activities, eventId = null) => {
         console.log("Données envoyées:", activities, "eventId:", eventId);
         setIsLoading(true);
 
-        if (eventId && activities.length === 1) {
-            try {
+        try {
+            if (eventId && activities.length === 1) {
                 const response = await axios.put(
                     `/conducteur/programmes/event/${eventId}`,
                     activities[0],
@@ -5603,18 +5693,8 @@ export default function Programmes() {
                             "Erreur lors de la modification",
                         "error",
                     );
-                    setIsLoading(false);
                 }
-            } catch (error) {
-                console.error("Erreur modification:", error);
-                const errorMessage =
-                    error.response?.data?.message ||
-                    "Erreur lors de la modification";
-                showToast(errorMessage, "error");
-                setIsLoading(false);
-            }
-        } else {
-            try {
+            } else {
                 const response = await axios.post(
                     "/conducteur/programmes/events-multiple",
                     { activities },
@@ -5632,19 +5712,23 @@ export default function Programmes() {
                         response.data.message || "Erreur lors de la création",
                         "error",
                     );
-                    setIsLoading(false);
                 }
-            } catch (error) {
-                console.error(
-                    "Erreur création:",
-                    error.response?.data || error.message,
-                );
-                const errorMessage =
-                    error.response?.data?.message ||
-                    "Erreur lors de la création";
-                showToast(errorMessage, "error");
-                setIsLoading(false);
             }
+        } catch (error) {
+            console.error(
+                eventId && activities.length === 1
+                    ? "Erreur modification:"
+                    : "Erreur création:",
+                error.response?.data || error.message,
+            );
+            const errorMessage =
+                error.response?.data?.message ||
+                (eventId && activities.length === 1
+                    ? "Erreur lors de la modification"
+                    : "Erreur lors de la création");
+            showToast(errorMessage, "error");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -5666,11 +5750,11 @@ export default function Programmes() {
                 setTimeout(() => router.reload(), 1500);
             } else {
                 showToast("Erreur lors de l'import", "error");
-                setIsLoading(false);
             }
         } catch (error) {
             console.error("Erreur import:", error);
             showToast("Erreur lors de l'import", "error");
+        } finally {
             setIsLoading(false);
         }
     };
@@ -5681,6 +5765,14 @@ export default function Programmes() {
         router.visit("/conducteur/programmes/all");
     const handleViewAllHistory = () =>
         router.visit("/conducteur/programmes/history");
+
+    useEffect(() => {
+        if (activeCalendarDate) {
+            setShowAllCurrentMonthEvents(true);
+            return;
+        }
+        setShowAllCurrentMonthEvents(false);
+    }, [activeCalendarDate]);
 
     const openQrModal = async (event) => {
         setIsQrModalOpen(true);
@@ -5784,89 +5876,116 @@ export default function Programmes() {
                                     {filteredEvents.length > 0 ? (
                                         <div className="horizontal-scroller">
                                             <div className="cards-wrapper">
-                                                {filteredEvents.map((event) => (
-                                                    <div
-                                                        key={event.id}
-                                                        className="special-card"
-                                                    >
-                                                        <button
-                                                            className="edit-btn-card"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleEditEvent(
-                                                                    event,
-                                                                );
-                                                            }}
-                                                        >
-                                                            <IconEdit />
-                                                        </button>
-                                                        <div>
-                                                            <div className="special-header">
-                                                                <span className="special-date">
-                                                                    {formatDateFrench(
-                                                                        event.date,
-                                                                    )}
-                                                                </span>
-                                                            </div>
-                                                            <h4 className="special-title">
-                                                                {event.title}
-                                                            </h4>
-                                                            {event.lieu && (
-                                                                <p className="special-lieu">
-                                                                    <IconLocation />{" "}
-                                                                    {event.lieu}
-                                                                </p>
-                                                            )}
-                                                            <div className="time-qr-row">
-                                                                <p>
-                                                                    <IconClock />{" "}
-                                                                    {event.time
-                                                                        ? event.time.substring(
-                                                                              0,
-                                                                              5,
-                                                                          )
-                                                                        : "--:--"}
-                                                                </p>
+                                                {displayedEvents.map(
+                                                    (event) => {
+                                                        const qrAccess =
+                                                            getQrAccessState(
+                                                                event,
+                                                            );
+
+                                                        return (
+                                                            <div
+                                                                key={event.id}
+                                                                className="special-card"
+                                                            >
                                                                 <button
-                                                                    type="button"
-                                                                    className="btn-qr-inline"
+                                                                    className="edit-btn-card"
                                                                     onClick={(
                                                                         e,
                                                                     ) => {
                                                                         e.stopPropagation();
-                                                                        openQrModal(
+                                                                        handleEditEvent(
                                                                             event,
                                                                         );
                                                                     }}
                                                                 >
-                                                                    Code Qr
+                                                                    <IconEdit />
                                                                 </button>
-                                                            </div>
-                                                            <div className="special-meta">
-                                                                {event.orateur && (
-                                                                    <div>
-                                                                        <span className="special-meta-label">
-                                                                            Orateur:
-                                                                        </span>{" "}
-                                                                        {
-                                                                            event.orateur
-                                                                        }
+                                                                <div>
+                                                                    <div className="special-header">
+                                                                        <span className="special-date">
+                                                                            {formatDateFrench(
+                                                                                event.date,
+                                                                            )}
+                                                                        </span>
                                                                     </div>
-                                                                )}
-                                                                {event.moderateur && (
-                                                                    <div>
-                                                                        <span className="special-meta-label">
-                                                                            Modérateur:
-                                                                        </span>{" "}
+                                                                    <h4 className="special-title">
                                                                         {
-                                                                            event.moderateur
+                                                                            event.title
                                                                         }
+                                                                    </h4>
+                                                                    {event.lieu && (
+                                                                        <p className="special-lieu">
+                                                                            <IconLocation />{" "}
+                                                                            {
+                                                                                event.lieu
+                                                                            }
+                                                                        </p>
+                                                                    )}
+                                                                    <div className="time-qr-row">
+                                                                        <p>
+                                                                            <IconClock />{" "}
+                                                                            {event.time
+                                                                                ? event.time.substring(
+                                                                                      0,
+                                                                                      5,
+                                                                                  )
+                                                                                : "--:--"}
+                                                                        </p>
+                                                                        <button
+                                                                            type="button"
+                                                                            className="btn-qr-inline"
+                                                                            disabled={
+                                                                                !qrAccess.enabled
+                                                                            }
+                                                                            title={
+                                                                                qrAccess.reason
+                                                                            }
+                                                                            onClick={(
+                                                                                e,
+                                                                            ) => {
+                                                                                e.stopPropagation();
+                                                                                if (
+                                                                                    !qrAccess.enabled
+                                                                                ) {
+                                                                                    return;
+                                                                                }
+                                                                                openQrModal(
+                                                                                    event,
+                                                                                );
+                                                                            }}
+                                                                        >
+                                                                            Code
+                                                                            Qr
+                                                                        </button>
                                                                     </div>
-                                                                )}
+                                                                    <div className="special-meta">
+                                                                        {event.orateur && (
+                                                                            <div>
+                                                                                <span className="special-meta-label">
+                                                                                    Orateur:
+                                                                                </span>{" "}
+                                                                                {
+                                                                                    event.orateur
+                                                                                }
+                                                                            </div>
+                                                                        )}
+                                                                        {event.moderateur && (
+                                                                            <div>
+                                                                                <span className="special-meta-label">
+                                                                                    Modérateur:
+                                                                                </span>{" "}
+                                                                                {
+                                                                                    event.moderateur
+                                                                                }
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                                        );
+                                                    },
+                                                )}
                                             </div>
                                         </div>
                                     ) : (

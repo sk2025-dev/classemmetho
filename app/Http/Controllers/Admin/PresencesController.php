@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Classe;
 use App\Models\Presence;
 use App\Models\PermanentActivity;
+use App\Models\SpecialEvent;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +31,9 @@ class PresencesController extends Controller
                 'periodesData' => [],
                 'alertesData' => [],
                 'tendancesData' => [],
+                'participantsData' => [],
+                'activitesParMois2026' => $this->emptyMonths2026(),
+                'classInsights' => [],
             ]);
         }
 
@@ -129,7 +133,7 @@ class PresencesController extends Controller
             ->where('statut', 'absent')
             ->select('membre_famille_id')
             ->groupBy('membre_famille_id')
-            ->havingRaw('COUNT(*) >= 3')
+            ->havingRaw("COUNT(DISTINCT CASE WHEN special_event_id IS NOT NULL THEN CONCAT('se-', special_event_id) WHEN activite_id IS NOT NULL THEN CONCAT('pa-', activite_id) ELSE CONCAT('p-', id) END) >= 3")
             ->get()
             ->count();
 
@@ -201,6 +205,41 @@ class PresencesController extends Controller
                     ->values();
             });
 
+        $classParticipantsRows = Presence::query()
+            ->from('presences as p')
+            ->join('users as u', 'u.id', '=', 'p.membre_famille_id')
+            ->leftJoin('classes as c', 'c.id', '=', 'u.classe_id')
+            ->leftJoin('permanent_activities as pa', 'pa.id', '=', 'p.activite_id')
+            ->leftJoin('special_events as se', 'se.id', '=', 'p.special_event_id')
+            ->whereIn('u.classe_id', $classIds)
+            ->selectRaw('u.classe_id as classe_id,
+                u.id as membre_id,
+                u.prenom,
+                u.nom,
+                c.nom as classe_nom,
+                p.statut,
+                COALESCE(se.title, pa.title, "Activite") as activite_nom,
+                p.marquee_le,
+                p.created_at')
+            ->orderByDesc('p.marquee_le')
+            ->orderByDesc('p.created_at')
+            ->limit(1500)
+            ->get()
+            ->groupBy('classe_id')
+            ->map(function ($rows) {
+                return collect($rows)
+                    ->map(function ($row) {
+                        return [
+                            'participant' => trim(($row->prenom ?? '') . ' ' . ($row->nom ?? '')),
+                            'classe' => $row->classe_nom ?? 'Sans classe',
+                            'activite' => $row->activite_nom ?? 'Activite',
+                            'statut' => $row->statut ?? 'absent',
+                            'date' => $row->marquee_le ?? $row->created_at,
+                        ];
+                    })
+                    ->values();
+            });
+
         $classMonthlyRows = Presence::query()
             ->from('presences as p')
             ->join('users as u', 'u.id', '=', 'p.membre_famille_id')
@@ -268,9 +307,9 @@ class PresencesController extends Controller
             ->leftJoin('classes as c', 'c.id', '=', 'u.classe_id')
             ->where('p.statut', 'absent')
             ->whereIn('u.classe_id', $classIds)
-            ->selectRaw('u.classe_id as classe_id, u.id as user_id, u.prenom, u.nom, c.nom as classe_nom, COUNT(*) as absences')
+            ->selectRaw("u.classe_id as classe_id, u.id as user_id, u.prenom, u.nom, c.nom as classe_nom, COUNT(*) as absences, COUNT(DISTINCT CASE WHEN p.special_event_id IS NOT NULL THEN CONCAT('se-', p.special_event_id) WHEN p.activite_id IS NOT NULL THEN CONCAT('pa-', p.activite_id) ELSE CONCAT('p-', p.id) END) as activites_distinctes")
             ->groupBy('u.classe_id', 'u.id', 'u.prenom', 'u.nom', 'c.nom')
-            ->havingRaw('COUNT(*) >= 3')
+            ->havingRaw("COUNT(DISTINCT CASE WHEN p.special_event_id IS NOT NULL THEN CONCAT('se-', p.special_event_id) WHEN p.activite_id IS NOT NULL THEN CONCAT('pa-', p.activite_id) ELSE CONCAT('p-', p.id) END) >= 3")
             ->orderByDesc('absences')
             ->get()
             ->groupBy('classe_id')
@@ -281,9 +320,11 @@ class PresencesController extends Controller
                         $abs = (int) ($row->absences ?? 0);
 
                         return [
+                            'id' => (int) ($row->user_id ?? 0),
                             'name' => trim(($row->prenom ?? '') . ' ' . ($row->nom ?? '')),
                             'classe' => $row->classe_nom ?? 'Sans classe',
                             'absences' => $abs,
+                            'activites' => (int) ($row->activites_distinctes ?? 0),
                             'level' => $abs >= 4 ? 'high' : 'medium',
                         ];
                     })
@@ -298,8 +339,127 @@ class PresencesController extends Controller
                 'periodesData' => ($classMonthlyRows->get($classe->id) ?? collect())->values()->all(),
                 'tendancesData' => ($classWeeklyRows->get($classe->id) ?? collect())->values()->all(),
                 'alertesData' => ($classAlertRows->get($classe->id) ?? collect())->values()->all(),
+                'participantsData' => ($classParticipantsRows->get($classe->id) ?? collect())->values()->all(),
+                'activitesParMois2026' => $this->emptyMonths2026(),
             ];
         }
+
+        $events2026 = collect();
+        if (Schema::hasTable('special_events')) {
+            $events2026 = SpecialEvent::query()
+                ->leftJoin('classes as c', 'c.id', '=', 'special_events.class_id')
+                ->whereYear('special_events.date', 2026)
+                ->where('special_events.is_parish', false)
+                ->orderBy('special_events.date')
+                ->orderBy('special_events.time')
+                ->get([
+                    'special_events.id',
+                    'special_events.class_id',
+                    'special_events.title',
+                    'special_events.date',
+                    'special_events.time',
+                    'special_events.end_time',
+                    'special_events.lieu',
+                    'c.nom as classe_nom',
+                ]);
+        }
+
+        $activitesParMois2026 = $this->emptyMonths2026();
+        foreach ($events2026 as $event) {
+            if (empty($event->date)) {
+                continue;
+            }
+
+            $monthKey = Carbon::parse($event->date)->format('Y-m');
+            if (! array_key_exists($monthKey, $activitesParMois2026)) {
+                continue;
+            }
+
+            $activitesParMois2026[$monthKey][] = [
+                'id' => $event->id,
+                'titre' => (string) ($event->title ?? 'Activite'),
+                'date' => $event->date,
+                'heure' => $event->time,
+                'heure_fin' => $event->end_time,
+                'classe' => $event->classe_nom,
+                'lieu' => $event->lieu,
+            ];
+        }
+
+        foreach ($activitesParMois2026 as $monthKey => $items) {
+            usort($items, function ($a, $b) {
+                $aDate = $this->resolveEventDateTimeForSort($a);
+                $bDate = $this->resolveEventDateTimeForSort($b);
+                return $aDate <=> $bDate;
+            });
+            $activitesParMois2026[$monthKey] = $items;
+        }
+
+        foreach ($classes as $classe) {
+            $classeKey = (string) $classe->id;
+            $monthMap = $this->emptyMonths2026();
+
+            foreach ($events2026->where('class_id', $classe->id) as $event) {
+                if (empty($event->date)) {
+                    continue;
+                }
+
+                $monthKey = Carbon::parse($event->date)->format('Y-m');
+                if (! array_key_exists($monthKey, $monthMap)) {
+                    continue;
+                }
+
+                $monthMap[$monthKey][] = [
+                    'id' => $event->id,
+                    'titre' => (string) ($event->title ?? 'Activite'),
+                    'date' => $event->date,
+                    'heure' => $event->time,
+                    'heure_fin' => $event->end_time,
+                    'classe' => $event->classe_nom,
+                    'lieu' => $event->lieu,
+                ];
+            }
+
+            foreach ($monthMap as $monthKey => $items) {
+                usort($items, function ($a, $b) {
+                    $aDate = $this->resolveEventDateTimeForSort($a);
+                    $bDate = $this->resolveEventDateTimeForSort($b);
+                    return $aDate <=> $bDate;
+                });
+                $monthMap[$monthKey] = $items;
+            }
+
+            $classInsights[$classeKey]['activitesParMois2026'] = $monthMap;
+        }
+
+        $participantsData = Presence::query()
+            ->from('presences as p')
+            ->join('users as u', 'u.id', '=', 'p.membre_famille_id')
+            ->leftJoin('classes as c', 'c.id', '=', 'u.classe_id')
+            ->leftJoin('permanent_activities as pa', 'pa.id', '=', 'p.activite_id')
+            ->leftJoin('special_events as se', 'se.id', '=', 'p.special_event_id')
+            ->selectRaw('u.id as membre_id,
+                u.prenom,
+                u.nom,
+                c.nom as classe_nom,
+                p.statut,
+                COALESCE(se.title, pa.title, "Activite") as activite_nom,
+                p.marquee_le,
+                p.created_at')
+            ->orderByDesc('p.marquee_le')
+            ->orderByDesc('p.created_at')
+            ->limit(1500)
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'participant' => trim(($row->prenom ?? '') . ' ' . ($row->nom ?? '')),
+                    'classe' => $row->classe_nom ?? 'Sans classe',
+                    'activite' => $row->activite_nom ?? 'Activite',
+                    'statut' => $row->statut ?? 'absent',
+                    'date' => $row->marquee_le ?? $row->created_at,
+                ];
+            })
+            ->values();
 
         $activityMap = Presence::query()
             ->selectRaw('activite_id,
@@ -357,10 +517,10 @@ class PresencesController extends Controller
             ->from('presences as p')
             ->join('users as u', 'u.id', '=', 'p.membre_famille_id')
             ->leftJoin('classes as c', 'c.id', '=', 'u.classe_id')
-            ->selectRaw('u.id as user_id, u.prenom, u.nom, c.nom as classe_nom, COUNT(*) as absences')
+            ->selectRaw("u.id as user_id, u.prenom, u.nom, c.nom as classe_nom, COUNT(*) as absences, COUNT(DISTINCT CASE WHEN p.special_event_id IS NOT NULL THEN CONCAT('se-', p.special_event_id) WHEN p.activite_id IS NOT NULL THEN CONCAT('pa-', p.activite_id) ELSE CONCAT('p-', p.id) END) as activites_distinctes")
             ->where('p.statut', 'absent')
             ->groupBy('u.id', 'u.prenom', 'u.nom', 'c.nom')
-            ->havingRaw('COUNT(*) >= 3')
+            ->havingRaw("COUNT(DISTINCT CASE WHEN p.special_event_id IS NOT NULL THEN CONCAT('se-', p.special_event_id) WHEN p.activite_id IS NOT NULL THEN CONCAT('pa-', p.activite_id) ELSE CONCAT('p-', p.id) END) >= 3")
             ->orderByDesc('absences')
             ->limit(20)
             ->get()
@@ -368,9 +528,11 @@ class PresencesController extends Controller
                 $abs = (int) $row->absences;
 
                 return [
+                    'id' => (int) ($row->user_id ?? 0),
                     'name' => trim(($row->prenom ?? '') . ' ' . ($row->nom ?? '')),
                     'classe' => $row->classe_nom ?? 'Sans classe',
                     'absences' => $abs,
+                    'activites' => (int) ($row->activites_distinctes ?? 0),
                     'level' => $abs >= 4 ? 'high' : 'medium',
                 ];
             })
@@ -411,7 +573,52 @@ class PresencesController extends Controller
             'periodesData' => $periodesData,
             'alertesData' => $alertesData,
             'tendancesData' => $tendancesData,
+            'participantsData' => $participantsData,
+            'activitesParMois2026' => $activitesParMois2026,
             'classInsights' => $classInsights,
+        ];
+    }
+
+    private function resolveEventDateTimeForSort(array $item): Carbon
+    {
+        $date = (string) ($item['date'] ?? '1970-01-01');
+        $timeRaw = trim((string) ($item['heure'] ?? ''));
+
+        if ($timeRaw === '') {
+            return Carbon::parse($date . ' 00:00:00');
+        }
+
+        // Some sources already provide a full datetime in the time field.
+        if (preg_match('/^\d{4}-\d{2}-\d{2}/', $timeRaw) === 1) {
+            return Carbon::parse($timeRaw);
+        }
+
+        if (preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $timeRaw) === 1) {
+            return Carbon::parse($date . ' ' . $timeRaw);
+        }
+
+        try {
+            return Carbon::parse($timeRaw);
+        } catch (\Throwable $e) {
+            return Carbon::parse($date . ' 00:00:00');
+        }
+    }
+
+    private function emptyMonths2026(): array
+    {
+        return [
+            '2026-01' => [],
+            '2026-02' => [],
+            '2026-03' => [],
+            '2026-04' => [],
+            '2026-05' => [],
+            '2026-06' => [],
+            '2026-07' => [],
+            '2026-08' => [],
+            '2026-09' => [],
+            '2026-10' => [],
+            '2026-11' => [],
+            '2026-12' => [],
         ];
     }
 }

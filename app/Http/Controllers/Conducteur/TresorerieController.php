@@ -111,30 +111,33 @@ class TresorerieController extends Controller
             ];
         })->values();
 
-        $retardThresholdDate = Carbon::today()->addDays(5)->endOfDay();
-        $cotisationsProchesFin = $cotisationsFamiliales
-            ->filter(function (Cotisation $cotisation) use ($retardThresholdDate) {
-                if (!$cotisation->date_fin) {
+        $today = Carbon::today()->startOfDay();
+        $cotisationsEnRetard = $cotisationsFamiliales
+            ->filter(function (Cotisation $cotisation) use ($today) {
+                $baseDate = $cotisation->date_echeance ?: $cotisation->date_fin;
+                if (!$baseDate) {
                     return false;
                 }
 
-                return Carbon::parse($cotisation->date_fin)
-                    ->endOfDay()
-                    ->lessThanOrEqualTo($retardThresholdDate);
+                $lateAt = Carbon::parse($baseDate)
+                    ->subDays((int) ($cotisation->late_after_days ?? 2))
+                    ->startOfDay();
+
+                return $today->greaterThanOrEqualTo($lateAt);
             })
             ->values();
 
         $paidByFamilyNearDeadline = collect();
-        if ($cotisationsProchesFin->isNotEmpty()) {
+        if ($cotisationsEnRetard->isNotEmpty()) {
             $paidByFamilyNearDeadline = Paiement::query()
                 ->select('family_id', DB::raw('SUM(montant) as total_paye'))
                 ->whereIn('family_id', $familyIds)
-                ->whereIn('cotisation_id', $cotisationsProchesFin->pluck('id'))
+                ->whereIn('cotisation_id', $cotisationsEnRetard->pluck('id'))
                 ->groupBy('family_id')
                 ->pluck('total_paye', 'family_id');
         }
 
-        $cotisationNearDeadlineUnit = (int) $cotisationsProchesFin->sum('montant');
+        $cotisationNearDeadlineUnit = (int) $cotisationsEnRetard->sum('montant');
 
         $famillesEnRetard = $families
             ->map(function (Family $family) use ($paidByFamilyNearDeadline, $cotisationNearDeadlineUnit) {
@@ -469,6 +472,7 @@ class TresorerieController extends Controller
             return [
                 'id' => $member->id,
                 'nom' => trim(($member->prenom ?? '') . ' ' . ($member->nom ?? '')),
+                'code_membre' => $member->code_membre,
                 'famille' => $member->family?->nom ?? 'Sans famille',
                 'role' => $member->role,
             ];
@@ -492,7 +496,7 @@ class TresorerieController extends Controller
             ->values();
 
         $fimecoHistorique = Paiement::query()
-            ->with(['user:id,nom,prenom,classe_id,family_id', 'user.family:id,nom', 'cotisation:id,nom'])
+            ->with(['user:id,nom,prenom,code_membre,classe_id,family_id', 'user.family:id,nom', 'cotisation:id,nom'])
             ->whereHas('user', fn($q) => $q->where('classe_id', $classeId))
             ->whereHas('cotisation', fn($q) => $q->whereRaw('LOWER(nom) like ?', ['%fimeco%']))
             ->orderByDesc('date_paiement')
@@ -502,6 +506,7 @@ class TresorerieController extends Controller
                 return [
                     'id' => $paiement->id,
                     'membre' => trim(($paiement->user?->prenom ?? '') . ' ' . ($paiement->user?->nom ?? '')),
+                    'code_membre' => $paiement->user?->code_membre,
                     'famille' => $paiement->user?->family?->nom ?? '-',
                     'cotisation' => $paiement->cotisation?->nom ?? '-',
                     'montant' => (int) $paiement->montant,
@@ -512,7 +517,7 @@ class TresorerieController extends Controller
             ->values();
 
         $paiementsHistorique = Paiement::query()
-            ->with(['user:id,nom,prenom,classe_id,family_id', 'user.family:id,nom', 'cotisation:id,nom'])
+            ->with(['user:id,nom,prenom,code_membre,classe_id,family_id', 'user.family:id,nom', 'cotisation:id,nom'])
             ->whereHas('user', fn($q) => $q->where('classe_id', $classeId))
             ->orderByDesc('date_paiement')
             ->limit(250)
@@ -521,6 +526,7 @@ class TresorerieController extends Controller
                 return [
                     'id' => $paiement->id,
                     'membre' => trim(($paiement->user?->prenom ?? '') . ' ' . ($paiement->user?->nom ?? '')),
+                    'code_membre' => $paiement->user?->code_membre,
                     'famille' => $paiement->user?->family?->nom ?? '-',
                     'cotisation' => $paiement->cotisation?->nom ?? '-',
                     'montant' => (int) $paiement->montant,
@@ -593,6 +599,7 @@ class TresorerieController extends Controller
                 return [
                     'user_id' => $member->id,
                     'nom' => trim(($member->prenom ?? '') . ' ' . ($member->nom ?? '')),
+                    'code_membre' => $member->code_membre,
                     'famille' => $member->family?->nom ?? '-',
                     'cotisation' => $cotisation->nom,
                     'montant_du' => $remaining,
@@ -995,9 +1002,14 @@ class TresorerieController extends Controller
 
             if ($remainingAfter > 0) {
                 $isLate = false;
-                if ($cotisation->date_echeance) {
-                    $lateAt = Carbon::parse($cotisation->date_echeance)->addDays((int) ($cotisation->late_after_days ?? 2))->startOfDay();
-                    $isLate = Carbon::parse($validated['date_paiement'])->startOfDay()->greaterThan($lateAt);
+                $baseDate = $cotisation->date_echeance ?: $cotisation->date_fin;
+                if ($baseDate) {
+                    $lateAt = Carbon::parse($baseDate)
+                        ->subDays((int) ($cotisation->late_after_days ?? 2))
+                        ->startOfDay();
+                    $isLate = Carbon::parse($validated['date_paiement'])
+                        ->startOfDay()
+                        ->greaterThanOrEqualTo($lateAt);
                 }
                 $paymentStatus = $isLate ? Paiement::STATUT_EN_RETARD : Paiement::STATUT_PARTIELLEMENT_PAYE;
             }

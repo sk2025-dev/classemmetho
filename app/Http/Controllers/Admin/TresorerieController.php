@@ -8,10 +8,12 @@ use App\Models\Cotisation;
 use App\Models\Don;
 use App\Models\Family;
 use App\Models\Paiement;
+use App\Services\TresorerieReportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TresorerieController extends Controller
 {
@@ -35,7 +37,7 @@ class TresorerieController extends Controller
         }
 
         $cotisations = Cotisation::query()
-            ->with('classe:id,nom')
+            ->with(['classe:id,nom', 'creator:id,prenom,nom'])
             ->orderBy('nom')
             ->get();
 
@@ -43,6 +45,14 @@ class TresorerieController extends Controller
             ->with('classe:id,nom')
             ->orderByDesc('created_at')
             ->get();
+
+        $dons = Don::query()
+            ->with(['family:id,nom', 'user:id,prenom,nom,classe_id', 'user.classe:id,nom'])
+            ->orderByDesc('date_don')
+            ->get();
+
+        // Debug: Log le nombre de dons chargés
+        \Log::info('Dons chargés admin tresorerie: ' . $dons->count());
 
         $paiementsRecents = Paiement::query()
             ->with(['family:id,nom', 'cotisation:id,nom'])
@@ -76,6 +86,23 @@ class TresorerieController extends Controller
                     'periodicite' => ucfirst(strtolower($cotisation->periodicite)),
                     'statut' => ucfirst(strtolower($cotisation->statut)),
                     'classes' => $cotisation->classe?->nom ?? 'Toutes',
+                    'classe_nom' => $cotisation->classe?->nom ?? 'Toutes',
+                    'created_at' => optional($cotisation->created_at)->toISOString(),
+                    'created_by' => trim((string) ($cotisation->creator?->prenom ? $cotisation->creator?->prenom . ' ' : '') . ($cotisation->creator?->nom ?? '')) ?: null,
+                ];
+            })->values(),
+            'dons' => $dons->map(function (Don $don) {
+                return [
+                    'id' => $don->id,
+                    'donor_name' => $don->family?->nom ?? 'Famille anonyme',
+                    'amount' => (int) $don->montant,
+                    'donation_date' => optional($don->date_don)->format('d/m/Y'),
+                    'treasurer_name' => trim(($don->user?->prenom ?? '') . ' ' . ($don->user?->nom ?? '')) ?: 'Trésorier inconnu',
+                    'class_name' => $don->user?->classe?->nom ?? 'Classe inconnue',
+                    'type' => $don->type,
+                    'mode_paiement' => $don->mode_paiement,
+                    'reference_recu' => $don->reference_recu,
+                    'note' => $don->note,
                 ];
             })->values(),
             'campagnes' => $campagnes->map(function (Campagne $campagne) {
@@ -217,5 +244,27 @@ class TresorerieController extends Controller
             'message' => 'Campagne clôturée.',
             'data' => $campagne->fresh(),
         ]);
+    }
+    public function export(Request $request, TresorerieReportService $reportService): StreamedResponse
+    {
+        if (! Schema::hasTable('paiements') || ! Schema::hasTable('dons')) {
+            abort(404, 'Treasury data is not available yet.');
+        }
+
+        $validated = $request->validate([
+            'scope' => ['nullable', 'in:monthly,annual'],
+            'month' => ['nullable', 'date_format:Y-m'],
+            'year' => ['nullable', 'integer', 'digits:4', 'min:2000', 'max:2100'],
+        ]);
+
+        $period = $reportService->resolvePeriod(
+            $validated['scope'] ?? 'monthly',
+            $validated['month'] ?? null,
+            isset($validated['year']) ? (int) $validated['year'] : null,
+        );
+
+        return $reportService->streamExcel(
+            $reportService->buildReport($period),
+        );
     }
 }

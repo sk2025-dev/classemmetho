@@ -3,7 +3,15 @@ import { Head, usePage } from "@inertiajs/react";
 import axios from "axios";
 
 export default function PresenceScan() {
-    const { token, event, isInvalidToken, isExpired } = usePage().props;
+    const {
+        token,
+        event,
+        isInvalidToken,
+        isExpired,
+        isNotYetOpen,
+        isClosed,
+        openingAt,
+    } = usePage().props;
 
     const [codeMembre, setCodeMembre] = useState("");
     const [loading, setLoading] = useState(false);
@@ -104,7 +112,34 @@ export default function PresenceScan() {
                         </p>
                     )}
 
-                    {!isInvalidToken && !isExpired && (
+                    {!isInvalidToken && !isExpired && isNotYetOpen && (
+                        <p
+                            style={{
+                                marginBottom: "16px",
+                                color: "#b45309",
+                                fontWeight: 600,
+                            }}
+                        >
+                            Le scan sera disponible deux jours avant l'activité
+                            {openingAt
+                                ? ` (activation: ${new Date(openingAt).toLocaleString("fr-FR")}).`
+                                : "."}
+                        </p>
+                    )}
+
+                    {!isInvalidToken && !isExpired && !isNotYetOpen && isClosed && (
+                        <p
+                            style={{
+                                marginBottom: "16px",
+                                color: "#dc2626",
+                                fontWeight: 600,
+                            }}
+                        >
+                            Cette activité est passée. Le scan n'est plus disponible.
+                        </p>
+                    )}
+
+                    {!isInvalidToken && !isExpired && !isNotYetOpen && !isClosed && (
                         <form onSubmit={submit}>
                             <label
                                 style={{

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Head, Link } from "@inertiajs/react";
 import { withBasePath } from "@/Utils/urlHelper";
 
@@ -20,6 +20,25 @@ const displayDate = (isoDate) => {
     const chunks = String(isoDate).split("-");
     if (chunks.length !== 3) return String(isoDate);
     return `${chunks[2]}/${chunks[1]}/${chunks[0]}`;
+};
+
+const normalizeDateForCompare = (rawDate) => {
+    if (!rawDate) return "";
+    const value = String(rawDate).trim();
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return value;
+    }
+
+    const parts = value.split("/");
+    if (parts.length === 3) {
+        const [dd, mm, yyyy] = parts;
+        if (dd && mm && yyyy) {
+            return `${yyyy.padStart(4, "0")}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+        }
+    }
+
+    return "";
 };
 
 const PAGE_SIZE = 10;
@@ -262,8 +281,26 @@ export default function TresorierClasse({
     const [donsPage, setDonsPage] = useState(1);
     const [retardsPage, setRetardsPage] = useState(1);
 
+    const [filters, setFilters] = useState({
+        famille: "",
+        codeMembre: "",
+        typeCotisation: "",
+        date: "",
+    });
+
     const [paiementsRows, setPaiementsRows] = useState(paiementsHistorique);
     const [donsRows, setDonsRows] = useState(donsClasse);
+
+    const filterNeedleFamille = String(filters.famille || "")
+        .trim()
+        .toLowerCase();
+    const filterNeedleCode = String(filters.codeMembre || "")
+        .trim()
+        .toLowerCase();
+    const filterNeedleCotisation = String(filters.typeCotisation || "")
+        .trim()
+        .toLowerCase();
+    const filterDate = normalizeDateForCompare(filters.date);
 
     const csrf = () => {
         const t = document.querySelector('meta[name="csrf-token"]');
@@ -309,20 +346,100 @@ export default function TresorierClasse({
     const memberOptions = useMemo(
         () =>
             membresClasse.map((m) => ({
-                label: `${m.nom} (${m.famille || "-"})`,
+                label: `${m.nom} (${m.famille || "-"})${m.code_membre ? ` · ${m.code_membre}` : ""}`,
                 value: String(m.id),
             })),
         [membresClasse],
     );
 
+    const cotisationTypeOptions = useMemo(() => {
+        const source = [
+            ...paiementsRows.map((r) => r.cotisation),
+            ...fimecoHistorique.map((r) => r.cotisation),
+            ...retardsClasse.map((r) => r.cotisation),
+            ...cotisationsPaiement.map((c) => c.nom),
+        ];
+
+        return Array.from(
+            new Set(
+                source
+                    .map((value) => String(value || "").trim())
+                    .filter(Boolean),
+            ),
+        ).sort((a, b) => a.localeCompare(b, "fr"));
+    }, [cotisationsPaiement, fimecoHistorique, paiementsRows, retardsClasse]);
+
+    const matchesFilters = (row) => {
+        const famille = String(row?.famille || "").toLowerCase();
+        const codeMembre = String(
+            row?.code_membre || row?.codeMembre || "",
+        ).toLowerCase();
+        const cotisation = String(row?.cotisation || "").toLowerCase();
+        const rowDate = normalizeDateForCompare(row?.date || row?.date_echeance);
+
+        if (filterNeedleFamille && !famille.includes(filterNeedleFamille)) {
+            return false;
+        }
+
+        if (filterNeedleCode && !codeMembre.includes(filterNeedleCode)) {
+            return false;
+        }
+
+        if (
+            filterNeedleCotisation &&
+            !cotisation.includes(filterNeedleCotisation)
+        ) {
+            return false;
+        }
+
+        if (filterDate && rowDate !== filterDate) {
+            return false;
+        }
+
+        return true;
+    };
+
+    const filteredFimecoRows = useMemo(
+        () => fimecoHistorique.filter(matchesFilters),
+        [
+            fimecoHistorique,
+            filterNeedleFamille,
+            filterNeedleCode,
+            filterNeedleCotisation,
+            filterDate,
+        ],
+    );
+
+    const filteredPaiementsRows = useMemo(
+        () => paiementsRows.filter(matchesFilters),
+        [
+            paiementsRows,
+            filterNeedleFamille,
+            filterNeedleCode,
+            filterNeedleCotisation,
+            filterDate,
+        ],
+    );
+
+    const filteredRetardsRows = useMemo(
+        () => retardsClasse.filter(matchesFilters),
+        [
+            retardsClasse,
+            filterNeedleFamille,
+            filterNeedleCode,
+            filterNeedleCotisation,
+            filterDate,
+        ],
+    );
+
     const fimecoPagination = useMemo(
-        () => paginateRows(fimecoHistorique, fimecoPage),
-        [fimecoHistorique, fimecoPage],
+        () => paginateRows(filteredFimecoRows, fimecoPage),
+        [filteredFimecoRows, fimecoPage],
     );
 
     const paiementsPagination = useMemo(
-        () => paginateRows(paiementsRows, paiementsPage),
-        [paiementsRows, paiementsPage],
+        () => paginateRows(filteredPaiementsRows, paiementsPage),
+        [filteredPaiementsRows, paiementsPage],
     );
 
     const donsPagination = useMemo(
@@ -331,9 +448,15 @@ export default function TresorierClasse({
     );
 
     const retardsPagination = useMemo(
-        () => paginateRows(retardsClasse, retardsPage),
-        [retardsClasse, retardsPage],
+        () => paginateRows(filteredRetardsRows, retardsPage),
+        [filteredRetardsRows, retardsPage],
     );
+
+    useEffect(() => {
+        setFimecoPage(1);
+        setPaiementsPage(1);
+        setRetardsPage(1);
+    }, [filterNeedleFamille, filterNeedleCode, filterNeedleCotisation, filterDate]);
 
     const openRappelModal = (row) => {
         setRappelForm({
@@ -378,6 +501,7 @@ export default function TresorierClasse({
                 {
                     id: createdId,
                     membre: selectedMember?.nom || "-",
+                    code_membre: selectedMember?.code_membre || "",
                     famille: selectedMember?.famille || "-",
                     cotisation: selectedCotisation?.nom || "-",
                     montant,
@@ -618,6 +742,92 @@ export default function TresorierClasse({
                 >
                     Rappels
                 </button>
+            </div>
+
+            <div
+                style={{
+                    background: "#fff",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: 14,
+                    padding: 12,
+                    marginBottom: 12,
+                    display: "grid",
+                    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                    gap: 10,
+                }}
+            >
+                <div>
+                    <label style={{ fontSize: 11, fontWeight: 700 }}>
+                        Recherche par famille
+                    </label>
+                    <input
+                        style={inputStyle}
+                        type="text"
+                        value={filters.famille}
+                        onChange={(e) =>
+                            setFilters((prev) => ({
+                                ...prev,
+                                famille: e.target.value,
+                            }))
+                        }
+                        placeholder="Nom de famille"
+                    />
+                </div>
+                <div>
+                    <label style={{ fontSize: 11, fontWeight: 700 }}>
+                        Recherche par code membre
+                    </label>
+                    <input
+                        style={inputStyle}
+                        type="text"
+                        value={filters.codeMembre}
+                        onChange={(e) =>
+                            setFilters((prev) => ({
+                                ...prev,
+                                codeMembre: e.target.value,
+                            }))
+                        }
+                        placeholder="Ex: MBR-001"
+                    />
+                </div>
+                <div>
+                    <label style={{ fontSize: 11, fontWeight: 700 }}>
+                        Type cotisation
+                    </label>
+                    <select
+                        style={inputStyle}
+                        value={filters.typeCotisation}
+                        onChange={(e) =>
+                            setFilters((prev) => ({
+                                ...prev,
+                                typeCotisation: e.target.value,
+                            }))
+                        }
+                    >
+                        <option value="">Toutes</option>
+                        {cotisationTypeOptions.map((opt) => (
+                            <option key={opt} value={opt}>
+                                {opt}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div>
+                    <label style={{ fontSize: 11, fontWeight: 700 }}>
+                        Recherche par date
+                    </label>
+                    <input
+                        style={inputStyle}
+                        type="date"
+                        value={filters.date}
+                        onChange={(e) =>
+                            setFilters((prev) => ({
+                                ...prev,
+                                date: e.target.value,
+                            }))
+                        }
+                    />
+                </div>
             </div>
 
             <div

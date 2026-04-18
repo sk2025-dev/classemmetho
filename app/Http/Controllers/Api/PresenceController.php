@@ -39,6 +39,14 @@ class PresenceController extends Controller
             ], 410);
         }
 
+        $programmeOpeningAt = $this->resolveProgrammeOpeningAt($event);
+        if (now()->lt($programmeOpeningAt)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Le scan sera disponible deux jours avant la date de cette activité.',
+            ], 423);
+        }
+
         $member = User::query()
             ->where('code_membre', $validated['code_membre'])
             ->where('classe_id', $event->class_id)
@@ -118,7 +126,14 @@ class PresenceController extends Controller
     public function programmeSummary(Request $request, SpecialEvent $event): JsonResponse
     {
         $user = Auth::user();
-        if (!$user || $user->role !== 'conducteur' || (int) $user->classe_id !== (int) $event->class_id) {
+        $isConducteur = $user && $user->role === 'conducteur';
+        $isPresenceMarker = $user && $this->isPresenceMarker($user);
+
+        if (
+            !$user
+            || (int) $user->classe_id !== (int) $event->class_id
+            || (!$isConducteur && !$isPresenceMarker)
+        ) {
             return response()->json([
                 'success' => false,
                 'message' => 'Accès refusé.',
@@ -219,6 +234,148 @@ class PresenceController extends Controller
             'non_scannes' => $pending->values(),
             'mode' => 'qr_read_only',
         ]);
+    }
+
+    public function marquerPresenceManuelle(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'event_id' => ['required', 'integer', 'exists:special_events,id'],
+            'member_id' => ['required', 'integer', 'exists:users,id'],
+        ]);
+
+        $user = Auth::user();
+
+        if (! $user || ! $this->isPresenceMarker($user)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Accès refusé.',
+            ], 403);
+        }
+
+        $event = SpecialEvent::query()
+            ->whereKey($validated['event_id'])
+            ->where('class_id', $user->classe_id)
+            ->where('is_parish', false)
+            ->first();
+
+        if (! $event) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Activité introuvable ou non autorisée.',
+            ], 404);
+        }
+
+        $programmeOpeningAt = $this->resolveProgrammeOpeningAt($event);
+        if (now()->lt($programmeOpeningAt)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Le marquage sera disponible deux jours avant la date de cette activité.',
+            ], 423);
+        }
+
+        $programmeEndAt = $this->resolveProgrammeEndAt($event);
+        if (now()->greaterThanOrEqualTo($programmeEndAt)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cette activité est déjà passée. Le marquage est clôturé.',
+            ], 410);
+        }
+
+        $member = User::query()
+            ->whereKey($validated['member_id'])
+            ->where('classe_id', $event->class_id)
+            ->first();
+
+        if (! $member) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Membre introuvable ou non autorisé.',
+            ], 422);
+        }
+
+        $presence = Presence::query()
+            ->where('special_event_id', $event->id)
+            ->where('membre_famille_id', $member->id)
+            ->first();
+
+        if ($presence && $presence->statut === 'present') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Présence déjà enregistrée.',
+            ], 409);
+        }
+
+        $payload = [
+            'activite_id' => null,
+            'special_event_id' => $event->id,
+            'membre_famille_id' => $member->id,
+            'statut' => 'present',
+            'marquee_par' => Auth::id(),
+            'marquee_le' => now(),
+            'methode' => 'marquage_manuel',
+            'notes' => 'Présence marquée manuellement par le marqueur de présence',
+        ];
+
+        if ($presence) {
+            $presence->update($payload);
+        } else {
+            Presence::create($payload);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Présence marquée manuellement.',
+            'data' => [
+                'event' => [
+                    'id' => $event->id,
+                    'title' => $event->title,
+                    'date' => $event->date,
+                ],
+                'member' => [
+                    'id' => $member->id,
+                    'nom' => $member->nom,
+                    'prenom' => $member->prenom,
+                    'code_membre' => $member->code_membre,
+                ],
+            ],
+        ]);
+    }
+
+    private function isPresenceMarker(User $user): bool
+    {
+        $user->loadMissing('fonction');
+        $nom = mb_strtolower(trim((string) ($user->fonction?->nom ?? '')));
+        $nom = strtr($nom, [
+            'é' => 'e',
+            'è' => 'e',
+            'ê' => 'e',
+            'ë' => 'e',
+            'à' => 'a',
+            'â' => 'a',
+            'ù' => 'u',
+            'û' => 'u',
+            'î' => 'i',
+            'ï' => 'i',
+            'ô' => 'o',
+            'ö' => 'o',
+            'ç' => 'c',
+        ]);
+
+        return in_array($nom, ['marqueur de presence', 'marqueur presence'], true);
+    }
+
+    private function resolveProgrammeOpeningAt(SpecialEvent $event): Carbon
+    {
+        $programmeStartAt = Carbon::parse($event->date);
+
+        if (!empty($event->time)) {
+            $startTime = Carbon::parse($event->time);
+            $programmeStartAt->setTime($startTime->hour, $startTime->minute, $startTime->second);
+        } else {
+            $programmeStartAt->setTime(0, 0, 0);
+        }
+
+        return $programmeStartAt->copy()->subDays(2);
     }
 
     private function resolveProgrammeEndAt(SpecialEvent $event): Carbon

@@ -206,6 +206,8 @@ Route::middleware(['auth'])->group(function () {
         // Routes module Trésorerie (Admin)
         Route::get('/admin/tresorerie', [AdminTresorerieController::class, 'index'])
             ->name('admin.tresorerie.index');
+        Route::get('/admin/tresorerie/export', [AdminTresorerieController::class, 'export'])
+            ->name('admin.tresorerie.export');
 
         // Codes familles
         Route::get('/admin/families', [FamilyCodeController::class, 'index'])->name('admin.families.index');
@@ -258,6 +260,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/conducteur/presences', [PresenceConducteurController::class, 'index'])->name('presences.index');
         Route::get('/conducteur/presences/programmes-activites', [PresenceConducteurController::class, 'activitesProgramme'])
             ->name('presences.programmes_activites');
+        Route::post('/conducteur/presences/assign-marqueur', [PresenceConducteurController::class, 'assignPresenceMarker'])
+            ->name('presences.assign_marqueur');
+        Route::post('/conducteur/presences/unassign-marqueur', [PresenceConducteurController::class, 'unassignPresenceMarker'])
+            ->name('presences.unassign_marqueur');
         Route::post('/conducteur/presences/programme/{event}', [PresenceConducteurController::class, 'enregistrerProgramme'])
             ->whereNumber('event')
             ->name('presences.enregistrer_programme');
@@ -527,6 +533,15 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/membre-famille/annuaire', [MembreFamilleAnnuaireController::class, 'index'])->name('membre_famille.annuaire.index');
         Route::get('/membre-famille/dashboard', [MembreFamilleDashboardController::class, 'index'])->name('membre_famille.dashboard');
         Route::get('/membre-famille/presences', [\App\Http\Controllers\MembreFamille\PresencesController::class, 'index'])->name('membre_famille.presences.index');
+        Route::get('/membre-famille/presences/marquage', [PresenceConducteurController::class, 'indexMarqueur'])
+            ->name('membre_famille.presences.marquage.index');
+        Route::get('/membre-famille/presences/marquage/programmes-activites', [PresenceConducteurController::class, 'activitesProgramme'])
+            ->name('membre_famille.presences.marquage.programmes_activites');
+        Route::get('/membre-famille/presences/marquage/programmes/{event}/presences', [\App\Http\Controllers\Api\PresenceController::class, 'programmeSummary'])
+            ->whereNumber('event')
+            ->name('membre_famille.presences.marquage.programmes.presences');
+        Route::post('/membre-famille/presences/marquage/marquer', [\App\Http\Controllers\Api\PresenceController::class, 'marquerPresenceManuelle'])
+            ->name('membre_famille.presences.marquage.marquer');
         Route::get('/membre-famille/prieres', [\App\Http\Controllers\MembreFamille\Prieres\PrieresController::class, 'index'])->name('membre_famille.prieres.index');
         Route::post('/membre-famille/prieres', [\App\Http\Controllers\MembreFamille\Prieres\PrieresController::class, 'store'])->name('membre_famille.prieres.store');
         Route::patch('/membre-famille/prieres/{priere}/commentaire', [\App\Http\Controllers\MembreFamille\Prieres\PrieresController::class, 'updateTestimony'])->name('membre_famille.prieres.testimony');

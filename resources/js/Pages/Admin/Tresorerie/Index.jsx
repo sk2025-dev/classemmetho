@@ -18,11 +18,13 @@ const fmtCurrency = (n) => `${fmt(n)} F`;
 export default function AdminTresorerie({
     stats: statsProp,
     cotisations: cotisationsProp,
-    campagnes: campagnesProp,
     paiementsRecents: paiementsRecentsProp,
+    dons: donsProp,
 }) {
     const [activeTab, setActiveTab] = useState("dashboard");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [selectedCotisation, setSelectedCotisation] = useState(null);
 
     const fallbackStats = {
         cotisationsTotales: 2500000,
@@ -30,7 +32,6 @@ export default function AdminTresorerie({
         cotisationsEnRetard: 625000,
         tauxPaiement: 75,
         donsTotaux: 450000,
-        campagnesActives: 1,
         famillesActives: 45,
     };
 
@@ -58,27 +59,6 @@ export default function AdminTresorerie({
             periodicite: "Mensuel",
             statut: "Actif",
             classes: "Toutes",
-        },
-    ];
-
-    const fallbackCampagnes = [
-        {
-            id: 1,
-            nom: "Rénovation temple",
-            objectif: 5000000,
-            collecté: 3200000,
-            classe: "Global",
-            statut: "ACTIVE",
-            progression: 64,
-        },
-        {
-            id: 2,
-            nom: "Achat chaises",
-            objectif: 1000000,
-            collecté: 750000,
-            classe: "Classe 1",
-            statut: "ACTIVE",
-            progression: 75,
         },
     ];
 
@@ -121,19 +101,72 @@ export default function AdminTresorerie({
         },
     ];
 
+    const fallbackDons = [
+        {
+            id: 1,
+            donor_name: "Famille Koné",
+            amount: 50000,
+            donation_date: "15/03/2026",
+            treasurer_name: "Marie Dupont",
+            class_name: "Classe A",
+        },
+        {
+            id: 2,
+            donor_name: "Famille Traoré",
+            amount: 25000,
+            donation_date: "12/03/2026",
+            treasurer_name: "Jean Martin",
+            class_name: "Classe B",
+        },
+        {
+            id: 3,
+            donor_name: "Famille Diallo",
+            amount: 100000,
+            donation_date: "10/03/2026",
+            treasurer_name: "Sophie Bernard",
+            class_name: "Classe A",
+        },
+    ];
+
     const stats = statsProp || fallbackStats;
     const cotisations =
         Array.isArray(cotisationsProp) && cotisationsProp.length
             ? cotisationsProp
             : fallbackCotisations;
-    const campagnes =
-        Array.isArray(campagnesProp) && campagnesProp.length
-            ? campagnesProp
-            : fallbackCampagnes;
     const paiementsRecents =
         Array.isArray(paiementsRecentsProp) && paiementsRecentsProp.length
             ? paiementsRecentsProp
             : fallbackPaiementsRecents;
+    const dons =
+        Array.isArray(donsProp) && donsProp.length
+            ? donsProp
+            : fallbackDons;
+    const reportDate = new Date();
+    const currentMonthValue = `${reportDate.getFullYear()}-${String(
+        reportDate.getMonth() + 1,
+    ).padStart(2, "0")}`;
+    const currentYearValue = String(reportDate.getFullYear());
+    const currentMonthLabel = reportDate.toLocaleDateString("fr-FR", {
+        month: "long",
+        year: "numeric",
+    });
+    const currentYearLabel = reportDate.toLocaleDateString("fr-FR", {
+        year: "numeric",
+    });
+    const monthlyReportUrl = withBasePath(
+        "",
+        `/admin/tresorerie/export?scope=monthly&month=${encodeURIComponent(currentMonthValue)}`,
+    );
+    const annualReportUrl = withBasePath(
+        "",
+        `/admin/tresorerie/export?scope=annual&year=${encodeURIComponent(currentYearValue)}`,
+    );
+
+    // Debug: Log les dons reçus
+    React.useEffect(() => {
+        console.log('Dons reçus du serveur:', donsProp);
+        console.log('Dons affichés:', dons);
+    }, [donsProp, dons]);
 
     const getCsrfToken = () => {
         const token = document.querySelector('meta[name="csrf-token"]');
@@ -222,58 +255,14 @@ export default function AdminTresorerie({
         }
     };
 
-    const handleAddCampagne = async () => {
-        if (isSubmitting) return;
-
-        const titre = window.prompt(
-            "Titre de la campagne ?",
-            "Nouvelle campagne",
-        );
-        if (!titre) return;
-
-        const objectifInput = window.prompt("Objectif (F CFA) ?", "1000000");
-        const objectif = Number(objectifInput || 0);
-        if (!Number.isFinite(objectif) || objectif < 1000) {
-            alert("Objectif invalide.");
-            return;
-        }
-
-        setIsSubmitting(true);
-        try {
-            await postJson("/api/admin/tresorerie/campagnes", {
-                titre,
-                objectif_montant: objectif,
-                scope: "GLOBAL",
-                classe_id: null,
-                statut: "ACTIVE",
-            });
-            alert("Campagne créée.");
-            window.location.reload();
-        } catch (error) {
-            alert("Échec de création de la campagne.");
-        } finally {
-            setIsSubmitting(false);
-        }
+    const handleViewCotisation = (cotisation) => {
+        setSelectedCotisation(cotisation);
+        setIsViewModalOpen(true);
     };
 
-    const handleCloseCampagne = async (campagne) => {
-        if (isSubmitting) return;
-        if (!window.confirm(`Clôturer la campagne \"${campagne.nom}\" ?`))
-            return;
-
-        setIsSubmitting(true);
-        try {
-            await postJson(
-                `/api/admin/tresorerie/campagnes/${campagne.id}/close`,
-                {},
-            );
-            alert("Campagne clôturée.");
-            window.location.reload();
-        } catch (error) {
-            alert("Échec de clôture de la campagne.");
-        } finally {
-            setIsSubmitting(false);
-        }
+    const closeViewModal = () => {
+        setIsViewModalOpen(false);
+        setSelectedCotisation(null);
     };
 
     return (
@@ -287,7 +276,7 @@ export default function AdminTresorerie({
 
             {/* Header */}
             <div className="bg-white/10 backdrop-blur-sm border-b border-white/20 sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-4 py-6">
+                <div className="mx-auto px-4 py-6">
                     <div className="flex items-center gap-4">
                         <Link
                             href={withBasePath("", "/admin/dashboard")}
@@ -308,7 +297,7 @@ export default function AdminTresorerie({
             </div>
 
             {/* Main Content */}
-            <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className="mx-auto px-4 py-8">
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow">
@@ -361,7 +350,7 @@ export default function AdminTresorerie({
                             <PieChart className="text-purple-600" size={32} />
                         </div>
                         <p className="text-xs text-blue-600 font-semibold">
-                            +{stats.campagnesActives} campagnes
+                            Collectes en cours
                         </p>
                     </div>
 
@@ -389,18 +378,23 @@ export default function AdminTresorerie({
                         {[
                             {
                                 id: "dashboard",
-                                label: "📊 Dashboard",
+                                label: "📊 Paiements",
                                 icon: BarChart3,
+                            },
+                            {
+                                id: "fimeco",
+                                label: "🏛️ FIMECO",
+                                icon: Users,
+                            },
+                            {
+                                id: "don",
+                                label: "🎁 Dons",
+                                icon: PieChart,
                             },
                             {
                                 id: "cotisations",
                                 label: "💰 Cotisations",
                                 icon: DollarSign,
-                            },
-                            {
-                                id: "campagnes",
-                                label: "🎯 Campagnes",
-                                icon: TrendingUp,
                             },
                             {
                                 id: "rapport",
@@ -425,66 +419,6 @@ export default function AdminTresorerie({
                     <div className="p-6">
                         {activeTab === "dashboard" && (
                             <div className="space-y-6">
-                                {/* Campagnes actives */}
-                                <div>
-                                    <h3 className="text-lg font-bold text-gray-900 mb-4">
-                                        Campagnes en cours
-                                    </h3>
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                        {campagnes.map((campagne) => (
-                                            <div
-                                                key={campagne.id}
-                                                className="border border-gray-200 rounded-lg p-4 hover:border-blue-400 transition-colors"
-                                            >
-                                                <div className="flex justify-between items-start mb-3">
-                                                    <div>
-                                                        <h4 className="font-semibold text-gray-900">
-                                                            {campagne.nom}
-                                                        </h4>
-                                                        <p className="text-xs text-gray-500 mt-1">
-                                                            Classe :{" "}
-                                                            {campagne.classe}
-                                                        </p>
-                                                    </div>
-                                                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                                                        ACTIVE
-                                                    </span>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <div className="flex justify-between text-sm">
-                                                        <span className="text-gray-600">
-                                                            {(
-                                                                campagne.collecté /
-                                                                1000000
-                                                            ).toFixed(1)}
-                                                            M /{" "}
-                                                            {(
-                                                                campagne.objectif /
-                                                                1000000
-                                                            ).toFixed(1)}
-                                                            M F CFA
-                                                        </span>
-                                                        <span className="font-semibold text-gray-900">
-                                                            {
-                                                                campagne.progression
-                                                            }
-                                                            %
-                                                        </span>
-                                                    </div>
-                                                    <div className="w-full bg-gray-200 rounded-full h-2">
-                                                        <div
-                                                            className="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full transition-all"
-                                                            style={{
-                                                                width: `${campagne.progression}%`,
-                                                            }}
-                                                        ></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
                                 {/* Paiements récents */}
                                 <div>
                                     <h3 className="text-lg font-bold text-gray-900 mb-4">
@@ -557,6 +491,187 @@ export default function AdminTresorerie({
                             </div>
                         )}
 
+                        {activeTab === "fimeco" && (
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+                                        <p className="text-sm text-blue-900 font-semibold">
+                                            Cotisations FIMECO
+                                        </p>
+                                        <p className="text-2xl font-bold text-blue-600 mt-2">
+                                            {fmtCurrency(
+                                                stats.cotisationsTotales ?? 0,
+                                            )}
+                                        </p>
+                                        <p className="text-xs text-blue-700 mt-2">
+                                            {fmtCurrency(
+                                                stats.cotisationsPayees ?? 0,
+                                            )}{" "}
+                                            payés
+                                        </p>
+                                    </div>
+                                    <div className="p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
+                                        <p className="text-sm text-green-900 font-semibold">
+                                            Familles actives
+                                        </p>
+                                        <p className="text-2xl font-bold text-green-600 mt-2">
+                                            {stats.famillesActives ?? 0}
+                                        </p>
+                                        <p className="text-xs text-green-700 mt-2">
+                                            Participation régulière
+                                        </p>
+                                    </div>
+                                    <div className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
+                                        <p className="text-sm text-purple-900 font-semibold">
+                                            Dons collectés
+                                        </p>
+                                        <p className="text-2xl font-bold text-purple-600 mt-2">
+                                            {fmtCurrency(stats.donsTotaux ?? 0)}
+                                        </p>
+                                        <p className="text-xs text-purple-700 mt-2">
+                                            Contributions volontaires
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                                    <h4 className="text-lg font-bold text-gray-900 mb-4">
+                                        Gestion FIMECO
+                                    </h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="p-4 bg-gray-50 rounded-lg">
+                                            <h5 className="font-semibold text-gray-900 mb-2">
+                                                📊 Suivi des paiements
+                                            </h5>
+                                            <p className="text-sm text-gray-600">
+                                                Gérez les cotisations mensuelles
+                                                et suivez les retards de
+                                                paiement.
+                                            </p>
+                                        </div>
+                                        <div className="p-4 bg-gray-50 rounded-lg">
+                                            <h5 className="font-semibold text-gray-900 mb-2">
+                                                👥 Gestion des familles
+                                            </h5>
+                                            <p className="text-sm text-gray-600">
+                                                Supervisez l'adhésion des
+                                                familles et leur participation.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === "don" && (
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
+                                        <p className="text-sm text-purple-900 font-semibold">
+                                            Total des dons
+                                        </p>
+                                        <p className="text-2xl font-bold text-purple-600 mt-2">
+                                            {fmtCurrency(stats.donsTotaux ?? 0)}
+                                        </p>
+                                        <p className="text-xs text-purple-700 mt-2">
+                                            Dons enregistrés dans le système
+                                        </p>
+                                    </div>
+                                    <div className="p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
+                                        <p className="text-sm text-green-900 font-semibold">
+                                            Nombre de dons
+                                        </p>
+                                        <p className="text-2xl font-bold text-green-600 mt-2">
+                                            {dons.length}
+                                        </p>
+                                        <p className="text-xs text-green-700 mt-2">
+                                            Contributions individuelles
+                                        </p>
+                                    </div>
+                                    <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+                                        <p className="text-sm text-blue-900 font-semibold">
+                                            Don moyen
+                                        </p>
+                                        <p className="text-2xl font-bold text-blue-600 mt-2">
+                                            {dons.length > 0 ? fmtCurrency(Math.round((stats.donsTotaux ?? 0) / dons.length)) : fmtCurrency(0)}
+                                        </p>
+                                        <p className="text-xs text-blue-700 mt-2">
+                                            Par contribution
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                                    <div className="px-6 py-4 border-b border-gray-200">
+                                        <h4 className="text-lg font-bold text-gray-900">
+                                            Liste des dons
+                                        </h4>
+                                        <p className="text-sm text-gray-600 mt-1">
+                                            Dons enregistrés par les trésoriers de classe
+                                        </p>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-gray-200">
+                                            <thead className="bg-gray-50">
+                                                <tr>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Donateur
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Montant
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Date
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Trésorier
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Classe
+                                                    </th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Motif
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white divide-y divide-gray-200">
+                                                {dons.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
+                                                            Aucun don enregistré pour le moment
+                                                        </td>
+                                                    </tr>
+                                                ) : (
+                                                    dons.map((don) => (
+                                                        <tr key={don.id} className="hover:bg-gray-50">
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                                {don.donor_name}
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                                {fmtCurrency(don.amount)}
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                                {don.donation_date}
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                                {don.treasurer_name}
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                                {don.class_name}
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                                {don.note || ''}
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {activeTab === "cotisations" && (
                             <div>
                                 <div className="flex justify-between items-center mb-6">
@@ -592,108 +707,14 @@ export default function AdminTresorerie({
                                                 </span>
                                                 <button
                                                     onClick={() =>
-                                                        handleEditCotisation(
+                                                        handleViewCotisation(
                                                             cot,
                                                         )
                                                     }
-                                                    disabled={isSubmitting}
-                                                    className="px-4 py-2 text-blue-600 hover:bg-blue-50 disabled:text-blue-300 rounded-lg transition-colors font-semibold"
+                                                    className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-semibold"
                                                 >
-                                                    Éditer
+                                                    Voir
                                                 </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {activeTab === "campagnes" && (
-                            <div>
-                                <div className="flex justify-between items-center mb-6">
-                                    <h3 className="text-lg font-bold text-gray-900">
-                                        Dernières campagnes
-                                    </h3>
-                                    <button
-                                        onClick={handleAddCampagne}
-                                        disabled={isSubmitting}
-                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 transition-colors"
-                                    >
-                                        <Plus size={18} /> Nouvelle
-                                    </button>
-                                </div>
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                    {campagnes.map((campagne) => (
-                                        <div
-                                            key={campagne.id}
-                                            className="border border-gray-200 rounded-lg p-5"
-                                        >
-                                            <div className="flex justify-between items-start mb-4">
-                                                <div>
-                                                    <h4 className="font-bold text-gray-900 text-lg">
-                                                        {campagne.nom}
-                                                    </h4>
-                                                    <p className="text-sm text-gray-600">
-                                                        Classe :{" "}
-                                                        {campagne.classe}
-                                                    </p>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <button className="px-3 py-1 text-blue-600 hover:bg-blue-50 rounded font-semibold text-sm">
-                                                        ✎ Éditer
-                                                    </button>
-                                                    <button
-                                                        onClick={() =>
-                                                            handleCloseCampagne(
-                                                                campagne,
-                                                            )
-                                                        }
-                                                        disabled={isSubmitting}
-                                                        className="px-3 py-1 text-red-600 hover:bg-red-50 disabled:text-red-300 rounded font-semibold text-sm"
-                                                    >
-                                                        ✕ Clôturer
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-3">
-                                                <div>
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <span className="text-sm font-semibold text-gray-700">
-                                                            Objectif
-                                                        </span>
-                                                        <span className="text-sm font-bold text-gray-900">
-                                                            {(
-                                                                campagne.objectif /
-                                                                1000000
-                                                            ).toFixed(1)}
-                                                            M F CFA
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm text-gray-600">
-                                                            Collecté
-                                                        </span>
-                                                        <span className="text-sm font-bold text-green-600">
-                                                            {(
-                                                                campagne.collecté /
-                                                                1000000
-                                                            ).toFixed(1)}
-                                                            M F CFA (
-                                                            {
-                                                                campagne.progression
-                                                            }
-                                                            %)
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div className="w-full bg-gray-200 rounded-full h-3">
-                                                    <div
-                                                        className="bg-gradient-to-r from-green-500 to-blue-600 h-3 rounded-full transition-all"
-                                                        style={{
-                                                            width: `${campagne.progression}%`,
-                                                        }}
-                                                    ></div>
-                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -707,7 +728,10 @@ export default function AdminTresorerie({
                                     Générer des rapports
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <button className="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-colors">
+                                    <a
+                                        href={monthlyReportUrl}
+                                        className="block p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-colors"
+                                    >
                                         <Download
                                             className="text-blue-600 mx-auto mb-3"
                                             size={32}
@@ -718,8 +742,14 @@ export default function AdminTresorerie({
                                         <p className="text-sm text-gray-600 mt-2">
                                             Exports cotisations & dons du mois
                                         </p>
-                                    </button>
-                                    <button className="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-colors">
+                                        <p className="text-xs text-blue-700 mt-3 font-medium">
+                                            Excel du mois en cours ({currentMonthLabel})
+                                        </p>
+                                    </a>
+                                    <a
+                                        href={annualReportUrl}
+                                        className="block p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-colors"
+                                    >
                                         <Download
                                             className="text-blue-600 mx-auto mb-3"
                                             size={32}
@@ -730,37 +760,76 @@ export default function AdminTresorerie({
                                         <p className="text-sm text-gray-600 mt-2">
                                             Bilan financier complet de l'année
                                         </p>
-                                    </button>
-                                    <button className="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-colors">
-                                        <Download
-                                            className="text-blue-600 mx-auto mb-3"
-                                            size={32}
-                                        />
-                                        <h4 className="font-semibold text-gray-900">
-                                            Par Classe
-                                        </h4>
-                                        <p className="text-sm text-gray-600 mt-2">
-                                            Détails financiers par classe
+                                        <p className="text-xs text-blue-700 mt-3 font-medium">
+                                            Excel de l'annee {currentYearLabel}
                                         </p>
-                                    </button>
-                                    <button className="p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-colors">
-                                        <Download
-                                            className="text-blue-600 mx-auto mb-3"
-                                            size={32}
-                                        />
-                                        <h4 className="font-semibold text-gray-900">
-                                            Par Famille
-                                        </h4>
-                                        <p className="text-sm text-gray-600 mt-2">
-                                            Détails des cotisations & dons
-                                        </p>
-                                    </button>
+                                    </a>
                                 </div>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
+
+            {isViewModalOpen && selectedCotisation && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
+                    <div className="w-full max-w-xl rounded-3xl bg-white shadow-2xl ring-1 ring-black/5">
+                        <div className="flex items-start justify-between border-b border-gray-200 px-6 py-5">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900">
+                                    Détails de la cotisation
+                                </h2>
+                                <p className="text-sm text-gray-600 mt-1">
+                                    Informations de création et participation
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closeViewModal}
+                                className="text-gray-400 hover:text-gray-700 transition"
+                            >
+                                Fermer
+                            </button>
+                        </div>
+                        <div className="space-y-5 p-6">
+                            <div className="space-y-2">
+                                <p className="text-sm text-gray-500">Cotisation</p>
+                                <p className="text-lg font-semibold text-gray-900">
+                                    {selectedCotisation.nom}
+                                </p>
+                            </div>
+                            <div className="grid gap-4 sm:grid-cols-3">
+                                <div className="rounded-2xl bg-slate-50 p-4">
+                                    <p className="text-xs uppercase tracking-[.24em] text-slate-500">
+                                        Créée le
+                                    </p>
+                                    <p className="mt-2 text-sm font-semibold text-slate-900">
+                                        {selectedCotisation.created_at
+                                            ? new Date(selectedCotisation.created_at).toLocaleDateString('fr-FR')
+                                            : 'Non disponible'}
+                                    </p>
+                                </div>
+                                <div className="rounded-2xl bg-slate-50 p-4">
+                                    <p className="text-xs uppercase tracking-[.24em] text-slate-500">
+                                        Créée par
+                                    </p>
+                                    <p className="mt-2 text-sm font-semibold text-slate-900">
+                                        {selectedCotisation.created_by || 'Non spécifié'}
+                                    </p>
+                                </div>
+                                <div className="rounded-2xl bg-slate-50 p-4">
+                                    <p className="text-xs uppercase tracking-[.24em] text-slate-500">
+                                        Classe
+                                    </p>
+                                    <p className="mt-2 text-sm font-semibold text-slate-900">
+                                        {selectedCotisation.classe_nom || 'Non spécifié'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

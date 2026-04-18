@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Head } from "@inertiajs/react";
 import AppLayout from "@/Layouts/AppLayout";
-import { localizeUrl, withBasePath } from "@/Utils/urlHelper";
+import { withBasePath } from "@/Utils/urlHelper";
 
 /**
  * Page Présences — Vue Conducteur de classe
@@ -21,6 +21,10 @@ export default function Presences({
     presences: initialPresences = {},
     stats = {},
     activite_active_id = null,
+    viewerLabel = "Conducteur",
+    canManagePresenceMarker = false,
+    presenceMarkerClasse = null,
+    presenceEndpoints = {},
 }) {
     const [activeTab, setActiveTab] = useState("marquer");
     const [selectedActiviteId, setSelectedActiviteId] = useState(
@@ -31,18 +35,91 @@ export default function Presences({
     const [searchQuery, setSearchQuery] = useState("");
     const [toast, setToast] = useState(null);
     const [summaryLoading, setSummaryLoading] = useState(false);
+    const [marquagePage, setMarquagePage] = useState(1);
     const [programmeSummary, setProgrammeSummary] = useState(null);
     const [programmeActivites, setProgrammeActivites] = useState([]);
     const [loadingProgrammeActivites, setLoadingProgrammeActivites] =
         useState(false);
+    const [modalMarqueurPresence, setModalMarqueurPresence] = useState(false);
+    const [selectedMemberMarqueur, setSelectedMemberMarqueur] = useState("");
+    const [marqueurPresenceActuel, setMarqueurPresenceActuel] =
+        useState(presenceMarkerClasse);
+
+    const activitesEndpoint =
+        presenceEndpoints?.activitesProgramme ||
+        "/conducteur/presences/programmes-activites";
+    const programmeSummaryTemplate =
+        presenceEndpoints?.programmeSummary ||
+        "/conducteur/programmes/{id}/presences";
+    const assignPresenceMarkerEndpoint =
+        presenceEndpoints?.assignPresenceMarker ||
+        "/conducteur/presences/assign-marqueur";
+    const unassignPresenceMarkerEndpoint =
+        presenceEndpoints?.unassignPresenceMarker ||
+        "/conducteur/presences/unassign-marqueur";
+    const [showAllActivites, setShowAllActivites] = useState(false);
 
     const activiteSelectionnee = activites.find(
         (a) => a.id === selectedActiviteId,
     );
-    const activitesAffichables = useMemo(() => activites, [activites]);
     const marquagesActivite = marquages[selectedActiviteId] ?? {};
     const activitesOnglet =
         programmeActivites.length > 0 ? programmeActivites : activites;
+
+    useEffect(() => {
+        setMarqueurPresenceActuel(presenceMarkerClasse ?? null);
+    }, [presenceMarkerClasse]);
+
+    const isInCurrentMonth = (dateStr) => {
+        if (!dateStr) return false;
+        const date = new Date(dateStr);
+        if (Number.isNaN(date.getTime())) return false;
+        const now = new Date();
+        return (
+            date.getMonth() === now.getMonth() &&
+            date.getFullYear() === now.getFullYear()
+        );
+    };
+
+    const activitesMoisCourant = useMemo(
+        () => activites.filter((a) => isInCurrentMonth(a.date_heure_debut)),
+        [activites],
+    );
+
+    const activitesOngletMoisCourant = useMemo(
+        () =>
+            activitesOnglet.filter((a) => isInCurrentMonth(a.date_heure_debut)),
+        [activitesOnglet],
+    );
+
+    const activitesAffichables = useMemo(() => {
+        const base = showAllActivites
+            ? activites
+            : activitesMoisCourant.slice(0, 3);
+
+        if (
+            selectedActiviteId &&
+            !base.some((a) => a.id === selectedActiviteId)
+        ) {
+            const selected = activites.find((a) => a.id === selectedActiviteId);
+            return selected ? [selected, ...base] : base;
+        }
+
+        return base;
+    }, [showAllActivites, activites, activitesMoisCourant, selectedActiviteId]);
+
+    const activitesOngletAffichables = useMemo(
+        () =>
+            showAllActivites
+                ? activitesOnglet
+                : activitesOngletMoisCourant.slice(0, 3),
+        [showAllActivites, activitesOnglet, activitesOngletMoisCourant],
+    );
+
+    const canToggleSelectionActivites =
+        activites.length > activitesMoisCourant.slice(0, 3).length;
+    const canToggleOngletActivites =
+        activitesOnglet.length > activitesOngletMoisCourant.slice(0, 3).length;
 
     useEffect(() => {
         if (activeTab !== "activites") return;
@@ -53,16 +130,7 @@ export default function Presences({
         async function loadProgrammeActivites() {
             setLoadingProgrammeActivites(true);
             try {
-                const endpoint =
-                    typeof window.route === "function"
-                        ? localizeUrl(
-                              window.route("presences.programmes_activites"),
-                              "/conducteur/presences/programmes-activites",
-                          )
-                        : withBasePath(
-                              "",
-                              "/conducteur/presences/programmes-activites",
-                          );
+                const endpoint = withBasePath("", activitesEndpoint);
 
                 const response = await window.axios.get(endpoint);
                 if (!isCancelled && response?.data?.success) {
@@ -82,7 +150,7 @@ export default function Presences({
         return () => {
             isCancelled = true;
         };
-    }, [activeTab, loadingProgrammeActivites]);
+    }, [activeTab, loadingProgrammeActivites, activitesEndpoint]);
 
     const membresFiltres = useMemo(() => {
         let list = membres;
@@ -102,6 +170,24 @@ export default function Presences({
             list = list.filter((m) => !marquagesActivite[m.id]);
         return list;
     }, [membres, searchQuery, filterMembre, marquagesActivite]);
+
+    const membresParPage = 12;
+    const totalMarquagePages = Math.max(
+        1,
+        Math.ceil(membresFiltres.length / membresParPage),
+    );
+    const marquagePageSafe = Math.min(
+        Math.max(marquagePage, 1),
+        totalMarquagePages,
+    );
+    const membresFiltresPagines = useMemo(() => {
+        const start = (marquagePageSafe - 1) * membresParPage;
+        return membresFiltres.slice(start, start + membresParPage);
+    }, [membresFiltres, marquagePageSafe]);
+
+    useEffect(() => {
+        setMarquagePage(1);
+    }, [searchQuery, filterMembre, selectedActiviteId, activeTab]);
 
     const nbPresents = Object.values(marquagesActivite).filter(
         (v) => v === "present",
@@ -127,19 +213,13 @@ export default function Presences({
         if (!selectedActiviteId) return;
         setSummaryLoading(true);
         try {
-            const endpoint =
-                typeof window.route === "function"
-                    ? localizeUrl(
-                          window.route(
-                              "conducteur.programmes.presences",
-                              selectedActiviteId,
-                          ),
-                          `/conducteur/programmes/${selectedActiviteId}/presences`,
-                      )
-                    : withBasePath(
-                          "",
-                          `/conducteur/programmes/${selectedActiviteId}/presences`,
-                      );
+            const endpoint = withBasePath(
+                "",
+                programmeSummaryTemplate.replace(
+                    "{id}",
+                    String(selectedActiviteId),
+                ),
+            );
 
             const response = await window.axios.get(endpoint);
             if (!response?.data?.success) return;
@@ -159,6 +239,70 @@ export default function Presences({
         } finally {
             setSummaryLoading(false);
         }
+    }
+
+    async function handleAssignPresenceMarker() {
+        if (!selectedMemberMarqueur) {
+            showToast("Veuillez sélectionner un membre.", "error");
+            return;
+        }
+
+        try {
+            const endpoint = withBasePath("", assignPresenceMarkerEndpoint);
+            const response = await window.axios.post(endpoint, {
+                user_id: selectedMemberMarqueur,
+            });
+
+            showToast(
+                response?.data?.message ||
+                    "Marqueur de présence assigné avec succès.",
+                "success",
+            );
+            setMarqueurPresenceActuel(response?.data?.data ?? null);
+            setModalMarqueurPresence(false);
+            setSelectedMemberMarqueur("");
+        } catch (error) {
+            showToast(
+                error?.response?.data?.message ||
+                    "Erreur lors de l'assignation du marqueur.",
+                "error",
+            );
+        }
+    }
+
+    async function handleUnassignPresenceMarker() {
+        if (!marqueurPresenceActuel?.id) {
+            showToast("Aucun marqueur de présence assigné.", "error");
+            return;
+        }
+
+        try {
+            const endpoint = withBasePath("", unassignPresenceMarkerEndpoint);
+            const response = await window.axios.post(endpoint, {
+                user_id: marqueurPresenceActuel.id,
+            });
+
+            showToast(
+                response?.data?.message ||
+                    "Marqueur de présence retiré avec succès.",
+                "success",
+            );
+            setMarqueurPresenceActuel(null);
+            setModalMarqueurPresence(false);
+        } catch (error) {
+            showToast(
+                error?.response?.data?.message ||
+                    "Erreur lors du retrait du marqueur.",
+                "error",
+            );
+        }
+    }
+
+    function openPresenceMarkerModal() {
+        setSelectedMemberMarqueur(
+            marqueurPresenceActuel?.id ? String(marqueurPresenceActuel.id) : "",
+        );
+        setModalMarqueurPresence(true);
     }
 
     useEffect(() => {
@@ -220,7 +364,7 @@ export default function Presences({
                             <h1 style={S.pageTitle}>Gestion des présences</h1>
                             <p style={S.pageSubtitle}>
                                 {conducteur?.classe?.nom ?? "Ma classe"} ·
-                                Conducteur : {conducteur?.prenom}{" "}
+                                {viewerLabel} : {conducteur?.prenom}{" "}
                                 {conducteur?.nom}
                             </p>
                         </div>
@@ -236,6 +380,25 @@ export default function Presences({
                         QR automatique (lecture seule)
                     </button>
                 </div>
+
+                {canManagePresenceMarker && (
+                    <div style={S.markerManagerWrap}>
+                        <div style={S.markerManagerText}>
+                            Marqueur actuel :{" "}
+                            <strong>
+                                {marqueurPresenceActuel
+                                    ? `${marqueurPresenceActuel.nom} (${marqueurPresenceActuel.famille})`
+                                    : "Aucun"}
+                            </strong>
+                        </div>
+                        <button
+                            style={S.btnSecondary}
+                            onClick={openPresenceMarkerModal}
+                        >
+                            Ajouter un marqueur de présence
+                        </button>
+                    </div>
+                )}
 
                 {/* ── Stats ── */}
                 <div style={S.statsGrid}>
@@ -349,6 +512,14 @@ export default function Presences({
                             </button>
                         ))}
                     </div>
+                    {canToggleSelectionActivites && (
+                        <button
+                            style={{ ...S.btnSecondary, marginLeft: 8 }}
+                            onClick={() => setShowAllActivites((prev) => !prev)}
+                        >
+                            {showAllActivites ? "Voir moins" : "Voir plus"}
+                        </button>
+                    )}
                 </div>
 
                 {/* ── Onglets ── */}
@@ -537,7 +708,7 @@ export default function Presences({
                                             </td>
                                         </tr>
                                     ) : (
-                                        membresFiltres.map((m) => {
+                                        membresFiltresPagines.map((m) => {
                                             const statut =
                                                 marquagesActivite[m.id] ?? null;
                                             const rowBg =
@@ -663,6 +834,54 @@ export default function Presences({
                             </table>
                         </div>
 
+                        {membresFiltres.length > membresParPage && (
+                            <div
+                                style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    marginTop: 12,
+                                    gap: 10,
+                                    flexWrap: "wrap",
+                                }}
+                            >
+                                <span style={{ fontSize: 12, color: "#777" }}>
+                                    Page {marquagePageSafe} /{" "}
+                                    {totalMarquagePages}
+                                </span>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                    <button
+                                        style={S.btnSecondary}
+                                        onClick={() =>
+                                            setMarquagePage((p) =>
+                                                Math.max(1, p - 1),
+                                            )
+                                        }
+                                        disabled={marquagePageSafe <= 1}
+                                    >
+                                        Précédent
+                                    </button>
+                                    <button
+                                        style={S.btnSecondary}
+                                        onClick={() =>
+                                            setMarquagePage((p) =>
+                                                Math.min(
+                                                    totalMarquagePages,
+                                                    p + 1,
+                                                ),
+                                            )
+                                        }
+                                        disabled={
+                                            marquagePageSafe >=
+                                            totalMarquagePages
+                                        }
+                                    >
+                                        Suivant
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         <div style={S.cardFooter}>
                             <span style={{ fontSize: 12, color: "#777" }}>
                                 Marquage 100% automatique par QR code. Aucun
@@ -699,7 +918,7 @@ export default function Presences({
                                 marginTop: 16,
                             }}
                         >
-                            {activitesOnglet.map((a) => (
+                            {activitesOngletAffichables.map((a) => (
                                 <div
                                     key={a.id}
                                     style={S.activiteRow}
@@ -800,8 +1019,23 @@ export default function Presences({
                                     </span>
                                 </div>
                             ))}
+                            {canToggleOngletActivites && (
+                                <button
+                                    style={{
+                                        ...S.btnSecondary,
+                                        alignSelf: "flex-start",
+                                    }}
+                                    onClick={() =>
+                                        setShowAllActivites((prev) => !prev)
+                                    }
+                                >
+                                    {showAllActivites
+                                        ? "Voir moins"
+                                        : "Voir plus"}
+                                </button>
+                            )}
                             {!loadingProgrammeActivites &&
-                                activitesOnglet.length === 0 && (
+                                activitesOngletAffichables.length === 0 && (
                                     <p
                                         style={{
                                             color: "#888",
@@ -809,8 +1043,9 @@ export default function Presences({
                                             padding: "16px 0",
                                         }}
                                     >
-                                        Aucune activité créée dans le module
-                                        Programmes pour le moment.
+                                        {activitesOnglet.length > 0
+                                            ? "Aucune activité du mois en cours. Cliquez sur Voir plus pour afficher toutes les activités."
+                                            : "Aucune activité créée dans le module Programmes pour le moment."}
                                     </p>
                                 )}
                         </div>
@@ -1156,6 +1391,78 @@ export default function Presences({
                     </div>
                 )}
             </div>
+
+            {canManagePresenceMarker && modalMarqueurPresence && (
+                <div
+                    style={S.modalBackdrop}
+                    onClick={() => setModalMarqueurPresence(false)}
+                >
+                    <div
+                        style={S.modalCard}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 style={S.modalTitle}>Assigner un marqueur</h3>
+                        <p style={S.modalSubTitle}>
+                            Le marqueur de présence pourra effectuer la
+                            vérification finale des présences de votre classe.
+                        </p>
+                        <p style={S.modalCurrentMarkerText}>
+                            Marqueur actuel :{" "}
+                            <strong>
+                                {marqueurPresenceActuel
+                                    ? `${marqueurPresenceActuel.nom} (${marqueurPresenceActuel.famille})`
+                                    : "Aucun"}
+                            </strong>
+                        </p>
+                        <select
+                            value={selectedMemberMarqueur}
+                            onChange={(e) =>
+                                setSelectedMemberMarqueur(e.target.value)
+                            }
+                            style={{ ...S.selectInput, width: "100%" }}
+                        >
+                            <option value="">Choisir un membre...</option>
+                            {membres.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                    {m.prenom} {m.nom}
+                                    {marqueurPresenceActuel?.id === m.id
+                                        ? " (Marqueur actuel)"
+                                        : ""}
+                                </option>
+                            ))}
+                        </select>
+
+                        <div style={S.modalActions}>
+                            <button
+                                style={S.btnSecondary}
+                                onClick={() => setModalMarqueurPresence(false)}
+                            >
+                                Fermer
+                            </button>
+                            {marqueurPresenceActuel && (
+                                <button
+                                    style={{
+                                        ...S.btnSecondary,
+                                        borderColor: "#ef9a9a",
+                                        color: "#c62828",
+                                    }}
+                                    onClick={handleUnassignPresenceMarker}
+                                >
+                                    Retirer
+                                </button>
+                            )}
+                            <button
+                                style={S.btnPrimary}
+                                onClick={handleAssignPresenceMarker}
+                            >
+                                {marqueurPresenceActuel
+                                    ? "Mettre à jour"
+                                    : "Assigner"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AppLayout>
     );
 }
@@ -1354,6 +1661,60 @@ const S = {
         padding: "8px 16px",
         fontSize: 13,
         cursor: "pointer",
+    },
+    markerManagerWrap: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        marginBottom: 16,
+        flexWrap: "wrap",
+    },
+    markerManagerText: {
+        color: "rgba(255,255,255,0.9)",
+        fontSize: 13,
+    },
+    modalBackdrop: {
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.35)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 3000,
+        padding: 16,
+    },
+    modalCard: {
+        width: "100%",
+        maxWidth: 520,
+        background: "white",
+        borderRadius: 12,
+        border: "1px solid #e5e7eb",
+        padding: 16,
+        boxShadow: "0 10px 25px rgba(0,0,0,0.18)",
+    },
+    modalTitle: {
+        margin: 0,
+        color: "#1a237e",
+        fontSize: 17,
+        fontWeight: 600,
+    },
+    modalSubTitle: {
+        margin: "8px 0 12px",
+        color: "#6b7280",
+        fontSize: 13,
+    },
+    modalCurrentMarkerText: {
+        margin: "0 0 10px",
+        color: "#374151",
+        fontSize: 13,
+    },
+    modalActions: {
+        display: "flex",
+        justifyContent: "flex-end",
+        gap: 8,
+        marginTop: 14,
+        flexWrap: "wrap",
     },
     btnDisabled: { opacity: 0.6, cursor: "not-allowed" },
     statsGrid: {

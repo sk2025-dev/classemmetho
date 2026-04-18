@@ -16,6 +16,12 @@ use Illuminate\Support\Collection;
 
 class AnnuaireService
 {
+    protected ?array $usersColumns = null;
+    protected array $columnExistsCache = [];
+    protected bool $hasUsersProfessionColumn = false;
+    protected bool $hasUsersCodeMembreColumn = false;
+    protected ?User $authenticatedUser = null;
+
     /**
      * Point d'entrée principal : construit toutes les données nécessaires à la page Annuaire.
      *
@@ -42,14 +48,28 @@ class AnnuaireService
         $familiesPerPage = (int) $request->get('familiesPerPage', 5);
         $classesPerPage = (int) $request->get('classesPerPage', 1);
 
-        // Données pour la vue 'all' (membres paginés)
-        $membersData = $this->getMembersPaginated($request, $roleScope, $filters);
+        $this->warmSchemaMetadata();
 
-        // Données pour la vue 'families' (familles paginées)
-        $familiesData = $this->getFamiliesPaginated($request, $roleScope, $filters, $familiesPerPage);
+        $membersData = $view === 'all'
+            ? $this->getMembersPaginated($request, $roleScope, $filters)
+            : $this->emptyPaginatedResult($filters['perPage'] ?? 10);
 
-        // Données pour la vue 'classes' (classes paginées)
-        $classesData = $this->getClassesPaginated($request, $roleScope, $filters, $classesPerPage);
+        $familiesData = $view === 'families'
+            ? $this->getFamiliesPaginated($request, $roleScope, $filters, $familiesPerPage)
+            : $this->emptyPaginatedResult($familiesPerPage);
+
+        $classesData = $view === 'classes'
+            ? $this->getClassesPaginated($request, $roleScope, $filters, $classesPerPage)
+            : $this->emptyPaginatedResult($classesPerPage);
+
+        // Log debug pour le diagnostic
+        \Log::info('[AnnuaireService] Filtres reçus', $filters);
+        \Log::info('[AnnuaireService] Vue demandée', ['view' => $view]);
+        \Log::info('[AnnuaireService] Résultats', [
+            'members_count' => is_array($membersData['data']) ? count($membersData['data']) : 0,
+            'families_count' => is_array($familiesData['data']) ? count($familiesData['data']) : 0,
+            'classes_count' => is_array($classesData['data']) ? count($classesData['data']) : 0,
+        ]);
 
         // Options pour les filtres (menus déroulants)
         $filterOptions = $this->getFilterOptions($roleScope, $filters);
@@ -104,13 +124,16 @@ class AnnuaireService
      */
     protected function getFamiliesPaginated(Request $request, string $roleScope, array $filters, int $perPage): array
     {
-        $query = Family::with([
-            'users' => function ($q) use ($roleScope, $filters) {
-                $q->select('id', 'prenom', 'nom', 'telephone', 'profile_photo_url', 'classe_id', 'family_id')
-                  ->with(['classe:id,nom']);
-                $this->applyUserFilters($q, $filters, $roleScope);
-            },
-        ])->orderBy('nom');
+        $query = Family::query()
+            ->select(['id', 'nom', 'code_famille'])
+            ->with([
+                'users' => function ($q) use ($roleScope, $filters) {
+                    $q->select('id', 'prenom', 'nom', 'telephone', 'profile_photo_url', 'classe_id', 'family_id')
+                        ->with(['classe:id,nom']);
+                    $this->applyUserFilters($q, $filters, $roleScope);
+                },
+            ])
+            ->orderBy('nom');
 
         if (!empty($filters['famille'])) {
             $query->where('id', $filters['famille']);
@@ -133,24 +156,20 @@ class AnnuaireService
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('nom', 'like', "%{$search}%")
-                  ->orWhere('code_famille', 'like', "%{$search}%")
-                  ->orWhereHas('users', function ($sub) use ($search) {
-                      $sub->where('nom', 'like', "%{$search}%")
-                          ->orWhere('prenom', 'like', "%{$search}%")
-                          ->orWhere('telephone', 'like', "%{$search}%")
-                          ->when(
-                              Schema::hasColumn('users', 'profession'),
-                              fn($inner) => $inner->orWhere('profession', 'like', "%{$search}%")
-                          )
-                          ->when(
-                              Schema::hasColumn('users', 'code_membre'),
-                              fn($inner) => $inner->orWhere('code_membre', 'like', "%{$search}%")
-                          )
-                          ->orWhereHas('family', function ($f) use ($search) {
-                              $f->where('code_famille', 'like', "%{$search}%")
-                                ->orWhere('nom', 'like', "%{$search}%");
-                          });
-                  });
+                    ->orWhere('code_famille', 'like', "%{$search}%")
+                    ->orWhereHas('users', function ($sub) use ($search) {
+                        $sub->where('nom', 'like', "%{$search}%")
+                            ->orWhere('prenom', 'like', "%{$search}%")
+                            ->orWhere('telephone', 'like', "%{$search}%")
+                            ->when(
+                                $this->hasUsersProfessionColumn,
+                                fn($inner) => $inner->orWhere('profession', 'like', "%{$search}%")
+                            )
+                            ->when(
+                                $this->hasUsersCodeMembreColumn,
+                                fn($inner) => $inner->orWhere('code_membre', 'like', "%{$search}%")
+                            );
+                    });
             });
         }
 
@@ -193,13 +212,17 @@ class AnnuaireService
      */
     protected function getClassesPaginated(Request $request, string $roleScope, array $filters, int $perPage): array
     {
-        $query = Classe::with([
-            'users' => function ($q) use ($roleScope, $filters) {
-                $q->select('id', 'prenom', 'nom', 'telephone', 'profile_photo_url', 'classe_id', 'family_id')
-                  ->with(['family:id,code_famille']);
-                $this->applyUserFilters($q, $filters, $roleScope);
-            },
-        ])->where('status', 'active')->orderBy('nom');
+        $query = Classe::query()
+            ->select(['id', 'nom'])
+            ->with([
+                'users' => function ($q) use ($roleScope, $filters) {
+                    $q->select('id', 'prenom', 'nom', 'telephone', 'profile_photo_url', 'classe_id', 'family_id')
+                        ->with(['family:id,code_famille']);
+                    $this->applyUserFilters($q, $filters, $roleScope);
+                },
+            ])
+            ->where('status', 'active')
+            ->orderBy('nom');
 
         if (!empty($filters['classe'])) {
             $query->where('id', $filters['classe']);
@@ -227,23 +250,19 @@ class AnnuaireService
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('nom', 'like', "%{$search}%")
-                  ->orWhereHas('users', function ($sub) use ($search) {
-                      $sub->where('nom', 'like', "%{$search}%")
-                          ->orWhere('prenom', 'like', "%{$search}%")
-                          ->orWhere('telephone', 'like', "%{$search}%")
-                          ->when(
-                              Schema::hasColumn('users', 'profession'),
-                              fn($inner) => $inner->orWhere('profession', 'like', "%{$search}%")
-                          )
-                          ->when(
-                              Schema::hasColumn('users', 'code_membre'),
-                              fn($inner) => $inner->orWhere('code_membre', 'like', "%{$search}%")
-                          )
-                          ->orWhereHas('family', function ($f) use ($search) {
-                              $f->where('code_famille', 'like', "%{$search}%")
-                                ->orWhere('nom', 'like', "%{$search}%");
-                          });
-                  });
+                    ->orWhereHas('users', function ($sub) use ($search) {
+                        $sub->where('nom', 'like', "%{$search}%")
+                            ->orWhere('prenom', 'like', "%{$search}%")
+                            ->orWhere('telephone', 'like', "%{$search}%")
+                            ->when(
+                                $this->hasUsersProfessionColumn,
+                                fn($inner) => $inner->orWhere('profession', 'like', "%{$search}%")
+                            )
+                            ->when(
+                                $this->hasUsersCodeMembreColumn,
+                                fn($inner) => $inner->orWhere('code_membre', 'like', "%{$search}%")
+                            );
+                    });
             });
         }
 
@@ -282,7 +301,7 @@ class AnnuaireService
      */
     protected function buildUsersQuery(string $roleScope, array $filters)
     {
-        $usersColumns = Schema::getColumnListing('users');
+        $usersColumns = $this->getUsersColumnListing();
         $selectColumns = [
             'id',
             'prenom',
@@ -319,15 +338,18 @@ class AnnuaireService
 
         $selectColumns = array_intersect($selectColumns, $usersColumns);
 
-        $query = User::with(['classe', 'fonction', 'family'])
+        $query = User::with([
+            'classe:id,nom',
+            'fonction:id,nom',
+            'family:id,code_famille,nom',
+        ])
             ->select($selectColumns)
             ->where('role', '!=', 'admin');
 
         $this->applyUserFilters($query, $filters, $roleScope);
 
         $query->orderBy('nom')
-            ->orderBy('prenom')
-            ->latest();
+            ->orderBy('prenom');
 
         return $query;
     }
@@ -337,17 +359,17 @@ class AnnuaireService
      */
     protected function applyUserFilters($query, array $filters, string $roleScope)
     {
-        $usersColumns = Schema::getColumnListing('users');
+        $usersColumns = $this->getUsersColumnListing();
         $identifierColumn = in_array('identifiant', $usersColumns, true)
             ? 'identifiant'
             : (in_array('identifier', $usersColumns, true) ? 'identifier' : null);
 
-        $authUserId = Auth::id();
+        $authUser = $this->getAuthenticatedUser();
+        $authUserId = $authUser?->id;
 
         switch ($roleScope) {
             case 'conducteur':
                 if ($authUserId !== null) {
-                    $authUser = User::find($authUserId);
                     $classeIds = [];
                     if ($authUser?->classe_id) {
                         $classeIds[] = $authUser->classe_id;
@@ -367,7 +389,6 @@ class AnnuaireService
             case 'responsable_famille':
             case 'membre_famille':
                 if ($authUserId !== null) {
-                    $authUser = User::find($authUserId);
                     $classeId = $authUser?->classe_id;
                     if ($classeId) {
                         $query->where('classe_id', $classeId);
@@ -394,16 +415,16 @@ class AnnuaireService
                         fn($inner) => $inner->orWhere($identifierColumn, 'like', "%{$search}%")
                     )
                     ->when(
-                        Schema::hasColumn($table, 'profession'),
+                        $this->hasColumn($table, 'profession'),
                         fn($inner) => $inner->orWhere('profession', 'like', "%{$search}%")
                     )
                     ->when(
-                        Schema::hasColumn($table, 'code_membre'),
+                        $this->hasColumn($table, 'code_membre'),
                         fn($inner) => $inner->orWhere('code_membre', 'like', "%{$search}%")
                     )
                     ->orWhereHas('family', function ($q) use ($search) {
                         $q->where('code_famille', 'like', "%{$search}%")
-                          ->orWhere('nom', 'like', "%{$search}%");
+                            ->orWhere('nom', 'like', "%{$search}%");
                     })
             );
         }
@@ -433,17 +454,21 @@ class AnnuaireService
     protected function getFilterOptions(string $roleScope, array $filters): array
     {
         // Classes : unique par nom pour éviter les doublons dans le menu déroulant
-        $classes = Classe::where('status', 'active')
+        $classes = Classe::query()
+            ->select(['id', 'nom'])
+            ->where('status', 'active')
             ->orderBy('nom')
-            ->get(['id', 'nom'])
+            ->get()
             ->unique('nom')
             ->map(fn($c) => ['id' => $c->id, 'nom' => $c->nom])
             ->values()
             ->toArray();
 
         // Familles
-        $families = Family::orderBy('nom')
-            ->get(['id', 'nom'])
+        $families = Family::query()
+            ->select(['id', 'nom'])
+            ->orderBy('nom')
+            ->get()
             ->map(fn($f) => ['id' => $f->id, 'nom' => $f->nom])
             ->toArray();
 
@@ -592,7 +617,7 @@ class AnnuaireService
      */
     public function getStats(Request $request, string $roleScope): array
     {
-        $usersColumns = Schema::getColumnListing('users');
+        $usersColumns = $this->getUsersColumnListing();
         $hasStatus = in_array('status', $usersColumns, true);
         $hasIsActive = in_array('is_active', $usersColumns, true);
 
@@ -610,5 +635,56 @@ class AnnuaireService
             ->pluck('count', 'role');
 
         return $stats;
+    }
+
+    protected function emptyPaginatedResult(int $perPage): array
+    {
+        return [
+            'data' => [],
+            'links' => [],
+            'current_page' => 1,
+            'per_page' => $perPage,
+            'total' => 0,
+        ];
+    }
+
+    protected function warmSchemaMetadata(): void
+    {
+        $this->getUsersColumnListing();
+        $this->hasUsersProfessionColumn = $this->hasColumn('users', 'profession');
+        $this->hasUsersCodeMembreColumn = $this->hasColumn('users', 'code_membre');
+    }
+
+    protected function getUsersColumnListing(): array
+    {
+        if ($this->usersColumns === null) {
+            $this->usersColumns = Schema::getColumnListing('users');
+        }
+
+        return $this->usersColumns;
+    }
+
+    protected function hasColumn(string $table, string $column): bool
+    {
+        $cacheKey = $table . '.' . $column;
+
+        if (!array_key_exists($cacheKey, $this->columnExistsCache)) {
+            $this->columnExistsCache[$cacheKey] = Schema::hasColumn($table, $column);
+        }
+
+        return $this->columnExistsCache[$cacheKey];
+    }
+
+    protected function getAuthenticatedUser(): ?User
+    {
+        if (Auth::id() === null) {
+            return null;
+        }
+
+        if ($this->authenticatedUser === null) {
+            $this->authenticatedUser = Auth::user();
+        }
+
+        return $this->authenticatedUser;
     }
 }

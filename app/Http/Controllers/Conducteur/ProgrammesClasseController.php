@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SpecialEvent;
 use App\Models\Media;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Http\Request;
@@ -143,6 +144,14 @@ class ProgrammesClasseController extends Controller
             ], 404);
         }
 
+        $window = $this->resolveQrWindow($event);
+        if (!$window['is_open']) {
+            return response()->json([
+                'success' => false,
+                'message' => $window['message'],
+            ], 422);
+        }
+
         $token = $event->ensureQrToken();
         $scanUrl = url('/presence/' . $token);
 
@@ -190,6 +199,11 @@ class ProgrammesClasseController extends Controller
             return redirect()->back()->with('error', 'Programme introuvable.');
         }
 
+        $window = $this->resolveQrWindow($event);
+        if (!$window['is_open']) {
+            return redirect()->back()->with('error', $window['message']);
+        }
+
         $token = $event->ensureQrToken();
         $scanUrl = url('/presence/' . $token);
 
@@ -234,6 +248,11 @@ class ProgrammesClasseController extends Controller
             return redirect()->back()->with('error', 'Programme introuvable.');
         }
 
+        $window = $this->resolveQrWindow($event);
+        if (!$window['is_open']) {
+            return redirect()->back()->with('error', $window['message']);
+        }
+
         $token = $event->ensureQrToken();
         $scanUrl = url('/presence/' . $token);
 
@@ -256,6 +275,49 @@ class ProgrammesClasseController extends Controller
             'scanUrl' => $scanUrl,
             'qrCode' => $result->getDataUri(),
         ]);
+    }
+
+    private function resolveQrWindow(SpecialEvent $event): array
+    {
+        $startAt = Carbon::parse($event->date);
+        if (!empty($event->time)) {
+            $startTime = Carbon::parse($event->time);
+            $startAt->setTime($startTime->hour, $startTime->minute, $startTime->second);
+        } else {
+            $startAt->setTime(0, 0, 0);
+        }
+
+        $endAt = Carbon::parse($event->date);
+        if (!empty($event->end_time)) {
+            $endTime = Carbon::parse($event->end_time);
+            $endAt->setTime($endTime->hour, $endTime->minute, $endTime->second);
+        } elseif (!empty($event->time)) {
+            $startTime = Carbon::parse($event->time);
+            $endAt->setTime($startTime->hour, $startTime->minute, $startTime->second);
+        } else {
+            $endAt->setTime(23, 59, 59);
+        }
+
+        $openingAt = $startAt->copy()->subDays(2);
+
+        if (now()->lt($openingAt)) {
+            return [
+                'is_open' => false,
+                'message' => 'Le QR code sera activé deux jours avant la date de l\'activité.',
+            ];
+        }
+
+        if (now()->greaterThanOrEqualTo($endAt)) {
+            return [
+                'is_open' => false,
+                'message' => 'Cette activité est passée. Le scan n\'est plus disponible.',
+            ];
+        }
+
+        return [
+            'is_open' => true,
+            'message' => null,
+        ];
     }
 
     /**

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Head, Link, router } from "@inertiajs/react";
-import html2pdf from "html2pdf.js";
 import { QRCodeCanvas } from "qrcode.react";
 import axios from "axios";
 import { withBasePath } from "../../../Utils/urlHelper";
