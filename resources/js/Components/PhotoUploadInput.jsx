@@ -414,7 +414,7 @@ export default function PhotoUploadInput({
             {/* Aperçu */}
             {preview ? (
                 <div
-                    className={`${sizeClass} rounded-xl overflow-hidden border-2 border-blue-300 shadow-lg relative group`}
+                    className={`${sizeClass} rounded-full overflow-hidden border-2 border-blue-300 shadow-lg relative group`}
                 >
                     <img
                         src={preview}
@@ -432,7 +432,7 @@ export default function PhotoUploadInput({
                 </div>
             ) : (
                 <div
-                    className={`${sizeClass} rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 border-2 border-dashed border-blue-300 flex items-center justify-center`}
+                    className={`${sizeClass} rounded-full bg-gradient-to-br from-blue-100 to-purple-100 border-2 border-dashed border-blue-300 flex items-center justify-center`}
                 >
                     <Upload size={32} className="text-blue-400" />
                 </div>
@@ -529,7 +529,7 @@ export default function PhotoUploadInput({
                                 </div>
                             )}
 
-                            <div className="rounded-xl overflow-hidden bg-black">
+                            <div className="rounded-full overflow-hidden bg-black">
                                 <video
                                     ref={videoRef}
                                     autoPlay

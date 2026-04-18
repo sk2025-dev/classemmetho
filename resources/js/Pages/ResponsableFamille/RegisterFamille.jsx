@@ -1437,7 +1437,7 @@ export default function RegisterFamille({
                                 <h3 className="text-sm font-bold text-gray-800">
                                     Photo de profil
                                 </h3>
-                                <div className="relative">
+                                {/* <div className="relative">
                                     <div className="w-20 h-20 rounded-full bg-white overflow-hidden border-3 border-blue-400 shadow-lg ring-3 ring-blue-100">
                                         {responsable.photoPreview ? (
                                             <img
@@ -1451,7 +1451,7 @@ export default function RegisterFamille({
                                             </div>
                                         )}
                                     </div>
-                                </div>
+                                </div> */}
                                 <PhotoUploadInput
                                     size="md"
                                     enableCamera={true}
