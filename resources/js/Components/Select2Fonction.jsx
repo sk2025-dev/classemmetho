@@ -13,6 +13,7 @@ const Select2Fonction = ({
     options = [],
     placeholder = "Sélectionner des fonctions...",
     disabled = false,
+    maxSelections = null,
 }) => {
     const normalizedFieldKey = String(name || id || "")
         .trim()
@@ -150,7 +151,14 @@ const Select2Fonction = ({
 
     const handleChange = (selectedOptions) => {
         if (onChange) {
-            const values = selectedOptions ? selectedOptions.map(option => option.value) : [];
+            const nextSelected = Array.isArray(selectedOptions)
+                ? selectedOptions
+                : [];
+            const limitedSelected =
+                typeof maxSelections === "number" && maxSelections > 0
+                    ? nextSelected.slice(0, maxSelections)
+                    : nextSelected;
+            const values = limitedSelected.map((option) => option.value);
             onChange({
                 target: {
                     name: name,
@@ -178,6 +186,14 @@ const Select2Fonction = ({
                 isMulti={true}
                 isClearable={true}
                 isDisabled={disabled}
+                isOptionDisabled={(option) =>
+                    typeof maxSelections === "number" &&
+                    maxSelections > 0 &&
+                    selectedValues.length >= maxSelections &&
+                    !selectedValues.some(
+                        (selected) => selected.value === option.value,
+                    )
+                }
                 styles={customStyles}
                 classNamePrefix="react-select"
                 noOptionsMessage={() => "Aucune fonction ne correspond"}

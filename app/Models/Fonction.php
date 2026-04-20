@@ -29,6 +29,15 @@ class Fonction extends Model
     }
 
     /**
+     * Utilisateurs liés à cette fonction via pivot multi-fonctions
+     */
+    public function usersMulti()
+    {
+        return $this->belongsToMany(User::class, 'fonction_user')
+            ->withTimestamps();
+    }
+
+    /**
      * Obtenir les inscriptions avec cette fonction
      */
     public function inscriptions()

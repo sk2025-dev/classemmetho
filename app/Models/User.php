@@ -257,6 +257,15 @@ class User extends Authenticatable
     }
 
     /**
+     * Fonctions d'église (multi-fonctions via pivot)
+     */
+    public function fonctions()
+    {
+        return $this->belongsToMany(Fonction::class, 'fonction_user')
+            ->withTimestamps();
+    }
+
+    /**
      * Les sacrements/événements religieux de cet utilisateur
      * Relation hasOne car chaque utilisateur n'a qu'un seul enregistrement UserSacrement
      */

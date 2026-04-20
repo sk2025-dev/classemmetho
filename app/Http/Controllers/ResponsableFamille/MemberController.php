@@ -70,6 +70,8 @@ class MemberController extends Controller
                 'lieu_mariage' => 'nullable|string|max:255',
                 'profession' => 'nullable|string|max:255',
                 'fonction_id' => 'nullable|exists:fonctions,id',
+                'fonction_ids' => 'nullable|array|max:2',
+                'fonction_ids.*' => 'integer|exists:fonctions,id',
                 'relation' => 'nullable|string|max:255',
                 'photo' => 'nullable',
                 // Sacrements
@@ -98,6 +100,8 @@ class MemberController extends Controller
                 'lieu_mariage.string' => 'Le lieu de mariage doit être un texte valide',
                 'profession.max' => 'La profession ne doit pas dépasser 255 caractères',
                 'fonction_id.exists' => 'La fonction sélectionnée n\'existe pas',
+                'fonction_ids.max' => 'Vous pouvez sélectionner au maximum 2 fonctions',
+                'fonction_ids.*.exists' => 'Une des fonctions sélectionnées n\'existe pas',
                 'photo.image' => 'Le fichier doit être une image valide',
                 'photo.mimes' => 'L\'image doit être au format JPEG, PNG ou GIF',
                 'photo.max' => 'L\'image ne doit pas dépasser 5MB',
@@ -132,6 +136,8 @@ class MemberController extends Controller
         // Ensure identifier is generated so DB non-null constraint is satisfied
         $identifier = User::generateIdentifier($validated['nom'], $validated['prenom'], $validated['date_naissance'] ?? null);
 
+        $resolvedFonctionIds = $this->resolveFonctionIds($validated);
+
         $user = User::create([
             'identifier' => $identifier,
             'nom' => $validated['nom'],
@@ -148,10 +154,12 @@ class MemberController extends Controller
             'family_id' => $familyId,
             'classe_id' => $family->classe_id,
             'ville_id' => $family->ville_id,
-            'fonction_id' => $validated['fonction_id'] ?? null,
+            'fonction_id' => $resolvedFonctionIds[0] ?? null,
             'photo_path' => $photoPath,
             'profile_photo_url' => $photoPath ? '/storage/' . ltrim($photoPath, '/') : null,
         ]);
+
+        $user->fonctions()->sync($resolvedFonctionIds);
 
         // Create sacrament record for this user
         \App\Models\UserSacrement::create([
@@ -211,6 +219,10 @@ class MemberController extends Controller
             ->get();
         $member->profile_photo_url = $member->profile_photo_url
             ?: PhotoHelper::getPhotoUrl($member->photo_path, $member->prenom, $member->nom);
+        $member->setAttribute(
+            'fonction_ids',
+            $member->fonctions()->pluck('fonctions.id')->values()->all()
+        );
 
         return Inertia::render('ResponsableFamille/Members/EditMember', [
             'member' => $member,
@@ -244,6 +256,8 @@ class MemberController extends Controller
                 'lieu_mariage' => 'nullable|string|max:255',
                 'profession' => 'nullable|string|max:255',
                 'fonction_id' => 'nullable|exists:fonctions,id',
+                'fonction_ids' => 'nullable|array|max:2',
+                'fonction_ids.*' => 'integer|exists:fonctions,id',
                 'relation' => 'nullable|string|max:255',
                 'photo' => 'nullable',
                 'baptise' => 'nullable|in:0,1',
@@ -282,6 +296,8 @@ class MemberController extends Controller
         }
 
         // Mettre à jour l'utilisateur (colonnes qui existent dans users)
+        $resolvedFonctionIds = $this->resolveFonctionIds($validated, $member->fonction_id);
+
         $member->update([
             'nom' => $validated['nom'],
             'prenom' => $validated['prenom'],
@@ -291,13 +307,15 @@ class MemberController extends Controller
             'genre' => $validated['genre'],
             'date_naissance' => $validated['date_naissance'] ?? $member->date_naissance,
             'profession' => $validated['profession'] ?? $member->profession,
-            'fonction_id' => $validated['fonction_id'] ?? $member->fonction_id,
+            'fonction_id' => $resolvedFonctionIds[0] ?? $member->fonction_id,
             'relation' => $validated['relation'] ?? $member->relation,
             'photo_path' => $validated['photo_path'] ?? $member->photo_path,
             'profile_photo_url' => isset($validated['photo_path'])
                 ? '/storage/' . ltrim($validated['photo_path'], '/')
                 : $member->profile_photo_url,
         ]);
+
+        $member->fonctions()->sync($resolvedFonctionIds);
 
         // Enregistrer les modifications dans l'audit
         $newData = $member->only([
@@ -403,5 +421,26 @@ class MemberController extends Controller
         }
 
         return ltrim($photo, '/');
+    }
+
+    private function resolveFonctionIds(array $validated, ?int $fallbackFonctionId = null): array
+    {
+        $fonctionIds = [];
+
+        if (array_key_exists('fonction_ids', $validated) && is_array($validated['fonction_ids'])) {
+            $fonctionIds = $validated['fonction_ids'];
+        } elseif (array_key_exists('fonction_id', $validated) && !empty($validated['fonction_id'])) {
+            $fonctionIds = [$validated['fonction_id']];
+        } elseif ($fallbackFonctionId) {
+            $fonctionIds = [$fallbackFonctionId];
+        }
+
+        return collect($fonctionIds)
+            ->filter(fn ($id) => !is_null($id) && $id !== '')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->take(2)
+            ->all();
     }
 }
