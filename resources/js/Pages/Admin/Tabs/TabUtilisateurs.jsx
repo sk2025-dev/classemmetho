@@ -144,7 +144,7 @@ const exportToPDF = (membres, filters = {}) => {
         genre: m.genre === "M" ? "H." : m.genre === "F" ? "F." : "-",
         fonction: m.fonction || "-",
         famille: m.famille || "-",
-        code_famille: m.code_famille || "-",
+        code_famille: formatFamilyCodeHistory(m),
         code_membre: m.code_membre || "-",
         naissance: m.date_naissance || "-",
         statut: m.is_active ? "Actif" : "Inactif",
@@ -409,6 +409,24 @@ const displayValue = (value) => {
     return value && value !== "null" && value !== "" ? value : "-";
 };
 
+const getFamilyCodeHistory = (member) => {
+    const history = Array.isArray(member?.code_famille_historique)
+        ? member.code_famille_historique.filter(Boolean)
+        : [];
+
+    if (history.length > 0) {
+        return history;
+    }
+
+    return member?.code_famille ? [member.code_famille] : [];
+};
+
+const formatFamilyCodeHistory = (member) => {
+    const history = getFamilyCodeHistory(member);
+
+    return history.length > 0 ? history.join(" -> ") : "-";
+};
+
 const resolvePhotoUrl = (member) => {
     return resolveMemberPhotoUrl(member);
 };
@@ -599,6 +617,14 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
                                 value={displayValue(member.relation)}
                             />
                             <InfoItem
+                                label="Code famille actuel"
+                                value={displayValue(member.code_famille)}
+                            />
+                            <InfoItem
+                                label="Code famille ancien"
+                                value={displayValue(member.ancienne_famille_code)}
+                            />
+                            <InfoItem
                                 label="Nom de famille"
                                 value={displayValue(member.famille_nom)}
                                 className="md:col-span-2"
@@ -620,6 +646,10 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
                                 <InfoItem
                                     label="Classe"
                                     value={displayValue(member.classe)}
+                                />
+                                <InfoItem
+                                    label="Ancienne classe"
+                                    value={displayValue(member.ancienne_classe)}
                                 />
                             </div>
                             <div className="border-t border-gray-200 pt-5">
@@ -2071,13 +2101,13 @@ const TabUtilisateurs = ({
             membre.email?.toLowerCase().includes(s) ||
             membre.identifiant?.toLowerCase().includes(s) ||
             membre.telephone?.includes(s) ||
-            membre.code_famille?.toLowerCase().includes(s) ||
+            formatFamilyCodeHistory(membre).toLowerCase().includes(s) ||
             membre.code_membre?.toLowerCase().includes(s);
 
         const normalizedBarcode = String(barcodeFilter || "")
             .trim()
             .toLowerCase();
-        const memberCode = String(membre.code_famille || "").toLowerCase();
+        const memberCode = formatFamilyCodeHistory(membre).toLowerCase();
         const matchBarcode =
             !normalizedBarcode || memberCode.includes(normalizedBarcode);
 
@@ -2705,8 +2735,28 @@ const TabUtilisateurs = ({
                                                     className="mx-auto border-2 border-white shadow-sm"
                                                 />
                                             </td>
-                                            <td className="px-3 py-3 text-sm text-gray-700 text-center whitespace-nowrap font-semibold">
-                                                {m.code_famille || "-"}
+                                            <td className="px-3 py-3 text-sm text-gray-700 text-center font-semibold">
+                                                {getFamilyCodeHistory(m)
+                                                    .slice(0, 2)
+                                                    .map((code, codeIndex) => (
+                                                        <div
+                                                            key={`${m.id}-family-code-${codeIndex}`}
+                                                            className="leading-5 whitespace-nowrap"
+                                                        >
+                                                            {codeIndex === 0 &&
+                                                            getFamilyCodeHistory(
+                                                                m,
+                                                            ).length > 1
+                                                                ? "Ancien: "
+                                                                : codeIndex ===
+                                                                      1
+                                                                  ? "Actuel: "
+                                                                  : ""}
+                                                            {code}
+                                                        </div>
+                                                    ))}
+                                                {getFamilyCodeHistory(m)
+                                                    .length === 0 && "-"}
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-700 text-center whitespace-nowrap font-semibold">
                                                 {m.code_membre || "-"}
@@ -2812,8 +2862,23 @@ const TabUtilisateurs = ({
                                             <td className="px-3 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
                                                 {m.updated_at || "-"}
                                             </td>
-                                            <td className="px-3 py-3 text-sm text-gray-700 text-center whitespace-nowrap">
-                                                {m.classe || "-"}
+                                            <td className="px-3 py-3 text-sm text-gray-700 text-center font-semibold">
+                                                {m.ancienne_classe ? (
+                                                    <>
+                                                        <div className="leading-5 whitespace-nowrap text-gray-500">
+                                                            Ancienne:{" "}
+                                                            {m.ancienne_classe}
+                                                        </div>
+                                                        <div className="leading-5 whitespace-nowrap text-gray-900">
+                                                            Actuelle:{" "}
+                                                            {m.classe || "-"}
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <span className="whitespace-nowrap">
+                                                        {m.classe || "-"}
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-700 text-center whitespace-nowrap">
                                                 {m.famille || "-"}

@@ -31,6 +31,13 @@ class Family extends Model
         'telephone',
         'telephone2',
         'email',
+        'transfer_status',
+        'transfer_label',
+        'transfer_request_id',
+        'transfer_locked_at',
+        'transferred_at',
+        'transferred_to_family_id',
+        'transfer_origin_family_id',
 
         // === DÉDUPLICATION ET AUDIT ===
         'email_hash',
@@ -52,6 +59,16 @@ class Family extends Model
     public function responsable()
     {
         return $this->belongsTo(User::class, 'responsable_id');
+    }
+
+    public function transferOriginFamily()
+    {
+        return $this->belongsTo(Family::class, 'transfer_origin_family_id');
+    }
+
+    public function transferredToFamily()
+    {
+        return $this->belongsTo(Family::class, 'transferred_to_family_id');
     }
 
     /**

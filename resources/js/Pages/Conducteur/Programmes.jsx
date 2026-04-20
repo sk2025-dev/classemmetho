@@ -1,12 +1,9 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import { Head, usePage, router } from "@inertiajs/react";
-import axios from "axios";
-import Select2Single from "../../Components/Select2Single";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Head, usePage, router } from '@inertiajs/react';
+import axios from 'axios';
 
 // Configuration d'axios avec le token CSRF
-axios.defaults.headers.common["X-CSRF-TOKEN"] = document
-    .querySelector('meta[name="csrf-token"]')
-    ?.getAttribute("content");
+axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
 // --- STYLES INTÉGRÉS ---
 const styles = `
@@ -468,16 +465,9 @@ const styles = `
     transition: all 0.2s ease;
     white-space: nowrap;
 }
-.btn-qr-inline:hover:not(:disabled) {
+.btn-qr-inline:hover {
     transform: translateY(-1px);
     box-shadow: 0 8px 18px rgba(217, 119, 6, 0.35);
-}
-.btn-qr-inline:disabled {
-    background: #9ca3af;
-    color: #f3f4f6;
-    cursor: not-allowed;
-    opacity: 0.75;
-    box-shadow: none;
 }
 .special-meta {
     display: flex;
@@ -1719,6 +1709,105 @@ textarea {
     background: #4b5563;
 }
 
+/* Filtres pour l'historique */
+.history-filters {
+    background: white;
+    border-radius: 20px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border: 1px solid #eef2ff;
+}
+
+.history-filter-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+}
+
+.history-filter-item {
+    flex: 1;
+    min-width: 180px;
+}
+
+.history-filter-item label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.history-filter-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    background: #f8fafc;
+    transition: all 0.2s;
+}
+
+.history-filter-input:focus {
+    outline: none;
+    border-color: #f59e0b;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+
+.history-filter-select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    background: #f8fafc;
+    cursor: pointer;
+}
+
+.history-filter-select:focus {
+    outline: none;
+    border-color: #f59e0b;
+}
+
+.history-filter-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.btn-history-filter-reset {
+    background: #6b7280;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-history-filter-reset:hover {
+    background: #4b5563;
+    transform: translateY(-1px);
+}
+
+.history-filter-stats {
+    margin-top: 15px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+    font-size: 0.85rem;
+    color: #6b7280;
+    text-align: right;
+}
+
 /* Styles pour les actions de groupe dans la galerie */
 .group-actions {
     display: flex;
@@ -2245,6 +2334,22 @@ textarea {
         flex-direction: column;
         text-align: center;
     }
+    .history-filters {
+        padding: 15px;
+    }
+    .history-filter-group {
+        flex-direction: column;
+    }
+    .history-filter-item {
+        width: 100%;
+    }
+    .history-filter-actions {
+        width: 100%;
+    }
+    .btn-history-filter-reset {
+        flex: 1;
+        justify-content: center;
+    }
 }
 
 @media (max-width: 600px) {
@@ -2317,554 +2422,61 @@ textarea {
 `;
 
 // --- ICONS ---
-const IconCalendar = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-        <line x1="16" y1="2" x2="16" y2="6"></line>
-        <line x1="8" y1="2" x2="8" y2="6"></line>
-        <line x1="3" y1="10" x2="21" y2="10"></line>
-    </svg>
-);
-const IconClock = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <circle cx="12" cy="12" r="10"></circle>
-        <polyline points="12 6 12 12 16 14"></polyline>
-    </svg>
-);
-const IconUser = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-        <circle cx="12" cy="7" r="4"></circle>
-    </svg>
-);
-const IconEdit = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-    </svg>
-);
-const IconPlus = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <line x1="12" y1="5" x2="12" y2="19"></line>
-        <line x1="5" y1="12" x2="19" y2="12"></line>
-    </svg>
-);
-const IconArchive = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <polyline points="21 8 21 21 3 21 3 8"></polyline>
-        <rect x="1" y="3" width="22" height="5"></rect>
-        <line x1="10" y1="12" x2="14" y2="12"></line>
-    </svg>
-);
-const IconArrowLeft = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <path d="M19 12H5M12 19l-7-7 7-7" />
-    </svg>
-);
-const IconArrowRight = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <path d="M5 12h14M12 5l7 7-7 7" />
-    </svg>
-);
-const IconMic = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-        <line x1="12" y1="19" x2="12" y2="23"></line>
-        <line x1="8" y1="23" x2="16" y2="23"></line>
-    </svg>
-);
-const IconFamily = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-        <circle cx="12" cy="7" r="4"></circle>
-        <path d="M17 3.5a4 4 0 0 1 0 7"></path>
-        <path d="M21 21v-2a4 4 0 0 0-3-3.85"></path>
-    </svg>
-);
-const IconLocation = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-        <circle cx="12" cy="10" r="3"></circle>
-    </svg>
-);
-const IconUpload = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-        <polyline points="17 8 12 3 7 8"></polyline>
-        <line x1="12" y1="3" x2="12" y2="15"></line>
-    </svg>
-);
-const IconFileExcel = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-        <polyline points="14 2 14 8 20 8"></polyline>
-        <path d="M10 14l4 4m0-4l-4 4"></path>
-    </svg>
-);
-const IconRoadmap = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <circle cx="12" cy="12" r="10"></circle>
-        <path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path>
-        <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path>
-    </svg>
-);
-const IconHistory = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <circle cx="12" cy="12" r="10"></circle>
-        <polyline points="12 6 12 12 16 14"></polyline>
-        <path d="M4 4L8 8M20 4L16 8M4 20L8 16M20 20L16 16"></path>
-    </svg>
-);
-const IconActivity = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-    </svg>
-);
-const IconEye = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-        <circle cx="12" cy="12" r="3"></circle>
-    </svg>
-);
-const IconPlay = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="white"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <polygon points="5 3 19 12 5 21 5 3"></polygon>
-    </svg>
-);
-const IconPhoto = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect>
-        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-        <polyline points="21 15 16 10 5 21"></polyline>
-    </svg>
-);
-const IconVideo = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <rect x="2" y="4" width="20" height="16" rx="2"></rect>
-        <polygon points="10 8 16 12 10 16 10 8"></polygon>
-    </svg>
-);
-const IconCheckCircle = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-        <polyline points="22 4 12 14.01 9 11.01"></polyline>
-    </svg>
-);
-const IconXCircle = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <circle cx="12" cy="12" r="10"></circle>
-        <line x1="15" y1="9" x2="9" y2="15"></line>
-        <line x1="9" y1="9" x2="15" y2="15"></line>
-    </svg>
-);
-const IconInfo = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <circle cx="12" cy="12" r="10"></circle>
-        <line x1="12" y1="16" x2="12" y2="12"></line>
-        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-    </svg>
-);
-const IconTrash = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <polyline points="3 6 5 6 21 6"></polyline>
-        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-        <line x1="10" y1="11" x2="10" y2="17"></line>
-        <line x1="14" y1="11" x2="14" y2="17"></line>
-    </svg>
-);
-const IconPray = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-        <path d="M2 17l10 5 10-5"></path>
-        <path d="M2 12l10 5 10-5"></path>
-    </svg>
-);
-const IconGallery = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect>
-        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-        <polyline points="21 15 16 10 5 21"></polyline>
-    </svg>
-);
-const IconMoreVert = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <circle cx="12" cy="12" r="1" />
-        <circle cx="12" cy="5" r="1" />
-        <circle cx="12" cy="19" r="1" />
-    </svg>
-);
-const IconChevronLeft = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <polyline points="15 18 9 12 15 6"></polyline>
-    </svg>
-);
-const IconChevronRight = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <polyline points="9 18 15 12 9 6"></polyline>
-    </svg>
-);
-const IconTrash2 = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <polyline points="3 6 5 6 21 6"></polyline>
-        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-        <line x1="10" y1="11" x2="10" y2="17"></line>
-        <line x1="14" y1="11" x2="14" y2="17"></line>
-    </svg>
-);
-const IconAlertTriangle = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-        <line x1="12" y1="9" x2="12" y2="13"></line>
-        <line x1="12" y1="17" x2="12.01" y2="17"></line>
-    </svg>
-);
-const IconStar = () => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-    </svg>
-);
+const IconCalendar = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>);
+const IconClock = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>);
+const IconUser = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>);
+const IconEdit = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>);
+const IconPlus = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>);
+const IconArchive = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>);
+const IconArrowLeft = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>);
+const IconArrowRight = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>);
+const IconMic = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>);
+const IconFamily = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle><path d="M17 3.5a4 4 0 0 1 0 7"></path><path d="M21 21v-2a4 4 0 0 0-3-3.85"></path></svg>);
+const IconLocation = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>);
+const IconUpload = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>);
+const IconFileExcel = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M10 14l4 4m0-4l-4 4"></path></svg>);
+const IconRoadmap = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path></svg>);
+const IconHistory = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline><path d="M4 4L8 8M20 4L16 8M4 20L8 16M20 20L16 16"></path></svg>);
+const IconActivity = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>);
+const IconEye = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>);
+const IconPlay = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>);
+const IconPhoto = () => (<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>);
+const IconVideo = () => (<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>);
+const IconCheckCircle = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>);
+const IconXCircle = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>);
+const IconInfo = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>);
+const IconTrash = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>);
+const IconPray = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>);
+const IconGallery = () => (<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>);
+const IconMoreVert = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>);
+const IconChevronLeft = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>);
+const IconChevronRight = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>);
+const IconTrash2 = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>);
+const IconAlertTriangle = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>);
+const IconStar = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>);
+const IconFilter = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 13 10 21 14 18 14 13 22 3"></polygon></svg>);
+const IconRefresh = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path></svg>);
 
 // --- FONCTIONS DE FORMATAGE DE DATE ---
 const getLocalDateString = (date) => {
-    if (!date) return "";
-    const d = new Date(date);
-    if (isNaN(d.getTime())) return "";
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
+  if (!date) return '';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 const formatDateFrench = (dateString) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "";
-    const day = date.getDate();
-    const month = date.toLocaleString("fr-FR", { month: "long" });
-    const year = date.getFullYear();
-    const monthCapitalized = month.charAt(0).toUpperCase() + month.slice(1);
-    return `${day} ${monthCapitalized} ${year}`;
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
+  const day = date.getDate();
+  const month = date.toLocaleString('fr-FR', { month: 'long' });
+  const year = date.getFullYear();
+  const monthCapitalized = month.charAt(0).toUpperCase() + month.slice(1);
+  return `${day} ${monthCapitalized} ${year}`;
 };
 
 const buildEventDateTime = (eventDate, eventTime, useEndOfDay = false) => {
@@ -2935,377 +2547,209 @@ const getQrAccessState = (event) => {
 
 // --- FONCTIONS DE FILTRAGE ---
 const isDateInCurrentMonth = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    return (
-        date.getMonth() === now.getMonth() &&
-        date.getFullYear() === now.getFullYear()
-    );
+  const date = new Date(dateString);
+  const now = new Date();
+  return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
 };
 
 const isDateInPastMonth = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    return date < now;
+  const date = new Date(dateString);
+  const now = new Date();
+  return date < now;
 };
 
 // --- TOAST COMPONENT ---
-const Toast = ({ message, type = "success", onClose }) => {
-    const [isExiting, setIsExiting] = useState(false);
+const Toast = ({ message, type = 'success', onClose }) => {
+  const [isExiting, setIsExiting] = useState(false);
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setIsExiting(true);
-            setTimeout(onClose, 300);
-        }, 3000);
-        return () => clearTimeout(timer);
-    }, [onClose]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsExiting(true);
+      setTimeout(onClose, 300);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
 
-    const getIcon = () => {
-        switch (type) {
-            case "success":
-                return <IconCheckCircle />;
-            case "error":
-                return <IconXCircle />;
-            default:
-                return <IconInfo />;
-        }
-    };
+  const getIcon = () => {
+    switch (type) {
+      case 'success': return <IconCheckCircle />;
+      case 'error': return <IconXCircle />;
+      default: return <IconInfo />;
+    }
+  };
 
-    return (
-        <div className={`toast-notification ${isExiting ? "exit" : ""}`}>
-            <div className={`toast-content toast-${type}`}>
-                <div className="toast-icon">{getIcon()}</div>
-                <div className="toast-message">{message}</div>
-                <div
-                    className="toast-close"
-                    onClick={() => {
-                        setIsExiting(true);
-                        setTimeout(onClose, 300);
-                    }}
-                >
-                    ✕
-                </div>
-            </div>
-        </div>
-    );
+  return (
+    <div className={`toast-notification ${isExiting ? 'exit' : ''}`}>
+      <div className={`toast-content toast-${type}`}>
+        <div className="toast-icon">{getIcon()}</div>
+        <div className="toast-message">{message}</div>
+        <div className="toast-close" onClick={() => { setIsExiting(true); setTimeout(onClose, 300); }}>✕</div>
+      </div>
+    </div>
+  );
 };
 
 // --- CONFIRMATION DIALOG COMPONENT ---
-const ConfirmDialog = ({
-    isOpen,
-    onClose,
-    onConfirm,
-    title,
-    message,
-    confirmText = "Supprimer",
-    cancelText = "Annuler",
-}) => {
-    if (!isOpen) return null;
+const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Supprimer", cancelText = "Annuler" }) => {
+  if (!isOpen) return null;
 
-    return (
-        <div className="confirm-dialog-overlay" onClick={onClose}>
-            <div
-                className="confirm-dialog"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="confirm-dialog-header">
-                    <h3>
-                        <IconTrash2 /> {title}
-                    </h3>
-                </div>
-                <div className="confirm-dialog-body">
-                    <p>{message}</p>
-                    <p className="confirm-warning">
-                        Cette action est irréversible.
-                    </p>
-                </div>
-                <div className="confirm-dialog-footer">
-                    <button className="btn-confirm-cancel" onClick={onClose}>
-                        {cancelText}
-                    </button>
-                    <button className="btn-confirm-delete" onClick={onConfirm}>
-                        {confirmText}
-                    </button>
-                </div>
-            </div>
+  return (
+    <div className="confirm-dialog-overlay" onClick={onClose}>
+      <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="confirm-dialog-header">
+          <h3><IconTrash2 /> {title}</h3>
         </div>
-    );
+        <div className="confirm-dialog-body">
+          <p>{message}</p>
+          <p className="confirm-warning">Cette action est irréversible.</p>
+        </div>
+        <div className="confirm-dialog-footer">
+          <button className="btn-confirm-cancel" onClick={onClose}>{cancelText}</button>
+          <button className="btn-confirm-delete" onClick={onConfirm}>{confirmText}</button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
-// --- CAROUSEL COMPONENT MODIFIÉ ---
+// --- CAROUSEL COMPONENT ---
 const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
-    const [currentSlide, setCurrentSlide] = useState(0);
-    const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-    const autoPlayIntervalRef = useRef(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const autoPlayIntervalRef = useRef(null);
 
-    // Slides par défaut (si pas de médias)
-    const defaultSlides = [
-        {
-            id: 1,
-            image: "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1200&h=500&fit=crop",
-            title: "Bienvenue",
-            description: "Gérez les activités de votre classe",
-            date: new Date().toISOString(),
-        },
-        {
-            id: 2,
-            image: "https://images.unsplash.com/photo-1504052434569-70ad5836ab61?w=1200&h=500&fit=crop",
-            title: "Programmes",
-            description: "Créez et organisez vos activités",
-            date: new Date().toISOString(),
-        },
-        {
-            id: 3,
-            image: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&h=500&fit=crop",
-            title: "Galerie",
-            description: "Partagez vos moments forts",
-            date: new Date().toISOString(),
-        },
-    ];
+  const defaultSlides = [
+    { id: 1, image: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1200&h=500&fit=crop', title: 'Bienvenue', description: 'Gérez les activités de votre classe', date: new Date().toISOString() },
+    { id: 2, image: 'https://images.unsplash.com/photo-1504052434569-70ad5836ab61?w=1200&h=500&fit=crop', title: 'Programmes', description: 'Créez et organisez vos activités', date: new Date().toISOString() },
+    { id: 3, image: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&h=500&fit=crop', title: 'Galerie', description: 'Partagez vos moments forts', date: new Date().toISOString() },
+  ];
 
-    // Fonction pour obtenir l'image à la une ou la première photo
-    const getActivityImage = (activityId) => {
-        if (!mediaImages) return null;
+  const getActivityImage = (activityId) => {
+    if (!mediaImages) return null;
+    const featuredImage = mediaImages.find(media => media.special_event_id === activityId && media.type === 'photo' && media.is_featured === true);
+    if (featuredImage) return featuredImage.url;
+    const firstPhoto = mediaImages.find(media => media.special_event_id === activityId && media.type === 'photo');
+    return firstPhoto ? firstPhoto.url : null;
+  };
 
-        // Chercher d'abord une image à la une
-        const featuredImage = mediaImages.find(
-            (media) =>
-                media.special_event_id === activityId &&
-                media.type === "photo" &&
-                media.is_featured === true,
-        );
+  const slides = useMemo(() => {
+    if (!pastEvents || pastEvents.length === 0) return defaultSlides;
+    const sortedPastEvents = [...pastEvents].sort((a, b) => new Date(b.start_date) - new Date(a.start_date)).slice(0, 4);
+    if (sortedPastEvents.length === 0) return defaultSlides;
+    const activitySlides = [];
+    for (const activity of sortedPastEvents) {
+      const activityImage = getActivityImage(activity.id);
+      if (activityImage) {
+        activitySlides.push({
+          id: activity.id,
+          image: activityImage,
+          title: activity.title,
+          description: activity.lieu || activity.orateur ? `${activity.lieu || ''} ${activity.orateur ? '· ' + activity.orateur : ''}` : 'Moment de partage',
+          date: activity.start_date,
+        });
+      }
+    }
+    return activitySlides.length > 0 ? activitySlides : defaultSlides;
+  }, [pastEvents, mediaImages]);
 
-        if (featuredImage) return featuredImage.url;
+  useEffect(() => {
+    if (isAutoPlaying && slides.length > 0) {
+      if (autoPlayIntervalRef.current) clearInterval(autoPlayIntervalRef.current);
+      autoPlayIntervalRef.current = setInterval(() => setCurrentSlide((prev) => (prev + 1) % slides.length), 5000);
+    }
+    return () => { if (autoPlayIntervalRef.current) clearInterval(autoPlayIntervalRef.current); };
+  }, [isAutoPlaying, slides.length]);
 
-        // Sinon, prendre la première photo
-        const firstPhoto = mediaImages.find(
-            (media) =>
-                media.special_event_id === activityId && media.type === "photo",
-        );
+  if (slides.length === 0) return null;
 
-        return firstPhoto ? firstPhoto.url : null;
-    };
+  const currentSlideData = slides[currentSlide];
+  const formattedDate = formatDateFrench(currentSlideData.date);
 
-    // Construire les slides à partir des photos des 4 dernières activités PASSÉES
-    const slides = useMemo(() => {
-        // Vérifier si on a des activités passées
-        if (!pastEvents || pastEvents.length === 0) {
-            return defaultSlides;
-        }
-
-        // Trier les activités passées par date (les plus récentes d'abord) et prendre les 4 dernières
-        const sortedPastEvents = [...pastEvents]
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .slice(0, 4);
-
-        if (sortedPastEvents.length === 0) {
-            return defaultSlides;
-        }
-
-        // Pour chaque activité, trouver la première photo
-        const activitySlides = [];
-
-        for (const activity of sortedPastEvents) {
-            const activityImage = getActivityImage(activity.id);
-
-            if (activityImage) {
-                const hasFeaturedImage =
-                    mediaImages?.some(
-                        (m) =>
-                            m.special_event_id === activity.id &&
-                            m.type === "photo" &&
-                            m.is_featured === true,
-                    ) || false;
-
-                activitySlides.push({
-                    id: activity.id,
-                    image: activityImage,
-                    title: activity.title,
-                    description:
-                        activity.lieu || activity.orateur
-                            ? `${activity.lieu || ""} ${activity.orateur ? "· " + activity.orateur : ""}`
-                            : "Moment de partage",
-                    date: activity.date,
-                    hasFeaturedImage: hasFeaturedImage,
-                });
-            }
-        }
-
-        // Si aucune activité n'a de photo, utiliser les slides par défaut
-        return activitySlides.length > 0 ? activitySlides : defaultSlides;
-    }, [pastEvents, mediaImages]);
-
-    const startAutoPlay = () => {
-        if (autoPlayIntervalRef.current)
-            clearInterval(autoPlayIntervalRef.current);
-        autoPlayIntervalRef.current = setInterval(
-            () => setCurrentSlide((prev) => (prev + 1) % slides.length),
-            5000,
-        );
-    };
-
-    useEffect(() => {
-        if (isAutoPlaying && slides.length > 0) startAutoPlay();
-        return () => {
-            if (autoPlayIntervalRef.current)
-                clearInterval(autoPlayIntervalRef.current);
-        };
-    }, [isAutoPlaying, slides.length]);
-
-    if (slides.length === 0) return null;
-
-    const currentSlideData = slides[currentSlide];
-    const formattedDate = formatDateFrench(currentSlideData.date);
-
-    return (
-        <div
-            className="carousel-simple"
-            onMouseEnter={() => setIsAutoPlaying(false)}
-            onMouseLeave={() => setIsAutoPlaying(true)}
-        >
-            <div className="carousel-simple-wrapper">
-                <div className="carousel-simple-image">
-                    <div
-                        className="carousel-simple-image-bg"
-                        style={{
-                            backgroundImage: `url(${currentSlideData.image})`,
-                        }}
-                    />
-                    {currentSlideData.hasFeaturedImage && (
-                        <div className="absolute top-4 left-4 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 z-20 shadow-lg">
-                            <IconStar /> À la une
-                        </div>
-                    )}
-                </div>
-                <div className="carousel-simple-info">
-                    <div className="carousel-simple-header">
-                        ACTIVITÉ RÉCENTES
-                    </div>
-                    <h3 className="carousel-simple-title">
-                        {currentSlideData.title}
-                    </h3>
-                    <p className="carousel-simple-description">
-                        {currentSlideData.description}
-                    </p>
-                    <div className="carousel-simple-date">
-                        <IconCalendar /> {formattedDate}
-                    </div>
-                </div>
-            </div>
-
-            {slides.length > 1 && (
-                <>
-                    <button
-                        className="carousel-simple-nav carousel-simple-nav-left"
-                        onClick={() =>
-                            setCurrentSlide(
-                                (prev) =>
-                                    (prev - 1 + slides.length) % slides.length,
-                            )
-                        }
-                    >
-                        ‹
-                    </button>
-                    <button
-                        className="carousel-simple-nav carousel-simple-nav-right"
-                        onClick={() =>
-                            setCurrentSlide(
-                                (prev) => (prev + 1) % slides.length,
-                            )
-                        }
-                    >
-                        ›
-                    </button>
-                    <div className="carousel-simple-dots">
-                        {slides.map((_, index) => (
-                            <button
-                                key={index}
-                                className={`carousel-simple-dot ${currentSlide === index ? "active" : ""}`}
-                                onClick={() => setCurrentSlide(index)}
-                            />
-                        ))}
-                    </div>
-                </>
-            )}
+  return (
+    <div className="carousel-simple" onMouseEnter={() => setIsAutoPlaying(false)} onMouseLeave={() => setIsAutoPlaying(true)}>
+      <div className="carousel-simple-wrapper">
+        <div className="carousel-simple-image">
+          <div className="carousel-simple-image-bg" style={{ backgroundImage: `url(${currentSlideData.image})` }} />
         </div>
-    );
+        <div className="carousel-simple-info">
+          <div className="carousel-simple-header">ACTIVITÉ RÉCENTES</div>
+          <h3 className="carousel-simple-title">{currentSlideData.title}</h3>
+          <p className="carousel-simple-description">{currentSlideData.description}</p>
+          <div className="carousel-simple-date"><IconCalendar /> {formattedDate}</div>
+        </div>
+      </div>
+      {slides.length > 1 && (
+        <>
+          <button className="carousel-simple-nav carousel-simple-nav-left" onClick={() => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)}>‹</button>
+          <button className="carousel-simple-nav carousel-simple-nav-right" onClick={() => setCurrentSlide((prev) => (prev + 1) % slides.length)}>›</button>
+          <div className="carousel-simple-dots">
+            {slides.map((_, index) => (
+              <button key={index} className={`carousel-simple-dot ${currentSlide === index ? 'active' : ''}`} onClick={() => setCurrentSlide(index)} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
 };
 
 // --- MINI CALENDAR COMPONENT ---
-const MiniCalendar = ({
-    eventsDates = [],
-    eventsData = [],
-    onDateClick,
-    activeDate,
-}) => {
-    const [currentDate, setCurrentDate] = useState(new Date());
-    const monthNames = [
-        "Janvier",
-        "Février",
-        "Mars",
-        "Avril",
-        "Mai",
-        "Juin",
-        "Juillet",
-        "Août",
-        "Septembre",
-        "Octobre",
-        "Novembre",
-        "Décembre",
-    ];
+const MiniCalendar = ({ eventsDates = [], eventsData = [], onDateClick, activeDate }) => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
-    const getDaysInMonth = (date) => {
-        const year = date.getFullYear(),
-            month = date.getMonth();
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-        const days = [];
-        const startPadding =
-            firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
-        for (let i = startPadding; i > 0; i--)
-            days.push({
-                date: new Date(year, month, -i + 1),
-                isCurrentMonth: false,
-            });
-        for (let i = 1; i <= lastDay.getDate(); i++)
-            days.push({ date: new Date(year, month, i), isCurrentMonth: true });
-        const remaining = 42 - days.length;
-        for (let i = 1; i <= remaining; i++)
-            days.push({
-                date: new Date(year, month + 1, i),
-                isCurrentMonth: false,
-            });
-        return days;
-    };
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear(), month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const days = [];
+    const startPadding = (firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1);
+    for (let i = startPadding; i > 0; i--) days.push({ date: new Date(year, month, -i + 1), isCurrentMonth: false });
+    for (let i = 1; i <= lastDay.getDate(); i++) days.push({ date: new Date(year, month, i), isCurrentMonth: true });
+    const remaining = 42 - days.length;
+    for (let i = 1; i <= remaining; i++) days.push({ date: new Date(year, month + 1, i), isCurrentMonth: false });
+    return days;
+  };
 
-    const getEventsOnDate = (date) => {
-        const localDateStr = getLocalDateString(date);
-        return eventsData.filter(
-            (event) => getLocalDateString(event.date) === localDateStr,
-        );
-    };
+  const getEventsOnDate = (date) => {
+    const localDateStr = getLocalDateString(date);
+    return eventsData.filter(event => {
+      const eventStartDate = getLocalDateString(event.start_date);
+      if (event.end_date) {
+        const eventEndDate = getLocalDateString(event.end_date);
+        return localDateStr >= eventStartDate && localDateStr <= eventEndDate;
+      }
+      return getLocalDateString(event.start_date) === localDateStr;
+    });
+  };
 
-    const hasEventOnDate = (date) => {
-        const localDateStr = getLocalDateString(date);
-        return eventsDates.includes(localDateStr);
-    };
+  const hasEventOnDate = (date) => {
+    const localDateStr = getLocalDateString(date);
+    return eventsData.some(event => {
+      const eventStartDate = getLocalDateString(event.start_date);
+      if (event.end_date) {
+        const eventEndDate = getLocalDateString(event.end_date);
+        return localDateStr >= eventStartDate && localDateStr <= eventEndDate;
+      }
+      return getLocalDateString(event.start_date) === localDateStr;
+    });
+  };
+  
+  const getEventTitles = (date) => {
+    const events = getEventsOnDate(date);
+    if (events.length === 0) return '';
+    if (events.length === 1) return events[0].title;
+    return `${events[0].title} + ${events.length - 1} autre(s)`;
+  };
 
-    const getEventTitles = (date) => {
-        const events = getEventsOnDate(date);
-        if (events.length === 0) return "";
-        if (events.length === 1) return events[0].title;
-        return `${events[0].title} + ${events.length - 1} autre(s)`;
-    };
-
-    const daysOfWeek = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"];
+    const daysOfWeek = ["L", "M", "M", "J", "V", "S", "D"];
     const days = getDaysInMonth(currentDate);
     const today = new Date();
 
-    const isActiveDate = (date) => {
-        if (!activeDate) return false;
-        return getLocalDateString(date) === getLocalDateString(activeDate);
-    };
+  const isActiveDate = (date) => {
+    if (!activeDate) return false;
+    return getLocalDateString(date) === getLocalDateString(activeDate);
+  };
 
     return (
         <div className="mini-calendar">
@@ -3344,8 +2788,8 @@ const MiniCalendar = ({
                 </button>
             </div>
             <div className="cal-grid">
-                {daysOfWeek.map((d, idx) => (
-                    <div key={`${d}-${idx}`} className="cal-day-label">
+                {daysOfWeek.map((d) => (
+                    <div key={d} className="cal-day-label">
                         {d}
                     </div>
                 ))}
@@ -4104,7 +3548,6 @@ const EventPlannerModal = ({
             title: "",
             date: "",
             time: "",
-            end_time: "",
             orateur: "",
             moderateur: "",
             famille_reception: "",
@@ -4122,7 +3565,6 @@ const EventPlannerModal = ({
                         ? getLocalDateString(editingEvent.date)
                         : "",
                     time: editingEvent.time || "",
-                    end_time: editingEvent.end_time || "",
                     orateur: editingEvent.orateur || "",
                     moderateur: editingEvent.moderateur || "",
                     famille_reception: editingEvent.famille_reception || "",
@@ -4135,7 +3577,6 @@ const EventPlannerModal = ({
                     title: "",
                     date: "",
                     time: "",
-                    end_time: "",
                     orateur: "",
                     moderateur: "",
                     famille_reception: "",
@@ -4148,11 +3589,9 @@ const EventPlannerModal = ({
         }
     }, [isOpen, editingEvent]);
 
-    useEffect(() => {
-        if (!isLoading) {
-            setIsSubmitting(false);
-        }
-    }, [isLoading]);
+  useEffect(() => {
+    if (!isLoading) setIsSubmitting(false);
+  }, [isLoading]);
 
     const cleanActivityData = (activity) => {
         return {
@@ -4161,10 +3600,6 @@ const EventPlannerModal = ({
             time:
                 activity.time && activity.time.trim() !== ""
                     ? activity.time
-                    : null,
-            end_time:
-                activity.end_time && activity.end_time.trim() !== ""
-                    ? activity.end_time
                     : null,
             orateur:
                 activity.orateur && activity.orateur.trim() !== ""
@@ -4209,7 +3644,6 @@ const EventPlannerModal = ({
                         title: "",
                         date: "",
                         time: "",
-                        end_time: "",
                         orateur: "",
                         moderateur: "",
                         famille_reception: "",
@@ -4223,7 +3657,7 @@ const EventPlannerModal = ({
         }
     };
 
-    if (!isOpen) return null;
+  if (!isOpen) return null;
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -4316,24 +3750,6 @@ const EventPlannerModal = ({
                                                         ...activities,
                                                     ];
                                                     updated[index].time =
-                                                        e.target.value;
-                                                    setActivities(updated);
-                                                }}
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Heure de fin</label>
-                                            <span className="input-icon">
-                                                <IconClock />
-                                            </span>
-                                            <input
-                                                type="time"
-                                                value={activity.end_time}
-                                                onChange={(e) => {
-                                                    const updated = [
-                                                        ...activities,
-                                                    ];
-                                                    updated[index].end_time =
                                                         e.target.value;
                                                     setActivities(updated);
                                                 }}
@@ -4434,7 +3850,6 @@ const EventPlannerModal = ({
                                             title: "",
                                             date: "",
                                             time: "",
-                                            end_time: "",
                                             orateur: "",
                                             moderateur: "",
                                             famille_reception: "",
@@ -4472,286 +3887,187 @@ const EventPlannerModal = ({
 };
 
 // --- IMPORT EXCEL MODAL ---
-const ImportExcelModal = ({
-    isOpen,
-    onClose,
-    onImport,
-    isLoading = false,
-    progress = 0,
-}) => {
-    const [file, setFile] = useState(null);
-    const [previewData, setPreviewData] = useState([]);
-    const [isDragActive, setIsDragActive] = useState(false);
-    const fileInputRef = useRef(null);
+const ImportExcelModal = ({ isOpen, onClose, onImport, isLoading = false, progress = 0 }) => {
+  const [file, setFile] = useState(null);
+  const [previewData, setPreviewData] = useState([]);
+  const [isDragActive, setIsDragActive] = useState(false);
+  const fileInputRef = useRef(null);
 
-    if (!isOpen) return null;
+  if (!isOpen) return null;
 
-    const handleFileSelect = (selectedFile) => {
-        setFile(selectedFile);
-        setPreviewData([
-            {
-                title: "Étude biblique",
-                date: "2026-04-15",
-                time: "18:30",
-                lieu: "Salle 101",
-                orateur: "Fr. Jean",
-                moderateur: "Fr. Paul",
-                famille_reception: "Famille Dupont",
-            },
-            {
-                title: "Réunion de prière",
-                date: "2026-04-16",
-                time: "19:00",
-                lieu: "Église",
-                orateur: "Fr. Marc",
-                moderateur: "Fr. Pierre",
-                famille_reception: "Famille Martin",
-            },
-        ]);
-    };
+  const handleFileSelect = (selectedFile) => {
+    setFile(selectedFile);
+    setPreviewData([
+      { title: 'Étude biblique', start_date: '2026-04-15', end_date: '', start_time: '18:30', end_time: '', lieu: 'Salle 101', orateur: 'Fr. Jean', moderateur: 'Fr. Paul', famille_reception: 'Famille Dupont' },
+      { title: 'Réunion de prière', start_date: '2026-04-16', end_date: '2026-04-18', start_time: '19:00', end_time: '21:00', lieu: 'Église', orateur: 'Fr. Marc', moderateur: 'Fr. Pierre', famille_reception: 'Famille Martin' },
+    ]);
+  };
 
-    return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div
-                className="modal-content import-modal-content"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="modal-header">
-                    <h2>Importer des programmes depuis Excel</h2>
-                    <button onClick={onClose}>✕</button>
-                </div>
-                <div className="modal-body">
-                    <div
-                        className={`import-area ${isDragActive ? "drag-active" : ""}`}
-                        onDragOver={(e) => {
-                            e.preventDefault();
-                            setIsDragActive(true);
-                        }}
-                        onDragLeave={(e) => {
-                            e.preventDefault();
-                            setIsDragActive(false);
-                        }}
-                        onDrop={(e) => {
-                            e.preventDefault();
-                            setIsDragActive(false);
-                            const droppedFile = e.dataTransfer.files[0];
-                            if (droppedFile) handleFileSelect(droppedFile);
-                        }}
-                        onClick={() => fileInputRef.current?.click()}
-                    >
-                        <div className="import-icon">📊</div>
-                        <div className="import-title">
-                            Glissez-déposez votre fichier Excel ici
-                        </div>
-                        <div className="import-subtitle">
-                            ou cliquez pour parcourir
-                        </div>
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            className="file-input"
-                            accept=".xlsx,.xls,.csv"
-                            onChange={(e) =>
-                                e.target.files[0] &&
-                                handleFileSelect(e.target.files[0])
-                            }
-                        />
-                        <button
-                            className="import-btn-select"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                fileInputRef.current?.click();
-                            }}
-                        >
-                            <IconFileExcel /> Sélectionner un fichier
-                        </button>
-                        {file && (
-                            <div className="file-info">
-                                <IconFileExcel /> {file.name} (
-                                {(file.size / 1024).toFixed(2)} KB)
-                            </div>
-                        )}
-                    </div>
-
-                    {isLoading && (
-                        <div className="progress-bar">
-                            <div
-                                className="progress-fill"
-                                style={{ width: `${progress}%` }}
-                            ></div>
-                        </div>
-                    )}
-
-                    {previewData.length > 0 && !isLoading && (
-                        <div className="preview-table">
-                            <table className="w-full">
-                                <thead>
-                                    <tr>
-                                        <th className="text-left p-2">Titre</th>
-                                        <th className="text-left p-2">Date</th>
-                                        <th className="text-left p-2">Heure</th>
-                                        <th className="text-left p-2">Lieu</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {previewData.map((item, idx) => (
-                                        <tr key={idx}>
-                                            <td className="p-2 border-t">
-                                                {item.title}
-                                            </td>
-                                            <td className="p-2 border-t">
-                                                {item.date}
-                                            </td>
-                                            <td className="p-2 border-t">
-                                                {item.time}
-                                            </td>
-                                            <td className="p-2 border-t">
-                                                {item.lieu}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
-                <div className="modal-footer">
-                    <button className="btn-cancel" onClick={onClose}>
-                        Annuler
-                    </button>
-                    <button
-                        className="btn-add"
-                        onClick={() => onImport(previewData)}
-                        disabled={!file || isLoading}
-                    >
-                        {isLoading
-                            ? `Import en cours... ${progress}%`
-                            : "Importer"}
-                    </button>
-                </div>
-            </div>
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content import-modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>Importer des programmes depuis Excel</h2>
+          <button onClick={onClose}>✕</button>
         </div>
-    );
+        <div className="modal-body">
+          <div className={`import-area ${isDragActive ? 'drag-active' : ''}`} onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }} onDragLeave={(e) => { e.preventDefault(); setIsDragActive(false); }} onDrop={(e) => { e.preventDefault(); setIsDragActive(false); const droppedFile = e.dataTransfer.files[0]; if (droppedFile) handleFileSelect(droppedFile); }} onClick={() => fileInputRef.current?.click()}>
+            <div className="import-icon">📊</div>
+            <div className="import-title">Glissez-déposez votre fichier Excel ici</div>
+            <div className="import-subtitle">ou cliquez pour parcourir</div>
+            <input ref={fileInputRef} type="file" className="file-input" accept=".xlsx,.xls,.csv" onChange={(e) => e.target.files[0] && handleFileSelect(e.target.files[0])} />
+            <button className="import-btn-select" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}><IconFileExcel /> Sélectionner un fichier</button>
+            {file && <div className="file-info"><IconFileExcel /> {file.name} ({(file.size / 1024).toFixed(2)} KB)</div>}
+          </div>
+          {isLoading && <div className="progress-bar"><div className="progress-fill" style={{ width: `${progress}%` }}></div></div>}
+          {previewData.length > 0 && !isLoading && (
+            <div className="preview-table">
+              <table className="w-full">
+                <thead><tr><th className="text-left p-2">Titre</th><th className="text-left p-2">Date début</th><th className="text-left p-2">Date fin</th><th className="text-left p-2">Heure début</th><th className="text-left p-2">Heure fin</th><th className="text-left p-2">Lieu</th></tr></thead>
+                <tbody>
+                  {previewData.map((item, idx) => (
+                    <tr key={idx}><td className="p-2 border-t">{item.title}</td><td className="p-2 border-t">{item.start_date}</td><td className="p-2 border-t">{item.end_date || '-'}</td><td className="p-2 border-t">{item.start_time || '-'}</td><td className="p-2 border-t">{item.end_time || '-'}</td><td className="p-2 border-t">{item.lieu}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+        <div className="modal-footer">
+          <button className="btn-cancel" onClick={onClose}>Annuler</button>
+          <button className="btn-add" onClick={() => onImport(previewData)} disabled={!file || isLoading}>{isLoading ? `Import en cours... ${progress}%` : 'Importer'}</button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
-// --- ADD MEDIA MODALE ---
-const AddMediaModal = ({
-    isOpen,
-    onClose,
-    onAdd,
-    isLoading = false,
-    events = [],
-    preselectedEventId = null,
-}) => {
-    const [mediaType, setMediaType] = useState("photo");
-    const [title, setTitle] = useState("");
-    const [description, setDescription] = useState("");
-    const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-    const [selectedEventId, setSelectedEventId] = useState(
-        preselectedEventId || "",
-    );
-    const [videoUrl, setVideoUrl] = useState("");
-    const [files, setFiles] = useState([]);
-    const [previews, setPreviews] = useState([]);
-    const [isDragActive, setIsDragActive] = useState(false);
-    const fileInputRef = useRef(null);
+// --- ADD MEDIA MODALE AVEC OPTION "IMAGE À LA UNE" ---
+const AddMediaModal = ({ isOpen, onClose, onAdd, isLoading = false, events = [], preselectedEventId = null }) => {
+  const [mediaType, setMediaType] = useState('photo');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedEventId, setSelectedEventId] = useState(preselectedEventId || '');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [files, setFiles] = useState([]);
+  const [previews, setPreviews] = useState([]);
+  const [isDragActive, setIsDragActive] = useState(false);
+  const [setAsFeatured, setSetAsFeatured] = useState(false);
+  const [selectedFeaturedIndex, setSelectedFeaturedIndex] = useState(null);
+  const fileInputRef = useRef(null);
 
-    useEffect(() => {
-        if (preselectedEventId) {
-            setSelectedEventId(preselectedEventId);
+  useEffect(() => {
+    if (preselectedEventId) setSelectedEventId(preselectedEventId);
+  }, [preselectedEventId]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSetAsFeatured(false);
+      setSelectedFeaturedIndex(null);
+      setFiles([]);
+      setPreviews([]);
+      setTitle('');
+      setDescription('');
+      setDate(new Date().toISOString().split('T')[0]);
+      setSelectedEventId(preselectedEventId || '');
+      setVideoUrl('');
+    }
+  }, [isOpen, preselectedEventId]);
+
+  if (!isOpen) return null;
+
+  const getYouTubeThumbnail = (url) => {
+    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = url.match(regex);
+    if (match) return `https://img.youtube.com/vi/${match[1]}/mqdefault.jpg`;
+    return null;
+  };
+
+  const getVimeoThumbnail = (url) => {
+    const regex = /vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|)(\d+)(?:$|\/|\?)/;
+    const match = url.match(regex);
+    if (match) return `https://vumbnail.com/${match[1]}.jpg`;
+    return null;
+  };
+
+  const getVideoThumbnail = (url) => getYouTubeThumbnail(url) || getVimeoThumbnail(url) || null;
+
+  const handleFilesSelect = (selectedFiles) => {
+    const validFiles = selectedFiles.filter(file => (mediaType === 'photo' && file.type.startsWith('image/')));
+    setFiles(prev => [...prev, ...validFiles]);
+    validFiles.forEach(file => { 
+      const reader = new FileReader(); 
+      reader.onloadend = () => { 
+        setPreviews(prev => [...prev, { url: reader.result, name: file.name, type: file.type, index: prev.length }]); 
+      }; 
+      reader.readAsDataURL(file); 
+    });
+  };
+
+  const handleSelectFeatured = (index) => {
+    setSelectedFeaturedIndex(index);
+    setSetAsFeatured(true);
+  };
+
+  const handleUnselectFeatured = () => {
+    setSelectedFeaturedIndex(null);
+    setSetAsFeatured(false);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (mediaType === 'video' && !videoUrl.trim()) { 
+      alert('Veuillez saisir l\'URL de la vidéo (YouTube, Vimeo, etc.)'); 
+      return; 
+    }
+    if (mediaType === 'photo' && files.length === 0) { 
+      alert('Veuillez sélectionner au moins une photo'); 
+      return; 
+    }
+    if (!title.trim()) { 
+      alert('Veuillez saisir un titre'); 
+      return; 
+    }
+    
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('description', description);
+    formData.append('date', date);
+    formData.append('type', mediaType);
+    if (selectedEventId) formData.append('special_event_id', selectedEventId);
+    
+    formData.append('set_as_featured', setAsFeatured);
+    if (setAsFeatured && selectedFeaturedIndex !== null) {
+      formData.append('featured_index', selectedFeaturedIndex);
+    }
+    
+    if (mediaType === 'video') {
+      formData.append('video_url', videoUrl);
+      const thumbnail = getVideoThumbnail(videoUrl);
+      if (thumbnail) formData.append('thumbnail', thumbnail);
+    } else {
+      files.forEach((file, index) => {
+        formData.append(`media[${index}]`, file);
+        if (setAsFeatured && selectedFeaturedIndex === index) {
+          formData.append(`featured_file_index`, index);
         }
-    }, [preselectedEventId]);
-
-    if (!isOpen) return null;
-
-    const getYouTubeThumbnail = (url) => {
-        const regex =
-            /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-        const match = url.match(regex);
-        if (match) {
-            return `https://img.youtube.com/vi/${match[1]}/mqdefault.jpg`;
-        }
-        return null;
-    };
-
-    const getVimeoThumbnail = (url) => {
-        const regex =
-            /vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|)(\d+)(?:$|\/|\?)/;
-        const match = url.match(regex);
-        if (match) {
-            return `https://vumbnail.com/${match[1]}.jpg`;
-        }
-        return null;
-    };
-
-    const getVideoThumbnail = (url) => {
-        return getYouTubeThumbnail(url) || getVimeoThumbnail(url) || null;
-    };
-
-    const handleFilesSelect = (selectedFiles) => {
-        const validFiles = selectedFiles.filter(
-            (file) => mediaType === "photo" && file.type.startsWith("image/"),
-        );
-        setFiles((prev) => [...prev, ...validFiles]);
-        validFiles.forEach((file) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setPreviews((prev) => [
-                    ...prev,
-                    { url: reader.result, name: file.name, type: file.type },
-                ]);
-            };
-            reader.readAsDataURL(file);
-        });
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        if (mediaType === "video" && !videoUrl.trim()) {
-            alert("Veuillez saisir l'URL de la vidéo (YouTube, Vimeo, etc.)");
-            return;
-        }
-
-        if (mediaType === "photo" && files.length === 0) {
-            alert("Veuillez sélectionner au moins une photo");
-            return;
-        }
-
-        if (!title.trim()) {
-            alert("Veuillez saisir un titre");
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append("title", title);
-        formData.append("description", description);
-        formData.append("date", date);
-        formData.append("type", mediaType);
-        if (selectedEventId)
-            formData.append("special_event_id", selectedEventId);
-
-        if (mediaType === "video") {
-            formData.append("video_url", videoUrl);
-            const thumbnail = getVideoThumbnail(videoUrl);
-            if (thumbnail) formData.append("thumbnail", thumbnail);
-        } else {
-            files.forEach((file, index) =>
-                formData.append(`media[${index}]`, file),
-            );
-        }
-
-        await onAdd(formData);
-
-        setMediaType("photo");
-        setTitle("");
-        setDescription("");
-        setDate(new Date().toISOString().split("T")[0]);
-        setSelectedEventId(preselectedEventId || "");
-        setVideoUrl("");
-        setFiles([]);
-        setPreviews([]);
-    };
+      });
+    }
+    
+    await onAdd(formData);
+    
+    setMediaType('photo');
+    setTitle('');
+    setDescription('');
+    setDate(new Date().toISOString().split('T')[0]);
+    setSelectedEventId(preselectedEventId || '');
+    setVideoUrl('');
+    setFiles([]);
+    setPreviews([]);
+    setSetAsFeatured(false);
+    setSelectedFeaturedIndex(null);
+  };
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -4831,21 +4147,27 @@ const AddMediaModal = ({
 
                         <div className="form-group modal-full">
                             <label>Activité associée</label>
-                            <Select2Single
-                                id="add-media-special-event-id"
-                                name="special_event_id"
+                            <span className="input-icon">
+                                <IconActivity />
+                            </span>
+                            <select
                                 value={selectedEventId}
                                 onChange={(e) =>
-                                    setSelectedEventId(e?.target?.value || "")
+                                    setSelectedEventId(e.target.value)
                                 }
-                                options={events.map((event) => ({
-                                    value: String(event.id),
-                                    label: event.title,
-                                    description: formatDateFrench(event.date),
-                                }))}
-                                placeholder="Rechercher une activité..."
-                                noOptionsMessage="Aucune activité trouvée"
-                            />
+                                style={{
+                                    appearance: "auto",
+                                    paddingLeft: "42px",
+                                }}
+                            >
+                                <option value="">-- Aucune activité --</option>
+                                {events.map((event) => (
+                                    <option key={event.id} value={event.id}>
+                                        {event.title} -{" "}
+                                        {formatDateFrench(event.date)}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
 
                         {mediaType === "video" ? (
@@ -5022,67 +4344,228 @@ const AddMediaModal = ({
     );
 };
 
-// Composant de pagination
+// --- PAGINATION COMPONENT ---
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
-    return (
-        <div className="pagination">
-            <button
-                className="pagination-btn"
-                onClick={() => onPageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-            >
-                ‹
-            </button>
-            <span className="pagination-info">
-                Page {currentPage} sur {totalPages}
-            </span>
-            <button
-                className="pagination-btn"
-                onClick={() => onPageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-            >
-                ›
-            </button>
-        </div>
-    );
+  return (
+    <div className="pagination">
+      <button className="pagination-btn" onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1}>‹</button>
+      <span className="pagination-info">Page {currentPage} sur {totalPages}</span>
+      <button className="pagination-btn" onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages}>›</button>
+    </div>
+  );
 };
 
-// Composant de navigation pour le défilement horizontal
-const GalleryScrollNav = ({
-    onScrollLeft,
-    onScrollRight,
-    hasLeftScroll,
-    hasRightScroll,
-}) => {
-    return (
-        <div className="gallery-nav">
-            <button
-                className="gallery-nav-btn"
-                onClick={onScrollLeft}
-                disabled={!hasLeftScroll}
-            >
-                <IconChevronLeft />
-            </button>
-            <button
-                className="gallery-nav-btn"
-                onClick={onScrollRight}
-                disabled={!hasRightScroll}
-            >
-                <IconChevronRight />
-            </button>
+// --- GALLERY SCROLL NAV ---
+const GalleryScrollNav = ({ onScrollLeft, onScrollRight, hasLeftScroll, hasRightScroll }) => {
+  return (
+    <div className="gallery-nav">
+      <button className="gallery-nav-btn" onClick={onScrollLeft} disabled={!hasLeftScroll}><IconChevronLeft /></button>
+      <button className="gallery-nav-btn" onClick={onScrollRight} disabled={!hasRightScroll}><IconChevronRight /></button>
+    </div>
+  );
+};
+
+// --- MEDIA VIEWER MODAL ---
+const MediaViewerModal = ({ isOpen, onClose, media, mediaList = [], currentIndex = 0, onNavigate }) => {
+  if (!isOpen || !media) return null;
+
+  const handlePrevious = () => { if (onNavigate && currentIndex > 0) onNavigate(currentIndex - 1); };
+  const handleNext = () => { if (onNavigate && currentIndex < mediaList.length - 1) onNavigate(currentIndex + 1); };
+  const currentMedia = mediaList[currentIndex] || media;
+
+  const getYouTubeEmbedUrl = (url) => {
+    if (!url) return null;
+    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = url.match(regex);
+    if (match) return `https://www.youtube.com/embed/${match[1]}`;
+    return null;
+  };
+
+  const getVimeoEmbedUrl = (url) => {
+    if (!url) return null;
+    const regex = /vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|)(\d+)(?:$|\/|\?)/;
+    const match = url.match(regex);
+    if (match) return `https://player.vimeo.com/video/${match[1]}`;
+    return null;
+  };
+
+  const getFacebookEmbedUrl = (url) => {
+    if (!url) return null;
+    let videoId = null;
+    const watchRegex = /facebook\.com\/watch\/?\?v=(\d+)/;
+    const watchMatch = url.match(watchRegex);
+    if (watchMatch) videoId = watchMatch[1];
+    const videosRegex = /facebook\.com\/(?:[^\/]+\/)?videos\/(?:[^\/]+\/)?(\d+)/;
+    const videosMatch = url.match(videosRegex);
+    if (videosMatch) videoId = videosMatch[1];
+    const fbWatchRegex = /fb\.watch\/([a-zA-Z0-9?=&]+)/;
+    const fbWatchMatch = url.match(fbWatchRegex);
+    if (fbWatchMatch) return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&mute=0`;
+    if (videoId) return `https://www.facebook.com/plugins/video.php?href=https://www.facebook.com/watch/?v=${videoId}&show_text=0&mute=0`;
+    if (url.includes('facebook.com')) return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&mute=0`;
+    return null;
+  };
+
+  const getEmbedUrl = (url) => {
+    if (!url) return null;
+    return getYouTubeEmbedUrl(url) || getVimeoEmbedUrl(url) || getFacebookEmbedUrl(url) || url;
+  };
+
+  const getPlatformName = (url) => {
+    if (!url) return 'la plateforme';
+    if (url.includes('youtube') || url.includes('youtu.be')) return 'YouTube';
+    if (url.includes('vimeo')) return 'Vimeo';
+    if (url.includes('facebook') || url.includes('fb.watch')) return 'Facebook';
+    return 'la plateforme';
+  };
+
+  const embedUrl = getEmbedUrl(currentMedia.video_url || currentMedia.url);
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content modal-content-media" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>{currentMedia.title}</h2>
+          <button onClick={onClose}>✕</button>
         </div>
-    );
+        <div className="modal-body">
+          <div className="media-viewer">
+            {currentMedia.type === 'video' ? (
+              embedUrl && (embedUrl.includes('youtube') || embedUrl.includes('vimeo') || embedUrl.includes('facebook')) ? (
+                embedUrl.includes('facebook') ? (
+                  <div className="text-center p-8 bg-gray-100 rounded-lg">
+                    <img src={currentMedia.thumbnail || '/default-video-thumb.jpg'} alt={currentMedia.title} className="max-h-64 mx-auto rounded-lg mb-4" />
+                    <a href={currentMedia.video_url || currentMedia.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">▶️ Ouvrir sur Facebook</a>
+                  </div>
+                ) : (
+                  <div className="relative" style={{ paddingBottom: '56.25%', height: 0 }}>
+                    <iframe src={embedUrl} title={currentMedia.title} className="absolute top-0 left-0 w-full h-full rounded-lg" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
+                  </div>
+                )
+              ) : (
+                <div className="text-center p-8 bg-gray-100 rounded-lg cursor-pointer" onClick={() => window.open(currentMedia.video_url || currentMedia.url, '_blank')}>
+                  <img src={currentMedia.thumbnail || '/default-video-thumb.jpg'} alt={currentMedia.title} className="max-h-64 mx-auto rounded-lg mb-4" />
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">▶️ Regarder sur {getPlatformName(currentMedia.video_url || currentMedia.url)}</div>
+                </div>
+              )
+            ) : (
+              <img src={currentMedia.url} alt={currentMedia.title} className="max-h-[70vh] mx-auto object-contain" />
+            )}
+            
+            {mediaList.length > 1 && (
+              <div className="media-viewer-nav">
+                <button className="media-viewer-nav-btn media-viewer-prev" onClick={handlePrevious} disabled={currentIndex === 0}>‹</button>
+                <button className="media-viewer-nav-btn media-viewer-next" onClick={handleNext} disabled={currentIndex === mediaList.length - 1}>›</button>
+              </div>
+            )}
+            
+            {mediaList.length > 1 && (<div className="media-viewer-counter">{currentIndex + 1} / {mediaList.length}</div>)}
+            
+            <div className="media-viewer-info">
+              <p><strong>Date:</strong> {formatDateFrench(currentMedia.date)}</p>
+              {currentMedia.description && <p><strong>Description:</strong> {currentMedia.description}</p>}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- PAST EVENT CONTENT MODAL ---
+const PastEventContentModal = ({ isOpen, onClose, date, events, mediaData }) => {
+  const [selectedMedia, setSelectedMedia] = useState(null);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+  const [currentMediaList, setCurrentMediaList] = useState([]);
+  const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false);
+
+  if (!isOpen || !date) return null;
+
+  const dateStr = getLocalDateString(date);
+  const eventsOnDate = events.filter(event => {
+    const eventStartDate = getLocalDateString(event.start_date);
+    if (event.end_date) {
+      const eventEndDate = getLocalDateString(event.end_date);
+      return dateStr >= eventStartDate && dateStr <= eventEndDate;
+    }
+    return getLocalDateString(event.start_date) === dateStr;
+  });
+  const formattedDate = formatDateFrench(date);
+
+  const openMediaViewer = (media, mediaArray) => {
+    const index = mediaArray.findIndex(m => m.id === media.id);
+    setCurrentMediaList(mediaArray);
+    setCurrentMediaIndex(index);
+    setSelectedMedia(media);
+    setIsMediaViewerOpen(true);
+  };
+
+  const closeMediaViewer = () => {
+    setIsMediaViewerOpen(false);
+    setSelectedMedia(null);
+    setCurrentMediaList([]);
+    setCurrentMediaIndex(0);
+  };
+
+  return (
+    <>
+      <div className="modal-overlay past-event-modal" onClick={onClose}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header"><h2>📅 {formattedDate}</h2><button onClick={onClose}>✕</button></div>
+          <div className="modal-body">
+            {eventsOnDate.length === 0 ? (
+              <div className="no-media"><p>Aucune activité programmée à cette date.</p></div>
+            ) : (
+              eventsOnDate.map(event => {
+                const eventMedia = mediaData.filter(m => m.special_event_id === event.id);
+                const eventStartDate = formatDateFrench(event.start_date);
+                const eventEndDate = event.end_date ? formatDateFrench(event.end_date) : null;
+                const isMultiDay = event.end_date && getLocalDateString(event.start_date) !== getLocalDateString(event.end_date);
+                return (
+                  <div key={event.id} className="past-event-item">
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: '700', marginBottom: '0.5rem' }}>{event.title}</h3>
+                    <p style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280', fontSize: '0.85rem' }}><IconCalendar /> {isMultiDay ? `${eventStartDate} → ${eventEndDate}` : eventStartDate}</p>
+                    {event.start_time && <p style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280', fontSize: '0.85rem' }}><IconClock /> {event.start_time.substring(0, 5)}{event.end_time ? ` → ${event.end_time.substring(0, 5)}` : ''}</p>}
+                    {event.lieu && <p style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280', fontSize: '0.85rem' }}><IconLocation /> {event.lieu}</p>}
+                    {event.orateur && <p style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}><strong>Orateur :</strong> {event.orateur}</p>}
+                    {event.moderateur && <p style={{ fontSize: '0.85rem' }}><strong>Modérateur :</strong> {event.moderateur}</p>}
+                    {eventMedia.length > 0 && (
+                      <div className="past-event-media">
+                        <h4>📸 Médias associés</h4>
+                        <div className="media-gallery">
+                          {eventMedia.map(media => (
+                            <div key={media.id} className="media-gallery-item" onClick={() => openMediaViewer(media, eventMedia)}>
+                              <img src={media.type === 'video' ? (media.thumbnail || '/default-video-thumb.jpg') : media.url} alt={media.title} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
+                              <div style={{ padding: '6px', fontSize: '0.7rem', textAlign: 'center', background: 'white' }}>{media.title.length > 20 ? media.title.substring(0, 20) + '...' : media.title}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+          <div className="modal-footer"><button className="btn-cancel" onClick={onClose}>Fermer</button></div>
+        </div>
+      </div>
+      <MediaViewerModal 
+        isOpen={isMediaViewerOpen} 
+        onClose={closeMediaViewer} 
+        media={selectedMedia}
+        mediaList={currentMediaList}
+        currentIndex={currentMediaIndex}
+        onNavigate={(newIndex) => { setCurrentMediaIndex(newIndex); setSelectedMedia(currentMediaList[newIndex]); }}
+      />
+    </>
+  );
 };
 
 // --- MAIN PAGE ---
 export default function Programmes() {
-    const { props } = usePage();
-    const {
-        initialClassList = [],
-        initialClassHistory = [],
-        currentClass = null,
-        galleryMedia = [],
-    } = props;
+  const { props } = usePage();
+  const { initialClassList = [], initialClassHistory = [], currentClass = null, galleryMedia = [] } = props;
 
     const [activeTab, setActiveTab] = useState("programmes");
     const [isEventModalOpen, setIsEventModalOpen] = useState(false);
@@ -5101,8 +4584,6 @@ export default function Programmes() {
     const [isDateContentModalOpen, setIsDateContentModalOpen] = useState(false);
     const [selectedDate, setSelectedDate] = useState(null);
     const [activeCalendarDate, setActiveCalendarDate] = useState(null);
-    const [showAllCurrentMonthEvents, setShowAllCurrentMonthEvents] =
-        useState(false);
     const [galleryFilter, setGalleryFilter] = useState({
         search: "",
         month: "",
@@ -5158,10 +4639,6 @@ export default function Programmes() {
     };
 
     const filteredEvents = getFilteredEventsByActiveDate();
-    const displayedEvents =
-        !activeCalendarDate && !showAllCurrentMonthEvents
-            ? filteredEvents.slice(0, 3)
-            : filteredEvents;
 
     const galleryAvailableMonths = [
         "Janvier",
@@ -5268,13 +4745,9 @@ export default function Programmes() {
     }, [filteredGalleryMedia, allEvents]);
 
     const totalPages = Math.ceil(groupedGalleryMedia.length / itemsPerPage);
-    const paginatedGroups = useMemo(
-        () =>
-            groupedGalleryMedia.slice(
-                (currentPage - 1) * itemsPerPage,
-                currentPage * itemsPerPage,
-            ),
-        [groupedGalleryMedia, currentPage, itemsPerPage],
+    const paginatedGroups = groupedGalleryMedia.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage,
     );
 
     const totalHistoryPages = Math.ceil(
@@ -5366,229 +4839,151 @@ export default function Programmes() {
         setCurrentMediaIndex(0);
     };
 
-    const openEditMediaModal = (media) => {
-        setEditingMedia(media);
-        setEditMediaForm({
-            title: media.title || "",
-            description: media.description || "",
-            date: media.date
-                ? new Date(media.date).toISOString().split("T")[0]
-                : "",
-            special_event_id: media.special_event_id || "",
-        });
-        setEditMediaErrors({});
-        setIsEditMediaModalOpen(true);
-    };
+  const openEditMediaModal = (media) => {
+    setEditingMedia(media);
+    setEditMediaForm({ title: media.title || '', description: media.description || '', date: media.date ? new Date(media.date).toISOString().split('T')[0] : '', special_event_id: media.special_event_id || '' });
+    setEditMediaErrors({});
+    setIsEditMediaModalOpen(true);
+  };
 
-    const closeEditMediaModal = () => {
-        setIsEditMediaModalOpen(false);
-        setEditingMedia(null);
-        setEditMediaForm({
-            title: "",
-            description: "",
-            date: "",
-            special_event_id: "",
-        });
-        setEditMediaErrors({});
-    };
+  const closeEditMediaModal = () => { setIsEditMediaModalOpen(false); setEditingMedia(null); setEditMediaForm({ title: '', description: '', date: '', special_event_id: '' }); setEditMediaErrors({}); };
+  const handleEditMediaFormChange = (e) => { const { name, value } = e.target; setEditMediaForm(prev => ({ ...prev, [name]: value })); if (editMediaErrors[name]) setEditMediaErrors(prev => ({ ...prev, [name]: '' })); };
 
-    const handleEditMediaFormChange = (e) => {
-        const { name, value } = e.target;
-        setEditMediaForm((prev) => ({ ...prev, [name]: value }));
-        if (editMediaErrors[name]) {
-            setEditMediaErrors((prev) => ({ ...prev, [name]: "" }));
+  const handleUpdateMedia = async (e) => {
+    e.preventDefault();
+    if (!editingMedia) return;
+    setIsEditMediaLoading(true);
+    setEditMediaErrors({});
+    try {
+      const response = await axios.put(`/conducteur/galerie/update/${editingMedia.id}`, editMediaForm);
+      if (response.data.success) {
+        const updatedMedia = response.data.media;
+        setGalleryData(prev => prev.map(m => m.id === editingMedia.id ? { ...m, ...updatedMedia } : m));
+        setMediaData(prev => prev.map(m => m.id === editingMedia.id ? { ...m, ...updatedMedia } : m));
+        showToast('Média mis à jour avec succès', 'success');
+        closeEditMediaModal();
+      } else {
+        showToast('Erreur lors de la mise à jour', 'error');
+      }
+    } catch (error) {
+      if (error.response?.status === 422) setEditMediaErrors(error.response.data.errors || {});
+      else showToast('Erreur: ' + (error.response?.data?.message || error.message), 'error');
+    } finally { 
+      setIsEditMediaLoading(false); 
+    }
+  };
+
+  const handleAddMedia = async (formData) => {
+    setIsLoading(true);
+    try {
+      const response = await axios.post('/conducteur/galerie/add', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (response.data.success) {
+        const newMedia = response.data.media || [];
+        setGalleryData(prev => [...newMedia, ...prev]);
+        setMediaData(prev => [...newMedia, ...prev]);
+        showToast(`${newMedia.length || 1} contenu(s) ajouté(s) !`, 'success');
+        closeAddMediaModal();
+      } else {
+        showToast('Erreur lors de l\'ajout', 'error');
+      }
+    } catch (error) { 
+      console.error('Erreur ajout média:', error); 
+      showToast(error.response?.data?.message || 'Erreur lors de l\'ajout', 'error'); 
+    } finally { 
+      setIsLoading(false); 
+    }
+  };
+
+  const handleDeleteSingleMedia = async (media) => {
+    setConfirmDialog({ isOpen: true, mediaToDelete: media, isMultiple: false, count: 1, onConfirm: async () => {
+      setIsLoading(true);
+      try {
+        const response = await axios.delete(`/conducteur/galerie/${media.id}`);
+        if (response.data.success) { 
+          setGalleryData(prev => prev.filter(m => m.id !== media.id));
+          setMediaData(prev => prev.filter(m => m.id !== media.id));
+          showToast('Média supprimé', 'success'); 
+        } else {
+          showToast('Erreur lors de la suppression', 'error');
         }
-    };
+      } catch (error) { 
+        console.error('Erreur suppression:', error); 
+        showToast('Erreur lors de la suppression', 'error'); 
+      } finally { 
+        setIsLoading(false); 
+        setConfirmDialog({ isOpen: false, mediaToDelete: null, isMultiple: false, count: 0 }); 
+      }
+    } });
+  };
 
-    const handleUpdateMedia = async (e) => {
-        e.preventDefault();
-        if (!editingMedia) return;
+  const setAsFeaturedMedia = async (media) => {
+    setIsLoading(true);
+    try {
+      const response = await axios.put(`/conducteur/galerie/set-featured/${media.id}`);
+      if (response.data.success) {
+        // Mettre à jour galleryData
+        setGalleryData(prev => prev.map(m => { 
+          if (m.special_event_id === media.special_event_id && m.type === 'photo') {
+            return { ...m, is_featured: m.id === media.id };
+          }
+          return m;
+        }));
+        
+        // Mettre à jour mediaData pour le carrousel
+        setMediaData(prev => prev.map(m => { 
+          if (m.special_event_id === media.special_event_id && m.type === 'photo') {
+            return { ...m, is_featured: m.id === media.id };
+          }
+          return m;
+        }));
+        
+        showToast('⭐ Image à la une définie avec succès', 'success');
+      } else {
+        showToast(response.data.message || 'Erreur lors de la mise à jour', 'error');
+      }
+    } catch (error) { 
+      console.error('Erreur:', error); 
+      showToast('Erreur lors de la définition de l\'image à la une', 'error'); 
+    } finally { 
+      setIsLoading(false); 
+    }
+  };
 
-        setIsEditMediaLoading(true);
-        setEditMediaErrors({});
+  const handleAddMediaToHistory = (eventId) => openAddMediaModal(eventId);
+  const toggleGalleryMediaSelection = (mediaId) => setSelectedGalleryMediaIds(prev => prev.includes(mediaId) ? prev.filter(id => id !== mediaId) : [...prev, mediaId]);
+  const cancelGallerySelection = () => { setSelectedGalleryMediaIds([]); setIsGallerySelectionMode(false); };
 
-        try {
-            const response = await axios.put(
-                `/conducteur/galerie/update/${editingMedia.id}`,
-                editMediaForm,
-            );
-            if (response.data.success) {
-                showToast("Média mis à jour avec succès", "success");
-                closeEditMediaModal();
-                setTimeout(() => router.reload(), 1500);
-            } else {
-                showToast("Erreur lors de la mise à jour", "error");
-            }
-        } catch (error) {
-            if (error.response?.status === 422) {
-                setEditMediaErrors(error.response.data.errors || {});
-            } else {
-                showToast(
-                    "Erreur: " +
-                        (error.response?.data?.message || error.message),
-                    "error",
-                );
-            }
-        } finally {
-            setIsEditMediaLoading(false);
+  const handleDeleteSelectedGalleryMedia = async () => {
+    if (selectedGalleryMediaIds.length === 0) { 
+      showToast('Aucun média sélectionné', 'error'); 
+      return; 
+    }
+    setConfirmDialog({ isOpen: true, mediaToDelete: null, isMultiple: true, count: selectedGalleryMediaIds.length, onConfirm: async () => {
+      setIsLoading(true);
+      let successCount = 0;
+      const deletedIds = [];
+      for (const mediaId of selectedGalleryMediaIds) {
+        try { 
+          const response = await axios.delete(`/conducteur/galerie/${mediaId}`); 
+          if (response.data.success) { 
+            successCount++; 
+            deletedIds.push(mediaId); 
+          } 
+        } catch (error) { 
+          console.error(`Erreur suppression média ${mediaId}:`, error); 
         }
-    };
-
-    const handleAddMedia = async (formData) => {
-        setIsLoading(true);
-        try {
-            const response = await axios.post(
-                "/conducteur/galerie/add",
-                formData,
-                { headers: { "Content-Type": "multipart/form-data" } },
-            );
-            if (response.data.success) {
-                showToast(
-                    `${response.data.media?.length || 1} contenu(s) ajouté(s) !`,
-                    "success",
-                );
-                closeAddMediaModal();
-                setTimeout(() => router.reload(), 1500);
-            } else showToast("Erreur lors de l'ajout", "error");
-        } catch (error) {
-            console.error("Erreur ajout média:", error);
-            const errorMessage =
-                error.response?.data?.message || "Erreur lors de l'ajout";
-            showToast(errorMessage, "error");
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleDeleteSingleMedia = async (media) => {
-        setConfirmDialog({
-            isOpen: true,
-            mediaToDelete: media,
-            isMultiple: false,
-            count: 1,
-            onConfirm: async () => {
-                setIsLoading(true);
-                try {
-                    const response = await axios.delete(
-                        `/conducteur/galerie/${media.id}`,
-                    );
-                    if (response.data.success) {
-                        showToast("Média supprimé", "success");
-                        setTimeout(() => router.reload(), 1500);
-                    } else showToast("Erreur lors de la suppression", "error");
-                } catch (error) {
-                    console.error("Erreur suppression:", error);
-                    showToast("Erreur lors de la suppression", "error");
-                } finally {
-                    setIsLoading(false);
-                    setConfirmDialog({
-                        isOpen: false,
-                        mediaToDelete: null,
-                        isMultiple: false,
-                        count: 0,
-                    });
-                }
-            },
-        });
-    };
-
-    // Fonction pour définir une image comme "à la une"
-    const setAsFeaturedMedia = async (media) => {
-        setIsLoading(true);
-        try {
-            const response = await axios.put(
-                `/conducteur/galerie/set-featured/${media.id}`,
-            );
-
-            if (response.data.success) {
-                // Mettre à jour localement l'état des médias
-                setMediaData((prev) =>
-                    prev.map((m) => {
-                        if (
-                            m.special_event_id === media.special_event_id &&
-                            m.type === "photo"
-                        ) {
-                            return { ...m, is_featured: m.id === media.id };
-                        }
-                        return m;
-                    }),
-                );
-                showToast("⭐ Image à la une définie avec succès", "success");
-                setTimeout(() => router.reload(), 1000);
-            } else {
-                showToast(
-                    response.data.message || "Erreur lors de la mise à jour",
-                    "error",
-                );
-            }
-        } catch (error) {
-            console.error("Erreur:", error);
-            showToast(
-                "Erreur lors de la définition de l'image à la une",
-                "error",
-            );
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleAddMediaToHistory = (eventId) => {
-        openAddMediaModal(eventId);
-    };
-
-    const toggleGalleryMediaSelection = (mediaId) => {
-        setSelectedGalleryMediaIds((prev) =>
-            prev.includes(mediaId)
-                ? prev.filter((id) => id !== mediaId)
-                : [...prev, mediaId],
-        );
-    };
-
-    const cancelGallerySelection = () => {
-        setSelectedGalleryMediaIds([]);
-        setIsGallerySelectionMode(false);
-    };
-
-    const handleDeleteSelectedGalleryMedia = async () => {
-        if (selectedGalleryMediaIds.length === 0) {
-            showToast("Aucun média sélectionné", "error");
-            return;
-        }
-        setConfirmDialog({
-            isOpen: true,
-            mediaToDelete: null,
-            isMultiple: true,
-            count: selectedGalleryMediaIds.length,
-            onConfirm: async () => {
-                setIsLoading(true);
-                let successCount = 0;
-                for (const mediaId of selectedGalleryMediaIds) {
-                    try {
-                        const response = await axios.delete(
-                            `/conducteur/galerie/${mediaId}`,
-                        );
-                        if (response.data.success) successCount++;
-                    } catch (error) {}
-                }
-                if (successCount > 0) {
-                    showToast(
-                        `${successCount} média(s) supprimé(s)`,
-                        "success",
-                    );
-                    setTimeout(() => router.reload(), 1500);
-                }
-                setSelectedGalleryMediaIds([]);
-                setIsGallerySelectionMode(false);
-                setIsLoading(false);
-                setConfirmDialog({
-                    isOpen: false,
-                    mediaToDelete: null,
-                    isMultiple: false,
-                    count: 0,
-                });
-            },
-        });
-    };
+      }
+      if (successCount > 0) { 
+        setGalleryData(prev => prev.filter(m => !deletedIds.includes(m.id)));
+        setMediaData(prev => prev.filter(m => !deletedIds.includes(m.id)));
+        showToast(`${successCount} média(s) supprimé(s)`, 'success'); 
+      }
+      setSelectedGalleryMediaIds([]); 
+      setIsGallerySelectionMode(false); 
+      setIsLoading(false); 
+      setConfirmDialog({ isOpen: false, mediaToDelete: null, isMultiple: false, count: 0 });
+    } });
+  };
 
     const handleAddMediaToGroup = (group) => {
         if (group.id !== "without_event") {
@@ -5631,22 +5026,10 @@ export default function Programmes() {
     const [scrollStates, setScrollStates] = useState({});
 
     const updateScrollState = (groupId) => {
-        const nextState = checkScrollButtons(groupId);
-        setScrollStates((prev) => {
-            const current = prev[groupId];
-            if (
-                current &&
-                current.hasLeftScroll === nextState.hasLeftScroll &&
-                current.hasRightScroll === nextState.hasRightScroll
-            ) {
-                return prev;
-            }
-
-            return {
-                ...prev,
-                [groupId]: nextState,
-            };
-        });
+        setScrollStates((prev) => ({
+            ...prev,
+            [groupId]: checkScrollButtons(groupId),
+        }));
     };
 
     useEffect(() => {
@@ -5663,14 +5046,14 @@ export default function Programmes() {
                 clearInterval(interval),
             );
         };
-    }, [currentPage, groupedGalleryMedia.length]);
+    }, [paginatedGroups]);
 
     const handleSaveEventModal = async (activities, eventId = null) => {
         console.log("Données envoyées:", activities, "eventId:", eventId);
         setIsLoading(true);
 
-        try {
-            if (eventId && activities.length === 1) {
+        if (eventId && activities.length === 1) {
+            try {
                 const response = await axios.put(
                     `/conducteur/programmes/event/${eventId}`,
                     activities[0],
@@ -5693,8 +5076,18 @@ export default function Programmes() {
                             "Erreur lors de la modification",
                         "error",
                     );
+                    setIsLoading(false);
                 }
-            } else {
+            } catch (error) {
+                console.error("Erreur modification:", error);
+                const errorMessage =
+                    error.response?.data?.message ||
+                    "Erreur lors de la modification";
+                showToast(errorMessage, "error");
+                setIsLoading(false);
+            }
+        } else {
+            try {
                 const response = await axios.post(
                     "/conducteur/programmes/events-multiple",
                     { activities },
@@ -5712,23 +5105,19 @@ export default function Programmes() {
                         response.data.message || "Erreur lors de la création",
                         "error",
                     );
+                    setIsLoading(false);
                 }
+            } catch (error) {
+                console.error(
+                    "Erreur création:",
+                    error.response?.data || error.message,
+                );
+                const errorMessage =
+                    error.response?.data?.message ||
+                    "Erreur lors de la création";
+                showToast(errorMessage, "error");
+                setIsLoading(false);
             }
-        } catch (error) {
-            console.error(
-                eventId && activities.length === 1
-                    ? "Erreur modification:"
-                    : "Erreur création:",
-                error.response?.data || error.message,
-            );
-            const errorMessage =
-                error.response?.data?.message ||
-                (eventId && activities.length === 1
-                    ? "Erreur lors de la modification"
-                    : "Erreur lors de la création");
-            showToast(errorMessage, "error");
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -5750,11 +5139,11 @@ export default function Programmes() {
                 setTimeout(() => router.reload(), 1500);
             } else {
                 showToast("Erreur lors de l'import", "error");
+                setIsLoading(false);
             }
         } catch (error) {
             console.error("Erreur import:", error);
             showToast("Erreur lors de l'import", "error");
-        } finally {
             setIsLoading(false);
         }
     };
@@ -5765,14 +5154,6 @@ export default function Programmes() {
         router.visit("/conducteur/programmes/all");
     const handleViewAllHistory = () =>
         router.visit("/conducteur/programmes/history");
-
-    useEffect(() => {
-        if (activeCalendarDate) {
-            setShowAllCurrentMonthEvents(true);
-            return;
-        }
-        setShowAllCurrentMonthEvents(false);
-    }, [activeCalendarDate]);
 
     const openQrModal = async (event) => {
         setIsQrModalOpen(true);
@@ -5876,116 +5257,89 @@ export default function Programmes() {
                                     {filteredEvents.length > 0 ? (
                                         <div className="horizontal-scroller">
                                             <div className="cards-wrapper">
-                                                {displayedEvents.map(
-                                                    (event) => {
-                                                        const qrAccess =
-                                                            getQrAccessState(
-                                                                event,
-                                                            );
-
-                                                        return (
-                                                            <div
-                                                                key={event.id}
-                                                                className="special-card"
-                                                            >
+                                                {filteredEvents.map((event) => (
+                                                    <div
+                                                        key={event.id}
+                                                        className="special-card"
+                                                    >
+                                                        <button
+                                                            className="edit-btn-card"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEditEvent(
+                                                                    event,
+                                                                );
+                                                            }}
+                                                        >
+                                                            <IconEdit />
+                                                        </button>
+                                                        <div>
+                                                            <div className="special-header">
+                                                                <span className="special-date">
+                                                                    {formatDateFrench(
+                                                                        event.date,
+                                                                    )}
+                                                                </span>
+                                                            </div>
+                                                            <h4 className="special-title">
+                                                                {event.title}
+                                                            </h4>
+                                                            {event.lieu && (
+                                                                <p className="special-lieu">
+                                                                    <IconLocation />{" "}
+                                                                    {event.lieu}
+                                                                </p>
+                                                            )}
+                                                            <div className="time-qr-row">
+                                                                <p>
+                                                                    <IconClock />{" "}
+                                                                    {event.time
+                                                                        ? event.time.substring(
+                                                                              0,
+                                                                              5,
+                                                                          )
+                                                                        : "--:--"}
+                                                                </p>
                                                                 <button
-                                                                    className="edit-btn-card"
+                                                                    type="button"
+                                                                    className="btn-qr-inline"
                                                                     onClick={(
                                                                         e,
                                                                     ) => {
                                                                         e.stopPropagation();
-                                                                        handleEditEvent(
+                                                                        openQrModal(
                                                                             event,
                                                                         );
                                                                     }}
                                                                 >
-                                                                    <IconEdit />
+                                                                    Code Qr
                                                                 </button>
-                                                                <div>
-                                                                    <div className="special-header">
-                                                                        <span className="special-date">
-                                                                            {formatDateFrench(
-                                                                                event.date,
-                                                                            )}
-                                                                        </span>
-                                                                    </div>
-                                                                    <h4 className="special-title">
-                                                                        {
-                                                                            event.title
-                                                                        }
-                                                                    </h4>
-                                                                    {event.lieu && (
-                                                                        <p className="special-lieu">
-                                                                            <IconLocation />{" "}
-                                                                            {
-                                                                                event.lieu
-                                                                            }
-                                                                        </p>
-                                                                    )}
-                                                                    <div className="time-qr-row">
-                                                                        <p>
-                                                                            <IconClock />{" "}
-                                                                            {event.time
-                                                                                ? event.time.substring(
-                                                                                      0,
-                                                                                      5,
-                                                                                  )
-                                                                                : "--:--"}
-                                                                        </p>
-                                                                        <button
-                                                                            type="button"
-                                                                            className="btn-qr-inline"
-                                                                            disabled={
-                                                                                !qrAccess.enabled
-                                                                            }
-                                                                            title={
-                                                                                qrAccess.reason
-                                                                            }
-                                                                            onClick={(
-                                                                                e,
-                                                                            ) => {
-                                                                                e.stopPropagation();
-                                                                                if (
-                                                                                    !qrAccess.enabled
-                                                                                ) {
-                                                                                    return;
-                                                                                }
-                                                                                openQrModal(
-                                                                                    event,
-                                                                                );
-                                                                            }}
-                                                                        >
-                                                                            Code
-                                                                            Qr
-                                                                        </button>
-                                                                    </div>
-                                                                    <div className="special-meta">
-                                                                        {event.orateur && (
-                                                                            <div>
-                                                                                <span className="special-meta-label">
-                                                                                    Orateur:
-                                                                                </span>{" "}
-                                                                                {
-                                                                                    event.orateur
-                                                                                }
-                                                                            </div>
-                                                                        )}
-                                                                        {event.moderateur && (
-                                                                            <div>
-                                                                                <span className="special-meta-label">
-                                                                                    Modérateur:
-                                                                                </span>{" "}
-                                                                                {
-                                                                                    event.moderateur
-                                                                                }
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
                                                             </div>
-                                                        );
-                                                    },
-                                                )}
+                                                            <div className="special-meta">
+                                                                {event.orateur && (
+                                                                    <div>
+                                                                        <span className="special-meta-label">
+                                                                            Orateur:
+                                                                        </span>{" "}
+                                                                        {
+                                                                            event.orateur
+                                                                        }
+                                                                    </div>
+                                                                )}
+                                                                {event.moderateur && (
+                                                                    <div>
+                                                                        <span className="special-meta-label">
+                                                                            Modérateur:
+                                                                        </span>{" "}
+                                                                        {
+                                                                            event.moderateur
+                                                                        }
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
                                     ) : (
@@ -6770,386 +6124,95 @@ export default function Programmes() {
         );
     };
 
-    return (
-        <>
-            <Head title="Programme et Activités" />
-            <style>{styles}</style>
-            {toast && (
-                <Toast
-                    message={toast.message}
-                    type={toast.type}
-                    onClose={hideToast}
-                />
-            )}
-
-            <ConfirmDialog
-                isOpen={confirmDialog.isOpen}
-                onClose={() =>
-                    setConfirmDialog({
-                        isOpen: false,
-                        mediaToDelete: null,
-                        isMultiple: false,
-                        count: 0,
-                    })
-                }
-                onConfirm={confirmDialog.onConfirm}
-                title={
-                    confirmDialog.isMultiple
-                        ? "Suppression multiple"
-                        : "Supprimer le média"
-                }
-                message={
-                    confirmDialog.isMultiple
-                        ? `Voulez-vous vraiment supprimer ${confirmDialog.count} média(s) ?`
-                        : `Voulez-vous vraiment supprimer "${confirmDialog.mediaToDelete?.title}" ?`
-                }
-            />
-
-            {isEditMediaModalOpen && editingMedia && (
-                <div className="modal-overlay" onClick={closeEditMediaModal}>
-                    <div
-                        className="modal-content"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="modal-header">
-                            <h2>Modifier le média</h2>
-                            <button onClick={closeEditMediaModal}>✕</button>
-                        </div>
-                        <div className="modal-body">
-                            <form
-                                onSubmit={handleUpdateMedia}
-                                id="edit-media-form"
-                            >
-                                <div className="bg-gray-100 rounded-xl p-4 mb-4">
-                                    <h3 className="font-semibold text-gray-700 mb-3">
-                                        Aperçu actuel
-                                    </h3>
-                                    <div className="flex justify-center">
-                                        {editingMedia.type === "video" ? (
-                                            <img
-                                                src={
-                                                    editingMedia.thumbnail ||
-                                                    editingMedia.url ||
-                                                    "/default-video-thumb.jpg"
-                                                }
-                                                alt={editingMedia.title}
-                                                className="max-h-48 rounded-lg shadow object-contain"
-                                            />
-                                        ) : (
-                                            <img
-                                                src={editingMedia.url}
-                                                alt={editingMedia.title}
-                                                className="max-h-48 rounded-lg shadow object-contain"
-                                            />
-                                        )}
-                                    </div>
-                                    <p className="text-center text-sm text-gray-500 mt-2">
-                                        Type:{" "}
-                                        {editingMedia.type === "video"
-                                            ? "Vidéo externe"
-                                            : "Photo"}{" "}
-                                        | ID: {editingMedia.id}
-                                    </p>
-                                </div>
-
-                                <div className="modal-form-grid">
-                                    <div className="form-group modal-full">
-                                        <label>Titre *</label>
-                                        <span className="input-icon">
-                                            <IconEdit />
-                                        </span>
-                                        <input
-                                            type="text"
-                                            name="title"
-                                            value={editMediaForm.title}
-                                            onChange={handleEditMediaFormChange}
-                                            className={
-                                                editMediaErrors.title
-                                                    ? "border-red-500"
-                                                    : ""
-                                            }
-                                            required
-                                        />
-                                        {editMediaErrors.title && (
-                                            <p className="text-red-500 text-sm mt-1">
-                                                {editMediaErrors.title}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div className="form-group modal-full">
-                                        <label>Description</label>
-                                        <span className="input-icon">
-                                            <IconEdit />
-                                        </span>
-                                        <textarea
-                                            name="description"
-                                            rows="3"
-                                            value={editMediaForm.description}
-                                            onChange={handleEditMediaFormChange}
-                                        />
-                                        {editMediaErrors.description && (
-                                            <p className="text-red-500 text-sm mt-1">
-                                                {editMediaErrors.description}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label>Date *</label>
-                                        <span className="input-icon">
-                                            <IconCalendar />
-                                        </span>
-                                        <input
-                                            type="date"
-                                            name="date"
-                                            value={editMediaForm.date}
-                                            onChange={handleEditMediaFormChange}
-                                            className={
-                                                editMediaErrors.date
-                                                    ? "border-red-500"
-                                                    : ""
-                                            }
-                                            required
-                                        />
-                                        {editMediaErrors.date && (
-                                            <p className="text-red-500 text-sm mt-1">
-                                                {editMediaErrors.date}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label>Activité associée</label>
-                                        <span className="input-icon">
-                                            <IconActivity />
-                                        </span>
-                                        <select
-                                            name="special_event_id"
-                                            value={
-                                                editMediaForm.special_event_id
-                                            }
-                                            onChange={handleEditMediaFormChange}
-                                            style={{
-                                                appearance: "auto",
-                                                paddingLeft: "42px",
-                                            }}
-                                        >
-                                            <option value="">
-                                                -- Aucune activité --
-                                            </option>
-                                            {allEvents.map((event) => (
-                                                <option
-                                                    key={event.id}
-                                                    value={event.id}
-                                                >
-                                                    {event.title} -{" "}
-                                                    {formatDateFrench(
-                                                        event.date,
-                                                    )}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        {editMediaErrors.special_event_id && (
-                                            <p className="text-red-500 text-sm mt-1">
-                                                {
-                                                    editMediaErrors.special_event_id
-                                                }
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                        <div className="modal-footer">
-                            <button
-                                className="btn-cancel"
-                                onClick={closeEditMediaModal}
-                            >
-                                Annuler
-                            </button>
-                            <button
-                                type="submit"
-                                form="edit-media-form"
-                                className="btn-add"
-                                disabled={isEditMediaLoading}
-                            >
-                                <IconPlus />{" "}
-                                {isEditMediaLoading
-                                    ? "Enregistrement..."
-                                    : "Enregistrer"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <EventPlannerModal
-                isOpen={isEventModalOpen}
-                onClose={closeEventModal}
-                onSave={handleSaveEventModal}
-                editingEvent={editingEvent}
-                isLoading={isLoading}
-            />
-            <ImportExcelModal
-                isOpen={isImportModalOpen}
-                onClose={closeImportModal}
-                onImport={handleImportEvents}
-                isLoading={isLoading}
-                progress={importProgress}
-            />
-            <AddMediaModal
-                isOpen={isAddMediaModalOpen}
-                onClose={closeAddMediaModal}
-                onAdd={handleAddMedia}
-                isLoading={isLoading}
-                events={allEvents}
-                preselectedEventId={preselectedEventId}
-            />
-            <MediaViewerModal
-                isOpen={isMediaViewerOpen}
-                onClose={closeMediaViewer}
-                media={selectedMedia}
-                mediaList={currentMediaList}
-                currentIndex={currentMediaIndex}
-                onNavigate={handleNavigateMedia}
-            />
-            <PastEventContentModal
-                isOpen={isDateContentModalOpen}
-                onClose={closeDateContentModal}
-                date={selectedDate}
-                events={allEvents}
-                mediaData={mediaData}
-            />
-
-            {isQrModalOpen && (
-                <div className="modal-overlay" onClick={closeQrModal}>
-                    <div
-                        className="modal-content"
-                        style={{ maxWidth: "520px" }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="modal-header">
-                            <h2>QR de présence</h2>
-                            <button onClick={closeQrModal}>✕</button>
-                        </div>
-                        <div
-                            className="modal-body"
-                            style={{ textAlign: "center" }}
-                        >
-                            {isQrLoading && <p>Génération du QR code...</p>}
-
-                            {!isQrLoading && qrPayload?.qr_code && (
-                                <>
-                                    <img
-                                        src={qrPayload.qr_code}
-                                        alt="QR code présence"
-                                        style={{
-                                            width: "280px",
-                                            maxWidth: "100%",
-                                            margin: "0 auto 16px",
-                                        }}
-                                    />
-                                    <p
-                                        style={{
-                                            fontWeight: 700,
-                                            marginBottom: "10px",
-                                        }}
-                                    >
-                                        {qrPayload?.event?.title}
-                                    </p>
-                                    <p
-                                        style={{
-                                            color: "#78350f",
-                                            background: "#fffbeb",
-                                            border: "1px solid #fbbf24",
-                                            borderRadius: "10px",
-                                            fontSize: "0.88rem",
-                                            lineHeight: 1.5,
-                                            padding: "10px 12px",
-                                            marginBottom: "10px",
-                                        }}
-                                    >
-                                        Scannez puis entrez votre code membre
-                                        pour marquer votre presence.
-                                    </p>
-                                    <p
-                                        style={{
-                                            color: "#6b7280",
-                                            fontSize: "0.9rem",
-                                            marginBottom: "14px",
-                                            wordBreak: "break-all",
-                                        }}
-                                    >
-                                        {qrPayload.scan_url}
-                                    </p>
-                                    <div
-                                        style={{
-                                            display: "flex",
-                                            justifyContent: "center",
-                                            gap: "10px",
-                                            flexWrap: "wrap",
-                                        }}
-                                    >
-                                        <button
-                                            className="btn-add"
-                                            type="button"
-                                            onClick={copyQrUrl}
-                                        >
-                                            Copier le lien
-                                        </button>
-                                        <button
-                                            className="btn-add"
-                                            type="button"
-                                            onClick={downloadQrSheetPdf}
-                                        >
-                                            Imprimer le scan
-                                        </button>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <div
-                className="min-h-screen animate-fade-in-up"
-                style={{
-                    background:
-                        "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
-                    paddingBottom: "40px",
-                }}
-            >
-                <main style={{ padding: "0 15px" }}>
-                    <div className="page-header-wrapper">
-                        <button className="btn-back" onClick={handleGoBack}>
-                            <IconArrowLeft /> Retour
-                        </button>
-                        <div className="tabs-container-header">
-                            <button
-                                className={`tab-btn-header ${activeTab === "programmes" ? "active" : ""}`}
-                                onClick={() => setActiveTab("programmes")}
-                            >
-                                <IconActivity /> Programmes
-                            </button>
-                            <button
-                                className={`tab-btn-header ${activeTab === "historique" ? "active" : ""}`}
-                                onClick={() => setActiveTab("historique")}
-                            >
-                                <IconHistory /> Historique
-                            </button>
-                            <button
-                                className={`tab-btn-header ${activeTab === "parcours" ? "active" : ""}`}
-                                onClick={() => setActiveTab("parcours")}
-                            >
-                                <IconRoadmap /> Galerie
-                            </button>
-                        </div>
-                    </div>
-                    {renderContent()}
-                </main>
+  return (
+    <>
+      <Head title="Programme et Activités" />
+      <style>{styles}</style>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
+      
+      <ConfirmDialog 
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ isOpen: false, mediaToDelete: null, isMultiple: false, count: 0 })}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.isMultiple ? "Suppression multiple" : "Supprimer le média"}
+        message={confirmDialog.isMultiple ? `Voulez-vous vraiment supprimer ${confirmDialog.count} média(s) ?` : `Voulez-vous vraiment supprimer "${confirmDialog.mediaToDelete?.title}" ?`}
+      />
+      
+      {isEditMediaModalOpen && editingMedia && (
+        <div className="modal-overlay" onClick={closeEditMediaModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Modifier le média</h2>
+              <button onClick={closeEditMediaModal}>✕</button>
             </div>
-        </>
-    );
+            <div className="modal-body">
+              <form onSubmit={handleUpdateMedia} id="edit-media-form">
+                <div className="bg-gray-100 rounded-xl p-4 mb-4">
+                  <h3 className="font-semibold text-gray-700 mb-3">Aperçu actuel</h3>
+                  <div className="flex justify-center">
+                    {editingMedia.type === 'video' ? (
+                      <img src={editingMedia.thumbnail || editingMedia.url || '/default-video-thumb.jpg'} alt={editingMedia.title} className="max-h-48 rounded-lg shadow object-contain" />
+                    ) : (
+                      <img src={editingMedia.url} alt={editingMedia.title} className="max-h-48 rounded-lg shadow object-contain" />
+                    )}
+                  </div>
+                </div>
+                <div className="modal-form-grid">
+                  <div className="form-group modal-full">
+                    <label>Titre *</label>
+                    <span className="input-icon"><IconEdit /></span>
+                    <input type="text" name="title" value={editMediaForm.title} onChange={handleEditMediaFormChange} required />
+                    {editMediaErrors.title && <p className="text-red-500 text-sm mt-1">{editMediaErrors.title}</p>}
+                  </div>
+                  <div className="form-group modal-full">
+                    <label>Description</label>
+                    <span className="input-icon"><IconEdit /></span>
+                    <textarea name="description" rows="3" value={editMediaForm.description} onChange={handleEditMediaFormChange} />
+                  </div>
+                  <div className="form-group">
+                    <label>Date *</label>
+                    <span className="input-icon"><IconCalendar /></span>
+                    <input type="date" name="date" value={editMediaForm.date} onChange={handleEditMediaFormChange} required />
+                    {editMediaErrors.date && <p className="text-red-500 text-sm mt-1">{editMediaErrors.date}</p>}
+                  </div>
+                  <div className="form-group">
+                    <label>Activité associée</label>
+                    <span className="input-icon"><IconActivity /></span>
+                    <select name="special_event_id" value={editMediaForm.special_event_id} onChange={handleEditMediaFormChange} style={{ appearance: 'auto', paddingLeft: '42px' }}>
+                      <option value="">-- Aucune activité --</option>
+                      {allEvents.map(event => (<option key={event.id} value={event.id}>{event.title} - {formatDateFrench(event.start_date)}</option>))}
+                    </select>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-cancel" onClick={closeEditMediaModal}>Annuler</button>
+              <button type="submit" form="edit-media-form" className="btn-add" disabled={isEditMediaLoading}><IconPlus /> {isEditMediaLoading ? 'Enregistrement...' : 'Enregistrer'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <EventPlannerModal isOpen={isEventModalOpen} onClose={closeEventModal} onSave={handleSaveEventModal} editingEvent={editingEvent} isLoading={isLoading} />
+      <ImportExcelModal isOpen={isImportModalOpen} onClose={closeImportModal} onImport={handleImportEvents} isLoading={isLoading} progress={importProgress} />
+      <AddMediaModal isOpen={isAddMediaModalOpen} onClose={closeAddMediaModal} onAdd={handleAddMedia} isLoading={isLoading} events={allEvents} preselectedEventId={preselectedEventId} />
+      <MediaViewerModal isOpen={isMediaViewerOpen} onClose={closeMediaViewer} media={selectedMedia} mediaList={currentMediaList} currentIndex={currentMediaIndex} onNavigate={handleNavigateMedia} />
+      <PastEventContentModal isOpen={isDateContentModalOpen} onClose={closeDateContentModal} date={selectedDate} events={allEvents} mediaData={mediaData} />
+      
+      <div className="min-h-screen animate-fade-in-up" style={{ background: "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)", paddingBottom: '40px' }}>
+        <main style={{ padding: '0 15px' }}>
+          <div className="page-header-wrapper">
+            <button className="btn-back" onClick={handleGoBack}><IconArrowLeft /> Retour</button>
+            <div className="tabs-container-header">
+              <button className={`tab-btn-header ${activeTab === 'programmes' ? 'active' : ''}`} onClick={() => setActiveTab('programmes')}><IconActivity /> Programmes</button>
+              <button className={`tab-btn-header ${activeTab === 'historique' ? 'active' : ''}`} onClick={() => setActiveTab('historique')}><IconHistory /> Historique</button>
+              <button className={`tab-btn-header ${activeTab === 'parcours' ? 'active' : ''}`} onClick={() => setActiveTab('parcours')}><IconRoadmap /> Galerie</button>
+            </div>
+          </div>
+          {renderContent()}
+        </main>
+      </div>
+    </>
+  );
 }

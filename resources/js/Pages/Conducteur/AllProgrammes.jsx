@@ -1,10 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
+// pages/Conducteur/AllProgrammes.jsx
+
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
 import axios from 'axios';
 import html2pdf from 'html2pdf.js';
 import * as XLSX from 'xlsx';
 
-// Styles pour le tableau (conservés identiques)
+// Styles pour le tableau
 const tableStyles = `
 .table-container {
     background: white;
@@ -451,7 +453,7 @@ tr.past-row td.actions-cell .btn-table-delete {
     background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(12px);
     width: 95%;
-    max-width: 600px;
+    max-width: 700px;
     max-height: 90vh;
     border-radius: 1.5rem;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -751,7 +753,7 @@ textarea {
 }
 `;
 
-// Icônes (conservées identiques)
+// Icônes
 const IconArrowLeft = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
 );
@@ -896,8 +898,10 @@ const AlertModal = ({ isOpen, onClose, title, message, icon = "⚠️" }) => {
 const EditProgrammeModal = ({ isOpen, onClose, event, onSave }) => {
   const [formData, setFormData] = useState({
     title: '',
-    date: '',
-    time: '',
+    start_date: '',
+    end_date: '',
+    start_time: '',
+    end_time: '',
     orateur: '',
     moderateur: '',
     famille_reception: '',
@@ -910,8 +914,10 @@ const EditProgrammeModal = ({ isOpen, onClose, event, onSave }) => {
     if (isOpen && event) {
       setFormData({
         title: event.title || '',
-        date: event.date ? event.date.split('T')[0] : '',
-        time: event.time?.substring(0, 5) || '',
+        start_date: event.start_date ? event.start_date.split('T')[0] : (event.date ? event.date.split('T')[0] : ''),
+        end_date: event.end_date ? event.end_date.split('T')[0] : '',
+        start_time: event.start_time?.substring(0, 5) || event.time?.substring(0, 5) || '',
+        end_time: event.end_time?.substring(0, 5) || '',
         orateur: event.orateur || '',
         moderateur: event.moderateur || '',
         famille_reception: event.famille_reception || '',
@@ -945,6 +951,8 @@ const EditProgrammeModal = ({ isOpen, onClose, event, onSave }) => {
 
   if (!isOpen) return null;
 
+  const today = new Date().toISOString().split('T')[0];
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -961,33 +969,54 @@ const EditProgrammeModal = ({ isOpen, onClose, event, onSave }) => {
                 <input type="text" name="title" placeholder="Ex: Étude biblique, Réunion de prière..." value={formData.title} onChange={handleChange} required />
                 {errors.title && <small style={{ color: '#dc2626', marginTop: '4px' }}>{errors.title}</small>}
               </div>
+              
               <div className="form-group">
-                <label>Date *</label>
+                <label>Date de début *</label>
                 <span className="input-icon"><IconCalendar /></span>
-                <input type="date" name="date" value={formData.date} onChange={handleChange} required />
-                {errors.date && <small style={{ color: '#dc2626', marginTop: '4px' }}>{errors.date}</small>}
+                <input type="date" name="start_date" value={formData.start_date} onChange={handleChange} required />
+                {errors.start_date && <small style={{ color: '#dc2626', marginTop: '4px' }}>{errors.start_date}</small>}
               </div>
+              
               <div className="form-group">
-                <label>Heure *</label>
-                <span className="input-icon"><IconClock /></span>
-                <input type="time" name="time" value={formData.time} onChange={handleChange} required />
-                {errors.time && <small style={{ color: '#dc2626', marginTop: '4px' }}>{errors.time}</small>}
+                <label>Date de fin</label>
+                <span className="input-icon"><IconCalendar /></span>
+                <input type="date" name="end_date" value={formData.end_date} onChange={handleChange} min={formData.start_date || today} />
+                <small style={{ fontSize: '0.7rem', color: '#6b7280' }}>Optionnelle - laisse vide pour une activité d'un jour</small>
+                {errors.end_date && <small style={{ color: '#dc2626', marginTop: '4px' }}>{errors.end_date}</small>}
               </div>
+              
+              <div className="form-group">
+                <label>Heure de début</label>
+                <span className="input-icon"><IconClock /></span>
+                <input type="time" name="start_time" value={formData.start_time} onChange={handleChange} />
+                {errors.start_time && <small style={{ color: '#dc2626', marginTop: '4px' }}>{errors.start_time}</small>}
+              </div>
+              
+              <div className="form-group">
+                <label>Heure de fin</label>
+                <span className="input-icon"><IconClock /></span>
+                <input type="time" name="end_time" value={formData.end_time} onChange={handleChange} />
+                {errors.end_time && <small style={{ color: '#dc2626', marginTop: '4px' }}>{errors.end_time}</small>}
+              </div>
+              
               <div className="form-group">
                 <label>Orateur</label>
                 <span className="input-icon"><IconMic /></span>
                 <input type="text" name="orateur" placeholder="Nom de l'orateur..." value={formData.orateur} onChange={handleChange} />
               </div>
+              
               <div className="form-group">
                 <label>Modérateur</label>
                 <span className="input-icon"><IconUser /></span>
                 <input type="text" name="moderateur" placeholder="Nom du modérateur..." value={formData.moderateur} onChange={handleChange} />
               </div>
+              
               <div className="form-group modal-full">
                 <label>Famille de réception</label>
                 <span className="input-icon"><IconFamily /></span>
                 <input type="text" name="famille_reception" placeholder="Nom de la famille de réception..." value={formData.famille_reception} onChange={handleChange} />
               </div>
+              
               <div className="form-group modal-full">
                 <label>Lieu de l'événement</label>
                 <span className="input-icon" style={{ top: '42px' }}><IconLocation /></span>
@@ -1010,6 +1039,7 @@ const EditProgrammeModal = ({ isOpen, onClose, event, onSave }) => {
 export default function AllProgrammes() {
   const { props } = usePage();
   const { allProgrammes = [], currentClass = null } = props;
+  
   const [toast, setToast] = useState(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isExportingExcel, setIsExportingExcel] = useState(false);
@@ -1017,7 +1047,7 @@ export default function AllProgrammes() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const tableRef = useRef(null);
   
-  // Pagination - 15 éléments par page
+  // Pagination - 15 éléments par page (frontend car les données sont déjà chargées)
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
   
@@ -1041,7 +1071,7 @@ export default function AllProgrammes() {
     icon: '⚠️'
   });
   
-  // États pour les filtres
+  // États pour les filtres (frontend)
   const [filters, setFilters] = useState({
     search: '',
     status: 'all',
@@ -1049,36 +1079,82 @@ export default function AllProgrammes() {
     year: new Date().getFullYear().toString()
   });
   
-  // Années disponibles
-  const availableYears = [...new Set(allProgrammes.map(event => new Date(event.date).getFullYear()))].sort((a, b) => b - a);
+  // Années disponibles (calculées depuis les données)
+  const availableYears = [...new Set(allProgrammes.map(event => new Date(event.start_date || event.date).getFullYear()))].sort((a, b) => b - a);
 
-  // Calcul des statistiques avec correction du fuseau horaire
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().split('T')[0];
-  
-  // Fonction pour vérifier si une date est aujourd'hui (indépendante du fuseau horaire)
-  const isToday = (eventDate) => {
-    const eventDateObj = new Date(eventDate);
-    eventDateObj.setHours(0, 0, 0, 0);
-    return eventDateObj.getTime() === today.getTime();
+  // ========== FONCTIONS DE GESTION DES DATES ==========
+  const getDateOnly = (date) => {
+    if (!date) return null;
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
   };
-  
-  const totalCount = allProgrammes.length;
-  const upcomingCount = allProgrammes.filter(event => new Date(event.date) >= today).length;
-  const pastCount = allProgrammes.filter(event => new Date(event.date) < today).length;
-  const todayCount = allProgrammes.filter(event => isToday(event.date)).length;
 
-  // Fonction pour vérifier si un événement est passé
+  const today = getDateOnly(new Date());
+
+  const getEventStartDate = (event) => {
+    return event.start_date || event.date;
+  };
+
   const isPastEvent = (event) => {
-    const eventDate = new Date(event.date);
+    const eventDate = getDateOnly(getEventStartDate(event));
     return eventDate < today;
   };
 
-  // Fonction de filtrage des programmes
+  const isUpcomingEvent = (event) => {
+    const eventDate = getDateOnly(getEventStartDate(event));
+    return eventDate > today;
+  };
+
+  const isTodayEvent = (eventDate) => {
+    if (!eventDate) return false;
+    const eventDateObj = getDateOnly(eventDate);
+    return eventDateObj.getTime() === today.getTime();
+  };
+
+  const getStatus = (event) => {
+    const eventDate = getEventStartDate(event);
+    if (isTodayEvent(eventDate)) return 'Aujourd\'hui';
+    if (isUpcomingEvent(event)) return 'À venir';
+    return 'Passé';
+  };
+
+  const getStatusClass = (event) => {
+    const eventDate = getEventStartDate(event);
+    if (isTodayEvent(eventDate)) return 'status-today';
+    if (isUpcomingEvent(event)) return 'status-upcoming';
+    return 'status-past';
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('fr-FR', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+  };
+
+  const formatDateRange = (event) => {
+    const startDate = getEventStartDate(event);
+    const endDate = event.end_date;
+    
+    if (endDate && startDate !== endDate) {
+      return `${formatDate(startDate)} → ${formatDate(endDate)}`;
+    }
+    return formatDate(startDate);
+  };
+  // ========== FIN DES FONCTIONS ==========
+
+  // Calcul des statistiques
+  const totalCount = allProgrammes.length;
+  const upcomingCount = allProgrammes.filter(event => isUpcomingEvent(event)).length;
+  const pastCount = allProgrammes.filter(event => isPastEvent(event)).length;
+  const todayCount = allProgrammes.filter(event => isTodayEvent(getEventStartDate(event))).length;
+
+  // Fonction de filtrage des programmes (frontend)
   const filteredProgrammes = allProgrammes.filter(event => {
-    const eventDate = new Date(event.date);
-    const eventDateStr = event.date;
+    const eventStartDate = getEventStartDate(event);
     
     // Filtre par recherche
     if (filters.search) {
@@ -1094,24 +1170,20 @@ export default function AllProgrammes() {
     
     // Filtre par statut
     if (filters.status !== 'all') {
-      const isUpcoming = eventDate >= today;
-      const isPast = eventDate < today;
-      const isTodayEvent = isToday(event.date);
-      
-      if (filters.status === 'upcoming' && !isUpcoming) return false;
-      if (filters.status === 'past' && !isPast) return false;
-      if (filters.status === 'today' && !isTodayEvent) return false;
+      if (filters.status === 'upcoming' && !isUpcomingEvent(event)) return false;
+      if (filters.status === 'past' && !isPastEvent(event)) return false;
+      if (filters.status === 'today' && !isTodayEvent(eventStartDate)) return false;
     }
     
     // Filtre par mois
     if (filters.month !== 'all') {
-      const eventMonth = eventDate.getMonth() + 1;
+      const eventMonth = new Date(eventStartDate).getMonth() + 1;
       if (eventMonth.toString() !== filters.month) return false;
     }
     
     // Filtre par année
     if (filters.year !== 'all') {
-      const eventYear = eventDate.getFullYear();
+      const eventYear = new Date(eventStartDate).getFullYear();
       if (eventYear.toString() !== filters.year) return false;
     }
     
@@ -1245,35 +1317,35 @@ export default function AllProgrammes() {
     setAlertModal({ ...alertModal, isOpen: false });
   };
 
-  // Génération du PDF sans les colonnes Statut et Actions
+  // Génération du PDF
   const handleDownloadPDF = async () => {
     setIsDownloading(true);
     try {
-      // Créer un élément temporaire pour le PDF
       const pdfElement = document.createElement('div');
       pdfElement.style.padding = '20px';
       pdfElement.style.backgroundColor = 'white';
       pdfElement.style.fontFamily = 'Arial, sans-serif';
       
-      // Ajouter l'en-tête
+      const className = currentClass?.nom || currentClass?.name || 'Non spécifiée';
+      const classDisplay = currentClass ? `Classe : ${className}` : '';
+      
       pdfElement.innerHTML = `
         <div style="text-align: center; margin-bottom: 20px;">
           <h1 style="color: #f59e0b; margin-bottom: 5px;">📋 Tous les programmes d'activités</h1>
+          ${classDisplay ? `<h2 style="color: #6b7280; margin-bottom: 10px; font-size: 1.2rem;">${classDisplay}</h2>` : ''}
           <p style="color: #6b7280;">Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
           <hr style="border: 1px solid #e5e7eb; margin: 15px 0;">
         </div>
       `;
       
-      // Créer le tableau pour le PDF (sans les colonnes Statut et Actions)
       const table = document.createElement('table');
       table.style.width = '100%';
       table.style.borderCollapse = 'collapse';
       table.style.fontSize = '12px';
       
-      // En-tête du tableau - Colonne Date en premier
       const thead = document.createElement('thead');
       const headerRow = document.createElement('tr');
-      const headers = ['#', 'Date', 'Activités', 'Heure', 'Lieu', 'Orateur', 'Modérateur', 'Famille de réception'];
+      const headers = ['#', 'Date', 'Activités', 'Heure', 'Lieu', 'Orateur', 'Modérateur', 'Famille de réception', 'Statut'];
       headers.forEach(header => {
         const th = document.createElement('th');
         th.textContent = header;
@@ -1288,12 +1360,10 @@ export default function AllProgrammes() {
       thead.appendChild(headerRow);
       table.appendChild(thead);
       
-      // Corps du tableau
       const tbody = document.createElement('tbody');
       filteredProgrammes.forEach((event, index) => {
         const row = document.createElement('tr');
         
-        // Numéro
         const numCell = document.createElement('td');
         numCell.textContent = (index + 1).toString();
         numCell.style.padding = '10px';
@@ -1301,14 +1371,12 @@ export default function AllProgrammes() {
         numCell.style.textAlign = 'center';
         row.appendChild(numCell);
         
-        // Date
         const dateCell = document.createElement('td');
-        dateCell.textContent = formatDate(event.date);
+        dateCell.textContent = formatDateRange(event);
         dateCell.style.padding = '10px';
         dateCell.style.border = '1px solid #e5e7eb';
         row.appendChild(dateCell);
         
-        // Titre
         const titleCell = document.createElement('td');
         titleCell.textContent = event.title || '';
         titleCell.style.padding = '10px';
@@ -1316,57 +1384,58 @@ export default function AllProgrammes() {
         titleCell.style.backgroundColor = '#ffffff';
         row.appendChild(titleCell);
         
-        // Heure
         const timeCell = document.createElement('td');
-        timeCell.textContent = event.time?.substring(0, 5) || '';
+        const startTime = event.start_time || event.time;
+        const endTime = event.end_time;
+        timeCell.textContent = startTime ? (endTime ? `${startTime.substring(0, 5)} → ${endTime.substring(0, 5)}` : startTime.substring(0, 5)) : '';
         timeCell.style.padding = '10px';
         timeCell.style.border = '1px solid #e5e7eb';
         row.appendChild(timeCell);
         
-        // Lieu
         const lieuCell = document.createElement('td');
         lieuCell.textContent = event.lieu || '';
         lieuCell.style.padding = '10px';
         lieuCell.style.border = '1px solid #e5e7eb';
         row.appendChild(lieuCell);
         
-        // Orateur
         const orateurCell = document.createElement('td');
         orateurCell.textContent = event.orateur || '';
         orateurCell.style.padding = '10px';
         orateurCell.style.border = '1px solid #e5e7eb';
         row.appendChild(orateurCell);
         
-        // Modérateur
         const moderateurCell = document.createElement('td');
         moderateurCell.textContent = event.moderateur || '';
         moderateurCell.style.padding = '10px';
         moderateurCell.style.border = '1px solid #e5e7eb';
         row.appendChild(moderateurCell);
         
-        // Famille de réception
         const familleCell = document.createElement('td');
         familleCell.textContent = event.famille_reception || '';
         familleCell.style.padding = '10px';
         familleCell.style.border = '1px solid #e5e7eb';
         row.appendChild(familleCell);
         
+        const statusCell = document.createElement('td');
+        statusCell.textContent = getStatus(event);
+        statusCell.style.padding = '10px';
+        statusCell.style.border = '1px solid #e5e7eb';
+        row.appendChild(statusCell);
+        
         tbody.appendChild(row);
       });
       table.appendChild(tbody);
       pdfElement.appendChild(table);
       
-      // Ajouter les statistiques en bas
       pdfElement.innerHTML += `
         <div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 11px;">
-          <p>Total: ${filteredProgrammes.length} programme(s) | À venir: ${filteredProgrammes.filter(e => new Date(e.date) >= today).length} | Passés: ${filteredProgrammes.filter(e => new Date(e.date) < today).length}</p>
+          <p>Total: ${filteredProgrammes.length} programme(s) | À venir: ${filteredProgrammes.filter(e => isUpcomingEvent(e)).length} | Aujourd'hui: ${filteredProgrammes.filter(e => isTodayEvent(getEventStartDate(e))).length} | Passés: ${filteredProgrammes.filter(e => isPastEvent(e)).length}</p>
         </div>
       `;
       
-      // Options pour html2pdf
       const opt = {
         margin: [0.5, 0.5, 0.5, 0.5],
-        filename: `programmes_${new Date().toISOString().split('T')[0]}.pdf`,
+        filename: `programmes_${className.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, letterRendering: true },
         jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
@@ -1386,46 +1455,79 @@ export default function AllProgrammes() {
   const handleExportExcel = async () => {
     setIsExportingExcel(true);
     try {
-      // Préparer les données pour Excel
+      const className = currentClass?.nom || currentClass?.name || 'Non spécifiée';
+      const classDisplay = currentClass ? `Classe : ${className}` : 'Classe : Non spécifiée';
+      const currentDate = new Date().toLocaleDateString('fr-FR');
+      const currentTime = new Date().toLocaleTimeString('fr-FR');
+      
       const excelData = filteredProgrammes.map((event, index) => ({
         '#': index + 1,
-        'Date': formatDate(event.date),
+        'Date': formatDateRange(event),
+        'Heure': (() => {
+          const startTime = event.start_time || event.time;
+          const endTime = event.end_time;
+          return startTime ? (endTime ? `${startTime.substring(0, 5)} → ${endTime.substring(0, 5)}` : startTime.substring(0, 5)) : '';
+        })(),
         'Activités': event.title || '',
-        'Heure': event.time?.substring(0, 5) || '',
         'Lieu': event.lieu || '',
         'Orateur': event.orateur || '',
         'Modérateur': event.moderateur || '',
         'Famille de réception': event.famille_reception || '',
-        'Statut': getStatus(event.date)
+        'Statut': getStatus(event)
       }));
 
-      // Créer un nouveau classeur
-      const ws = XLSX.utils.json_to_sheet(excelData);
+      const ws = XLSX.utils.json_to_sheet([]);
       
-      // Ajuster la largeur des colonnes
-      const colWidths = [
+      XLSX.utils.sheet_add_aoa(ws, [
+        ['LISTE DES PROGRAMMES D\'ACTIVITÉS'],
+        [classDisplay],
+        [`Date de génération : ${currentDate} à ${currentTime}`],
+        [],
+        ['#', 'Date', 'Heure', 'Activités', 'Lieu', 'Orateur', 'Modérateur', 'Famille de réception', 'Statut']
+      ], { origin: 'A1' });
+      
+      const dataRows = excelData.map(item => [
+        item['#'],
+        item['Date'],
+        item['Heure'],
+        item['Activités'],
+        item['Lieu'],
+        item['Orateur'],
+        item['Modérateur'],
+        item['Famille de réception'],
+        item['Statut']
+      ]);
+      
+      if (dataRows.length > 0) {
+        XLSX.utils.sheet_add_aoa(ws, dataRows, { origin: 'A6' });
+      }
+      
+      ws['!cols'] = [
         { wch: 5 },   // #
-        { wch: 15 },  // Date
-        { wch: 30 },  // Activités
-        { wch: 10 },  // Heure
+        { wch: 25 },  // Date
+        { wch: 15 },  // Heure
+        { wch: 35 },  // Activités
         { wch: 25 },  // Lieu
         { wch: 20 },  // Orateur
         { wch: 20 },  // Modérateur
         { wch: 25 },  // Famille de réception
         { wch: 12 }   // Statut
       ];
-      ws['!cols'] = colWidths;
       
-      // Créer le classeur
+      if (!ws['!merges']) ws['!merges'] = [];
+      ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } });
+      ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 8 } });
+      ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 8 } });
+      
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Programmes');
       
-      // Ajouter une feuille de statistiques
       const statsData = [
+        { 'Statistique': 'Classe', 'Valeur': className },
         { 'Statistique': 'Total des programmes', 'Valeur': filteredProgrammes.length },
-        { 'Statistique': 'Programmes à venir', 'Valeur': filteredProgrammes.filter(e => new Date(e.date) >= today).length },
-        { 'Statistique': 'Programmes passés', 'Valeur': filteredProgrammes.filter(e => new Date(e.date) < today).length },
-        { 'Statistique': 'Programmes aujourd\'hui', 'Valeur': filteredProgrammes.filter(e => isToday(e.date)).length },
+        { 'Statistique': 'Programmes à venir', 'Valeur': filteredProgrammes.filter(e => isUpcomingEvent(e)).length },
+        { 'Statistique': 'Programmes aujourd\'hui', 'Valeur': filteredProgrammes.filter(e => isTodayEvent(getEventStartDate(e))).length },
+        { 'Statistique': 'Programmes passés', 'Valeur': filteredProgrammes.filter(e => isPastEvent(e)).length },
         { 'Statistique': 'Date de génération', 'Valeur': new Date().toLocaleString('fr-FR') },
         { 'Statistique': 'Filtres appliqués', 'Valeur': `Recherche: ${filters.search || 'Aucune'} | Statut: ${filters.status} | Mois: ${filters.month} | Année: ${filters.year}` }
       ];
@@ -1434,8 +1536,7 @@ export default function AllProgrammes() {
       statsWs['!cols'] = [{ wch: 25 }, { wch: 30 }];
       XLSX.utils.book_append_sheet(wb, statsWs, 'Statistiques');
       
-      // Générer et télécharger le fichier
-      const fileName = `programmes_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const fileName = `programmes_${className.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(wb, fileName);
       
       showToast('Excel téléchargé avec succès', 'success');
@@ -1453,26 +1554,6 @@ export default function AllProgrammes() {
       status: 'all',
       month: 'all',
       year: new Date().getFullYear().toString()
-    });
-  };
-
-  const getStatus = (date) => {
-    if (isToday(date)) return 'Aujourd\'hui';
-    if (date > todayStr) return 'À venir';
-    return 'Passé';
-  };
-
-  const getStatusClass = (date) => {
-    if (isToday(date)) return 'status-today';
-    if (date > todayStr) return 'status-upcoming';
-    return 'status-past';
-  };
-
-  const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('fr-FR', { 
-      day: 'numeric', 
-      month: 'long', 
-      year: 'numeric' 
     });
   };
 
@@ -1666,7 +1747,7 @@ export default function AllProgrammes() {
             </div>
           </div>
 
-          {/* Tableau principal avec la colonne # en premier */}
+          {/* Tableau principal */}
           <div className="table-container" ref={tableRef}>
             <table className="programmes-table">
               <thead>
@@ -1688,6 +1769,11 @@ export default function AllProgrammes() {
                   paginatedProgrammes.map((event, index) => {
                     const past = isPastEvent(event);
                     const rowNumber = (currentPage - 1) * itemsPerPage + index + 1;
+                    const startDate = getEventStartDate(event);
+                    const startTime = event.start_time || event.time;
+                    const endTime = event.end_time;
+                    const isMultiDay = event.end_date && startDate !== event.end_date;
+                    
                     return (
                       <tr key={event.id} className={past ? 'past-row' : ''}>
                         <td style={{ textAlign: 'center', fontWeight: 'bold', color: past ? '#9ca3af' : '#6b7280' }}>
@@ -1696,15 +1782,17 @@ export default function AllProgrammes() {
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: past ? '#9ca3af' : '#4b5563' }}>
                             <IconCalendar style={{ width: '14px', height: '14px', color: '#9ca3af' }} />
-                            {formatDate(event.date)}
+                            {isMultiDay ? `${formatDate(startDate)} → ${formatDate(event.end_date)}` : formatDate(startDate)}
                           </div>
                         </td>
                         <td style={{ fontWeight: '600', color: past ? '#9ca3af' : '#111827' }}>{event.title}</td>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: past ? '#9ca3af' : '#4b5563' }}>
-                            <IconClock style={{ width: '14px', height: '14px', color: '#9ca3af' }} />
-                            {event.time?.substring(0, 5)}
-                          </div>
+                          {startTime && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: past ? '#9ca3af' : '#4b5563' }}>
+                              <IconClock style={{ width: '14px', height: '14px', color: '#9ca3af' }} />
+                              {endTime ? `${startTime.substring(0, 5)} → ${endTime.substring(0, 5)}` : startTime.substring(0, 5)}
+                            </div>
+                          )}
                         </td>
                         <td>
                           {event.lieu && (
@@ -1739,8 +1827,8 @@ export default function AllProgrammes() {
                           )}
                         </td>
                         <td>
-                          <span className={`status-badge ${getStatusClass(event.date)}`}>
-                            {getStatus(event.date)}
+                          <span className={`status-badge ${getStatusClass(event)}`}>
+                            {getStatus(event)}
                           </span>
                         </td>
                         <td className="actions-cell" onClick={(e) => e.stopPropagation()}>

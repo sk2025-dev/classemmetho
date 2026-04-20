@@ -51,6 +51,25 @@ const GenreBadge = ({ genre }) => {
     );
 };
 
+const TransferBadge = ({ member }) => {
+    if (!member?.transfer_locked) return null;
+
+    const isArchived = member.transfer_status === "completed";
+
+    return (
+        <span
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
+                isArchived
+                    ? "bg-slate-200 text-slate-700 border border-slate-300"
+                    : "bg-orange-100 text-orange-700 border border-orange-300"
+            }`}
+        >
+            {member.transfer_label ||
+                (isArchived ? "Ancien membre" : "Transfert en cours")}
+        </span>
+    );
+};
+
 export default function Inscriptions({
     family,
     members,
@@ -253,7 +272,7 @@ export default function Inscriptions({
                                     ),
                                 )
                             }
-                            disabled={!family}
+                            disabled={!family || family?.transfer_locked}
                             className="flex items-center justify-center gap-2 px-4 py-2.5 text-white font-medium rounded-lg transition-all text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             style={{ backgroundColor: "#1E40AF" }}
                         >
@@ -325,7 +344,7 @@ export default function Inscriptions({
                                     {filteredMembers.map((member, index) => (
                                         <tr
                                             key={member.id}
-                                            className={`border-b border-gray-200 hover:bg-gray-50 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
+                                            className={`border-b border-gray-200 ${member.transfer_locked ? "opacity-60" : "hover:bg-gray-50"} ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
                                         >
                                             <td className="px-6 py-4 text-left text-sm font-medium text-gray-600">
                                                 #{member.id}
@@ -337,10 +356,13 @@ export default function Inscriptions({
                                                         size="sm"
                                                         rounded={true}
                                                     />
-                                                    <span>
-                                                        {member.prenom}{" "}
-                                                        {member.nom}
-                                                    </span>
+                                                    <div className="flex flex-col gap-1">
+                                                        <span>
+                                                            {member.prenom}{" "}
+                                                            {member.nom}
+                                                        </span>
+                                                        <TransferBadge member={member} />
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-left text-sm">
@@ -409,7 +431,8 @@ export default function Inscriptions({
                                                                 ),
                                                             )
                                                         }
-                                                        className="text-green-600 hover:text-green-800 hover:bg-green-50 p-1.5 rounded transition-colors"
+                                                        disabled={member.transfer_locked}
+                                                        className="text-green-600 hover:text-green-800 hover:bg-green-50 p-1.5 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                                         title="Modifier"
                                                     >
                                                         <Edit className="w-4 h-4" />
@@ -417,6 +440,9 @@ export default function Inscriptions({
                                                     {!member.is_responsable && (
                                                         <button
                                                             onClick={() => {
+                                                                if (member.transfer_locked) {
+                                                                    return;
+                                                                }
                                                                 if (
                                                                     confirm(
                                                                         "Êtes-vous sûr de vouloir supprimer ce membre?",
@@ -430,7 +456,8 @@ export default function Inscriptions({
                                                                     );
                                                                 }
                                                             }}
-                                                            className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1.5 rounded transition-colors"
+                                                            disabled={member.transfer_locked}
+                                                            className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1.5 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                                             title="Supprimer"
                                                         >
                                                             <Trash2 className="w-4 h-4" />

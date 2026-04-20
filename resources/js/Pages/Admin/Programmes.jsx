@@ -952,7 +952,7 @@ const Toast = ({ message, type = 'success', onClose }) => {
   );
 };
 
-// --- COMPOSANT MODAL AVEC TABLEAU FUSIONNÉ ---
+// --- COMPOSANT MODAL AVEC TABLEAU FUSIONNÉ (CORRIGÉ) ---
 const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
   const [filters, setFilters] = useState({
     search: '',
@@ -977,20 +977,32 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
   const todayStr = today.toISOString().split('T')[0];
 
   const isToday = (eventDate) => {
+    if (!eventDate) return false;
     const eventDateObj = new Date(eventDate);
     eventDateObj.setHours(0, 0, 0, 0);
     return eventDateObj.getTime() === today.getTime();
   };
 
-  const availableYears = [...new Set(programmes.map(p => new Date(p.date).getFullYear()))].sort((a, b) => b - a);
+  // Fonction pour formater l'heure
+  const formatTime = (startTime, endTime) => {
+    if (!startTime) return '-';
+    const start = startTime.substring(0, 5);
+    if (endTime) {
+      const end = endTime.substring(0, 5);
+      return `${start} - ${end}`;
+    }
+    return start;
+  };
+
+  const availableYears = [...new Set(programmes.map(p => new Date(p.start_date).getFullYear()))].sort((a, b) => b - a);
 
   const totalCount = programmes.length;
-  const upcomingCount = programmes.filter(p => new Date(p.date) >= today).length;
-  const pastCount = programmes.filter(p => new Date(p.date) < today).length;
-  const todayCount = programmes.filter(p => isToday(p.date)).length;
+  const upcomingCount = programmes.filter(p => new Date(p.start_date) >= today).length;
+  const pastCount = programmes.filter(p => new Date(p.start_date) < today).length;
+  const todayCount = programmes.filter(p => isToday(p.start_date)).length;
 
   const filteredProgrammes = programmes.filter(programme => {
-    const programmeDate = new Date(programme.date);
+    const programmeDate = new Date(programme.start_date);
     
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
@@ -1006,7 +1018,7 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
     if (filters.status !== 'all') {
       const isUpcoming = programmeDate >= today;
       const isPast = programmeDate < today;
-      const isTodayEvent = isToday(programme.date);
+      const isTodayEvent = isToday(programme.start_date);
       
       if (filters.status === 'upcoming' && !isUpcoming) return false;
       if (filters.status === 'past' && !isPast) return false;
@@ -1026,7 +1038,8 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
     return true;
   });
 
-  const sortedProgrammes = [...filteredProgrammes].sort((a, b) => new Date(b.date) - new Date(a.date));
+  // CORRECTION : Utiliser start_date au lieu de date
+  const sortedProgrammes = [...filteredProgrammes].sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
 
   const totalPages = Math.ceil(sortedProgrammes.length / itemsPerPage);
   const paginatedProgrammes = sortedProgrammes.slice(
@@ -1043,19 +1056,24 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
     });
   };
 
-  const getStatus = (date) => {
-    if (isToday(date)) return 'Aujourd\'hui';
-    if (date > todayStr) return 'À venir';
+  // CORRECTION : Utiliser start_date
+  const getStatus = (startDate) => {
+    if (!startDate) return 'Passé';
+    if (isToday(startDate)) return 'Aujourd\'hui';
+    if (new Date(startDate) >= today) return 'À venir';
     return 'Passé';
   };
 
-  const getStatusClass = (date) => {
-    if (isToday(date)) return 'status-today';
-    if (date > todayStr) return 'status-upcoming';
+  // CORRECTION : Utiliser start_date
+  const getStatusClass = (startDate) => {
+    if (!startDate) return 'status-past';
+    if (isToday(startDate)) return 'status-today';
+    if (new Date(startDate) >= today) return 'status-upcoming';
     return 'status-past';
   };
 
   const formatDateForTable = (dateStr) => {
+    if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('fr-FR', { 
       day: 'numeric', 
       month: 'long', 
@@ -1078,14 +1096,14 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
       
       const exportData = sortedProgrammes.map((programme, index) => ({
         '#': index + 1,
-        'Date': formatDateForTable(programme.date),
+        'Date': formatDateForTable(programme.start_date),
         'Activités': programme.title,
-        'Heure': programme.time?.substring(0, 5) || '-',
+        'Heure': formatTime(programme.start_time, programme.end_time),
         'Lieu': programme.lieu || '-',
         'Orateur': programme.orateur || '-',
         'Modérateur': programme.moderateur || '-',
         'Famille de réception': programme.famille_reception || '-',
-        'Statut': getStatus(programme.date)
+        'Statut': getStatus(programme.start_date)
       }));
 
       const ws = XLSX.utils.json_to_sheet(exportData);
@@ -1094,7 +1112,7 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
         { wch: 5 },   // #
         { wch: 15 },  // Date
         { wch: 30 },  // Activités
-        { wch: 10 },  // Heure
+        { wch: 15 },  // Heure
         { wch: 25 },  // Lieu
         { wch: 20 },  // Orateur
         { wch: 20 },  // Modérateur
@@ -1117,14 +1135,15 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
     }
   };
 
-  // Export PDF avec pagination à 15 programmes par page
+  // Export PDF
   const handleExportPDF = async () => {
     try {
       setIsExporting(true);
       
-      const getStatusForExport = (date) => {
-        if (isToday(date)) return 'Aujourd\'hui';
-        if (date > todayStr) return 'À venir';
+      const getStatusForExport = (startDate) => {
+        if (!startDate) return 'Passé';
+        if (isToday(startDate)) return 'Aujourd\'hui';
+        if (new Date(startDate) >= today) return 'À venir';
         return 'Passé';
       };
       
@@ -1134,13 +1153,11 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
         return '#6b7280';
       };
       
-      // Créer un élément temporaire pour le PDF
       const pdfElement = document.createElement('div');
       pdfElement.style.padding = '20px';
       pdfElement.style.backgroundColor = 'white';
       pdfElement.style.fontFamily = 'Arial, sans-serif';
       
-      // Pagination : 15 programmes par page
       const itemsPerPagePDF = 15;
       const totalPagesPDF = Math.ceil(sortedProgrammes.length / itemsPerPagePDF);
       
@@ -1198,18 +1215,18 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
         pageProgrammes.forEach((programme, idx) => {
           const row = document.createElement('tr');
           const globalIndex = start + idx + 1;
-          const status = getStatusForExport(programme.date);
+          const status = getStatusForExport(programme.start_date);
           const statusColor = getStatusColor(status);
           
-          const numCell = document.createElement('td');
-          numCell.textContent = globalIndex.toString();
-          numCell.style.padding = '8px';
-          numCell.style.border = '1px solid #e5e7eb';
-          numCell.style.textAlign = 'center';
-          row.appendChild(numCell);
+          const indexCell = document.createElement('td');
+          indexCell.textContent = globalIndex;
+          indexCell.style.padding = '8px';
+          indexCell.style.border = '1px solid #e5e7eb';
+          indexCell.style.textAlign = 'center';
+          row.appendChild(indexCell);
           
           const dateCell = document.createElement('td');
-          dateCell.textContent = formatDateForTable(programme.date);
+          dateCell.textContent = formatDateForTable(programme.start_date);
           dateCell.style.padding = '8px';
           dateCell.style.border = '1px solid #e5e7eb';
           row.appendChild(dateCell);
@@ -1221,7 +1238,7 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
           row.appendChild(titleCell);
           
           const timeCell = document.createElement('td');
-          timeCell.textContent = programme.time?.substring(0, 5) || '-';
+          timeCell.textContent = formatTime(programme.start_time, programme.end_time);
           timeCell.style.padding = '8px';
           timeCell.style.border = '1px solid #e5e7eb';
           row.appendChild(timeCell);
@@ -1343,7 +1360,6 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
         </button>
       </div>
       <div className="modal-fullscreen-body">
-        {/* Cartes statistiques */}
         <div className="stats-cards">
           <div className="stat-card">
             <div className="stat-icon total">📊</div>
@@ -1375,7 +1391,6 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
           </div>
         </div>
 
-        {/* Barre des filtres avec boutons d'export à droite */}
         <div className="filter-bar">
           <div className="filter-group" style={{ flex: 2 }}>
             <label><IconFilter style={{ display: 'inline', marginRight: '4px' }} /> Recherche</label>
@@ -1432,7 +1447,6 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
             </button>
           </div>
           
-          {/* Boutons d'export dans la barre des filtres à droite */}
           <div className="export-buttons-filter">
             <button 
               className="btn-excel-filter" 
@@ -1453,7 +1467,6 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
           </div>
         </div>
 
-        {/* Tableau des programmes */}
         {paginatedProgrammes.length > 0 ? (
           <>
             <div className="table-container">
@@ -1482,14 +1495,14 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#4b5563' }}>
                             <IconCalendar style={{ width: '14px', height: '14px' }} />
-                            {formatDateForTable(programme.date)}
+                            {formatDateForTable(programme.start_date)}
                           </div>
                         </td>
                         <td style={{ fontWeight: '600', color: '#111827' }}>{programme.title}</td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#4b5563' }}>
                             <IconClock style={{ width: '14px', height: '14px' }} />
-                            {programme.time?.substring(0, 5) || '-'}
+                            {formatTime(programme.start_time, programme.end_time)}
                           </div>
                         </td>
                         <td>
@@ -1525,8 +1538,8 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
                           )}
                         </td>
                         <td>
-                          <span className={`status-badge ${getStatusClass(programme.date)}`}>
-                            {getStatus(programme.date)}
+                          <span className={`status-badge ${getStatusClass(programme.start_date)}`}>
+                            {getStatus(programme.start_date)}
                           </span>
                         </td>
                       </tr>
@@ -1536,7 +1549,6 @@ const ClassProgrammesModal = ({ isOpen, onClose, classe, programmes }) => {
               </table>
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="pagination">
                 <button 
@@ -1611,9 +1623,9 @@ const ClassCard = ({ conducteur, onViewProgrammes }) => {
   };
   
   const totalProgrammes = programmes.length;
-  const currentProgrammes = programmes.filter(p => new Date(p.date) >= today).length;
-  const pastProgrammes = programmes.filter(p => new Date(p.date) < today).length;
-  const todayProgrammes = programmes.filter(p => isToday(p.date)).length;
+  const currentProgrammes = programmes.filter(p => new Date(p.start_date) >= today).length;
+  const pastProgrammes = programmes.filter(p => new Date(p.start_date) < today).length;
+  const todayProgrammes = programmes.filter(p => isToday(p.start_date)).length;
 
   const getAvatarUrl = () => {
     if (conducteur.profile_photo_url) {
@@ -1671,7 +1683,7 @@ const ClassCard = ({ conducteur, onViewProgrammes }) => {
           </div>
           <div className="stat-item">
             <IconEye />
-            <span>En cours</span>
+            <span>À venir</span>
             <span className="stat-value">{currentProgrammes}</span>
           </div>
           <div className="stat-item">
@@ -1800,10 +1812,10 @@ export default function Programmes() {
             value={selectedClasseId}
             onChange={(e) => setSelectedClasseId(e.target.value)}
           >
-            <option value="all">📚 Toutes les classes</option>
+            <option value="all">Toutes les classes</option>
             {classOptions.map(classe => (
               <option key={classe.id} value={classe.id}>
-                📖 {classe.nom}
+                 {classe.nom}
               </option>
             ))}
           </select>
@@ -1824,7 +1836,7 @@ export default function Programmes() {
           </div>
         ) : (
           <div className="empty-state">
-            <div className="empty-icon">📭</div>
+            <div className="empty-icon"></div>
             <div className="empty-title">Aucun conducteur trouvé</div>
             <div className="empty-message">
               {searchTerm || selectedClasseId !== 'all' ? 'Aucun résultat ne correspond à vos critères.' : 'Aucun conducteur n\'est disponible pour le moment.'}

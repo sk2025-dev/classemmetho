@@ -1,15 +1,37 @@
-# TODO - Résolution des conflits Git
+# TODO - Résolution Conflits Git Merge feature/Desy
 
-## Étape 1: Créer ce fichier ✅
+## ✅ Plan approuvé - Commencer les fusions (4 fichiers)
 
-## Étape 2: Résoudre routes/web.php ✅
+### Étape 1/6: Créer TODO.md ✅ TERMINÉ
 
-## Étape 3: Résoudre JSX conflicts (4 fichiers) [EN COURS]
+### Étape 2/6: Résoudre `resources/js/Pages/Conducteur/Programmes.jsx`
 
-## Étape 4: Regénérer package-lock.json (npm install) ✅
+- Fix imports React/axios single quotes + useCallback
 
-## Étape 5: Vérifier git status + test app (npm run dev)
+```
 
-## Étape 6: attempt_completion
+```
 
-**Statut: Prêt pour édition des fichiers**
+### Étape 3/6: Résoudre `app/Models/SpecialEvent.php`
+
+- Garder version REMOTE (nouveaux champs DB + accessors compatibilité)
+
+### Étape 4/6: Résoudre `app/Http/Controllers/Conducteur/ProgrammesClasseController.php`
+
+- Fusionner imports QR + utiliser start_date avec $event->date = $event->start_date
+
+### Étape 5/6: Résoudre `routes/web.php`
+
+```
+
+```
+
+### Étape 6/6: Finaliser Git
+
+```
+git add .
+git commit -m "✅ Merge feature/Desy: QR codes + date range + routes présence + compatibilité"
+git push origin feature/Desy
+```
+
+**Prochaine étape: Résoudre Programmes.jsx → Confirmez pour continuer?**
