@@ -400,6 +400,14 @@ function FichesMariageModal({ open, onClose, acte, ids, onEdit, onSent }) {
 import axios from "axios";
 import { Link } from "@inertiajs/react";
 import MiniCalendar from "../../../Components/MiniCalendar";
+import SoumisesTab from "./tabs/SoumisesTab";
+import TransmisesTab from "./tabs/TransmisesTab";
+import DatesTab from "./tabs/DatesTab";
+import CalendarTab from "./tabs/CalendarTab";
+import AnnoncesTab from "./tabs/AnnoncesTab";
+import MesDemandesTab from "./tabs/MesDemandesTab";
+import HistoriqueTab from "./tabs/HistoriqueTab";
+import StatsTab from "./tabs/StatsTab";
 
 const SOUMISES_PER_PAGE = 6;
 const HISTO_PER_PAGE = 8;
@@ -606,6 +614,7 @@ export default function Index({
     const soumises = filteredActes.filter(
         (a) =>
             a.statut === "SOUMISE" &&
+            !a.demandeur_is_conducteur &&
             !ANNONCE_TYPE_VALUES.includes(
                 String(a.type_acte || "").toLowerCase(),
             ),
@@ -613,6 +622,7 @@ export default function Index({
     const transmises = filteredActes.filter(
         (a) =>
             a.statut === "TRANSMISE_AU_PASTEUR" &&
+            !a.demandeur_is_conducteur &&
             !ANNONCE_TYPE_VALUES.includes(
                 String(a.type_acte || "").toLowerCase(),
             ),
@@ -1556,9 +1566,10 @@ export default function Index({
                         <div className="page-heading">
                             <h1 className="page-title">Gestion des demandes</h1>
                         </div>
-                        <button
+                        <Link
+                            href={withBasePath("", "/conducteur/liturgie/selection")}
                             className="btn-create"
-                            onClick={() => openModal("create")}
+                            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
                         >
                             <svg
                                 width="15"
@@ -1575,7 +1586,7 @@ export default function Index({
                                 />
                             </svg>
                             Créer un acte
-                        </button>
+                        </Link>
                     </div>
 
                     {/* ALERT BANNERS */}
@@ -1615,7 +1626,7 @@ export default function Index({
                                         className="alert-action"
                                         onClick={() => setTab("soumises")}
                                     >
-                                        Voir les actes{" "}
+                                        Voir les actes à valider{" "}
                                         <svg
                                             width="13"
                                             height="13"
@@ -1762,7 +1773,7 @@ export default function Index({
                                         d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"
                                     />
                                 </svg>
-                                Soumises
+                                À valider
                                 {stats.soumises > 0 && (
                                     <span className="tab-count tab-red">
                                         {stats.soumises}
@@ -1787,7 +1798,7 @@ export default function Index({
                                         d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
                                     />
                                 </svg>
-                                Au pasteur
+                                Transmises
                                 {stats.transmises > 0 && (
                                     <span className="tab-count tab-gold">
                                         {stats.transmises}
@@ -1874,6 +1885,26 @@ export default function Index({
                                         {annEnAttente.length}
                                     </span>
                                 )}
+                            </button>
+                            <button
+                                className={`tab tab-mes-demandes ${tab === "mes-demandes" ? "active" : ""}`}
+                                onClick={() => setTab("mes-demandes")}
+                            >
+                                <svg
+                                    width="13"
+                                    height="13"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"
+                                    />
+                                </svg>
+                                Mes demandes d'acte
                             </button>
                             <button
                                 className={`tab ${tab === "historique" ? "active" : ""}`}
@@ -1963,2074 +1994,141 @@ export default function Index({
 
                     {/* ══════════ ONGLET SOUMISES ══════════ */}
                     {tab === "soumises" && (
-                        <div className="grid-3-1">
-                            <div className="panel">
-                                <div className="panel-head">
-                                    <div>
-                                        <div className="panel-title">
-                                            <svg
-                                                width="16"
-                                                height="16"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                strokeWidth="2"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"
-                                                />
-                                            </svg>
-                                            Demandes à traiter
-                                        </div>
-                                        <div className="panel-subtitle">
-                                            Nécessitent votre analyse et
-                                            validation
-                                        </div>
-                                    </div>
-                                    <div className="panel-actions">
-                                        <span className="panel-count-badge">
-                                            {soumises.length}
-                                        </span>
-                                        <button
-                                            type="button"
-                                            className="btn-bulk"
-                                            onClick={toggleSelectAllPage}
-                                            disabled={
-                                                pagedSoumises.length === 0
-                                            }
-                                        >
-                                            {allPageSelected
-                                                ? "Tout désélectionner"
-                                                : "Tout sélectionner"}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="btn-bulk"
-                                            onClick={approveSelected}
-                                            disabled={
-                                                processing ||
-                                                selectedIds.size === 0
-                                            }
-                                        >
-                                            Approuver
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="btn-bulk btn-bulk-refuse"
-                                            onClick={refuseSelected}
-                                            disabled={
-                                                processing ||
-                                                selectedIds.size === 0
-                                            }
-                                        >
-                                            Refuser
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="panel-body">
-                                    {soumises.length === 0 && (
-                                        <div className="empty-state">
-                                            <svg
-                                                width="32"
-                                                height="32"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                strokeWidth="1.2"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                />
-                                            </svg>
-                                            <span>
-                                                Aucune demande en attente
-                                            </span>
-                                        </div>
-                                    )}
-                                    {pagedSoumises.map((acte, i) => (
-                                        <div
-                                            key={acte.id}
-                                            className={`demande-item ${i === 0 ? "urgent" : ""}`}
-                                        >
-                                            <label
-                                                className="bulk-check"
-                                                onClick={(e) =>
-                                                    e.stopPropagation()
-                                                }
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedIds.has(
-                                                        acte.id,
-                                                    )}
-                                                    onChange={() =>
-                                                        toggleSelected(acte.id)
-                                                    }
-                                                />
-                                            </label>
-                                            <div
-                                                className={`demande-acte-icon ${tone(acte.type_acte)}`}
-                                            >
-                                                {normalizePhotoUrl(
-                                                    acte.membre
-                                                        ?.profile_photo_url,
-                                                ) ? (
-                                                    <img
-                                                        src={normalizePhotoUrl(
-                                                            acte.membre
-                                                                ?.profile_photo_url,
-                                                        )}
-                                                        alt={
-                                                            acte.membre
-                                                                ?.prenom +
-                                                            " " +
-                                                            acte.membre?.nom
-                                                        }
-                                                        style={{
-                                                            width: "100%",
-                                                            height: "100%",
-                                                            objectFit: "cover",
-                                                            borderRadius: "50%",
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <span>
-                                                        {iconEmoji(
-                                                            acte.type_acte,
-                                                        )}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div
-                                                className="demande-info"
-                                                onClick={() =>
-                                                    openModal("detail", acte)
-                                                }
-                                            >
-                                                <div
-                                                    className="demande-name"
-                                                    style={{
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: 8,
-                                                    }}
-                                                >
-                                                    {acte.membre?.prenom}{" "}
-                                                    {acte.membre?.nom}
-                                                    {/* Bouton transmettre la fiche à côté du conducteur */}
-                                                    <button
-                                                        className="btn-small btn-fiche"
-                                                        title="Transmettre la fiche PDF de la demande du jour"
-                                                        style={{
-                                                            marginLeft: 8,
-                                                            background:
-                                                                "#e0e7ff",
-                                                            color: "#3730a3",
-                                                            border: "1px solid #a5b4fc",
-                                                            borderRadius: 4,
-                                                            padding: "2px 8px",
-                                                            fontSize: 12,
-                                                        }}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            openFicheModalForActe(
-                                                                acte,
-                                                            );
-                                                        }}
-                                                    >
-                                                        📄 voir la fiche
-                                                    </button>
-                                                </div>
-                                                <div className="demande-type">
-                                                    {prettyType(acte.type_acte)}{" "}
-                                                    · Soumis le{" "}
-                                                    {formatDate(
-                                                        acte.created_at ||
-                                                            acte.date_souhaitee,
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="demande-meta">
-                                                <span className="badge badge-soumise">
-                                                    <span className="badge-dot" />
-                                                    SOUMISE
-                                                </span>
-                                                <div
-                                                    className="item-actions"
-                                                    onClick={(e) =>
-                                                        e.stopPropagation()
-                                                    }
-                                                >
-                                                    <button
-                                                        className="btn-small btn-approve"
-                                                        onClick={() =>
-                                                            openModal(
-                                                                "approve",
-                                                                acte,
-                                                            )
-                                                        }
-                                                    >
-                                                        <svg
-                                                            width="11"
-                                                            height="11"
-                                                            fill="none"
-                                                            viewBox="0 0 24 24"
-                                                            stroke="currentColor"
-                                                            strokeWidth="2.5"
-                                                        >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                d="M5 13l4 4L19 7"
-                                                            />
-                                                        </svg>
-                                                        Valider
-                                                    </button>
-                                                    {hasCeremonyChoice(
-                                                        acte,
-                                                    ) && (
-                                                        <button
-                                                            className="btn-small btn-see"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                openModal(
-                                                                    "ceremony",
-                                                                    acte,
-                                                                );
-                                                            }}
-                                                        >
-                                                            Voir la date choisie
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        className="btn-small btn-refuse"
-                                                        onClick={() =>
-                                                            openModal(
-                                                                "refuse",
-                                                                acte,
-                                                            )
-                                                        }
-                                                    >
-                                                        <svg
-                                                            width="11"
-                                                            height="11"
-                                                            fill="none"
-                                                            viewBox="0 0 24 24"
-                                                            stroke="currentColor"
-                                                            strokeWidth="2.5"
-                                                        >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                d="M6 18L18 6M6 6l12 12"
-                                                            />
-                                                        </svg>
-                                                        Refuser
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {soumisesTotalPages > 1 && (
-                                        <div className="pager">
-                                            <button
-                                                type="button"
-                                                className="pager-btn"
-                                                onClick={() =>
-                                                    setSoumisesPage((p) =>
-                                                        Math.max(1, p - 1),
-                                                    )
-                                                }
-                                                disabled={soumisesPage === 1}
-                                            >
-                                                Précédent
-                                            </button>
-                                            <div className="pager-info">
-                                                Page {soumisesPage}/
-                                                {soumisesTotalPages}
-                                            </div>
-                                            <button
-                                                type="button"
-                                                className="pager-btn"
-                                                onClick={() =>
-                                                    setSoumisesPage((p) =>
-                                                        Math.min(
-                                                            soumisesTotalPages,
-                                                            p + 1,
-                                                        ),
-                                                    )
-                                                }
-                                                disabled={
-                                                    soumisesPage ===
-                                                    soumisesTotalPages
-                                                }
-                                            >
-                                                Suivant
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: 16,
-                                }}
-                            >
-                                <div className="panel panel-side">
-                                    <div className="panel-head">
-                                        <div className="panel-title">
-                                            <svg
-                                                width="15"
-                                                height="15"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                strokeWidth="2"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                />
-                                            </svg>
-                                            Circuit de validation
-                                        </div>
-                                    </div>
-                                    <div className="circuit-steps">
-                                        <div className="circuit-step done">
-                                            <div className="circuit-dot done">
-                                                <svg
-                                                    width="10"
-                                                    height="10"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                    strokeWidth="3"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        d="M5 13l4 4L19 7"
-                                                    />
-                                                </svg>
-                                            </div>
-                                            <div className="circuit-line done" />
-                                            <div className="circuit-text">
-                                                <strong>Membre soumet</strong>
-                                                <span>Demande enregistrée</span>
-                                            </div>
-                                        </div>
-                                        <div className="circuit-step active">
-                                            <div className="circuit-dot active">
-                                                <svg
-                                                    width="10"
-                                                    height="10"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                    strokeWidth="2.5"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                                    />
-                                                </svg>
-                                            </div>
-                                            <div className="circuit-line" />
-                                            <div className="circuit-text">
-                                                <strong>Vous analysez</strong>
-                                                <span>
-                                                    Validation conducteur
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="circuit-step">
-                                            <div className="circuit-dot pending">
-                                                ✝
-                                            </div>
-                                            <div className="circuit-text">
-                                                <strong>Pasteur valide</strong>
-                                                <span>Validation finale</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="panel panel-side">
-                                    <div className="panel-head">
-                                        <div className="panel-title">
-                                            <svg
-                                                width="15"
-                                                height="15"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                strokeWidth="2"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M12 4v16m8-8H4"
-                                                />
-                                            </svg>
-                                            Créer un acte direct
-                                        </div>
-                                    </div>
-                                    <div className="panel-side-body">
-                                        <p>
-                                            En tant que conducteur, vous pouvez
-                                            créer directement un acte pour votre
-                                            classe sans demande préalable.
-                                        </p>
-                                        <button
-                                            className="btn-create-side"
-                                            onClick={() => openModal("create")}
-                                        >
-                                            <svg
-                                                width="13"
-                                                height="13"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                strokeWidth="2.5"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M12 4v16m8-8H4"
-                                                />
-                                            </svg>
-                                            Nouvel acte direct
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <SoumisesTab
+                            soumises={soumises}
+                            pagedSoumises={pagedSoumises}
+                            soumisesPage={soumisesPage}
+                            soumisesTotalPages={soumisesTotalPages}
+                            selectedIds={selectedIds}
+                            allPageSelected={allPageSelected}
+                            processing={processing}
+                            setSoumisesPage={setSoumisesPage}
+                            toggleSelectAllPage={toggleSelectAllPage}
+                            approveSelected={approveSelected}
+                            refuseSelected={refuseSelected}
+                            toggleSelected={toggleSelected}
+                            openModal={openModal}
+                            openFicheModalForActe={openFicheModalForActe}
+                            hasCeremonyChoice={hasCeremonyChoice}
+                            prettyType={prettyType}
+                            formatDate={formatDate}
+                            tone={tone}
+                            iconEmoji={iconEmoji}
+                            normalizePhotoUrl={normalizePhotoUrl}
+                        />
                     )}
 
                     {/* ══════════ ONGLET TRANSMISES ══════════ */}
                     {tab === "transmises" && (
-                        <div className="panel">
-                            <div className="panel-head">
-                                <div>
-                                    <div className="panel-title">
-                                        <svg
-                                            width="16"
-                                            height="16"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                                            />
-                                        </svg>
-                                        Transmises au Pasteur
-                                    </div>
-                                    <div className="panel-subtitle">
-                                        En attente de validation finale
-                                    </div>
-                                </div>
-                                <span className="panel-count-badge panel-count-gold">
-                                    {transmises.length}
-                                </span>
-                            </div>
-                            <div className="panel-body">
-                                {transmises.length === 0 && (
-                                    <div className="empty-state">
-                                        <svg
-                                            width="32"
-                                            height="32"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth="1.2"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                                            />
-                                        </svg>
-                                        <span>
-                                            Aucune demande transmise au pasteur
-                                        </span>
-                                    </div>
-                                )}
-                                {transmises.map((acte) => (
-                                    <div
-                                        key={acte.id}
-                                        className="demande-item"
-                                        onClick={() =>
-                                            openModal("detail", acte)
-                                        }
-                                    >
-                                        <div
-                                            className={`demande-acte-icon ${tone(acte.type_acte)}`}
-                                        >
-                                            {acte.membre?.profile_photo_url ? (
-                                                <img
-                                                    src={
-                                                        acte.membre
-                                                            .profile_photo_url
-                                                    }
-                                                    alt={`${acte.membre?.prenom} ${acte.membre?.nom}`}
-                                                    style={{
-                                                        width: "100%",
-                                                        height: "100%",
-                                                        objectFit: "cover",
-                                                        borderRadius: "50%",
-                                                    }}
-                                                />
-                                            ) : (
-                                                <span>
-                                                    {iconEmoji(acte.type_acte)}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="demande-info">
-                                            <div className="demande-name">
-                                                {acte.membre?.prenom}{" "}
-                                                {acte.membre?.nom}
-                                            </div>
-                                            <div className="demande-type">
-                                                {prettyType(acte.type_acte)} ·
-                                                Transmis le{" "}
-                                                {formatDate(
-                                                    acte.updated_at ||
-                                                        acte.created_at,
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="demande-meta">
-                                            <span className="badge badge-transmis">
-                                                <span className="badge-dot" />
-                                                AU PASTEUR
-                                            </span>
-                                            <div className="item-actions">
-                                                <button
-                                                    className="btn-small btn-view"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        openModal(
-                                                            "detail",
-                                                            acte,
-                                                        );
-                                                    }}
-                                                >
-                                                    <svg
-                                                        width="11"
-                                                        height="11"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        stroke="currentColor"
-                                                        strokeWidth="2"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                                        />
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                                        />
-                                                    </svg>
-                                                    Voir dossier
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                        <TransmisesTab
+                            transmises={transmises}
+                            openModal={openModal}
+                            prettyType={prettyType}
+                            formatDate={formatDate}
+                            tone={tone}
+                            iconEmoji={iconEmoji}
+                        />
                     )}
 
                     {/* ══════════ ONGLET DATES CHOISIES ══════════ */}
                     {tab === "dates" && (
-                        <div className="date-tab-root">
-                            <section className="date-section-panel">
-                                <div className="date-shell">
-                                    <div className="date-shell-head">
-                                        <div>
-                                            <div className="date-shell-title">
-                                                Dates proposées en attente
-                                                conducteur
-                                            </div>
-                                            <div className="date-shell-sub">
-                                                Vérifiez les dates soumises par
-                                                les responsables avant
-                                                transmission au pasteur.
-                                            </div>
-                                        </div>
-                                        <div className="date-shell-tools">
-                                            <button
-                                                type="button"
-                                                className="btn-bulk"
-                                                onClick={
-                                                    toggleSelectAllCeremony
-                                                }
-                                                disabled={
-                                                    ceremonyActs.length === 0
-                                                }
-                                            >
-                                                {allCeremonySelected
-                                                    ? "Désélectionner"
-                                                    : "Tout sélectionner"}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className="btn-bulk"
-                                                onClick={clearCeremonySelection}
-                                                disabled={
-                                                    selectedCeremonyIds.size ===
-                                                    0
-                                                }
-                                            >
-                                                Effacer
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className="btn-bulk btn-bulk-violet"
-                                                onClick={
-                                                    approveSelectedCeremony
-                                                }
-                                                disabled={
-                                                    selectedCeremonyIds.size ===
-                                                        0 || processing
-                                                }
-                                            >
-                                                Valider la sélection
-                                            </button>
-                                            <div className="date-shell-count">
-                                                {ceremonyActs.length} dossier
-                                                {ceremonyActs.length > 1
-                                                    ? "s"
-                                                    : ""}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {ceremonyActs.length === 0 ? (
-                                        <div className="empty-state">
-                                            <svg
-                                                width="32"
-                                                height="32"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                strokeWidth="1.2"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M6 2h12a2 2 0 012 2v16a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"
-                                                />
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M6 10h12"
-                                                />
-                                            </svg>
-                                            <div className="empty-title">
-                                                Aucune date de mariage choisie
-                                            </div>
-                                            <div className="empty-sub">
-                                                Les responsables pourront
-                                                proposer une date une fois leur
-                                                dossier validé.
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="date-grid">
-                                            {ceremonyActs.map((acte) => {
-                                                const statut =
-                                                    acte.details
-                                                        ?.ceremonie_statut;
-                                                return (
-                                                    <article
-                                                        className="date-card"
-                                                        key={acte.id}
-                                                    >
-                                                        <label className="date-card-check">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={selectedCeremonyIds.has(
-                                                                    acte.id,
-                                                                )}
-                                                                onChange={() =>
-                                                                    toggleCeremonySelect(
-                                                                        acte.id,
-                                                                    )
-                                                                }
-                                                            />
-                                                            <span>
-                                                                Sélectionner
-                                                            </span>
-                                                        </label>
-                                                        <div className="date-card-main">
-                                                            <div className="date-card-heading">
-                                                                <div className="date-card-title">
-                                                                    {
-                                                                        acte
-                                                                            .membre
-                                                                            ?.prenom
-                                                                    }{" "}
-                                                                    {
-                                                                        acte
-                                                                            .membre
-                                                                            ?.nom
-                                                                    }
-                                                                </div>
-                                                                <div className="date-card-ref">
-                                                                    {acte.reference ||
-                                                                        "Référence indisponible"}
-                                                                </div>
-                                                            </div>
-                                                            <span
-                                                                className={`badge ${
-                                                                    statut &&
-                                                                    statut.includes(
-                                                                        "REFUSEE",
-                                                                    )
-                                                                        ? "badge-refuse"
-                                                                        : "badge-valide"
-                                                                }`}
-                                                            >
-                                                                <span className="badge-dot" />
-                                                                {ceremonyStatusLabel(
-                                                                    statut,
-                                                                )}
-                                                            </span>
-                                                        </div>
-                                                        <div className="date-card-meta">
-                                                            {formatDate(
-                                                                acte.date_souhaitee,
-                                                            )}
-                                                            <span className="date-card-sep">
-                                                                •
-                                                            </span>
-                                                            {acte.details
-                                                                ?.ceremonie_creneau ||
-                                                                "—"}
-                                                        </div>
-                                                        <div className="date-card-body">
-                                                            <div className="date-card-field">
-                                                                <span className="date-card-label">
-                                                                    Lieu
-                                                                </span>
-                                                                <span className="date-card-value">
-                                                                    {acte
-                                                                        .details
-                                                                        ?.lieu_ceremonie ||
-                                                                        "—"}
-                                                                </span>
-                                                            </div>
-                                                            <div className="date-card-field">
-                                                                <span className="date-card-label">
-                                                                    Témoins
-                                                                </span>
-                                                                <span className="date-card-value">
-                                                                    {acte
-                                                                        .details
-                                                                        ?.temoins ||
-                                                                        [
-                                                                            acte
-                                                                                .details
-                                                                                ?.temoin_femme,
-                                                                            acte
-                                                                                .details
-                                                                                ?.temoin_homme,
-                                                                        ]
-                                                                            .filter(
-                                                                                Boolean,
-                                                                            )
-                                                                            .join(
-                                                                                " / ",
-                                                                            ) ||
-                                                                        "—"}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                        <div className="date-card-actions">
-                                                            <button
-                                                                className="btn-see date-card-button"
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    openModal(
-                                                                        "ceremony",
-                                                                        acte,
-                                                                    )
-                                                                }
-                                                            >
-                                                                Voir la date
-                                                                choisie
-                                                            </button>
-                                                        </div>
-                                                    </article>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-                            </section>
-
-                            <section className="date-section-panel date-section-history">
-                                <div className="date-history-shell">
-                                    <div className="date-history-head">
-                                        <div>
-                                            <div className="date-history-title">
-                                                Historique des dates validées
-                                                par le conducteur
-                                            </div>
-                                            <div className="date-history-sub">
-                                                Uniquement les membres de votre
-                                                classe dont la date a été
-                                                validée et transmise par vous.
-                                            </div>
-                                        </div>
-                                        <div className="date-history-count">
-                                            {ceremonyHistoryRows.length} date
-                                            {ceremonyHistoryRows.length > 1
-                                                ? "s"
-                                                : ""}
-                                        </div>
-                                    </div>
-
-                                    {ceremonyHistoryRows.length === 0 ? (
-                                        <div className="empty empty-history">
-                                            Aucune date validée par le
-                                            conducteur.
-                                        </div>
-                                    ) : (
-                                        <div className="table-scroll date-history-table-scroll">
-                                            <table className="history-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Référence</th>
-                                                        <th>Membre concerné</th>
-                                                        <th>Classe</th>
-                                                        <th>
-                                                            Fiancé / fiancée
-                                                        </th>
-                                                        <th>Témoin(s)</th>
-                                                        <th>Date choisie</th>
-                                                        <th>Transmise le</th>
-                                                        <th>Statut</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {ceremonyHistoryRows.map(
-                                                        (row) => (
-                                                            <tr
-                                                                key={row.rowKey}
-                                                            >
-                                                                <td>
-                                                                    {
-                                                                        row.reference
-                                                                    }
-                                                                </td>
-                                                                <td>
-                                                                    {
-                                                                        row.memberName
-                                                                    }
-                                                                </td>
-                                                                <td>
-                                                                    {
-                                                                        row.classeName
-                                                                    }
-                                                                </td>
-                                                                <td>
-                                                                    {
-                                                                        row.fianceName
-                                                                    }
-                                                                </td>
-                                                                <td>
-                                                                    {
-                                                                        row.witnesses
-                                                                    }
-                                                                </td>
-                                                                <td>
-                                                                    {formatDate(
-                                                                        row.dateChosen,
-                                                                    )}
-                                                                </td>
-                                                                <td>
-                                                                    {formatDateTime(
-                                                                        row.conducteurValidatedAt,
-                                                                    )}
-                                                                </td>
-                                                                <td>
-                                                                    {ceremonyStatusLabel(
-                                                                        row.ceremonyStatut,
-                                                                    )}
-                                                                </td>
-                                                            </tr>
-                                                        ),
-                                                    )}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
-                                </div>
-                            </section>
-                        </div>
+                        <DatesTab
+                            ceremonyActs={ceremonyActs}
+                            ceremonyHistoryRows={ceremonyHistoryRows}
+                            selectedCeremonyIds={selectedCeremonyIds}
+                            allCeremonySelected={allCeremonySelected}
+                            processing={processing}
+                            toggleSelectAllCeremony={toggleSelectAllCeremony}
+                            clearCeremonySelection={clearCeremonySelection}
+                            approveSelectedCeremony={approveSelectedCeremony}
+                            toggleCeremonySelect={toggleCeremonySelect}
+                            openModal={openModal}
+                            formatDate={formatDate}
+                            formatDateTime={formatDateTime}
+                            ceremonyStatusLabel={ceremonyStatusLabel}
+                        />
                     )}
 
                     {tab === "calendar" && (
-                        <div className="calendar-tab-root">
-                            <MiniCalendar
-                                events={calendarEvents}
-                                title="Calendrier des mariages"
-                            />
-                        </div>
+                        <CalendarTab
+                            calendarEvents={calendarEvents}
+                        />
                     )}
 
                     {/* ══════════ ★★★ ONGLET ANNONCES ★★★ ══════════ */}
                     {tab === "annonces" && (
-                        <div className="ann-tab-root">
-                            {/* Corps : liste + sidebar */}
-                            <div className="grid-3-1">
-                                {/* COLONNE PRINCIPALE */}
-                                <div className="panel">
-                                    <div className="panel-head">
-                                        <div>
-                                            {/* Sous-tabs À traiter / Traitées */}
-                                            <div className="ann-subtabs">
-                                                <button
-                                                    className={`ann-subtab ${annoncesSubTab === "pending" ? "active" : ""}`}
-                                                    onClick={() => {
-                                                        setAnnoncesSubTab(
-                                                            "pending",
-                                                        );
-                                                        setAnnoncesPage(1);
-                                                    }}
-                                                >
-                                                    À traiter
-                                                    {annEnAttente.length >
-                                                        0 && (
-                                                        <span className="ann-subtab-badge">
-                                                            {
-                                                                annEnAttente.length
-                                                            }
-                                                        </span>
-                                                    )}
-                                                </button>
-                                                <button
-                                                    className={`ann-subtab ${annoncesSubTab === "done" ? "active" : ""}`}
-                                                    onClick={() => {
-                                                        setAnnoncesSubTab(
-                                                            "done",
-                                                        );
-                                                        setAnnoncesPage(1);
-                                                    }}
-                                                >
-                                                    Déjà traitées
-                                                    {annTraitees.length > 0 && (
-                                                        <span className="ann-subtab-badge ann-subtab-badge-done">
-                                                            {annTraitees.length}
-                                                        </span>
-                                                    )}
-                                                </button>
-                                                <button
-                                                    className={`ann-subtab ${annoncesSubTab === "mine" ? "active" : ""}`}
-                                                    onClick={() => {
-                                                        setAnnoncesSubTab(
-                                                            "mine",
-                                                        );
-                                                        setAnnoncesPage(1);
-                                                    }}
-                                                >
-                                                    Mes annonces
-                                                    {annMines.length > 0 && (
-                                                        <span className="ann-subtab-badge">
-                                                            {annMines.length}
-                                                        </span>
-                                                    )}
-                                                </button>
-                                            </div>
-                                            <div
-                                                className="panel-subtitle"
-                                                style={{ marginTop: 4 }}
-                                            >
-                                                {annoncesSubTab === "pending"
-                                                    ? "Soumises par les responsables de famille"
-                                                    : annoncesSubTab === "done"
-                                                      ? "Transmises au pasteur ou refusées"
-                                                      : "Les annonces que vous avez créées"}
-                                            </div>
-                                        </div>
-                                        <div className="panel-actions">
-                                            <button
-                                                type="button"
-                                                className="btn-cta-ann btn-cta-ann-sm"
-                                                onClick={() =>
-                                                    openAnnonceModal("create")
-                                                }
-                                                disabled={annonceProcessing}
-                                            >
-                                                <svg
-                                                    width="13"
-                                                    height="13"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                    strokeWidth="2.5"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        d="M12 4v16m8-8H4"
-                                                    />
-                                                </svg>
-                                                Nouvelle annonce
-                                            </button>
-                                            {annoncesSubTab === "pending" &&
-                                                annEnAttente.length > 0 && (
-                                                    <>
-                                                        <button
-                                                            type="button"
-                                                            className="btn-bulk btn-bulk-violet"
-                                                            onClick={
-                                                                toggleAllAnnPage
-                                                            }
-                                                            disabled={
-                                                                pagedAnn.filter(
-                                                                    (a) =>
-                                                                        a.statut ===
-                                                                        "SOUMISE",
-                                                                ).length === 0
-                                                            }
-                                                        >
-                                                            {allAnnSel
-                                                                ? "Tout désél."
-                                                                : "Tout sél."}
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            className="btn-bulk btn-bulk-violet"
-                                                            onClick={
-                                                                approveAnnonces
-                                                            }
-                                                            disabled={
-                                                                annonceProcessing ||
-                                                                annSelectedIds.size ===
-                                                                    0
-                                                            }
-                                                        >
-                                                            <svg
-                                                                width="11"
-                                                                height="11"
-                                                                fill="none"
-                                                                viewBox="0 0 24 24"
-                                                                stroke="currentColor"
-                                                                strokeWidth="2.5"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                                                                />
-                                                            </svg>
-                                                            Transmettre
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            className="btn-bulk btn-bulk-refuse"
-                                                            onClick={
-                                                                refuseAnnonces
-                                                            }
-                                                            disabled={
-                                                                annonceProcessing ||
-                                                                annSelectedIds.size ===
-                                                                    0
-                                                            }
-                                                        >
-                                                            <svg
-                                                                width="11"
-                                                                height="11"
-                                                                fill="none"
-                                                                viewBox="0 0 24 24"
-                                                                stroke="currentColor"
-                                                                strokeWidth="2.5"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    d="M6 18L18 6M6 6l12 12"
-                                                                />
-                                                            </svg>
-                                                            Refuser
-                                                        </button>
-                                                    </>
-                                                )}
-                                        </div>
-                                    </div>
-
-                                    <div className="panel-body">
-                                        {annDisplay.length === 0 && (
-                                            <div className="empty-state">
-                                                <span
-                                                    style={{
-                                                        fontSize: 38,
-                                                        opacity: 0.3,
-                                                    }}
-                                                >
-                                                    📢
-                                                </span>
-                                                <span>
-                                                    {annoncesSubTab ===
-                                                    "pending"
-                                                        ? "Aucune annonce en attente"
-                                                        : annoncesSubTab ===
-                                                            "done"
-                                                          ? "Aucune annonce traitée"
-                                                          : "Vous n'avez créé aucune annonce"}
-                                                </span>
-                                            </div>
-                                        )}
-                                        {pagedAnn.map((ann) => {
-                                            const typeInfo = ANNONCE_TYPES.find(
-                                                (t) =>
-                                                    t.value ===
-                                                    ann.type_annonce,
-                                            );
-                                            const isPending =
-                                                ann.statut === "SOUMISE";
-                                            const isTrans =
-                                                ann.statut ===
-                                                "TRANSMISE_AU_PASTEUR";
-                                            const isRefuse =
-                                                ann.statut?.startsWith(
-                                                    "REFUSEE",
-                                                );
-                                            const isPublie = [
-                                                "VALIDEE",
-                                                "PUBLIEE",
-                                            ].includes(ann.statut);
-                                            const creatorName =
-                                                [
-                                                    ann.createur?.prenom,
-                                                    ann.createur?.nom,
-                                                ]
-                                                    .filter(Boolean)
-                                                    .join(" ") ||
-                                                ann.nom_concerne ||
-                                                "—";
-                                            return (
-                                                <div
-                                                    key={ann.id}
-                                                    className={`ann-item ${isPending ? "ann-item-pending" : ""}`}
-                                                >
-                                                    {/* Checkbox groupée (seulement pour pending et onglet "À traiter") */}
-                                                    {isPending &&
-                                                        annoncesSubTab ===
-                                                            "pending" && (
-                                                            <label
-                                                                className="bulk-check"
-                                                                onClick={(e) =>
-                                                                    e.stopPropagation()
-                                                                }
-                                                            >
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={annSelectedIds.has(
-                                                                        ann.id,
-                                                                    )}
-                                                                    onChange={() =>
-                                                                        toggleAnnSel(
-                                                                            ann.id,
-                                                                        )
-                                                                    }
-                                                                />
-                                                            </label>
-                                                        )}
-                                                    {/* Icône type */}
-                                                    <div
-                                                        className={`ann-type-icon aicon-${typeInfo?.color || "green"}`}
-                                                    >
-                                                        {typeInfo?.emoji ||
-                                                            "📢"}
-                                                    </div>
-                                                    {/* Corps annonce */}
-                                                    <div
-                                                        className="ann-item-body"
-                                                        onClick={() =>
-                                                            openAnnonceModal(
-                                                                "detail",
-                                                                ann,
-                                                            )
-                                                        }
-                                                    >
-                                                        <div className="ann-item-header">
-                                                            <span className="ann-item-type">
-                                                                {typeInfo?.label ||
-                                                                    ann.type_annonce}
-                                                            </span>
-                                                            <span className="ann-item-who">
-                                                                — {creatorName}
-                                                            </span>
-                                                        </div>
-                                                        <div className="ann-item-msg">
-                                                            {(
-                                                                ann.details
-                                                                    ?.contenu ||
-                                                                ann.message ||
-                                                                ""
-                                                            ).slice(0, 120)}
-                                                            {(
-                                                                ann.details
-                                                                    ?.contenu ||
-                                                                ann.message ||
-                                                                ""
-                                                            ).length > 120 &&
-                                                                "…"}
-                                                        </div>
-                                                        <div className="ann-status-line">
-                                                            Statut :{" "}
-                                                            {prettyStatut(
-                                                                ann.statut,
-                                                            )}
-                                                        </div>
-                                                        <div className="ann-item-footer">
-                                                            {ann.classe
-                                                                ?.nom && (
-                                                                <span className="ann-chip ann-chip-class">
-                                                                    🏠{" "}
-                                                                    {
-                                                                        ann
-                                                                            .classe
-                                                                            .nom
-                                                                    }
-                                                                </span>
-                                                            )}
-                                                            {ann.destinataire && (
-                                                                <span className="ann-chip">
-                                                                    →{" "}
-                                                                    {
-                                                                        ann.destinataire
-                                                                    }
-                                                                </span>
-                                                            )}
-                                                            <span className="ann-date">
-                                                                {formatDate(
-                                                                    ann.created_at,
-                                                                )}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    {/* Actions droite */}
-                                                    <div className="ann-item-right">
-                                                        {isPending && (
-                                                            <span className="badge badge-soumise">
-                                                                <span className="badge-dot" />
-                                                                À TRAITER
-                                                            </span>
-                                                        )}
-                                                        {isTrans && (
-                                                            <span className="badge badge-transmis">
-                                                                <span className="badge-dot" />
-                                                                AU PASTEUR
-                                                            </span>
-                                                        )}
-                                                        {isRefuse && (
-                                                            <span className="badge badge-refuse">
-                                                                <span className="badge-dot" />
-                                                                REFUSÉE
-                                                            </span>
-                                                        )}
-                                                        {isPublie && (
-                                                            <span className="badge badge-valide">
-                                                                <span className="badge-dot" />
-                                                                PUBLIÉE
-                                                            </span>
-                                                        )}
-                                                        {isPending ? (
-                                                            <div
-                                                                className="item-actions"
-                                                                onClick={(e) =>
-                                                                    e.stopPropagation()
-                                                                }
-                                                            >
-                                                                <button
-                                                                    className="btn-small btn-approve"
-                                                                    onClick={() =>
-                                                                        openAnnonceModal(
-                                                                            "approve",
-                                                                            ann,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <svg
-                                                                        width="11"
-                                                                        height="11"
-                                                                        fill="none"
-                                                                        viewBox="0 0 24 24"
-                                                                        stroke="currentColor"
-                                                                        strokeWidth="2.5"
-                                                                    >
-                                                                        <path
-                                                                            strokeLinecap="round"
-                                                                            strokeLinejoin="round"
-                                                                            d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                                                                        />
-                                                                    </svg>
-                                                                    Transmettre
-                                                                </button>
-                                                                <button
-                                                                    className="btn-small btn-refuse"
-                                                                    onClick={() =>
-                                                                        openAnnonceModal(
-                                                                            "refuse",
-                                                                            ann,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <svg
-                                                                        width="11"
-                                                                        height="11"
-                                                                        fill="none"
-                                                                        viewBox="0 0 24 24"
-                                                                        stroke="currentColor"
-                                                                        strokeWidth="2.5"
-                                                                    >
-                                                                        <path
-                                                                            strokeLinecap="round"
-                                                                            strokeLinejoin="round"
-                                                                            d="M6 18L18 6M6 6l12 12"
-                                                                        />
-                                                                    </svg>
-                                                                    Refuser
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <button
-                                                                className="btn-small btn-view"
-                                                                onClick={() =>
-                                                                    openAnnonceModal(
-                                                                        "detail",
-                                                                        ann,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <svg
-                                                                    width="11"
-                                                                    height="11"
-                                                                    fill="none"
-                                                                    viewBox="0 0 24 24"
-                                                                    stroke="currentColor"
-                                                                    strokeWidth="2"
-                                                                >
-                                                                    <path
-                                                                        strokeLinecap="round"
-                                                                        strokeLinejoin="round"
-                                                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                                                    />
-                                                                    <path
-                                                                        strokeLinecap="round"
-                                                                        strokeLinejoin="round"
-                                                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                                                    />
-                                                                </svg>
-                                                                Voir
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                        {annTotalPages > 1 && (
-                                            <div className="pager">
-                                                <button
-                                                    type="button"
-                                                    className="pager-btn"
-                                                    onClick={() =>
-                                                        setAnnoncesPage((p) =>
-                                                            Math.max(1, p - 1),
-                                                        )
-                                                    }
-                                                    disabled={
-                                                        annoncesPage === 1
-                                                    }
-                                                >
-                                                    Précédent
-                                                </button>
-                                                <div className="pager-info">
-                                                    Page {annoncesPage}/
-                                                    {annTotalPages}
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    className="pager-btn"
-                                                    onClick={() =>
-                                                        setAnnoncesPage((p) =>
-                                                            Math.min(
-                                                                annTotalPages,
-                                                                p + 1,
-                                                            ),
-                                                        )
-                                                    }
-                                                    disabled={
-                                                        annoncesPage ===
-                                                        annTotalPages
-                                                    }
-                                                >
-                                                    Suivant
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* COLONNE LATÉRALE */}
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        flexDirection: "column",
-                                        gap: 16,
-                                    }}
-                                >
-                                    {/* Circuit annonces */}
-                                    <div className="panel panel-side">
-                                        <div className="panel-head">
-                                            <div className="panel-title">
-                                                <svg
-                                                    width="15"
-                                                    height="15"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                    strokeWidth="2"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                    />
-                                                </svg>
-                                                Circuit de l'annonce
-                                            </div>
-                                        </div>
-                                        <div className="circuit-steps">
-                                            <div className="circuit-step done">
-                                                <div className="circuit-dot done">
-                                                    <svg
-                                                        width="10"
-                                                        height="10"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        stroke="currentColor"
-                                                        strokeWidth="3"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            d="M5 13l4 4L19 7"
-                                                        />
-                                                    </svg>
-                                                </div>
-                                                <div className="circuit-line done" />
-                                                <div className="circuit-text">
-                                                    <strong>
-                                                        Famille soumet
-                                                    </strong>
-                                                    <span>
-                                                        Annonce enregistrée
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="circuit-step active">
-                                                <div
-                                                    className="circuit-dot active"
-                                                    style={{ fontSize: 13 }}
-                                                >
-                                                    📢
-                                                </div>
-                                                <div className="circuit-line" />
-                                                <div className="circuit-text">
-                                                    <strong>
-                                                        Vous validez
-                                                    </strong>
-                                                    <span>Contenu analysé</span>
-                                                </div>
-                                            </div>
-                                            <div className="circuit-step">
-                                                <div
-                                                    className="circuit-dot pending"
-                                                    style={{ fontSize: 10 }}
-                                                >
-                                                    ✝
-                                                </div>
-                                                <div className="circuit-line" />
-                                                <div className="circuit-text">
-                                                    <strong>
-                                                        Pasteur approuve
-                                                    </strong>
-                                                    <span>
-                                                        Validation finale
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="circuit-step">
-                                                <div
-                                                    className="circuit-dot pending"
-                                                    style={{ fontSize: 10 }}
-                                                >
-                                                    🌍
-                                                </div>
-                                                <div className="circuit-text">
-                                                    <strong>Publication</strong>
-                                                    <span>
-                                                        Visible à la paroisse
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Répartition par type */}
-                                    <div className="panel panel-side">
-                                        <div className="panel-head">
-                                            <div className="panel-title">
-                                                <svg
-                                                    width="15"
-                                                    height="15"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                    strokeWidth="2"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                                                    />
-                                                </svg>
-                                                Par type
-                                            </div>
-                                        </div>
-                                        <div
-                                            className="panel-side-body"
-                                            style={{ paddingTop: 10 }}
-                                        >
-                                            {ANNONCE_TYPES.map((t) => {
-                                                const cnt =
-                                                    localAnnonces.filter(
-                                                        (a) =>
-                                                            a.type_annonce ===
-                                                            t.value,
-                                                    ).length;
-                                                const pct = localAnnonces.length
-                                                    ? Math.round(
-                                                          (cnt /
-                                                              localAnnonces.length) *
-                                                              100,
-                                                      )
-                                                    : 0;
-                                                return (
-                                                    <div
-                                                        key={t.value}
-                                                        className="ann-stat-row"
-                                                    >
-                                                        <span className="ann-stat-emoji">
-                                                            {t.emoji}
-                                                        </span>
-                                                        <div className="ann-stat-info">
-                                                            <div className="ann-stat-name">
-                                                                {t.label}
-                                                            </div>
-                                                            <div className="ann-stat-bar">
-                                                                <div
-                                                                    className={`ann-stat-fill asfill-${t.color}`}
-                                                                    style={{
-                                                                        width: `${pct}%`,
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                        <span className="ann-stat-cnt">
-                                                            {cnt}
-                                                        </span>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <AnnoncesTab
+                            annoncesSubTab={annoncesSubTab}
+                            setAnnoncesSubTab={setAnnoncesSubTab}
+                            annDisplay={annDisplay}
+                            pagedAnn={pagedAnn}
+                            annEnAttente={annEnAttente}
+                            annTraitees={annTraitees}
+                            annMines={annMines}
+                            annTotalPages={annTotalPages}
+                            annoncesPage={annoncesPage}
+                            setAnnoncesPage={setAnnoncesPage}
+                            annSelectedIds={annSelectedIds}
+                            allAnnSel={allAnnSel}
+                            annonceProcessing={annonceProcessing}
+                            localAnnonces={localAnnonces}
+                            toggleAnnSel={toggleAnnSel}
+                            toggleAllAnnPage={toggleAllAnnPage}
+                            approveAnnonces={approveAnnonces}
+                            refuseAnnonces={refuseAnnonces}
+                            openAnnonceModal={openAnnonceModal}
+                            ANNONCE_TYPES={ANNONCE_TYPES}
+                            prettyStatut={prettyStatut}
+                            formatDate={formatDate}
+                        />
                     )}
 
                     {/* ══════════ ONGLET HISTORIQUE ══════════ */}
                     {tab === "historique" && (
-                        <div className="grid-2">
-                            <div className="panel">
-                                <div className="panel-head">
-                                    <div className="panel-title">
-                                        <svg
-                                            width="16"
-                                            height="16"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                            />
-                                        </svg>
-                                        Journal des actes
-                                    </div>
-                                </div>
-                                <div className="panel-body">
-                                    {historique.length === 0 && (
-                                        <div className="empty-state">
-                                            <svg
-                                                width="32"
-                                                height="32"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                strokeWidth="1.2"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                />
-                                            </svg>
-                                            <span>
-                                                Aucun historique disponible
-                                            </span>
-                                        </div>
-                                    )}
-                                    {pagedHistorique.map((acte) => (
-                                        <div
-                                            key={acte.id}
-                                            className="timeline-item"
-                                        >
-                                            <div
-                                                className={`timeline-dot ${dot(getActeStatus(acte))}`}
-                                            />
-                                            <div className="timeline-content">
-                                                <div className="timeline-action">
-                                                    {prettyType(acte.type_acte)}{" "}
-                                                    — {acte.membre?.prenom}{" "}
-                                                    {acte.membre?.nom}
-                                                </div>
-                                                <div className="timeline-detail">
-                                                    {prettyStatut(
-                                                        getActeStatus(acte),
-                                                    )}
-                                                </div>
-                                                {String(
-                                                    acte.type_acte || "",
-                                                ).toLowerCase() ===
-                                                    "mariage" && (
-                                                    <div
-                                                        style={{ marginTop: 8 }}
-                                                    >
-                                                        <button
-                                                            type="button"
-                                                            className={`btn-see ${!acte?.details?.ceremonie_statut ? "btn-disabled" : ""}`}
-                                                            disabled={
-                                                                !acte?.details
-                                                                    ?.ceremonie_statut
-                                                            }
-                                                            style={{
-                                                                borderRadius: 14,
-                                                                padding:
-                                                                    "8px 12px",
-                                                                fontSize:
-                                                                    "11px",
-                                                                backgroundColor:
-                                                                    acte
-                                                                        ?.details
-                                                                        ?.ceremonie_statut
-                                                                        ? "#c82333"
-                                                                        : "#f3f4f6",
-                                                                borderColor:
-                                                                    acte
-                                                                        ?.details
-                                                                        ?.ceremonie_statut
-                                                                        ? "#c82333"
-                                                                        : "#d1d5db",
-                                                                color: acte
-                                                                    ?.details
-                                                                    ?.ceremonie_statut
-                                                                    ? "#fff"
-                                                                    : "#6b7280",
-                                                            }}
-                                                            title={
-                                                                acte?.details
-                                                                    ?.ceremonie_statut
-                                                                    ? "Voir la date choisie"
-                                                                    : "Aucune date de cérémonie soumise."
-                                                            }
-                                                            onClick={() =>
-                                                                acte?.details
-                                                                    ?.ceremonie_statut &&
-                                                                openModal(
-                                                                    "ceremony",
-                                                                    acte,
-                                                                )
-                                                            }
-                                                        >
-                                                            Voir la date choisie
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div
-                                                style={{
-                                                    display: "flex",
-                                                    flexDirection: "column",
-                                                    alignItems: "flex-end",
-                                                    gap: 8,
-                                                    minWidth: 140,
-                                                }}
-                                            >
-                                                <div className="timeline-time">
-                                                    {formatDate(
-                                                        acte.updated_at ||
-                                                            acte.created_at,
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {historiqueTotalPages > 1 && (
-                                        <div className="pager">
-                                            <button
-                                                type="button"
-                                                className="pager-btn"
-                                                onClick={() =>
-                                                    setHistoriquePage((p) =>
-                                                        Math.max(1, p - 1),
-                                                    )
-                                                }
-                                                disabled={historiquePage === 1}
-                                            >
-                                                Précédent
-                                            </button>
-                                            <div className="pager-info">
-                                                Page {historiquePage}/
-                                                {historiqueTotalPages}
-                                            </div>
-                                            <button
-                                                type="button"
-                                                className="pager-btn"
-                                                onClick={() =>
-                                                    setHistoriquePage((p) =>
-                                                        Math.min(
-                                                            historiqueTotalPages,
-                                                            p + 1,
-                                                        ),
-                                                    )
-                                                }
-                                                disabled={
-                                                    historiquePage ===
-                                                    historiqueTotalPages
-                                                }
-                                            >
-                                                Suivant
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="panel">
-                                <div className="panel-head">
-                                    <div className="panel-title">
-                                        <svg
-                                            width="16"
-                                            height="16"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                            />
-                                        </svg>
-                                        Actes récents validés
-                                    </div>
-                                </div>
-                                <div className="panel-body">
-                                    {historique
-                                        .filter((a) =>
-                                            [
-                                                "VALIDEE",
-                                                "PUBLIEE",
-                                                "ARCHIVEE",
-                                            ].includes(a.statut),
-                                        )
-                                        .slice(0, 6)
-                                        .map((acte) => (
-                                            <div
-                                                key={acte.id}
-                                                className="demande-item"
-                                            >
-                                                <div
-                                                    className={`demande-acte-icon ${tone(acte.type_acte)}`}
-                                                >
-                                                    {normalizePhotoUrl(
-                                                        acte.membre
-                                                            ?.profile_photo_url,
-                                                    ) ? (
-                                                        <img
-                                                            src={normalizePhotoUrl(
-                                                                acte.membre
-                                                                    ?.profile_photo_url,
-                                                            )}
-                                                            alt={
-                                                                acte.membre
-                                                                    ?.prenom +
-                                                                " " +
-                                                                acte.membre?.nom
-                                                            }
-                                                            style={{
-                                                                width: "100%",
-                                                                height: "100%",
-                                                                objectFit:
-                                                                    "cover",
-                                                                borderRadius:
-                                                                    "50%",
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        <span>
-                                                            {iconEmoji(
-                                                                acte.type_acte,
-                                                            )}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div
-                                                    className="demande-info"
-                                                    onClick={() =>
-                                                        openModal(
-                                                            "detail",
-                                                            acte,
-                                                        )
-                                                    }
-                                                >
-                                                    <div className="demande-name">
-                                                        {acte.membre?.prenom}{" "}
-                                                        {acte.membre?.nom}
-                                                    </div>
-                                                    <div className="demande-type">
-                                                        {prettyType(
-                                                            acte.type_acte,
-                                                        )}{" "}
-                                                        ·{" "}
-                                                        {formatDate(
-                                                            acte.updated_at ||
-                                                                acte.created_at,
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="demande-meta">
-                                                    <span className="badge badge-valide">
-                                                        <span className="badge-dot" />
-                                                        VALIDÉ
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                </div>
-                            </div>
-                        </div>
+                        <HistoriqueTab
+                            historique={historique}
+                            pagedHistorique={pagedHistorique}
+                            historiquePage={historiquePage}
+                            historiqueTotalPages={historiqueTotalPages}
+                            setHistoriquePage={setHistoriquePage}
+                            openModal={openModal}
+                            prettyType={prettyType}
+                            prettyStatut={prettyStatut}
+                            formatDate={formatDate}
+                            tone={tone}
+                            iconEmoji={iconEmoji}
+                            normalizePhotoUrl={normalizePhotoUrl}
+                            getActeStatus={getActeStatus}
+                            dot={dot}
+                        />
                     )}
 
                     {/* ══════════ ONGLET STATS ══════════ */}
                     {tab === "stats" && (
-                        <div className="grid-2">
-                            <div className="panel">
-                                <div className="panel-head">
-                                    <div className="panel-title">
-                                        <svg
-                                            width="16"
-                                            height="16"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                        >
-                                            <circle cx="12" cy="12" r="10" />
-                                            <path
-                                                strokeLinecap="round"
-                                                d="M12 12l-4-4"
-                                            />
-                                        </svg>
-                                        Répartition par type
-                                    </div>
-                                </div>
-                                <div className="stats-types">
-                                    {[
-                                        "bapteme",
-                                        "mariage",
-                                        "premiere_communion",
-                                        "deces",
-                                    ].map((type) => {
-                                        const count = localActes.filter(
-                                            (a) => a.type_acte === type,
-                                        ).length;
-                                        const pct = stats.total
-                                            ? Math.round(
-                                                  (count / stats.total) * 100,
-                                              )
-                                            : 0;
-                                        return (
-                                            <div
-                                                key={type}
-                                                className="stat-type-row"
-                                            >
-                                                <div
-                                                    className={`stat-type-icon ${tone(type)}`}
-                                                >
-                                                    {iconEmoji(type)}
-                                                </div>
-                                                <div className="stat-type-info">
-                                                    <div className="stat-type-name">
-                                                        {prettyType(type)}
-                                                    </div>
-                                                    <div className="stat-type-bar-wrap">
-                                                        <div className="stat-type-bar">
-                                                            <div
-                                                                className={`stat-type-bar-fill ${tone(type)}`}
-                                                                style={{
-                                                                    width: `${pct}%`,
-                                                                }}
-                                                            />
-                                                        </div>
-                                                        <span className="stat-type-pct">
-                                                            {pct}%
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div className="stat-type-count">
-                                                    {count}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                            <div className="panel">
-                                <div className="panel-head">
-                                    <div className="panel-title">
-                                        <svg
-                                            width="16"
-                                            height="16"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                                            />
-                                        </svg>
-                                        Taux de traitement
-                                    </div>
-                                </div>
-                                <div className="stats-rates">
-                                    <div className="rate-big">
-                                        <div className="rate-circle">
-                                            <svg
-                                                viewBox="0 0 36 36"
-                                                className="rate-svg"
-                                            >
-                                                <path
-                                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                                    fill="none"
-                                                    stroke="rgba(255,255,255,0.1)"
-                                                    strokeWidth="3"
-                                                />
-                                                <path
-                                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                                    fill="none"
-                                                    stroke="#B6C01A"
-                                                    strokeWidth="3"
-                                                    strokeDasharray={`${stats.total ? Math.round((stats.valides / stats.total) * 100) : 0}, 100`}
-                                                    strokeLinecap="round"
-                                                />
-                                            </svg>
-                                            <div className="rate-center">
-                                                <div className="rate-pct">
-                                                    {stats.total
-                                                        ? Math.round(
-                                                              (stats.valides /
-                                                                  stats.total) *
-                                                                  100,
-                                                          )
-                                                        : 0}
-                                                    %
-                                                </div>
-                                                <div className="rate-lbl">
-                                                    Validés
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="rate-rows">
-                                        <div className="rate-row">
-                                            <span className="rate-dot green" />
-                                            <span className="rate-name">
-                                                Validées
-                                            </span>
-                                            <span className="rate-val">
-                                                {stats.valides}
-                                            </span>
-                                        </div>
-                                        <div className="rate-row">
-                                            <span className="rate-dot gold" />
-                                            <span className="rate-name">
-                                                Au pasteur
-                                            </span>
-                                            <span className="rate-val">
-                                                {stats.transmises}
-                                            </span>
-                                        </div>
-                                        <div className="rate-row">
-                                            <span className="rate-dot orange" />
-                                            <span className="rate-name">
-                                                En attente
-                                            </span>
-                                            <span className="rate-val">
-                                                {stats.soumises}
-                                            </span>
-                                        </div>
-                                        <div className="rate-row total-row">
-                                            <span className="rate-dot blue" />
-                                            <span className="rate-name">
-                                                Total
-                                            </span>
-                                            <span className="rate-val">
-                                                {stats.total}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <StatsTab
+                            stats={stats}
+                            localActes={localActes}
+                            prettyType={prettyType}
+                            tone={tone}
+                            iconEmoji={iconEmoji}
+                        />
+                    )}
+
+                    {/* ══════════ ONGLET MES DEMANDES D'ACTE ══════════ */}
+                    {tab === "mes-demandes" && (
+                        <MesDemandesTab
+                            localActes={localActes}
+                            openModal={openModal}
+                            prettyType={prettyType}
+                            formatDate={formatDate}
+                            formatDateTime={formatDateTime}
+                            tone={tone}
+                            iconEmoji={iconEmoji}
+                            normalizePhotoUrl={normalizePhotoUrl}
+                            getActeBadgeClass={getActeBadgeClass}
+                            getActeStatus={getActeStatus}
+                            prettyStatut={prettyStatut}
+                        />
                     )}
                 </div>
             </main>

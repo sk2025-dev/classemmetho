@@ -94,6 +94,28 @@ const tableStyles = `
     cursor: not-allowed;
     opacity: 0.6;
 }
+.btn-table-qr {
+    background: #8b5cf6;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.btn-table-qr:hover:not(:disabled) {
+    background: #7c3aed;
+    transform: translateY(-1px);
+}
+.btn-table-qr:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
 tr.past-row td:last-child,
 tr.past-row td.actions-cell {
     background-color: #f3f4f6;
@@ -751,6 +773,248 @@ textarea {
         grid-template-columns: 1fr;
     }
 }
+.view-toggle {
+    display: flex;
+    gap: 4px;
+    background: rgba(255,255,255,0.15);
+    padding: 4px;
+    border-radius: 12px;
+}
+.view-toggle-btn {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    background: transparent;
+    color: rgba(255,255,255,0.7);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.view-toggle-btn.active {
+    background: white;
+    color: #6366f1;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+}
+.activity-card {
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    border: 1px solid #eef2ff;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+}
+.activity-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.12);
+}
+.activity-card.past-card {
+    opacity: 0.65;
+}
+.card-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+.card-date-label {
+    font-size: 0.78rem;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.card-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 14px 0;
+    line-height: 1.35;
+}
+.card-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    flex: 1;
+    margin-bottom: 14px;
+}
+.card-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: #4b5563;
+}
+.card-footer-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 12px;
+}
+.btn-card-edit {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+.btn-card-edit:hover:not(:disabled) { background: #2563eb; }
+.btn-card-edit:disabled { background: #9ca3af; cursor: not-allowed; opacity: 0.6; }
+.btn-card-delete {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+.btn-card-delete:hover:not(:disabled) { background: #dc2626; }
+.btn-card-delete:disabled { background: #9ca3af; cursor: not-allowed; opacity: 0.6; }
+.btn-card-qr {
+    background: #8b5cf6;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+.btn-card-qr:hover:not(:disabled) { background: #7c3aed; }
+.btn-card-qr:disabled { background: #9ca3af; cursor: not-allowed; opacity: 0.6; }
+@media (max-width: 768px) {
+    .cards-grid { grid-template-columns: 1fr; }
+}
+.qr-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(6px);
+    z-index: 9000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+.qr-modal-box {
+    background: white;
+    border-radius: 24px;
+    width: 95%;
+    max-width: 420px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.25);
+    overflow: hidden;
+    animation: scaleIn 0.25s cubic-bezier(0.16,1,0.3,1);
+}
+.qr-modal-header {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    padding: 18px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+}
+.qr-modal-header h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+.qr-modal-close {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+.qr-modal-close:hover { background: rgba(255,255,255,0.35); }
+.qr-modal-body {
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+.qr-modal-event-title { font-size: 1rem; font-weight: 700; color: #111827; text-align: center; }
+.qr-modal-event-meta { font-size: 0.82rem; color: #6b7280; text-align: center; }
+.qr-modal-img { width: 220px; height: 220px; border-radius: 12px; border: 2px solid #e5e7eb; padding: 8px; }
+.qr-modal-url {
+    font-size: 0.72rem;
+    color: #9ca3af;
+    word-break: break-all;
+    text-align: center;
+    padding: 8px 12px;
+    background: #f9fafb;
+    border-radius: 8px;
+    width: 100%;
+}
+.qr-modal-actions { display: flex; gap: 12px; width: 100%; margin-top: 4px; }
+.btn-qr-copy {
+    flex: 1;
+    padding: 11px;
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+}
+.btn-qr-copy:hover { background: #e5e7eb; }
+.btn-qr-print {
+    flex: 1;
+    padding: 11px;
+    background: #8b5cf6;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+}
+.btn-qr-print:hover { background: #7c3aed; }
+.qr-modal-loading { padding: 40px; text-align: center; color: #6b7280; font-size: 0.9rem; }
 `;
 
 // Icônes
@@ -804,6 +1068,9 @@ const IconRefresh = () => (
 );
 const IconWarning = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v4M12 17h.01"></path><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"></path></svg>
+);
+const IconQr = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><line x1="14" y1="20" x2="20" y2="20"/><line x1="20" y1="14" x2="20" y2="17"/></svg>
 );
 
 // Composant Toast
@@ -1036,11 +1303,53 @@ const EditProgrammeModal = ({ isOpen, onClose, event, onSave }) => {
   );
 };
 
+const getQrAccessState = (event) => {
+  const rawDate = event.start_date || event.date;
+  const rawTime = event.start_time || event.time;
+  const rawEndDate = event.end_date || rawDate;
+  const rawEndTime = event.end_time || rawTime;
+
+  if (!rawDate) return { enabled: false, reason: "Date de l'activité invalide pour le QR code." };
+
+  const buildDateTime = (date, time, endOfDay = false) => {
+    if (!date) return null;
+    const d = new Date(date);
+    if (endOfDay || !time) {
+      d.setHours(23, 59, 59, 0);
+    } else {
+      const [h, m] = time.split(':').map(Number);
+      d.setHours(h, m, 0, 0);
+    }
+    return d;
+  };
+
+  const startAt = buildDateTime(rawDate, rawTime);
+  const endAt = buildDateTime(rawEndDate, rawEndTime, !rawEndTime);
+
+  if (!startAt || !endAt) return { enabled: false, reason: "Date de l'activité invalide." };
+
+  const openingAt = new Date(startAt);
+  openingAt.setDate(openingAt.getDate() - 2);
+
+  const now = new Date();
+
+  if (now < openingAt) {
+    return { enabled: false, reason: `Le QR sera actif à partir du ${openingAt.toLocaleString('fr-FR')}.` };
+  }
+
+  if (now >= endAt) {
+    return { enabled: false, reason: "Cette activité est passée. Le scan n'est plus disponible." };
+  }
+
+  return { enabled: true, reason: "QR code actif." };
+};
+
 export default function AllProgrammes() {
   const { props } = usePage();
   const { allProgrammes = [], currentClass = null } = props;
   
   const [toast, setToast] = useState(null);
+  const [viewMode, setViewMode] = useState('table');
   const [isDownloading, setIsDownloading] = useState(false);
   const [isExportingExcel, setIsExportingExcel] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -1453,6 +1762,10 @@ export default function AllProgrammes() {
 
   // Génération du fichier Excel
   const handleExportExcel = async () => {
+    if (!XLSX) {
+      showToast('Bibliothèque Excel non chargée. Rechargez la page.', 'error');
+      return;
+    }
     setIsExportingExcel(true);
     try {
       const className = currentClass?.nom || currentClass?.name || 'Non spécifiée';
@@ -1557,6 +1870,44 @@ export default function AllProgrammes() {
     });
   };
 
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [qrPayload, setQrPayload] = useState(null);
+  const [isQrLoading, setIsQrLoading] = useState(false);
+
+  const openQrModal = async (event) => {
+    setIsQrModalOpen(true);
+    setIsQrLoading(true);
+    setQrPayload(null);
+    try {
+      const res = await axios.get(`/conducteur/programmes/event/${event.id}/qr/data`);
+      setQrPayload(res.data);
+    } catch {
+      setQrPayload({ error: true });
+    } finally {
+      setIsQrLoading(false);
+    }
+  };
+
+  const closeQrModal = () => {
+    setIsQrModalOpen(false);
+    setQrPayload(null);
+  };
+
+  const copyQrLink = async () => {
+    if (!qrPayload?.scanUrl) return;
+    try {
+      await navigator.clipboard.writeText(qrPayload.scanUrl);
+      showToast('Lien copié dans le presse-papier !', 'success');
+    } catch {
+      showToast('Impossible de copier sur cet appareil.', 'error');
+    }
+  };
+
+  const printQr = () => {
+    if (!qrPayload?.event?.id) return;
+    window.open(`/conducteur/programmes/event/${qrPayload.event.id}/qr/fiche-pdf`, '_blank');
+  };
+
   const months = [
     { value: '1', label: 'Janvier' },
     { value: '2', label: 'Février' },
@@ -1628,6 +1979,49 @@ export default function AllProgrammes() {
         onSave={handleUpdateEvent}
       />
 
+      {/* Modale QR Code */}
+      {isQrModalOpen && (
+        <div className="qr-modal-overlay" onClick={closeQrModal}>
+          <div className="qr-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="qr-modal-header">
+              <h3>📲 Code QR — Présence</h3>
+              <button className="qr-modal-close" onClick={closeQrModal}>✕</button>
+            </div>
+            <div className="qr-modal-body">
+              {isQrLoading && (
+                <div className="qr-modal-loading">Génération du QR code…</div>
+              )}
+              {!isQrLoading && qrPayload?.error && (
+                <div className="qr-modal-loading" style={{ color: '#ef4444' }}>
+                  Impossible de charger le QR code.
+                </div>
+              )}
+              {!isQrLoading && qrPayload && !qrPayload.error && (
+                <>
+                  <div className="qr-modal-event-title">{qrPayload.event.title}</div>
+                  {qrPayload.event.date && (
+                    <div className="qr-modal-event-meta">
+                      {new Date(qrPayload.event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {qrPayload.event.time ? ` · ${qrPayload.event.time.substring(0, 5)}` : ''}
+                    </div>
+                  )}
+                  <img className="qr-modal-img" src={qrPayload.qrCode} alt="QR Code présence" />
+                  <div className="qr-modal-url">{qrPayload.scanUrl}</div>
+                  <div className="qr-modal-actions">
+                    <button className="btn-qr-copy" onClick={copyQrLink}>
+                      📋 Copier le lien
+                    </button>
+                    <button className="btn-qr-print" onClick={printQr}>
+                      🖨️ Imprimer
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="min-h-screen animate-fade-in-up" style={{ background: "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)", paddingBottom: '40px' }}>
         <main style={{ padding: '0 20px', width: '100%', margin: '0 auto' }}>
           <div className="page-header">
@@ -1636,6 +2030,22 @@ export default function AllProgrammes() {
             </button>
             <div className="page-title">
               📋 Tous les programmes d'activités
+            </div>
+            <div className="view-toggle">
+              <button
+                className={`view-toggle-btn${viewMode === 'table' ? ' active' : ''}`}
+                onClick={() => setViewMode('table')}
+                title="Vue tableau"
+              >
+                ☰ Tableau
+              </button>
+              <button
+                className={`view-toggle-btn${viewMode === 'cards' ? ' active' : ''}`}
+                onClick={() => setViewMode('cards')}
+                title="Vue cartes"
+              >
+                ▦ Cartes
+              </button>
             </div>
             <div className="header-buttons">
               <button 
@@ -1747,7 +2157,109 @@ export default function AllProgrammes() {
             </div>
           </div>
 
+          {/* Vue cartes */}
+          {viewMode === 'cards' && (
+            paginatedProgrammes.length > 0 ? (
+              <div className="cards-grid">
+                {paginatedProgrammes.map((event) => {
+                  const past = isPastEvent(event);
+                  const qrState = getQrAccessState(event);
+                  const startTime = event.start_time || event.time;
+                  const endTime = event.end_time;
+                  const startDate = getEventStartDate(event);
+                  const isMultiDay = event.end_date && startDate !== event.end_date;
+
+                  return (
+                    <div key={event.id} className={`activity-card${past ? ' past-card' : ''}`}>
+                      <div className="card-header-row">
+                        <div className="card-date-label">
+                          <IconCalendar />
+                          {isMultiDay
+                            ? `${formatDate(startDate)} → ${formatDate(event.end_date)}`
+                            : formatDate(startDate)}
+                        </div>
+                        <span className={`status-badge ${getStatusClass(event)}`}>
+                          {getStatus(event)}
+                        </span>
+                      </div>
+
+                      <h4 className="card-title">{event.title}</h4>
+
+                      <div className="card-meta">
+                        {startTime && (
+                          <div className="card-meta-row">
+                            <IconClock />
+                            {endTime
+                              ? `${startTime.substring(0, 5)} → ${endTime.substring(0, 5)}`
+                              : startTime.substring(0, 5)}
+                          </div>
+                        )}
+                        {event.lieu && (
+                          <div className="card-meta-row">
+                            <IconLocation />
+                            {event.lieu}
+                          </div>
+                        )}
+                        {event.orateur && (
+                          <div className="card-meta-row">
+                            <IconMic />
+                            {event.orateur}
+                          </div>
+                        )}
+                        {event.moderateur && (
+                          <div className="card-meta-row">
+                            <IconUser />
+                            {event.moderateur}
+                          </div>
+                        )}
+                        {event.famille_reception && (
+                          <div className="card-meta-row">
+                            <IconFamily />
+                            {event.famille_reception}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="card-footer-row">
+                        <button
+                          className="btn-card-edit"
+                          onClick={() => openEditModal(event)}
+                          disabled={past}
+                          title={past ? "Impossible de modifier une activité passée" : "Modifier"}
+                        >
+                          <IconEdit /> Modifier
+                        </button>
+                        <button
+                          className="btn-card-delete"
+                          onClick={() => openDeleteConfirm(event)}
+                          disabled={past}
+                          title={past ? "Impossible de supprimer une activité passée" : "Supprimer"}
+                        >
+                          <IconTrash /> Supprimer
+                        </button>
+                        <button
+                          className="btn-card-qr"
+                          onClick={() => qrState.enabled && openQrModal(event)}
+                          disabled={!qrState.enabled}
+                          title={qrState.reason}
+                        >
+                          <IconQr /> QR
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '20px', color: '#9ca3af' }}>
+                <div style={{ fontSize: '4rem', marginBottom: '1rem', opacity: 0.5 }}>📋</div>
+                <p style={{ fontSize: '1rem' }}>Aucun programme d'activité ne correspond à vos critères.</p>
+              </div>
+            )
+          )}
+
           {/* Tableau principal */}
+          {viewMode === 'table' && (
           <div className="table-container" ref={tableRef}>
             <table className="programmes-table">
               <thead>
@@ -1833,22 +2345,35 @@ export default function AllProgrammes() {
                         </td>
                         <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
                           <div className="table-actions">
-                            <button 
-                              className="btn-table-edit" 
+                            <button
+                              className="btn-table-edit"
                               onClick={() => openEditModal(event)}
                               disabled={past}
                               title={past ? "Impossible de modifier une activité passée" : "Modifier"}
                             >
                               <IconEdit style={{ width: '14px', height: '14px' }} /> Modifier
                             </button>
-                            <button 
-                              className="btn-table-delete" 
+                            <button
+                              className="btn-table-delete"
                               onClick={() => openDeleteConfirm(event)}
                               disabled={past}
                               title={past ? "Impossible de supprimer une activité passée" : "Supprimer"}
                             >
                               <IconTrash style={{ width: '14px', height: '14px' }} /> Supprimer
                             </button>
+                            {(() => {
+                              const qrState = getQrAccessState(event);
+                              return (
+                                <button
+                                  className="btn-table-qr"
+                                  onClick={() => qrState.enabled && openQrModal(event)}
+                                  disabled={!qrState.enabled}
+                                  title={qrState.reason}
+                                >
+                                  <IconQr /> QR
+                                </button>
+                              );
+                            })()}
                           </div>
                         </td>
                       </tr>
@@ -1865,6 +2390,7 @@ export default function AllProgrammes() {
               </tbody>
             </table>
           </div>
+          )}
 
           {/* Pagination */}
           {totalPages > 1 && (

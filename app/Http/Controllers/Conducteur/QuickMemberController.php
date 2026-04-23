@@ -30,7 +30,6 @@ class QuickMemberController extends Controller
         try {
             // Valider les données du formulaire simplifié
             $validated = $request->validate([
-                // Données du membre
                 'nom' => 'required|string|max:255',
                 'prenom' => 'required|string|max:255',
                 'email' => 'nullable|email|unique:users,email',
@@ -43,11 +42,9 @@ class QuickMemberController extends Controller
                 'lieu_mariage' => 'nullable|string|max:255',
                 'profession' => 'nullable|string|max:255',
                 'fonction_id' => 'nullable|exists:fonctions,id',
-                'relation' => 'nullable|string|max:100', // Pour les données de la famille
-                'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // Max 5MB
+                'relation' => 'nullable|string|max:100',
+                'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
                 'profile_photo_url' => 'nullable|string|max:1000',
-
-                // Sacrements
                 'baptise' => 'nullable|in:true,false,1,0',
                 'date_bapteme' => 'nullable|date',
                 'lieu_bapteme' => 'nullable|string|max:255',
@@ -57,6 +54,13 @@ class QuickMemberController extends Controller
                 'marie_religieusement' => 'nullable|in:true,false,1,0',
                 'date_mariage_religieux' => 'nullable|date',
                 'lieu_mariage_religieux' => 'nullable|string|max:255',
+            ], [
+                'nom.required' => 'Le nom est obligatoire.',
+                'prenom.required' => 'Le prénom est obligatoire.',
+                'email.email' => 'L\'adresse email n\'est pas valide.',
+                'email.unique' => 'Cette adresse email est déjà utilisée par un autre membre.',
+                'genre.required' => 'Le genre est obligatoire.',
+                'genre.in' => 'Le genre doit être M ou F.',
             ]);
 
             // Vérifier que le conducteur est connecté

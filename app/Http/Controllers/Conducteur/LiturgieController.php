@@ -40,7 +40,11 @@ class LiturgieController extends Controller
             $query->where('statut', $request->string('statut')->toString());
         }
 
-        $actes = $query->get();
+        $conducteurId = $user->id;
+        $actes = $query->get()->map(function (ActeLiturgique $acte) use ($conducteurId) {
+            $acte->demandeur_is_conducteur = $acte->created_by === $conducteurId;
+            return $acte;
+        });
 
         // récupérer également les annonces liées aux mêmes classes
         $annonces = ActeLiturgique::with(['createur', 'family', 'membre'])
@@ -101,6 +105,16 @@ class LiturgieController extends Controller
                     'reference' => $acte->reference,
                     'statut' => $acte->statut,
                     'ceremonie_statut' => $details['ceremonie_statut'] ?? null,
+                    'details' => [
+                        'conjoint_prenom'  => $details['conjoint_prenom']  ?? null,
+                        'conjoint_nom'     => $details['conjoint_nom']     ?? null,
+                        'epoux_prenom'     => $details['epoux_prenom']     ?? null,
+                        'epoux_nom'        => $details['epoux_nom']        ?? null,
+                        'conjoint_1'       => $details['conjoint_1']       ?? null,
+                        'conjoint_2'       => $details['conjoint_2']       ?? null,
+                        'lieu_ceremonie'   => $details['lieu_ceremonie']   ?? null,
+                        'lieu'             => $details['lieu']             ?? null,
+                    ],
                     'membre' => [
                         'id' => $acte->membre?->id,
                         'prenom' => $acte->membre?->prenom,
@@ -246,6 +260,11 @@ class LiturgieController extends Controller
 
             if (!in_array($acte->statut, $validFicheStatuses, true)) {
                 abort(422, "La fiche est disponible uniquement apres validation de la demande.");
+            }
+        } elseif ($typeActe === 'bapteme') {
+            $allowedBapteme = ['VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'];
+            if (!in_array($acte->statut, $allowedBapteme, true)) {
+                abort(422, "Le certificat de baptême est disponible après validation du pasteur.");
             }
         } elseif (!in_array($acte->statut, ['CELEBRE', 'TERMINE'], true)) {
             abort(422, "Le certificat est disponible uniquement apres l'acte effectue.");

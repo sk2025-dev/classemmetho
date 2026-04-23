@@ -37,9 +37,6 @@ class PresenceScanController extends Controller
             if (!empty($event->end_time)) {
                 $endTime = Carbon::parse($event->end_time);
                 $endAt->setTime($endTime->hour, $endTime->minute, $endTime->second);
-            } elseif (!empty($event->time)) {
-                $startTime = Carbon::parse($event->time);
-                $endAt->setTime($startTime->hour, $startTime->minute, $startTime->second);
             } else {
                 $endAt->setTime(23, 59, 59);
             }

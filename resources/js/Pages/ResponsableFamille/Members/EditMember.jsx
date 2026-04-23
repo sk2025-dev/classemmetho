@@ -152,6 +152,7 @@ export default function EditMember({ member, family }) {
         date_mariage: formatDateForInput(member.date_mariage),
         lieu_mariage: member.lieu_mariage || "",
         profession: member.profession || "",
+        employment_status: member.employment_status || "",
         fonction_id: member.fonction_id || "",
         fonction_ids: Array.isArray(member.fonction_ids)
             ? member.fonction_ids
@@ -193,6 +194,7 @@ export default function EditMember({ member, family }) {
             date_mariage: formatDateForInput(member.date_mariage),
             lieu_mariage: member.lieu_mariage || "",
             profession: member.profession || "",
+            employment_status: member.employment_status || "",
             fonction_id: member.fonction_id || "",
             fonction_ids: Array.isArray(member.fonction_ids)
                 ? member.fonction_ids
@@ -653,6 +655,27 @@ export default function EditMember({ member, family }) {
                                             profession: e.target.value,
                                         })
                                     }
+                                />
+                            </FormField>
+
+                            <FormField label="Statut d'emploi" icon={Briefcase}>
+                                <Select2Single
+                                    name="employment_status"
+                                    value={data.employment_status}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            employment_status: e.target.value,
+                                        })
+                                    }
+                                    options={[
+                                        { value: "TRAVAILLEUR", label: "Travailleur" },
+                                        { value: "RETRAITE", label: "Retraité" },
+                                        { value: "ETUDIANT", label: "Étudiant" },
+                                        { value: "SANS_EMPLOI", label: "Sans emploi" },
+                                    ]}
+                                    placeholder="Sélectionner..."
+                                    isClearable={true}
                                 />
                             </FormField>
 

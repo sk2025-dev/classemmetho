@@ -125,6 +125,7 @@ export default function CreateMember({ family, errors }) {
             date_mariage: "",
             lieu_mariage: "",
             profession: "",
+            employment_status: "",
             fonction_id: "",
             fonction_ids: [],
             relation: "",
@@ -157,7 +158,7 @@ export default function CreateMember({ family, errors }) {
                 const fonctionsRes = await axios.get(
                     withBasePath("", "/api/fonctions"),
                 );
-                setFonctions(fonctionsRes.data);
+                setFonctions(fonctionsRes.data.fonctions || fonctionsRes.data);
             } catch (error) {
                 console.error("Erreur:", error);
             }
@@ -264,7 +265,7 @@ export default function CreateMember({ family, errors }) {
     };
 
     const handleFieldChange = (fieldName, value) => {
-        setData({ ...data, [fieldName]: value });
+        setData((prev) => ({ ...prev, [fieldName]: value }));
         // Valider immédiatement et afficher l'erreur
         const error = validateField(fieldName, value);
         setFieldErrors((prev) => ({
@@ -409,6 +410,7 @@ export default function CreateMember({ family, errors }) {
                     date_mariage: "",
                     lieu_mariage: "",
                     profession: "",
+                    employment_status: "",
                     fonction_id: "",
                     fonction_ids: [],
                     relation: "",
@@ -754,6 +756,29 @@ export default function CreateMember({ family, errors }) {
                                         )}
                                     </FormField>
                                     <FormField
+                                        label="Statut d'emploi"
+                                        icon={Briefcase}
+                                    >
+                                        <Select2Single
+                                            name="employment_status"
+                                            value={data.employment_status || ""}
+                                            onChange={(e) =>
+                                                handleFieldChange(
+                                                    "employment_status",
+                                                    e.target.value,
+                                                )
+                                            }
+                                            options={[
+                                                { value: "TRAVAILLEUR", label: "Travailleur" },
+                                                { value: "RETRAITE", label: "Retraité" },
+                                                { value: "ETUDIANT", label: "Étudiant" },
+                                                { value: "SANS_EMPLOI", label: "Sans emploi" },
+                                            ]}
+                                            placeholder="Sélectionner..."
+                                            isClearable={true}
+                                        />
+                                    </FormField>
+                                    <FormField
                                         label="Fonction dans l'église"
                                         icon={Users}
                                         required
@@ -762,32 +787,27 @@ export default function CreateMember({ family, errors }) {
                                             value={data.fonction_ids || []}
                                             maxSelections={2}
                                             onChange={(e) => {
-                                                const values = Array.isArray(
-                                                    e.target.value,
-                                                )
-                                                    ? e.target.value
-                                                          .slice(0, 2)
-                                                          .map((v) =>
-                                                              Number(v),
-                                                          )
+                                                const values = Array.isArray(e.target.value)
+                                                    ? e.target.value.slice(0, 2).map((v) => Number(v))
                                                     : [];
-                                                handleFieldChange(
-                                                    "fonction_ids",
-                                                    values,
-                                                );
-                                                handleFieldChange(
-                                                    "fonction_id",
-                                                    values[0] || "",
-                                                );
+                                                setData((prev) => ({
+                                                    ...prev,
+                                                    fonction_ids: values,
+                                                    fonction_id: values[0] || "",
+                                                }));
+                                                setFieldErrors((prev) => ({
+                                                    ...prev,
+                                                    fonction_ids: values.length === 0
+                                                        ? "Au moins une fonction est obligatoire"
+                                                        : "",
+                                                }));
                                             }}
                                             options={fonctions}
                                             placeholder="Sélectionner jusqu'à 2 fonctions..."
                                         />
-                                        {(fieldErrors.fonction_ids ||
-                                            errors.fonction_ids) && (
+                                        {(fieldErrors.fonction_ids || errors.fonction_ids) && (
                                             <p className="text-red-500 text-xs mt-1">
-                                                {fieldErrors.fonction_ids ||
-                                                    errors.fonction_ids}
+                                                {fieldErrors.fonction_ids || errors.fonction_ids}
                                             </p>
                                         )}
                                     </FormField>
@@ -799,10 +819,7 @@ export default function CreateMember({ family, errors }) {
                                             name="relation"
                                             value={data.relation}
                                             onChange={(e) =>
-                                                setData({
-                                                    ...data,
-                                                    relation: e.target.value,
-                                                })
+                                                setData({ ...data, relation: e.target.value })
                                             }
                                             options={RELATION_OPTIONS}
                                             placeholder="Sélectionner une relation..."

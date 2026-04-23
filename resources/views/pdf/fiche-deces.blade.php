@@ -23,16 +23,33 @@ $lieuDeces = trim((string) ($details['lieu_deces'] ?? $details['lieu'] ?? '—')
 $dateCulte = !empty($acte->date_souhaitee)
     ? (function () use ($acte) {
         try {
-            return Carbon::parse($acte->date_souhaitee)->format('d/m/Y');
+            return Carbon::parse($acte->date_souhaitee)->locale('fr')->isoFormat('D MMMM YYYY');
         } catch (\Throwable $e) {
-            return '—';
+            return $acte->date_souhaitee;
         }
     })()
-    : '—';
+    : (!empty($details['date_souhaitee_culte'])
+        ? (function () use ($details) {
+            try {
+                return Carbon::parse($details['date_souhaitee_culte'])->locale('fr')->isoFormat('D MMMM YYYY');
+            } catch (\Throwable $e) {
+                return $details['date_souhaitee_culte'];
+            }
+        })()
+        : '—');
 
-$lieuAnnonce = trim((string) ($details['lieu_annonce'] ?? $details['lieu'] ?? ''));
+$heureCulte = !empty($details['heure_culte'])
+    ? (function () use ($details) {
+        try {
+            return Carbon::parse($details['heure_culte'])->format('H\hi');
+        } catch (\Throwable $e) {
+            return $details['heure_culte'];
+        }
+    })()
+    : '';
+
 $culteDisplay = $dateCulte !== '—'
-    ? trim($dateCulte . ($lieuAnnonce !== '' ? ' a ' . $lieuAnnonce : ''))
+    ? trim($dateCulte . ($heureCulte !== '' ? ' à ' . $heureCulte : ''))
     : '—';
 
 $reference = $acte->reference ?? '—';

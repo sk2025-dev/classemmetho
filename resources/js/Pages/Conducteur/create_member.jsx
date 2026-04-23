@@ -298,6 +298,7 @@ export default function RegisterFamille({
             genre: "",
             lienParente: "",
             profession: "",
+            employment_status: "",
             fonction: "",
             fonction_ids: [],
             statutMarital: "",
@@ -361,6 +362,7 @@ export default function RegisterFamille({
             fonction: "",
             fonction_ids: [],
             profession: "",
+            employment_status: "",
             photo: null,
             photoPreview: null,
         },
@@ -682,6 +684,7 @@ export default function RegisterFamille({
                 fonction: "",
             fonction_ids: [],
                 profession: "",
+                employment_status: "",
                 photo: null,
                 photoPreview: null,
             });
@@ -992,6 +995,7 @@ export default function RegisterFamille({
                 genre: "",
                 lienParente: "",
                 profession: "",
+                employment_status: "",
                 fonction: "",
             fonction_ids: [],
                 statutMarital: "",
@@ -1044,6 +1048,7 @@ export default function RegisterFamille({
                 fonction: "",
             fonction_ids: [],
                 profession: "",
+                employment_status: "",
                 photo: null,
                 photoPreview: null,
             });
@@ -1481,28 +1486,46 @@ export default function RegisterFamille({
                                 />
                             </FormField>
                             <FormField
+                                label="Statut d'emploi"
+                                icon={Briefcase}
+                            >
+                                <Select2Single
+                                    name="responsable_employment_status"
+                                    value={responsable.employment_status || ""}
+                                    onChange={(e) =>
+                                        setResponsable({
+                                            ...responsable,
+                                            employment_status: e.target.value,
+                                        })
+                                    }
+                                    options={[
+                                        { value: "TRAVAILLEUR", label: "Travailleur" },
+                                        { value: "RETRAITE", label: "Retraité" },
+                                        { value: "ETUDIANT", label: "Étudiant" },
+                                        { value: "SANS_EMPLOI", label: "Sans emploi" },
+                                    ]}
+                                    placeholder="Sélectionner..."
+                                    isClearable={true}
+                                />
+                            </FormField>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
                                 label="Fonction dans l'église"
                                 icon={Users}
                                 hint="Jusqu'à 2 fonctions"
                             >
                                 <Select2Fonction
-                                    value={selectedRolesResponsable}
+                                    value={responsable.fonction_ids || []}
                                     maxSelections={2}
                                     onChange={(e) => {
-                                        const selectedValues =
-                                            normalizeFonctionSelection(
-                                                e.target.value,
-                                            );
-                                        setSelectedRolesResponsable(
-                                            selectedValues,
-                                        );
+                                        const values = Array.isArray(e.target.value)
+                                            ? e.target.value.slice(0, 2).map((v) => Number(v))
+                                            : [];
                                         setResponsable((prev) => ({
                                             ...prev,
-                                            fonction:
-                                                selectedValues.join(","),
-                                            fonction_ids: selectedValues.map(
-                                                (v) => Number(v),
-                                            ),
+                                            fonction: values.join(","),
+                                            fonction_ids: values,
                                         }));
                                     }}
                                     options={churchRoles}
@@ -2108,25 +2131,16 @@ export default function RegisterFamille({
                                         hint="Jusqu'à 2 fonctions"
                                     >
                                         <Select2Fonction
-                                            value={normalizeFonctionSelection(
-                                                membreTemp.fonction,
-                                            )}
+                                            value={membreTemp.fonction_ids || []}
                                             maxSelections={2}
                                             onChange={(e) => {
-                                                const selectedValues =
-                                                    normalizeFonctionSelection(
-                                                        e.target.value,
-                                                    );
+                                                const values = Array.isArray(e.target.value)
+                                                    ? e.target.value.slice(0, 2).map((v) => Number(v))
+                                                    : [];
                                                 setMembreTemp((prev) => ({
                                                     ...prev,
-                                                    fonction:
-                                                        selectedValues.join(
-                                                            ",",
-                                                        ),
-                                                    fonction_ids:
-                                                        selectedValues.map(
-                                                            (v) => Number(v),
-                                                        ),
+                                                    fonction: values.join(","),
+                                                    fonction_ids: values,
                                                 }));
                                             }}
                                             options={churchRoles}
@@ -2154,6 +2168,32 @@ export default function RegisterFamille({
                                                 {errors["membre.profession"]}
                                             </p>
                                         )}
+                                    </FormField>
+                                </div>
+                                {/* Statut d'emploi */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                        label="Statut d'emploi"
+                                        icon={Briefcase}
+                                    >
+                                        <Select2Single
+                                            name="membre_employment_status"
+                                            value={membreTemp.employment_status || ""}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    employment_status: e.target.value,
+                                                })
+                                            }
+                                            options={[
+                                                { value: "TRAVAILLEUR", label: "Travailleur" },
+                                                { value: "RETRAITE", label: "Retraité" },
+                                                { value: "ETUDIANT", label: "Étudiant" },
+                                                { value: "SANS_EMPLOI", label: "Sans emploi" },
+                                            ]}
+                                            placeholder="Sélectionner..."
+                                            isClearable={true}
+                                        />
                                     </FormField>
                                 </div>
                                 {/* Lien de parenté et Statut marital */}
@@ -2330,25 +2370,16 @@ export default function RegisterFamille({
                                         hint="Jusqu'à 2 fonctions"
                                     >
                                         <Select2Fonction
-                                            value={normalizeFonctionSelection(
-                                                membreTemp.fonction,
-                                            )}
+                                            value={membreTemp.fonction_ids || []}
                                             maxSelections={2}
                                             onChange={(e) => {
-                                                const selectedValues =
-                                                    normalizeFonctionSelection(
-                                                        e.target.value,
-                                                    );
+                                                const values = Array.isArray(e.target.value)
+                                                    ? e.target.value.slice(0, 2).map((v) => Number(v))
+                                                    : [];
                                                 setMembreTemp((prev) => ({
                                                     ...prev,
-                                                    fonction:
-                                                        selectedValues.join(
-                                                            ",",
-                                                        ),
-                                                    fonction_ids:
-                                                        selectedValues.map(
-                                                            (v) => Number(v),
-                                                        ),
+                                                    fonction: values.join(","),
+                                                    fonction_ids: values,
                                                 }));
                                             }}
                                             options={churchRoles}
@@ -2376,6 +2407,32 @@ export default function RegisterFamille({
                                                 {errors["membre.profession"]}
                                             </p>
                                         )}
+                                    </FormField>
+                                </div>
+                                {/* Statut d'emploi */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                        label="Statut d'emploi"
+                                        icon={Briefcase}
+                                    >
+                                        <Select2Single
+                                            name="membre_employment_status"
+                                            value={membreTemp.employment_status || ""}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    employment_status: e.target.value,
+                                                })
+                                            }
+                                            options={[
+                                                { value: "TRAVAILLEUR", label: "Travailleur" },
+                                                { value: "RETRAITE", label: "Retraité" },
+                                                { value: "ETUDIANT", label: "Étudiant" },
+                                                { value: "SANS_EMPLOI", label: "Sans emploi" },
+                                            ]}
+                                            placeholder="Sélectionner..."
+                                            isClearable={true}
+                                        />
                                     </FormField>
                                 </div>
                                 {/* Lien de parenté et Statut marital */}

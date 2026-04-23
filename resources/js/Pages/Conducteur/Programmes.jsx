@@ -438,37 +438,6 @@ const styles = `
     margin-bottom: 15px;
     line-height: 1.6;
 }
-.time-qr-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-top: 8px;
-}
-.time-qr-row p {
-    margin: 0;
-    color: #374151;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-.btn-qr-inline {
-    border: none;
-    border-radius: 10px;
-    padding: 8px 14px;
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-    color: white;
-    font-weight: 700;
-    font-size: 0.82rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
-.btn-qr-inline:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 18px rgba(217, 119, 6, 0.35);
-}
 .special-meta {
     display: flex;
     flex-direction: column;
@@ -488,6 +457,137 @@ const styles = `
     font-weight: 600;
     color: #6b7280;
     min-width: 120px;
+}
+
+/* Modale QR Code */
+.qr-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(6px);
+    z-index: 9000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+.qr-modal-box {
+    background: white;
+    border-radius: 24px;
+    width: 95%;
+    max-width: 420px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.25);
+    overflow: hidden;
+    animation: scaleIn 0.25s cubic-bezier(0.16,1,0.3,1);
+}
+.qr-modal-header {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    padding: 18px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+}
+.qr-modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+.qr-modal-close {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+.qr-modal-close:hover { background: rgba(255,255,255,0.35); }
+.qr-modal-body {
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+.qr-modal-event-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #111827;
+    text-align: center;
+}
+.qr-modal-event-meta {
+    font-size: 0.82rem;
+    color: #6b7280;
+    text-align: center;
+}
+.qr-modal-img {
+    width: 220px;
+    height: 220px;
+    border-radius: 12px;
+    border: 2px solid #e5e7eb;
+    padding: 8px;
+}
+.qr-modal-url {
+    font-size: 0.72rem;
+    color: #9ca3af;
+    word-break: break-all;
+    text-align: center;
+    padding: 8px 12px;
+    background: #f9fafb;
+    border-radius: 8px;
+    width: 100%;
+}
+.qr-modal-actions {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    margin-top: 4px;
+}
+.btn-qr-copy {
+    flex: 1;
+    padding: 11px;
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+}
+.btn-qr-copy:hover { background: #e5e7eb; }
+.btn-qr-print {
+    flex: 1;
+    padding: 11px;
+    background: #8b5cf6;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+}
+.btn-qr-print:hover { background: #7c3aed; }
+.qr-modal-loading {
+    padding: 40px;
+    text-align: center;
+    color: #6b7280;
+    font-size: 0.9rem;
 }
 
 /* Bouton d'édition sur la carte */
@@ -513,6 +613,35 @@ const styles = `
     color: white;
     transform: scale(1.1);
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+.btn-qr-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 14px;
+    padding: 8px 18px;
+    background: #8b5cf6;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 3px 8px rgba(139, 92, 246, 0.35);
+    letter-spacing: 0.3px;
+}
+.btn-qr-card:hover:not(:disabled) {
+    background: #7c3aed;
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px rgba(139, 92, 246, 0.45);
+}
+.btn-qr-card:disabled {
+    background: #d1d5db;
+    color: #9ca3af;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
 }
 
 /* Media Cards - Version grille */
@@ -681,6 +810,11 @@ const styles = `
     bottom: 0;
     background-size: cover;
     background-position: center;
+    animation: carouselFadeIn 0.6s ease;
+}
+@keyframes carouselFadeIn {
+    from { opacity: 0; transform: scale(1.04); }
+    to   { opacity: 1; transform: scale(1); }
 }
 .carousel-simple-image-bg::after {
     content: '';
@@ -2439,6 +2573,7 @@ const IconRoadmap = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" he
 const IconHistory = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline><path d="M4 4L8 8M20 4L16 8M4 20L8 16M20 20L16 16"></path></svg>);
 const IconActivity = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>);
 const IconEye = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>);
+const IconQr = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><line x1="14" y1="20" x2="20" y2="20"/><line x1="20" y1="14" x2="20" y2="17"/></svg>);
 const IconPlay = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>);
 const IconPhoto = () => (<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>);
 const IconVideo = () => (<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>);
@@ -2477,72 +2612,6 @@ const formatDateFrench = (dateString) => {
   const year = date.getFullYear();
   const monthCapitalized = month.charAt(0).toUpperCase() + month.slice(1);
   return `${day} ${monthCapitalized} ${year}`;
-};
-
-const buildEventDateTime = (eventDate, eventTime, useEndOfDay = false) => {
-    const date = new Date(eventDate);
-    if (isNaN(date.getTime())) return null;
-
-    if (!eventTime) {
-        if (useEndOfDay) {
-            date.setHours(23, 59, 59, 999);
-        } else {
-            date.setHours(0, 0, 0, 0);
-        }
-        return date;
-    }
-
-    const [hours = "0", minutes = "0", seconds = "0"] =
-        String(eventTime).split(":");
-
-    date.setHours(
-        Number.parseInt(hours, 10) || 0,
-        Number.parseInt(minutes, 10) || 0,
-        Number.parseInt(seconds, 10) || 0,
-        0,
-    );
-
-    return date;
-};
-
-const getQrAccessState = (event) => {
-    const startAt = buildEventDateTime(event?.date, event?.time, false);
-    const endAt = buildEventDateTime(
-        event?.date,
-        event?.end_time || event?.time,
-        !event?.end_time && !event?.time,
-    );
-
-    if (!startAt || !endAt) {
-        return {
-            enabled: false,
-            reason: "Date de l'activité invalide pour le QR code.",
-        };
-    }
-
-    const openingAt = new Date(startAt);
-    openingAt.setDate(openingAt.getDate() - 2);
-
-    const now = new Date();
-
-    if (now < openingAt) {
-        return {
-            enabled: false,
-            reason: `Le QR sera actif à partir du ${openingAt.toLocaleString("fr-FR")}.`,
-        };
-    }
-
-    if (now >= endAt) {
-        return {
-            enabled: false,
-            reason: "Cette activité est passée. Le scan n'est plus disponible.",
-        };
-    }
-
-    return {
-        enabled: true,
-        reason: "QR code actif.",
-    };
 };
 
 // --- FONCTIONS DE FILTRAGE ---
@@ -2624,27 +2693,33 @@ const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
     { id: 3, image: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&h=500&fit=crop', title: 'Galerie', description: 'Partagez vos moments forts', date: new Date().toISOString() },
   ];
 
-  const getActivityImage = (activityId) => {
+  const getActivityMedia = (activityId) => {
     if (!mediaImages) return null;
-    const featuredImage = mediaImages.find(media => media.special_event_id === activityId && media.type === 'photo' && media.is_featured === true);
-    if (featuredImage) return featuredImage.url;
-    const firstPhoto = mediaImages.find(media => media.special_event_id === activityId && media.type === 'photo');
-    return firstPhoto ? firstPhoto.url : null;
+    const featured = mediaImages.find(m => m.special_event_id === activityId && m.type === 'photo' && m.is_featured === true);
+    if (featured) return featured;
+    return mediaImages.find(m => m.special_event_id === activityId && m.type === 'photo') || null;
   };
 
   const slides = useMemo(() => {
     if (!pastEvents || pastEvents.length === 0) return defaultSlides;
-    const sortedPastEvents = [...pastEvents].sort((a, b) => new Date(b.start_date) - new Date(a.start_date)).slice(0, 4);
+    const sortedPastEvents = [...pastEvents]
+      .sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
+      .slice(0, 6);
     if (sortedPastEvents.length === 0) return defaultSlides;
     const activitySlides = [];
     for (const activity of sortedPastEvents) {
-      const activityImage = getActivityImage(activity.id);
-      if (activityImage) {
+      const media = getActivityMedia(activity.id);
+      if (media) {
+        const lieuOrateur = [activity.lieu, activity.orateur].filter(Boolean).join(' · ');
+        const description =
+          (media.description && media.description.trim()) ? media.description :
+          (media.title && media.title.trim()) ? media.title :
+          (lieuOrateur || 'Moment de partage');
         activitySlides.push({
           id: activity.id,
-          image: activityImage,
+          image: media.url,
           title: activity.title,
-          description: activity.lieu || activity.orateur ? `${activity.lieu || ''} ${activity.orateur ? '· ' + activity.orateur : ''}` : 'Moment de partage',
+          description,
           date: activity.start_date,
         });
       }
@@ -2652,24 +2727,37 @@ const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
     return activitySlides.length > 0 ? activitySlides : defaultSlides;
   }, [pastEvents, mediaImages]);
 
+  // Réinitialise l'index si le nombre de slides change (ajout/suppression d'image)
   useEffect(() => {
-    if (isAutoPlaying && slides.length > 0) {
+    setCurrentSlide(prev => (prev >= slides.length ? 0 : prev));
+  }, [slides.length]);
+
+  useEffect(() => {
+    if (isAutoPlaying && slides.length > 1) {
       if (autoPlayIntervalRef.current) clearInterval(autoPlayIntervalRef.current);
-      autoPlayIntervalRef.current = setInterval(() => setCurrentSlide((prev) => (prev + 1) % slides.length), 5000);
+      autoPlayIntervalRef.current = setInterval(
+        () => setCurrentSlide(prev => (prev + 1) % slides.length),
+        5000
+      );
     }
     return () => { if (autoPlayIntervalRef.current) clearInterval(autoPlayIntervalRef.current); };
   }, [isAutoPlaying, slides.length]);
 
   if (slides.length === 0) return null;
 
-  const currentSlideData = slides[currentSlide];
+  const safeIndex = Math.min(currentSlide, slides.length - 1);
+  const currentSlideData = slides[safeIndex];
   const formattedDate = formatDateFrench(currentSlideData.date);
 
   return (
     <div className="carousel-simple" onMouseEnter={() => setIsAutoPlaying(false)} onMouseLeave={() => setIsAutoPlaying(true)}>
       <div className="carousel-simple-wrapper">
         <div className="carousel-simple-image">
-          <div className="carousel-simple-image-bg" style={{ backgroundImage: `url(${currentSlideData.image})` }} />
+          <div
+            key={safeIndex}
+            className="carousel-simple-image-bg"
+            style={{ backgroundImage: `url("${encodeURI(currentSlideData.image)}")` }}
+          />
         </div>
         <div className="carousel-simple-info">
           <div className="carousel-simple-header">ACTIVITÉ RÉCENTES</div>
@@ -2684,7 +2772,7 @@ const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
           <button className="carousel-simple-nav carousel-simple-nav-right" onClick={() => setCurrentSlide((prev) => (prev + 1) % slides.length)}>›</button>
           <div className="carousel-simple-dots">
             {slides.map((_, index) => (
-              <button key={index} className={`carousel-simple-dot ${currentSlide === index ? 'active' : ''}`} onClick={() => setCurrentSlide(index)} />
+              <button key={index} className={`carousel-simple-dot ${safeIndex === index ? 'active' : ''}`} onClick={() => setCurrentSlide(index)} />
             ))}
           </div>
         </>
@@ -2742,1148 +2830,249 @@ const MiniCalendar = ({ eventsDates = [], eventsData = [], onDateClick, activeDa
     return `${events[0].title} + ${events.length - 1} autre(s)`;
   };
 
-    const daysOfWeek = ["L", "M", "M", "J", "V", "S", "D"];
-    const days = getDaysInMonth(currentDate);
-    const today = new Date();
+  const daysOfWeek = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+  const days = getDaysInMonth(currentDate);
+  const today = new Date();
 
   const isActiveDate = (date) => {
     if (!activeDate) return false;
     return getLocalDateString(date) === getLocalDateString(activeDate);
   };
 
-    return (
-        <div className="mini-calendar">
-            <div className="cal-header">
-                <button
-                    className="cal-nav-btn"
-                    onClick={() =>
-                        setCurrentDate(
-                            new Date(
-                                currentDate.getFullYear(),
-                                currentDate.getMonth() - 1,
-                                1,
-                            ),
-                        )
-                    }
-                >
-                    ‹
-                </button>
-                <span className="cal-month-year">
-                    {monthNames[currentDate.getMonth()]}{" "}
-                    {currentDate.getFullYear()}
-                </span>
-                <button
-                    className="cal-nav-btn"
-                    onClick={() =>
-                        setCurrentDate(
-                            new Date(
-                                currentDate.getFullYear(),
-                                currentDate.getMonth() + 1,
-                                1,
-                            ),
-                        )
-                    }
-                >
-                    ›
-                </button>
-            </div>
-            <div className="cal-grid">
-                {daysOfWeek.map((d) => (
-                    <div key={d} className="cal-day-label">
-                        {d}
-                    </div>
-                ))}
-                {days.map((day, idx) => {
-                    const hasEvent = hasEventOnDate(day.date);
-                    const eventTitles = getEventTitles(day.date);
-                    const isToday =
-                        getLocalDateString(day.date) ===
-                        getLocalDateString(today);
-                    const isActive = isActiveDate(day.date);
-                    return (
-                        <div
-                            key={idx}
-                            className={`cal-day ${!day.isCurrentMonth ? "empty" : ""} ${isToday ? "today" : ""} ${hasEvent && day.isCurrentMonth ? "has-event" : ""} ${isActive && day.isCurrentMonth ? "active-selected" : ""}`}
-                            onClick={() =>
-                                day.isCurrentMonth &&
-                                onDateClick &&
-                                onDateClick(day.date)
-                            }
-                        >
-                            {day.date.getDate()}
-                            {hasEvent && day.isCurrentMonth && eventTitles && (
-                                <span className="tooltip">{eventTitles}</span>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
-    );
-};
-
-// --- PAST EVENT CONTENT MODAL CORRIGÉ ---
-const PastEventContentModal = ({
-    isOpen,
-    onClose,
-    date,
-    events,
-    mediaData,
-}) => {
-    const [selectedMedia, setSelectedMedia] = useState(null);
-    const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
-    const [currentMediaList, setCurrentMediaList] = useState([]);
-    const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false);
-
-    if (!isOpen || !date) return null;
-
-    const dateStr = getLocalDateString(date);
-    const eventsOnDate = events.filter(
-        (event) => getLocalDateString(event.date) === dateStr,
-    );
-    const eventIds = eventsOnDate.map((e) => e.id);
-    const relatedMedia = mediaData.filter(
-        (media) =>
-            media.special_event_id && eventIds.includes(media.special_event_id),
-    );
-    const generalMedia = mediaData.filter(
-        (media) =>
-            !media.special_event_id &&
-            getLocalDateString(media.date) === dateStr,
-    );
-    const formattedDate = formatDateFrench(date);
-
-    const getVideoEmbedUrl = (url) => {
-        if (!url) return null;
-        const youtubeRegex =
-            /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-        const youtubeMatch = url.match(youtubeRegex);
-        if (youtubeMatch) {
-            return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
-        }
-        const vimeoRegex =
-            /vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|)(\d+)(?:$|\/|\?)/;
-        const vimeoMatch = url.match(vimeoRegex);
-        if (vimeoMatch) {
-            return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
-        }
-        return url;
-    };
-
-    const openMediaViewer = (media, mediaArray) => {
-        const index = mediaArray.findIndex((m) => m.id === media.id);
-        setCurrentMediaList(mediaArray);
-        setCurrentMediaIndex(index);
-        setSelectedMedia(media);
-        setIsMediaViewerOpen(true);
-    };
-
-    const handleNavigateMedia = (newIndex) => {
-        setCurrentMediaIndex(newIndex);
-        setSelectedMedia(currentMediaList[newIndex]);
-    };
-
-    const closeMediaViewer = () => {
-        setIsMediaViewerOpen(false);
-        setSelectedMedia(null);
-        setCurrentMediaList([]);
-        setCurrentMediaIndex(0);
-    };
-
-    return (
-        <>
-            <div className="modal-overlay past-event-modal" onClick={onClose}>
-                <div
-                    className="modal-content"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <div className="modal-header">
-                        <h2>📅 {formattedDate}</h2>
-                        <button onClick={onClose}>✕</button>
-                    </div>
-                    <div className="modal-body">
-                        {eventsOnDate.length === 0 &&
-                        generalMedia.length === 0 ? (
-                            <div className="no-media">
-                                <p>
-                                    Aucune activité programmée et aucun média à
-                                    cette date.
-                                </p>
-                            </div>
-                        ) : (
-                            <>
-                                {eventsOnDate.map((event) => {
-                                    const eventMedia = relatedMedia.filter(
-                                        (m) => m.special_event_id === event.id,
-                                    );
-                                    return (
-                                        <div
-                                            key={event.id}
-                                            className="past-event-item"
-                                        >
-                                            <h3
-                                                style={{
-                                                    fontSize: "1.2rem",
-                                                    fontWeight: "700",
-                                                    marginBottom: "0.5rem",
-                                                }}
-                                            >
-                                                {event.title}
-                                            </h3>
-                                            {event.time && (
-                                                <p
-                                                    style={{
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: "8px",
-                                                        color: "#6b7280",
-                                                        fontSize: "0.85rem",
-                                                    }}
-                                                >
-                                                    <IconClock />{" "}
-                                                    {event.time.substring(0, 5)}
-                                                </p>
-                                            )}
-                                            {event.lieu && (
-                                                <p
-                                                    style={{
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: "8px",
-                                                        color: "#6b7280",
-                                                        fontSize: "0.85rem",
-                                                    }}
-                                                >
-                                                    <IconLocation />{" "}
-                                                    {event.lieu}
-                                                </p>
-                                            )}
-                                            {event.orateur && (
-                                                <p
-                                                    style={{
-                                                        fontSize: "0.85rem",
-                                                        marginTop: "0.5rem",
-                                                    }}
-                                                >
-                                                    <strong>Orateur :</strong>{" "}
-                                                    {event.orateur}
-                                                </p>
-                                            )}
-                                            {event.moderateur && (
-                                                <p
-                                                    style={{
-                                                        fontSize: "0.85rem",
-                                                    }}
-                                                >
-                                                    <strong>
-                                                        Modérateur :
-                                                    </strong>{" "}
-                                                    {event.moderateur}
-                                                </p>
-                                            )}
-                                            {event.famille_reception && (
-                                                <p
-                                                    style={{
-                                                        fontSize: "0.85rem",
-                                                    }}
-                                                >
-                                                    <strong>
-                                                        Famille de réception :
-                                                    </strong>{" "}
-                                                    {event.famille_reception}
-                                                </p>
-                                            )}
-                                            {eventMedia.length > 0 && (
-                                                <div className="past-event-media">
-                                                    <h4>📸 Médias associés</h4>
-                                                    <div className="media-gallery">
-                                                        {eventMedia.map(
-                                                            (media) => {
-                                                                let mediaUrl =
-                                                                    "";
-                                                                let thumbnailUrl =
-                                                                    "";
-
-                                                                if (
-                                                                    media.type ===
-                                                                    "video"
-                                                                ) {
-                                                                    mediaUrl =
-                                                                        media.video_url ||
-                                                                        media.url;
-                                                                    thumbnailUrl =
-                                                                        media.thumbnail ||
-                                                                        getVideoEmbedUrl(
-                                                                            mediaUrl,
-                                                                        ) ||
-                                                                        "/default-video-thumb.jpg";
-                                                                } else {
-                                                                    mediaUrl =
-                                                                        media.url;
-                                                                    thumbnailUrl =
-                                                                        media.url;
-                                                                }
-
-                                                                return (
-                                                                    <div
-                                                                        key={
-                                                                            media.id
-                                                                        }
-                                                                        className="media-gallery-item"
-                                                                        onClick={() =>
-                                                                            openMediaViewer(
-                                                                                media,
-                                                                                eventMedia,
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        {media.type ===
-                                                                        "video" ? (
-                                                                            <div className="relative">
-                                                                                <img
-                                                                                    src={
-                                                                                        thumbnailUrl
-                                                                                    }
-                                                                                    alt={
-                                                                                        media.title
-                                                                                    }
-                                                                                    style={{
-                                                                                        width: "100%",
-                                                                                        height: "120px",
-                                                                                        objectFit:
-                                                                                            "cover",
-                                                                                    }}
-                                                                                    onError={(
-                                                                                        e,
-                                                                                    ) => {
-                                                                                        e.target.src =
-                                                                                            "/default-video-thumb.jpg";
-                                                                                    }}
-                                                                                />
-                                                                                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40">
-                                                                                    <svg
-                                                                                        className="w-10 h-10 text-white"
-                                                                                        fill="currentColor"
-                                                                                        viewBox="0 0 24 24"
-                                                                                    >
-                                                                                        <path d="M8 5v14l11-7z" />
-                                                                                    </svg>
-                                                                                </div>
-                                                                            </div>
-                                                                        ) : (
-                                                                            <img
-                                                                                src={
-                                                                                    media.url
-                                                                                }
-                                                                                alt={
-                                                                                    media.title
-                                                                                }
-                                                                                style={{
-                                                                                    width: "100%",
-                                                                                    height: "120px",
-                                                                                    objectFit:
-                                                                                        "cover",
-                                                                                }}
-                                                                            />
-                                                                        )}
-                                                                        <div
-                                                                            style={{
-                                                                                padding:
-                                                                                    "6px",
-                                                                                fontSize:
-                                                                                    "0.7rem",
-                                                                                textAlign:
-                                                                                    "center",
-                                                                                background:
-                                                                                    "white",
-                                                                            }}
-                                                                        >
-                                                                            {media
-                                                                                .title
-                                                                                .length >
-                                                                            20
-                                                                                ? media.title.substring(
-                                                                                      0,
-                                                                                      20,
-                                                                                  ) +
-                                                                                  "..."
-                                                                                : media.title}
-                                                                        </div>
-                                                                    </div>
-                                                                );
-                                                            },
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                                {generalMedia.length > 0 && (
-                                    <div className="past-event-media">
-                                        <h4>📸 Médias du jour</h4>
-                                        <div className="media-gallery">
-                                            {generalMedia.map((media) => {
-                                                let mediaUrl = "";
-                                                let thumbnailUrl = "";
-
-                                                if (media.type === "video") {
-                                                    mediaUrl =
-                                                        media.video_url ||
-                                                        media.url;
-                                                    thumbnailUrl =
-                                                        media.thumbnail ||
-                                                        getVideoEmbedUrl(
-                                                            mediaUrl,
-                                                        ) ||
-                                                        "/default-video-thumb.jpg";
-                                                } else {
-                                                    mediaUrl = media.url;
-                                                    thumbnailUrl = media.url;
-                                                }
-
-                                                return (
-                                                    <div
-                                                        key={media.id}
-                                                        className="media-gallery-item"
-                                                        onClick={() =>
-                                                            openMediaViewer(
-                                                                media,
-                                                                generalMedia,
-                                                            )
-                                                        }
-                                                    >
-                                                        {media.type ===
-                                                        "video" ? (
-                                                            <div className="relative">
-                                                                <img
-                                                                    src={
-                                                                        thumbnailUrl
-                                                                    }
-                                                                    alt={
-                                                                        media.title
-                                                                    }
-                                                                    style={{
-                                                                        width: "100%",
-                                                                        height: "120px",
-                                                                        objectFit:
-                                                                            "cover",
-                                                                    }}
-                                                                    onError={(
-                                                                        e,
-                                                                    ) => {
-                                                                        e.target.src =
-                                                                            "/default-video-thumb.jpg";
-                                                                    }}
-                                                                />
-                                                                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40">
-                                                                    <svg
-                                                                        className="w-10 h-10 text-white"
-                                                                        fill="currentColor"
-                                                                        viewBox="0 0 24 24"
-                                                                    >
-                                                                        <path d="M8 5v14l11-7z" />
-                                                                    </svg>
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <img
-                                                                src={media.url}
-                                                                alt={
-                                                                    media.title
-                                                                }
-                                                                style={{
-                                                                    width: "100%",
-                                                                    height: "120px",
-                                                                    objectFit:
-                                                                        "cover",
-                                                                }}
-                                                            />
-                                                        )}
-                                                        <div
-                                                            style={{
-                                                                padding: "6px",
-                                                                fontSize:
-                                                                    "0.7rem",
-                                                                textAlign:
-                                                                    "center",
-                                                                background:
-                                                                    "white",
-                                                            }}
-                                                        >
-                                                            {media.title
-                                                                .length > 20
-                                                                ? media.title.substring(
-                                                                      0,
-                                                                      20,
-                                                                  ) + "..."
-                                                                : media.title}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-                    <div className="modal-footer">
-                        <button className="btn-cancel" onClick={onClose}>
-                            Fermer
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <MediaViewerModal
-                isOpen={isMediaViewerOpen}
-                onClose={closeMediaViewer}
-                media={selectedMedia}
-                mediaList={currentMediaList}
-                currentIndex={currentMediaIndex}
-                onNavigate={handleNavigateMedia}
-            />
-        </>
-    );
-};
-
-// --- MEDIA VIEWER MODAL AVEC SUPPORT YOUTUBE, VIMEO, FACEBOOK ---
-const MediaViewerModal = ({
-    isOpen,
-    onClose,
-    media,
-    mediaList = [],
-    currentIndex = 0,
-    onNavigate,
-}) => {
-    if (!isOpen || !media) return null;
-
-    const handlePrevious = () => {
-        if (onNavigate && currentIndex > 0) {
-            onNavigate(currentIndex - 1);
-        }
-    };
-
-    const handleNext = () => {
-        if (onNavigate && currentIndex < mediaList.length - 1) {
-            onNavigate(currentIndex + 1);
-        }
-    };
-
-    const currentMedia = mediaList[currentIndex] || media;
-
-    const getYouTubeEmbedUrl = (url) => {
-        if (!url) return null;
-        const regex =
-            /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-        const match = url.match(regex);
-        if (match) {
-            return `https://www.youtube.com/embed/${match[1]}`;
-        }
-        return null;
-    };
-
-    const getVimeoEmbedUrl = (url) => {
-        if (!url) return null;
-        const regex =
-            /vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|)(\d+)(?:$|\/|\?)/;
-        const match = url.match(regex);
-        if (match) {
-            return `https://player.vimeo.com/video/${match[1]}`;
-        }
-        return null;
-    };
-
-    const getFacebookEmbedUrl = (url) => {
-        if (!url) return null;
-        let videoId = null;
-        const watchRegex = /facebook\.com\/watch\/?\?v=(\d+)/;
-        const watchMatch = url.match(watchRegex);
-        if (watchMatch) {
-            videoId = watchMatch[1];
-        }
-        const videosRegex =
-            /facebook\.com\/(?:[^\/]+\/)?videos\/(?:[^\/]+\/)?(\d+)/;
-        const videosMatch = url.match(videosRegex);
-        if (videosMatch) {
-            videoId = videosMatch[1];
-        }
-        const fbWatchRegex = /fb\.watch\/([a-zA-Z0-9?=&]+)/;
-        const fbWatchMatch = url.match(fbWatchRegex);
-        if (fbWatchMatch) {
-            return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&mute=0`;
-        }
-        if (videoId) {
-            return `https://www.facebook.com/plugins/video.php?href=https://www.facebook.com/watch/?v=${videoId}&show_text=0&mute=0`;
-        }
-        if (url.includes("facebook.com")) {
-            return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&mute=0`;
-        }
-        return null;
-    };
-
-    const getEmbedUrl = (url) => {
-        if (!url) return null;
-        return (
-            getYouTubeEmbedUrl(url) ||
-            getVimeoEmbedUrl(url) ||
-            getFacebookEmbedUrl(url) ||
-            url
-        );
-    };
-
-    const getPlatform = (url) => {
-        if (!url) return "unknown";
-        if (url.includes("youtube") || url.includes("youtu.be"))
-            return "youtube";
-        if (url.includes("vimeo")) return "vimeo";
-        if (url.includes("facebook") || url.includes("fb.watch"))
-            return "facebook";
-        return "unknown";
-    };
-
-    const embedUrl = getEmbedUrl(currentMedia.video_url || currentMedia.url);
-    const platform = getPlatform(currentMedia.video_url || currentMedia.url);
-
-    const getPlatformName = (url) => {
-        if (!url) return "la plateforme";
-        if (url.includes("youtube") || url.includes("youtu.be"))
-            return "YouTube";
-        if (url.includes("vimeo")) return "Vimeo";
-        if (url.includes("facebook") || url.includes("fb.watch"))
-            return "Facebook";
-        return "la plateforme";
-    };
-
-    return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div
-                className="modal-content modal-content-media"
-                onClick={(e) => e.stopPropagation()}
+  return (
+    <div className="mini-calendar">
+      <div className="cal-header">
+        <button className="cal-nav-btn" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}>‹</button>
+        <span className="cal-month-year">{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</span>
+        <button className="cal-nav-btn" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}>›</button>
+      </div>
+      <div className="cal-grid">
+        {daysOfWeek.map(d => <div key={d} className="cal-day-label">{d}</div>)}
+        {days.map((day, idx) => {
+          const hasEvent = hasEventOnDate(day.date);
+          const eventTitles = getEventTitles(day.date);
+          const isToday = getLocalDateString(day.date) === getLocalDateString(today);
+          const isActive = isActiveDate(day.date);
+          return (
+            <div 
+              key={idx} 
+              className={`cal-day ${!day.isCurrentMonth ? 'empty' : ''} ${isToday ? 'today' : ''} ${hasEvent && day.isCurrentMonth ? 'has-event' : ''} ${isActive && day.isCurrentMonth ? 'active-selected' : ''}`}
+              onClick={() => day.isCurrentMonth && onDateClick && onDateClick(day.date)}
             >
-                <div className="modal-header">
-                    <h2>{currentMedia.title}</h2>
-                    <button onClick={onClose}>✕</button>
-                </div>
-                <div className="modal-body">
-                    <div className="media-viewer">
-                        {currentMedia.type === "video" ? (
-                            embedUrl &&
-                            (embedUrl.includes("youtube") ||
-                                embedUrl.includes("vimeo") ||
-                                embedUrl.includes("facebook")) ? (
-                                platform === "facebook" ? (
-                                    <div className="text-center p-8 bg-gray-100 rounded-lg">
-                                        <div className="mb-4">
-                                            <img
-                                                src={
-                                                    currentMedia.thumbnail ||
-                                                    "/default-video-thumb.jpg"
-                                                }
-                                                alt={currentMedia.title}
-                                                className="max-h-64 mx-auto rounded-lg mb-4"
-                                            />
-                                        </div>
-                                        <p className="text-gray-600 mb-4">
-                                            La vidéo Facebook ne peut pas être
-                                            intégrée directement.
-                                        </p>
-                                        <a
-                                            href={
-                                                currentMedia.video_url ||
-                                                currentMedia.url
-                                            }
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                                        >
-                                            <svg
-                                                className="w-5 h-5"
-                                                fill="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path d="M8 5v14l11-7z" />
-                                            </svg>
-                                            Ouvrir sur Facebook
-                                        </a>
-                                    </div>
-                                ) : (
-                                    <div
-                                        className="relative"
-                                        style={{
-                                            paddingBottom: "56.25%",
-                                            height: 0,
-                                        }}
-                                    >
-                                        <iframe
-                                            src={embedUrl}
-                                            title={currentMedia.title}
-                                            className="absolute top-0 left-0 w-full h-full rounded-lg"
-                                            frameBorder="0"
-                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                            allowFullScreen
-                                        />
-                                    </div>
-                                )
-                            ) : (
-                                <div
-                                    className="text-center p-8 bg-gray-100 rounded-lg cursor-pointer"
-                                    onClick={() =>
-                                        window.open(
-                                            currentMedia.video_url ||
-                                                currentMedia.url,
-                                            "_blank",
-                                        )
-                                    }
-                                >
-                                    <img
-                                        src={
-                                            currentMedia.thumbnail ||
-                                            "/default-video-thumb.jpg"
-                                        }
-                                        alt={currentMedia.title}
-                                        className="max-h-64 mx-auto rounded-lg mb-4"
-                                    />
-                                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                                        <svg
-                                            className="w-5 h-5"
-                                            fill="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path d="M8 5v14l11-7z" />
-                                        </svg>
-                                        Regarder sur{" "}
-                                        {getPlatformName(
-                                            currentMedia.video_url ||
-                                                currentMedia.url,
-                                        )}
-                                    </div>
-                                </div>
-                            )
-                        ) : (
-                            <img
-                                src={currentMedia.url}
-                                alt={currentMedia.title}
-                                className="max-h-[70vh] mx-auto object-contain"
-                            />
-                        )}
-
-                        {mediaList.length > 1 && (
-                            <div className="media-viewer-nav">
-                                <button
-                                    className="media-viewer-nav-btn media-viewer-prev"
-                                    onClick={handlePrevious}
-                                    disabled={currentIndex === 0}
-                                >
-                                    ‹
-                                </button>
-                                <button
-                                    className="media-viewer-nav-btn media-viewer-next"
-                                    onClick={handleNext}
-                                    disabled={
-                                        currentIndex === mediaList.length - 1
-                                    }
-                                >
-                                    ›
-                                </button>
-                            </div>
-                        )}
-
-                        {mediaList.length > 1 && (
-                            <div className="media-viewer-counter">
-                                {currentIndex + 1} / {mediaList.length}
-                            </div>
-                        )}
-
-                        <div className="media-viewer-info">
-                            <p>
-                                <strong>Date:</strong>{" "}
-                                {formatDateFrench(currentMedia.date)}
-                            </p>
-                            {currentMedia.description && (
-                                <p>
-                                    <strong>Description:</strong>{" "}
-                                    {currentMedia.description}
-                                </p>
-                            )}
-                            {currentMedia.type === "video" &&
-                                (currentMedia.video_url ||
-                                    currentMedia.url) && (
-                                    <p className="text-blue-600 text-sm mt-2">
-                                        <a
-                                            href={
-                                                currentMedia.video_url ||
-                                                currentMedia.url
-                                            }
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="hover:underline"
-                                        >
-                                            🔗 Ouvrir sur{" "}
-                                            {getPlatformName(
-                                                currentMedia.video_url ||
-                                                    currentMedia.url,
-                                            )}
-                                        </a>
-                                    </p>
-                                )}
-                        </div>
-                    </div>
-                </div>
+              {day.date.getDate()}
+              {hasEvent && day.isCurrentMonth && eventTitles && <span className="tooltip">{eventTitles}</span>}
             </div>
-        </div>
-    );
+          );
+        })}
+      </div>
+    </div>
+  );
 };
 
-// --- EVENT PLANNER MODAL AVEC RÉINITIALISATION CORRIGÉE ---
-const EventPlannerModal = ({
-    isOpen,
-    onClose,
-    onSave,
-    editingEvent = null,
-    isLoading = false,
-}) => {
-    const [activities, setActivities] = useState([
-        {
-            title: "",
-            date: "",
-            time: "",
-            orateur: "",
-            moderateur: "",
-            famille_reception: "",
-            lieu: "",
-        },
-    ]);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+// --- EVENT PLANNER MODAL ---
+const EventPlannerModal = ({ isOpen, onClose, onSave, editingEvent = null, isLoading = false }) => {
+  const [activities, setActivities] = useState([{ 
+    title: '', 
+    start_date: '', 
+    end_date: '', 
+    start_time: '', 
+    end_time: '',
+    orateur: '', 
+    moderateur: '', 
+    famille_reception: '', 
+    lieu: '' 
+  }]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    useEffect(() => {
-        if (isOpen && editingEvent) {
-            setActivities([
-                {
-                    title: editingEvent.title || "",
-                    date: editingEvent.date
-                        ? getLocalDateString(editingEvent.date)
-                        : "",
-                    time: editingEvent.time || "",
-                    orateur: editingEvent.orateur || "",
-                    moderateur: editingEvent.moderateur || "",
-                    famille_reception: editingEvent.famille_reception || "",
-                    lieu: editingEvent.lieu || "",
-                },
-            ]);
-        } else if (isOpen && !editingEvent) {
-            setActivities([
-                {
-                    title: "",
-                    date: "",
-                    time: "",
-                    orateur: "",
-                    moderateur: "",
-                    famille_reception: "",
-                    lieu: "",
-                },
-            ]);
-        }
-        if (!isOpen) {
-            setIsSubmitting(false);
-        }
-    }, [isOpen, editingEvent]);
+  const getCurrentDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  useEffect(() => {
+    if (isOpen && editingEvent) {
+      setActivities([{ 
+        title: editingEvent.title || '', 
+        start_date: editingEvent.start_date ? getLocalDateString(editingEvent.start_date) : getCurrentDate(), 
+        end_date: editingEvent.end_date ? getLocalDateString(editingEvent.end_date) : '', 
+        start_time: editingEvent.start_time || '', 
+        end_time: editingEvent.end_time || '',
+        orateur: editingEvent.orateur || '', 
+        moderateur: editingEvent.moderateur || '', 
+        famille_reception: editingEvent.famille_reception || '', 
+        lieu: editingEvent.lieu || '' 
+      }]);
+    } else if (isOpen && !editingEvent) {
+      setActivities([{ 
+        title: '', 
+        start_date: getCurrentDate(), 
+        end_date: '', 
+        start_time: '', 
+        end_time: '',
+        orateur: '', 
+        moderateur: '', 
+        famille_reception: '', 
+        lieu: '' 
+      }]);
+    }
+    if (!isOpen) setIsSubmitting(false);
+  }, [isOpen, editingEvent]);
 
   useEffect(() => {
     if (!isLoading) setIsSubmitting(false);
   }, [isLoading]);
 
-    const cleanActivityData = (activity) => {
-        return {
-            title: activity.title.trim(),
-            date: activity.date,
-            time:
-                activity.time && activity.time.trim() !== ""
-                    ? activity.time
-                    : null,
-            orateur:
-                activity.orateur && activity.orateur.trim() !== ""
-                    ? activity.orateur
-                    : null,
-            moderateur:
-                activity.moderateur && activity.moderateur.trim() !== ""
-                    ? activity.moderateur
-                    : null,
-            famille_reception:
-                activity.famille_reception &&
-                activity.famille_reception.trim() !== ""
-                    ? activity.famille_reception
-                    : null,
-            lieu:
-                activity.lieu && activity.lieu.trim() !== ""
-                    ? activity.lieu
-                    : null,
-        };
+  const cleanActivityData = (activity) => {
+    return {
+      title: activity.title.trim(),
+      start_date: activity.start_date,
+      end_date: activity.end_date && activity.end_date.trim() !== '' ? activity.end_date : null,
+      start_time: activity.start_time && activity.start_time.trim() !== '' ? activity.start_time : null,
+      end_time: activity.end_time && activity.end_time.trim() !== '' ? activity.end_time : null,
+      orateur: activity.orateur && activity.orateur.trim() !== '' ? activity.orateur : null,
+      moderateur: activity.moderateur && activity.moderateur.trim() !== '' ? activity.moderateur : null,
+      famille_reception: activity.famille_reception && activity.famille_reception.trim() !== '' ? activity.famille_reception : null,
+      lieu: activity.lieu && activity.lieu.trim() !== '' ? activity.lieu : null,
     };
+  };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        const validActivities = activities.filter(
-            (a) => a.title.trim() !== "" && a.date !== "",
-        );
-        if (validActivities.length === 0) {
-            alert(
-                "Veuillez remplir au moins une activité avec un titre et une date",
-            );
-            return;
-        }
-
-        setIsSubmitting(true);
-        const cleanedActivities = validActivities.map(cleanActivityData);
-
-        try {
-            await onSave(cleanedActivities, editingEvent?.id);
-            if (!editingEvent) {
-                setActivities([
-                    {
-                        title: "",
-                        date: "",
-                        time: "",
-                        orateur: "",
-                        moderateur: "",
-                        famille_reception: "",
-                        lieu: "",
-                    },
-                ]);
-            }
-        } catch (error) {
-            console.error("Erreur lors de la soumission:", error);
-        } finally {
-        }
-    };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const validActivities = activities.filter(a => a.title.trim() !== '' && a.start_date !== '');
+    if (validActivities.length === 0) { 
+      alert('Veuillez remplir au moins une activité avec un titre et une date de début'); 
+      return; 
+    }
+    for (const activity of validActivities) {
+      if (activity.end_date && activity.end_date < activity.start_date) {
+        alert(`L'activité "${activity.title}" a une date de fin antérieure à la date de début`);
+        return;
+      }
+    }
+    setIsSubmitting(true);
+    const cleanedActivities = validActivities.map(cleanActivityData);
+    try {
+      await onSave(cleanedActivities, editingEvent?.id);
+      if (!editingEvent) {
+        setActivities([{ 
+          title: '', 
+          start_date: getCurrentDate(), 
+          end_date: '', 
+          start_time: '', 
+          end_time: '',
+          orateur: '', 
+          moderateur: '', 
+          famille_reception: '', 
+          lieu: '' 
+        }]);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la soumission:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (!isOpen) return null;
 
-    return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                <div className="modal-header">
-                    <h2>
-                        {editingEvent
-                            ? "Modifier le programme"
-                            : "Créer des programmes d'activités"}
-                    </h2>
-                    <button onClick={onClose}>✕</button>
-                </div>
-                <div className="modal-body">
-                    <form onSubmit={handleSubmit} id="event-form">
-                        <div className="activities-list">
-                            {activities.map((activity, index) => (
-                                <div key={index} className="activity-item">
-                                    <div className="activity-item-header">
-                                        <span className="activity-number">
-                                            Activité {index + 1}
-                                        </span>
-                                        {activities.length > 1 &&
-                                            !editingEvent && (
-                                                <button
-                                                    type="button"
-                                                    className="btn-remove-activity"
-                                                    onClick={() =>
-                                                        setActivities(
-                                                            activities.filter(
-                                                                (_, i) =>
-                                                                    i !== index,
-                                                            ),
-                                                        )
-                                                    }
-                                                >
-                                                    ✕
-                                                </button>
-                                            )}
-                                    </div>
-                                    <div className="modal-form-grid">
-                                        <div className="form-group modal-full">
-                                            <label>Activité / Titre *</label>
-                                            <span className="input-icon">
-                                                <IconEdit />
-                                            </span>
-                                            <input
-                                                type="text"
-                                                placeholder="Ex: Étude biblique..."
-                                                value={activity.title}
-                                                onChange={(e) => {
-                                                    const updated = [
-                                                        ...activities,
-                                                    ];
-                                                    updated[index].title =
-                                                        e.target.value;
-                                                    setActivities(updated);
-                                                }}
-                                                required
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Date *</label>
-                                            <span className="input-icon">
-                                                <IconCalendar />
-                                            </span>
-                                            <input
-                                                type="date"
-                                                value={activity.date}
-                                                onChange={(e) => {
-                                                    const updated = [
-                                                        ...activities,
-                                                    ];
-                                                    updated[index].date =
-                                                        e.target.value;
-                                                    setActivities(updated);
-                                                }}
-                                                required
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Heure</label>
-                                            <span className="input-icon">
-                                                <IconClock />
-                                            </span>
-                                            <input
-                                                type="time"
-                                                value={activity.time}
-                                                onChange={(e) => {
-                                                    const updated = [
-                                                        ...activities,
-                                                    ];
-                                                    updated[index].time =
-                                                        e.target.value;
-                                                    setActivities(updated);
-                                                }}
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Orateur</label>
-                                            <span className="input-icon">
-                                                <IconMic />
-                                            </span>
-                                            <input
-                                                type="text"
-                                                placeholder="Nom de l'orateur..."
-                                                value={activity.orateur}
-                                                onChange={(e) => {
-                                                    const updated = [
-                                                        ...activities,
-                                                    ];
-                                                    updated[index].orateur =
-                                                        e.target.value;
-                                                    setActivities(updated);
-                                                }}
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Modérateur</label>
-                                            <span className="input-icon">
-                                                <IconUser />
-                                            </span>
-                                            <input
-                                                type="text"
-                                                placeholder="Nom du modérateur..."
-                                                value={activity.moderateur}
-                                                onChange={(e) => {
-                                                    const updated = [
-                                                        ...activities,
-                                                    ];
-                                                    updated[index].moderateur =
-                                                        e.target.value;
-                                                    setActivities(updated);
-                                                }}
-                                            />
-                                        </div>
-                                        <div className="form-group modal-full">
-                                            <label>Famille de réception</label>
-                                            <span className="input-icon">
-                                                <IconFamily />
-                                            </span>
-                                            <input
-                                                type="text"
-                                                placeholder="Nom de la famille..."
-                                                value={
-                                                    activity.famille_reception
-                                                }
-                                                onChange={(e) => {
-                                                    const updated = [
-                                                        ...activities,
-                                                    ];
-                                                    updated[
-                                                        index
-                                                    ].famille_reception =
-                                                        e.target.value;
-                                                    setActivities(updated);
-                                                }}
-                                            />
-                                        </div>
-                                        <div className="form-group modal-full">
-                                            <label>Lieu</label>
-                                            <span className="input-icon">
-                                                <IconLocation />
-                                            </span>
-                                            <textarea
-                                                rows="2"
-                                                placeholder="Adresse, salle..."
-                                                value={activity.lieu}
-                                                onChange={(e) => {
-                                                    const updated = [
-                                                        ...activities,
-                                                    ];
-                                                    updated[index].lieu =
-                                                        e.target.value;
-                                                    setActivities(updated);
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        {!editingEvent && (
-                            <button
-                                type="button"
-                                className="btn-add-activity"
-                                onClick={() =>
-                                    setActivities([
-                                        ...activities,
-                                        {
-                                            title: "",
-                                            date: "",
-                                            time: "",
-                                            orateur: "",
-                                            moderateur: "",
-                                            famille_reception: "",
-                                            lieu: "",
-                                        },
-                                    ])
-                                }
-                            >
-                                <IconPlus /> Ajouter une autre activité
-                            </button>
-                        )}
-                    </form>
-                </div>
-                <div className="modal-footer">
-                    <button className="btn-cancel" onClick={onClose}>
-                        Annuler
-                    </button>
-                    <button
-                        type="submit"
-                        form="event-form"
-                        className="btn-add"
-                        disabled={isLoading || isSubmitting}
-                    >
-                        <IconPlus />{" "}
-                        {isLoading || isSubmitting
-                            ? "Envoi en cours..."
-                            : editingEvent
-                              ? "Mettre à jour"
-                              : `Ajouter ${activities.length} programme(s)`}
-                    </button>
-                </div>
-            </div>
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>{editingEvent ? 'Modifier le programme' : 'Créer des programmes d\'activités'}</h2>
+          <button onClick={onClose}>✕</button>
         </div>
-    );
+        <div className="modal-body">
+          <form onSubmit={handleSubmit} id="event-form">
+            <div className="activities-list">
+              {activities.map((activity, index) => (
+                <div key={index} className="activity-item">
+                  <div className="activity-item-header">
+                    <span className="activity-number">Activité {index + 1}</span>
+                    {activities.length > 1 && !editingEvent && (
+                      <button type="button" className="btn-remove-activity" onClick={() => setActivities(activities.filter((_, i) => i !== index))}>✕</button>
+                    )}
+                  </div>
+                  <div className="modal-form-grid">
+                    <div className="form-group modal-full">
+                      <label>Activité / Titre *</label>
+                      <span className="input-icon"><IconEdit /></span>
+                      <input type="text" placeholder="Ex: Étude biblique..." value={activity.title} onChange={(e) => { const updated = [...activities]; updated[index].title = e.target.value; setActivities(updated); }} required />
+                    </div>
+                    <div className="form-group">
+                      <label>Date de début *</label>
+                      <span className="input-icon"><IconCalendar /></span>
+                      <input type="date" value={activity.start_date} onChange={(e) => { const updated = [...activities]; updated[index].start_date = e.target.value; setActivities(updated); }} required />
+                    </div>
+                    <div className="form-group">
+                      <label>Date de fin</label>
+                      <span className="input-icon"><IconCalendar /></span>
+                      <input type="date" value={activity.end_date} onChange={(e) => { const updated = [...activities]; updated[index].end_date = e.target.value; setActivities(updated); }} />
+                      <p style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '4px' }}>Optionnelle - laisse vide pour une activité d'un jour</p>
+                    </div>
+                    <div className="form-group">
+                      <label>Heure de début</label>
+                      <span className="input-icon"><IconClock /></span>
+                      <input type="time" value={activity.start_time} onChange={(e) => { const updated = [...activities]; updated[index].start_time = e.target.value; setActivities(updated); }} />
+                    </div>
+                    <div className="form-group">
+                      <label>Heure de fin</label>
+                      <span className="input-icon"><IconClock /></span>
+                      <input type="time" value={activity.end_time} onChange={(e) => { const updated = [...activities]; updated[index].end_time = e.target.value; setActivities(updated); }} />
+                    </div>
+                    <div className="form-group">
+                      <label>Orateur</label>
+                      <span className="input-icon"><IconMic /></span>
+                      <input type="text" placeholder="Nom de l'orateur..." value={activity.orateur} onChange={(e) => { const updated = [...activities]; updated[index].orateur = e.target.value; setActivities(updated); }} />
+                    </div>
+                    <div className="form-group">
+                      <label>Modérateur</label>
+                      <span className="input-icon"><IconUser /></span>
+                      <input type="text" placeholder="Nom du modérateur..." value={activity.moderateur} onChange={(e) => { const updated = [...activities]; updated[index].moderateur = e.target.value; setActivities(updated); }} />
+                    </div>
+                    <div className="form-group modal-full">
+                      <label>Famille de réception</label>
+                      <span className="input-icon"><IconFamily /></span>
+                      <input type="text" placeholder="Nom de la famille..." value={activity.famille_reception} onChange={(e) => { const updated = [...activities]; updated[index].famille_reception = e.target.value; setActivities(updated); }} />
+                    </div>
+                    <div className="form-group modal-full">
+                      <label>Lieu</label>
+                      <span className="input-icon"><IconLocation /></span>
+                      <textarea rows="2" placeholder="Adresse, salle..." value={activity.lieu} onChange={(e) => { const updated = [...activities]; updated[index].lieu = e.target.value; setActivities(updated); }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {!editingEvent && (
+              <button type="button" className="btn-add-activity" onClick={() => setActivities([...activities, { 
+                title: '', 
+                start_date: getCurrentDate(), 
+                end_date: '', 
+                start_time: '', 
+                end_time: '',
+                orateur: '', 
+                moderateur: '', 
+                famille_reception: '', 
+                lieu: '' 
+              }])}>
+                <IconPlus /> Ajouter une autre activité
+              </button>
+            )}
+          </form>
+        </div>
+        <div className="modal-footer">
+          <button className="btn-cancel" onClick={onClose}>Annuler</button>
+          <button type="submit" form="event-form" className="btn-add" disabled={isLoading || isSubmitting}>
+            <IconPlus /> {isLoading || isSubmitting ? 'Envoi en cours...' : (editingEvent ? 'Mettre à jour' : `Ajouter ${activities.length} programme(s)`)}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // --- IMPORT EXCEL MODAL ---
@@ -4069,279 +3258,105 @@ const AddMediaModal = ({ isOpen, onClose, onAdd, isLoading = false, events = [],
     setSelectedFeaturedIndex(null);
   };
 
-    return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                <div className="modal-header">
-                    <h2>Ajouter des contenus média</h2>
-                    <button onClick={onClose}>✕</button>
-                </div>
-                <div className="modal-body">
-                    <form onSubmit={handleSubmit} id="add-media-form">
-                        <div className="media-type-selector">
-                            <button
-                                type="button"
-                                className={`media-type-btn ${mediaType === "photo" ? "active" : ""}`}
-                                onClick={() => {
-                                    setMediaType("photo");
-                                    setFiles([]);
-                                    setPreviews([]);
-                                    setVideoUrl("");
-                                }}
-                            >
-                                <IconPhoto /> Photos
-                            </button>
-                            <button
-                                type="button"
-                                className={`media-type-btn ${mediaType === "video" ? "active" : ""}`}
-                                onClick={() => {
-                                    setMediaType("video");
-                                    setFiles([]);
-                                    setPreviews([]);
-                                    setVideoUrl("");
-                                }}
-                            >
-                                <IconVideo /> Vidéos externes
-                            </button>
-                        </div>
-
-                        <div className="form-group modal-full">
-                            <label>Titre *</label>
-                            <span className="input-icon">
-                                <IconEdit />
-                            </span>
-                            <input
-                                type="text"
-                                placeholder="Titre du contenu..."
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                required
-                            />
-                        </div>
-
-                        <div className="form-group modal-full">
-                            <label>Description</label>
-                            <span className="input-icon">
-                                <IconEdit />
-                            </span>
-                            <textarea
-                                rows="3"
-                                placeholder="Description..."
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label>Date</label>
-                            <span className="input-icon">
-                                <IconCalendar />
-                            </span>
-                            <input
-                                type="date"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                                required
-                            />
-                        </div>
-
-                        <div className="form-group modal-full">
-                            <label>Activité associée</label>
-                            <span className="input-icon">
-                                <IconActivity />
-                            </span>
-                            <select
-                                value={selectedEventId}
-                                onChange={(e) =>
-                                    setSelectedEventId(e.target.value)
-                                }
-                                style={{
-                                    appearance: "auto",
-                                    paddingLeft: "42px",
-                                }}
-                            >
-                                <option value="">-- Aucune activité --</option>
-                                {events.map((event) => (
-                                    <option key={event.id} value={event.id}>
-                                        {event.title} -{" "}
-                                        {formatDateFrench(event.date)}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {mediaType === "video" ? (
-                            <div className="form-group modal-full">
-                                <label>URL de la vidéo *</label>
-                                <span className="input-icon">
-                                    <IconVideo />
-                                </span>
-                                <input
-                                    type="url"
-                                    placeholder="https://www.youtube.com/watch?v=... ou https://vimeo.com/..."
-                                    value={videoUrl}
-                                    onChange={(e) =>
-                                        setVideoUrl(e.target.value)
-                                    }
-                                    required
-                                />
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Supporte: YouTube, Vimeo, Dailymotion,
-                                    Facebook (copiez l'URL de la vidéo)
-                                </p>
-                                {videoUrl && getVideoThumbnail(videoUrl) && (
-                                    <div className="mt-3 p-3 bg-gray-100 rounded-lg">
-                                        <p className="text-sm text-gray-600 mb-2">
-                                            Aperçu de la miniature:
-                                        </p>
-                                        <img
-                                            src={getVideoThumbnail(videoUrl)}
-                                            alt="Aperçu"
-                                            className="max-h-32 rounded-lg shadow"
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="form-group modal-full">
-                                <label>Photos *</label>
-                                <div
-                                    className={`media-upload-area ${isDragActive ? "drag-active" : ""}`}
-                                    onDragOver={(e) => {
-                                        e.preventDefault();
-                                        setIsDragActive(true);
-                                    }}
-                                    onDragLeave={(e) => {
-                                        e.preventDefault();
-                                        setIsDragActive(false);
-                                    }}
-                                    onDrop={(e) => {
-                                        e.preventDefault();
-                                        setIsDragActive(false);
-                                        const droppedFiles = Array.from(
-                                            e.dataTransfer.files,
-                                        );
-                                        if (droppedFiles.length > 0)
-                                            handleFilesSelect(droppedFiles);
-                                    }}
-                                    onClick={() =>
-                                        fileInputRef.current?.click()
-                                    }
-                                >
-                                    <div className="import-icon">🖼️</div>
-                                    <div className="import-title">
-                                        Glissez-déposez vos photos ici
-                                    </div>
-                                    <div className="import-subtitle">
-                                        ou cliquez pour parcourir
-                                    </div>
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        className="file-input"
-                                        accept="image/*"
-                                        multiple
-                                        onChange={(e) =>
-                                            e.target.files &&
-                                            handleFilesSelect(
-                                                Array.from(e.target.files),
-                                            )
-                                        }
-                                    />
-                                    <button
-                                        type="button"
-                                        className="import-btn-select"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            fileInputRef.current?.click();
-                                        }}
-                                    >
-                                        Sélectionner des photos
-                                    </button>
-                                </div>
-                                {previews.length > 0 && (
-                                    <div className="files-preview-grid">
-                                        <h4>
-                                            {files.length} photo(s)
-                                            sélectionnée(s)
-                                        </h4>
-                                        <div className="preview-grid">
-                                            {previews.map((preview, index) => (
-                                                <div
-                                                    key={index}
-                                                    className="preview-item"
-                                                >
-                                                    <div className="preview-thumbnail">
-                                                        <img
-                                                            src={preview.url}
-                                                            alt={preview.name}
-                                                        />
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        className="preview-remove"
-                                                        onClick={() => {
-                                                            setFiles((prev) =>
-                                                                prev.filter(
-                                                                    (_, i) =>
-                                                                        i !==
-                                                                        index,
-                                                                ),
-                                                            );
-                                                            setPreviews(
-                                                                (prev) =>
-                                                                    prev.filter(
-                                                                        (
-                                                                            _,
-                                                                            i,
-                                                                        ) =>
-                                                                            i !==
-                                                                            index,
-                                                                    ),
-                                                            );
-                                                        }}
-                                                    >
-                                                        ✕
-                                                    </button>
-                                                    <p className="preview-filename">
-                                                        {preview.name.length >
-                                                        20
-                                                            ? preview.name.substring(
-                                                                  0,
-                                                                  20,
-                                                              ) + "..."
-                                                            : preview.name}
-                                                    </p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </form>
-                </div>
-                <div className="modal-footer">
-                    <button className="btn-cancel" onClick={onClose}>
-                        Annuler
-                    </button>
-                    <button
-                        type="submit"
-                        form="add-media-form"
-                        className="btn-add"
-                        disabled={isLoading}
-                    >
-                        <IconPlus />{" "}
-                        {isLoading
-                            ? "Ajout en cours..."
-                            : mediaType === "video"
-                              ? "Ajouter la vidéo"
-                              : `Ajouter ${files.length} photo(s)`}
-                    </button>
-                </div>
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header"><h2>Ajouter des contenus média</h2><button onClick={onClose}>✕</button></div>
+        <div className="modal-body">
+          <form onSubmit={handleSubmit} id="add-media-form">
+            <div className="media-type-selector">
+              <button type="button" className={`media-type-btn ${mediaType === 'photo' ? 'active' : ''}`} onClick={() => { setMediaType('photo'); setFiles([]); setPreviews([]); setVideoUrl(''); setSetAsFeatured(false); setSelectedFeaturedIndex(null); }}><IconPhoto /> Photos</button>
+              <button type="button" className={`media-type-btn ${mediaType === 'video' ? 'active' : ''}`} onClick={() => { setMediaType('video'); setFiles([]); setPreviews([]); setVideoUrl(''); setSetAsFeatured(false); setSelectedFeaturedIndex(null); }}><IconVideo /> Vidéos externes</button>
             </div>
+            
+            <div className="form-group modal-full"><label>Titre *</label><span className="input-icon"><IconEdit /></span><input type="text" placeholder="Titre du contenu..." value={title} onChange={(e) => setTitle(e.target.value)} required /></div>
+            <div className="form-group modal-full"><label>Description</label><span className="input-icon"><IconEdit /></span><textarea rows="3" placeholder="Description..." value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+            <div className="form-group"><label>Date</label><span className="input-icon"><IconCalendar /></span><input type="date" value={date} onChange={(e) => setDate(e.target.value)} required /></div>
+            <div className="form-group modal-full"><label>Activité associée</label><span className="input-icon"><IconActivity /></span><select value={selectedEventId} onChange={(e) => setSelectedEventId(e.target.value)} style={{ appearance: 'auto', paddingLeft: '42px' }}><option value="">-- Aucune activité --</option>{events.map(event => (<option key={event.id} value={event.id}>{event.title} - {formatDateFrench(event.start_date)}</option>))}</select></div>
+            
+            {mediaType === 'video' ? (
+              <div className="form-group modal-full">
+                <label>URL de la vidéo *</label>
+                <span className="input-icon"><IconVideo /></span>
+                <input type="url" placeholder="https://www.youtube.com/watch?v=... ou https://vimeo.com/..." value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} required />
+                <p className="text-xs text-gray-500 mt-1">Supporte: YouTube, Vimeo, Dailymotion, Facebook (copiez l'URL de la vidéo)</p>
+                {videoUrl && getVideoThumbnail(videoUrl) && (<div className="mt-3 p-3 bg-gray-100 rounded-lg"><p className="text-sm text-gray-600 mb-2">Aperçu de la miniature:</p><img src={getVideoThumbnail(videoUrl)} alt="Aperçu" className="max-h-32 rounded-lg shadow" /></div>)}
+              </div>
+            ) : (
+              <div className="form-group modal-full">
+                <label>Photos *</label>
+                <div className={`media-upload-area ${isDragActive ? 'drag-active' : ''}`} onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }} onDragLeave={(e) => { e.preventDefault(); setIsDragActive(false); }} onDrop={(e) => { e.preventDefault(); setIsDragActive(false); const droppedFiles = Array.from(e.dataTransfer.files); if (droppedFiles.length > 0) handleFilesSelect(droppedFiles); }} onClick={() => fileInputRef.current?.click()}>
+                  <div className="import-icon">🖼️</div>
+                  <div className="import-title">Glissez-déposez vos photos ici</div>
+                  <div className="import-subtitle">ou cliquez pour parcourir</div>
+                  <input ref={fileInputRef} type="file" className="file-input" accept="image/*" multiple onChange={(e) => e.target.files && handleFilesSelect(Array.from(e.target.files))} />
+                  <button type="button" className="import-btn-select" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>Sélectionner des photos</button>
+                </div>
+                
+                {previews.length > 0 && (
+                  <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <div className="flex items-center gap-2 mb-3">
+                      <IconStar style={{ color: '#d97706' }} />
+                      <label className="font-semibold text-amber-700" style={{ textTransform: 'none' }}>Image à la une</label>
+                      <span className="text-xs text-gray-500">(Optionnel - sera mise en avant dans le carrousel)</span>
+                    </div>
+                    <div className="preview-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))' }}>
+                      {previews.map((preview, index) => (
+                        <div key={index} className={`preview-item cursor-pointer transition-all ${selectedFeaturedIndex === index ? 'ring-2 ring-amber-500 shadow-lg' : ''}`} onClick={() => handleSelectFeatured(index)}>
+                          <div className="preview-thumbnail relative">
+                            <img src={preview.url} alt={preview.name} />
+                            {selectedFeaturedIndex === index && (
+                              <div className="absolute inset-0 bg-amber-500 bg-opacity-20 flex items-center justify-center">
+                                <div className="bg-amber-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1"><IconStar /> À la une</div>
+                              </div>
+                            )}
+                          </div>
+                          <p className="preview-filename">{preview.name.length > 20 ? preview.name.substring(0, 20) + '...' : preview.name}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {selectedFeaturedIndex !== null && (
+                      <div className="mt-3 flex justify-end">
+                        <button type="button" className="text-sm text-amber-600 hover:text-amber-800 flex items-center gap-1" onClick={handleUnselectFeatured}>✖ Retirer la sélection</button>
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-500 mt-2">{selectedFeaturedIndex !== null ? `⭐ "${previews[selectedFeaturedIndex]?.name}" sera l'image à la une de cette activité` : 'Cliquez sur une photo pour la définir comme image à la une'}</p>
+                  </div>
+                )}
+                
+                {previews.length > 0 && (
+                  <div className="files-preview-grid mt-3">
+                    <h4>{files.length} photo(s) sélectionnée(s)</h4>
+                    <div className="preview-grid">
+                      {previews.map((preview, index) => (
+                        <div key={index} className="preview-item">
+                          <div className="preview-thumbnail">
+                            <img src={preview.url} alt={preview.name} />
+                            {selectedFeaturedIndex === index && (<div className="absolute top-2 left-2 bg-amber-500 text-white px-1 py-0.5 rounded text-xs font-bold flex items-center gap-1"><IconStar style={{ width: '10px', height: '10px' }} /> Une</div>)}
+                          </div>
+                          <button type="button" className="preview-remove" onClick={() => { 
+                            setFiles(prev => prev.filter((_, i) => i !== index)); 
+                            setPreviews(prev => prev.filter((_, i) => i !== index));
+                            if (selectedFeaturedIndex === index) { setSelectedFeaturedIndex(null); setSetAsFeatured(false); } 
+                            else if (selectedFeaturedIndex > index) { setSelectedFeaturedIndex(prev => prev - 1); }
+                          }}>✕</button>
+                          <p className="preview-filename">{preview.name.length > 20 ? preview.name.substring(0, 20) + '...' : preview.name}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </form>
         </div>
-    );
+        <div className="modal-footer">
+          <button className="btn-cancel" onClick={onClose}>Annuler</button>
+          <button type="submit" form="add-media-form" className="btn-add" disabled={isLoading}><IconPlus /> {isLoading ? 'Ajout en cours...' : (mediaType === 'video' ? 'Ajouter la vidéo' : `Ajouter ${files.length} photo(s)`)}</button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // --- PAGINATION COMPONENT ---
@@ -4567,277 +3582,313 @@ export default function Programmes() {
   const { props } = usePage();
   const { initialClassList = [], initialClassHistory = [], currentClass = null, galleryMedia = [] } = props;
 
-    const [activeTab, setActiveTab] = useState("programmes");
-    const [isEventModalOpen, setIsEventModalOpen] = useState(false);
-    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-    const [isAddMediaModalOpen, setIsAddMediaModalOpen] = useState(false);
-    const [preselectedEventId, setPreselectedEventId] = useState(null);
-    const [editingEvent, setEditingEvent] = useState(null);
-    const [selectedMedia, setSelectedMedia] = useState(null);
-    const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
-    const [currentMediaList, setCurrentMediaList] = useState([]);
-    const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false);
-    const [toast, setToast] = useState(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [importProgress, setImportProgress] = useState(0);
-    const [mediaData, setMediaData] = useState(galleryMedia || []);
-    const [isDateContentModalOpen, setIsDateContentModalOpen] = useState(false);
-    const [selectedDate, setSelectedDate] = useState(null);
-    const [activeCalendarDate, setActiveCalendarDate] = useState(null);
-    const [galleryFilter, setGalleryFilter] = useState({
-        search: "",
-        month: "",
-        year: "",
+  const [classList, setClassList] = useState(initialClassList || []);
+  const [classHistory, setClassHistory] = useState(initialClassHistory || []);
+  const [mediaData, setMediaData] = useState(galleryMedia || []);
+
+  const [activeTab, setActiveTab] = useState('programmes');
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isAddMediaModalOpen, setIsAddMediaModalOpen] = useState(false);
+  const [preselectedEventId, setPreselectedEventId] = useState(null);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [selectedMedia, setSelectedMedia] = useState(null);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+  const [currentMediaList, setCurrentMediaList] = useState([]);
+  const [isMediaViewerOpen, setIsMediaViewerOpen] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [isDateContentModalOpen, setIsDateContentModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [activeCalendarDate, setActiveCalendarDate] = useState(null);
+  const [selectedGalleryMediaIds, setSelectedGalleryMediaIds] = useState([]);
+  const [isGallerySelectionMode, setIsGallerySelectionMode] = useState(false);
+  const [openGalleryMenuId, setOpenGalleryMenuId] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, mediaToDelete: null, isMultiple: false, count: 0 });
+  
+  const [isEditMediaModalOpen, setIsEditMediaModalOpen] = useState(false);
+  const [editingMedia, setEditingMedia] = useState(null);
+  const [editMediaForm, setEditMediaForm] = useState({ title: '', description: '', date: '', special_event_id: '' });
+  const [editMediaErrors, setEditMediaErrors] = useState({});
+  const [isEditMediaLoading, setIsEditMediaLoading] = useState(false);
+  
+  // États pour l'historique avec filtrage backend
+  const [historyData, setHistoryData] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyPagination, setHistoryPagination] = useState({
+    current_page: 1,
+    last_page: 1,
+    per_page: 6,
+    total: 0
+  });
+  const [historyFilters, setHistoryFilters] = useState({ search: '', year: 'all', month: 'all' });
+  const [historySortOrder, setHistorySortOrder] = useState('desc');
+  const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
+  const historyItemsPerPage = 6;
+  
+  // États pour la galerie avec filtrage backend
+  const [galleryData, setGalleryData] = useState([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryPagination, setGalleryPagination] = useState({
+    current_page: 1,
+    last_page: 1,
+    per_page: 12,
+    total: 0
+  });
+  const [galleryFilters, setGalleryFilters] = useState({ 
+    search: '', 
+    month: '', 
+    year: '', 
+    type: 'all',
+    sort_order: 'desc'
+  });
+  const [galleryCurrentPage, setGalleryCurrentPage] = useState(1);
+  const galleryItemsPerPage = 12;
+  
+  const scrollRefs = useRef({});
+
+  const currentMonthEvents = classList.filter(event => isDateInCurrentMonth(event.start_date));
+  const pastEvents = classHistory.filter(event => isDateInPastMonth(event.start_date));
+  const allEvents = [...classList, ...classHistory];
+  const allEventsData = [...classList, ...classHistory];
+
+  // Années disponibles pour l'historique
+  const historyAvailableYears = useMemo(() => {
+    const years = historyData.map(event => new Date(event.start_date).getFullYear());
+    return ['all', ...new Set(years)].sort((a, b) => {
+      if (a === 'all') return -1;
+      if (b === 'all') return 1;
+      return b - a;
     });
-    const [selectedGalleryMediaIds, setSelectedGalleryMediaIds] = useState([]);
-    const [isGallerySelectionMode, setIsGallerySelectionMode] = useState(false);
-    const [openGalleryMenuId, setOpenGalleryMenuId] = useState(null);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [confirmDialog, setConfirmDialog] = useState({
-        isOpen: false,
-        mediaToDelete: null,
-        isMultiple: false,
-        count: 0,
+  }, [historyData]);
+
+  const months = [
+    { value: 'all', label: 'Tous les mois' },
+    { value: '1', label: 'Janvier' }, { value: '2', label: 'Février' }, { value: '3', label: 'Mars' },
+    { value: '4', label: 'Avril' }, { value: '5', label: 'Mai' }, { value: '6', label: 'Juin' },
+    { value: '7', label: 'Juillet' }, { value: '8', label: 'Août' }, { value: '9', label: 'Septembre' },
+    { value: '10', label: 'Octobre' }, { value: '11', label: 'Novembre' }, { value: '12', label: 'Décembre' }
+  ];
+
+  // Mois disponibles pour la galerie (depuis les données chargées)
+  const galleryAvailableMonths = useMemo(() => {
+    const monthsSet = new Set();
+    galleryData.forEach(media => {
+      if (media.date) {
+        const month = new Date(media.date).toLocaleString('fr-FR', { month: 'long' });
+        monthsSet.add(month.charAt(0).toUpperCase() + month.slice(1));
+      }
     });
+    return Array.from(monthsSet).sort();
+  }, [galleryData]);
 
-    const [isEditMediaModalOpen, setIsEditMediaModalOpen] = useState(false);
-    const [editingMedia, setEditingMedia] = useState(null);
-    const [editMediaForm, setEditMediaForm] = useState({
-        title: "",
-        description: "",
-        date: "",
-        special_event_id: "",
+  // Années disponibles pour la galerie
+  const galleryAvailableYears = useMemo(() => {
+    const years = new Set();
+    galleryData.forEach(media => {
+      if (media.date) {
+        years.add(new Date(media.date).getFullYear());
+      }
     });
-    const [editMediaErrors, setEditMediaErrors] = useState({});
-    const [isEditMediaLoading, setIsEditMediaLoading] = useState(false);
+    return Array.from(years).sort((a, b) => b - a);
+  }, [galleryData]);
 
-    const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
-    const [isQrModalOpen, setIsQrModalOpen] = useState(false);
-    const [isQrLoading, setIsQrLoading] = useState(false);
-    const [qrPayload, setQrPayload] = useState(null);
-    const historyItemsPerPage = 6;
-
-    const itemsPerPage = 6;
-    const scrollRefs = useRef({});
-
-    const currentMonthEvents = initialClassList.filter((event) =>
-        isDateInCurrentMonth(event.date),
-    );
-    const pastEvents = initialClassHistory.filter((event) =>
-        isDateInPastMonth(event.date),
-    );
-    const allEvents = [...currentMonthEvents, ...pastEvents];
-    const allEventsData = [...currentMonthEvents, ...pastEvents];
-
-    const getFilteredEventsByActiveDate = () => {
-        if (!activeCalendarDate) return currentMonthEvents;
-        const activeDateStr = getLocalDateString(activeCalendarDate);
-        return currentMonthEvents.filter((event) => {
-            const eventDateStr = getLocalDateString(event.date);
-            return eventDateStr === activeDateStr;
+  // Regrouper les médias par activité pour l'affichage
+  const groupedGalleryMedia = useMemo(() => {
+    const groups = new Map();
+    
+    galleryData.forEach(media => {
+      const eventId = media.special_event_id || 'without_event';
+      if (!groups.has(eventId)) {
+        groups.set(eventId, {
+          id: eventId,
+          title: media.special_event?.title || 'Sans activité associée',
+          date: media.special_event?.start_date || null,
+          medias: []
         });
-    };
+      }
+      groups.get(eventId).medias.push(media);
+    });
+    
+    // Trier les médias dans chaque groupe par date décroissante
+    for (const group of groups.values()) {
+      group.medias.sort((a, b) => new Date(b.date) - new Date(a.date));
+    }
+    
+    // Trier les groupes par date d'activité (les plus récentes d'abord)
+    return Array.from(groups.values()).sort((a, b) => {
+      if (a.date && b.date) return new Date(b.date) - new Date(a.date);
+      if (a.date) return -1;
+      if (b.date) return 1;
+      return 0;
+    });
+  }, [galleryData]);
 
-    const filteredEvents = getFilteredEventsByActiveDate();
+  // Charger l'historique depuis le backend
+  const loadHistoryProgrammes = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const params = {};
+      if (historyFilters.search && historyFilters.search.trim() !== '') {
+        params.search = historyFilters.search.trim();
+      }
+      if (historyFilters.year && historyFilters.year !== 'all') {
+        params.year = historyFilters.year;
+      }
+      if (historyFilters.month && historyFilters.month !== 'all') {
+        params.month = historyFilters.month;
+      }
+      params.sort_order = historySortOrder;
+      params.page = historyCurrentPage;
+      params.per_page = historyItemsPerPage;
+      
+      const response = await axios.get('/conducteur/programmes/history/filter', { params });
+      
+      if (response.data.success) {
+        setHistoryData(response.data.data);
+        setHistoryPagination(response.data.pagination);
+      } else {
+        showToast(response.data.message || 'Erreur lors du chargement', 'error');
+      }
+    } catch (error) {
+      console.error('Erreur chargement historique:', error);
+      showToast('Erreur lors du chargement des données', 'error');
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [historyFilters, historySortOrder, historyCurrentPage, historyItemsPerPage]);
 
-    const galleryAvailableMonths = [
-        "Janvier",
-        "Février",
-        "Mars",
-        "Avril",
-        "Mai",
-        "Juin",
-        "Juillet",
-        "Août",
-        "Septembre",
-        "Octobre",
-        "Novembre",
-        "Décembre",
-    ];
+  // Charger la galerie depuis le backend
+  const loadGalleryMedia = useCallback(async () => {
+    setGalleryLoading(true);
+    try {
+      const params = {};
+      if (galleryFilters.search && galleryFilters.search.trim() !== '') {
+        params.search = galleryFilters.search.trim();
+      }
+      if (galleryFilters.month && galleryFilters.month !== '') {
+        params.month = galleryFilters.month;
+      }
+      if (galleryFilters.year && galleryFilters.year !== '') {
+        params.year = galleryFilters.year;
+      }
+      if (galleryFilters.type && galleryFilters.type !== 'all') {
+        params.type = galleryFilters.type;
+      }
+      params.sort_order = galleryFilters.sort_order;
+      params.page = galleryCurrentPage;
+      params.per_page = galleryItemsPerPage;
+      
+      const response = await axios.get('/conducteur/galerie/filter', { params });
+      
+      if (response.data.success) {
+        setGalleryData(response.data.data);
+        setGalleryPagination(response.data.pagination);
+      } else {
+        showToast(response.data.message || 'Erreur lors du chargement', 'error');
+      }
+    } catch (error) {
+      console.error('Erreur chargement galerie:', error);
+      showToast('Erreur lors du chargement de la galerie', 'error');
+    } finally {
+      setGalleryLoading(false);
+    }
+  }, [galleryFilters, galleryCurrentPage, galleryItemsPerPage]);
 
-    const galleryAvailableYears = useMemo(() => {
-        const years = mediaData.map((m) => new Date(m.date).getFullYear());
-        return [...new Set(years)].sort((a, b) => b - a);
-    }, [mediaData]);
+  // Recharger quand les filtres ou la page changent
+  useEffect(() => {
+    loadHistoryProgrammes();
+  }, [historyFilters, historySortOrder, historyCurrentPage]);
 
-    const filteredGalleryMedia = useMemo(() => {
-        let filtered = [...mediaData];
+  useEffect(() => {
+    loadGalleryMedia();
+  }, [galleryFilters, galleryCurrentPage]);
 
-        if (galleryFilter.search !== "") {
-            filtered = filtered.filter(
-                (m) =>
-                    m.title
-                        .toLowerCase()
-                        .includes(galleryFilter.search.toLowerCase()) ||
-                    (m.description &&
-                        m.description
-                            .toLowerCase()
-                            .includes(galleryFilter.search.toLowerCase())),
-            );
+  // Réinitialiser la page quand les filtres changent
+  useEffect(() => {
+    setHistoryCurrentPage(1);
+  }, [historyFilters, historySortOrder]);
+
+  useEffect(() => {
+    setGalleryCurrentPage(1);
+  }, [galleryFilters]);
+
+  const resetHistoryFilters = () => {
+    setHistoryFilters({ search: '', year: 'all', month: 'all' });
+    setHistorySortOrder('desc');
+    setHistoryCurrentPage(1);
+  };
+
+  const resetGalleryFilters = () => {
+    setGalleryFilters({ 
+      search: '', 
+      month: '', 
+      year: '', 
+      type: 'all',
+      sort_order: 'desc'
+    });
+    setGalleryCurrentPage(1);
+  };
+
+  const getFilteredEventsByActiveDate = () => {
+    if (!activeCalendarDate) return currentMonthEvents;
+    const activeDateStr = getLocalDateString(activeCalendarDate);
+    return currentMonthEvents.filter(event => {
+      const eventStartDate = getLocalDateString(event.start_date);
+      if (event.end_date) {
+        const eventEndDate = getLocalDateString(event.end_date);
+        return activeDateStr >= eventStartDate && activeDateStr <= eventEndDate;
+      }
+      return getLocalDateString(event.start_date) === activeDateStr;
+    });
+  };
+
+  const filteredEvents = getFilteredEventsByActiveDate();
+
+  const showToast = (message, type = 'success') => setToast({ message, type });
+  const hideToast = () => setToast(null);
+  
+  const getAllEventDates = () => {
+    const dates = [];
+    allEvents.forEach(event => {
+      const startDate = getLocalDateString(event.start_date);
+      dates.push(startDate);
+      if (event.end_date) {
+        const endDate = new Date(event.end_date);
+        const start = new Date(event.start_date);
+        let current = new Date(start);
+        while (current < endDate) {
+          current.setDate(current.getDate() + 1);
+          dates.push(getLocalDateString(current));
         }
-
-        if (galleryFilter.month !== "") {
-            filtered = filtered.filter((m) => {
-                const month = new Date(m.date).toLocaleString("fr-FR", {
-                    month: "long",
-                });
-                const monthCapitalized =
-                    month.charAt(0).toUpperCase() + month.slice(1);
-                return monthCapitalized === galleryFilter.month;
-            });
-        }
-
-        if (galleryFilter.year !== "") {
-            filtered = filtered.filter(
-                (m) =>
-                    new Date(m.date).getFullYear() ===
-                    parseInt(galleryFilter.year),
-            );
-        }
-
-        return filtered;
-    }, [mediaData, galleryFilter]);
-
-    const groupedGalleryMedia = useMemo(() => {
-        const groups = [];
-        const mediaByActivity = new Map();
-
-        filteredGalleryMedia.forEach((media) => {
-            const key = media.special_event_id || "without_event";
-            if (!mediaByActivity.has(key)) {
-                mediaByActivity.set(key, []);
-            }
-            mediaByActivity.get(key).push(media);
-        });
-
-        for (const [activityId, medias] of mediaByActivity) {
-            let activity = null;
-            if (activityId !== "without_event") {
-                activity = allEvents.find((e) => e.id === parseInt(activityId));
-            }
-
-            const images = medias.filter((m) => m.type === "photo");
-            const videos = medias.filter((m) => m.type === "video");
-            const sortedImages = images.sort(
-                (a, b) => new Date(b.date) - new Date(a.date),
-            );
-            const sortedVideos = videos.sort(
-                (a, b) => new Date(b.date) - new Date(a.date),
-            );
-            const sortedMedias = [...sortedImages, ...sortedVideos];
-
-            groups.push({
-                id: activityId,
-                title: activity ? activity.title : "Sans activité associée",
-                date: activity ? activity.date : null,
-                medias: sortedMedias,
-                imagesCount: sortedImages.length,
-                videosCount: sortedVideos.length,
-            });
-        }
-
-        return groups.sort((a, b) => {
-            if (a.date && b.date) return new Date(b.date) - new Date(a.date);
-            if (a.date) return -1;
-            if (b.date) return 1;
-            return 0;
-        });
-    }, [filteredGalleryMedia, allEvents]);
-
-    const totalPages = Math.ceil(groupedGalleryMedia.length / itemsPerPage);
-    const paginatedGroups = groupedGalleryMedia.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage,
-    );
-
-    const totalHistoryPages = Math.ceil(
-        pastEvents.length / historyItemsPerPage,
-    );
-    const paginatedHistoryEvents = pastEvents.slice(
-        (historyCurrentPage - 1) * historyItemsPerPage,
-        historyCurrentPage * historyItemsPerPage,
-    );
-
-    useEffect(() => {
-        if (historyCurrentPage > totalHistoryPages && totalHistoryPages > 0) {
-            setHistoryCurrentPage(totalHistoryPages);
-        }
-    }, [pastEvents.length]);
-
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [galleryFilter]);
-
-    const showToast = (message, type = "success") =>
-        setToast({ message, type });
-    const hideToast = () => setToast(null);
-    const getAllEventDates = () =>
-        allEvents.map((event) => getLocalDateString(event.date));
-
-    const handleDateClick = (date) => {
-        setActiveCalendarDate(date);
-        setSelectedDate(date);
-        setIsDateContentModalOpen(true);
-    };
-
-    const handleHistoricalCardClick = (event) => {
-        setSelectedDate(new Date(event.date));
-        setIsDateContentModalOpen(true);
-    };
-
-    const closeDateContentModal = () => {
-        setIsDateContentModalOpen(false);
-        setSelectedDate(null);
-        setActiveCalendarDate(null);
-    };
-
-    const handleClearDateFilter = () => setActiveCalendarDate(null);
-
-    const openEventModal = (event = null) => {
-        setEditingEvent(event);
-        setIsEventModalOpen(true);
-    };
-    const closeEventModal = () => {
-        setIsEventModalOpen(false);
-        setEditingEvent(null);
-    };
-    const openImportModal = () => setIsImportModalOpen(true);
-    const closeImportModal = () => {
-        setIsImportModalOpen(false);
-        setImportProgress(0);
-    };
-
-    const openAddMediaModal = (eventId = null) => {
-        setPreselectedEventId(eventId);
-        setIsAddMediaModalOpen(true);
-    };
-    const closeAddMediaModal = () => {
-        setIsAddMediaModalOpen(false);
-        setPreselectedEventId(null);
-    };
-
-    const openMediaViewer = (media, mediaArray = null) => {
-        const list = mediaArray || mediaData;
-        const index = list.findIndex((m) => m.id === media.id);
-        setCurrentMediaList(list);
-        setCurrentMediaIndex(index >= 0 ? index : 0);
-        setSelectedMedia(media);
-        setIsMediaViewerOpen(true);
-    };
-
-    const handleNavigateMedia = (newIndex) => {
-        if (currentMediaList[newIndex]) {
-            setCurrentMediaIndex(newIndex);
-            setSelectedMedia(currentMediaList[newIndex]);
-        }
-    };
-
-    const closeMediaViewer = () => {
-        setIsMediaViewerOpen(false);
-        setSelectedMedia(null);
-        setCurrentMediaList([]);
-        setCurrentMediaIndex(0);
-    };
+      }
+    });
+    return [...new Set(dates)];
+  };
+  
+  const handleDateClick = (date) => { setActiveCalendarDate(date); setSelectedDate(date); setIsDateContentModalOpen(true); };
+  const handleHistoricalCardClick = (event) => { setSelectedDate(new Date(event.start_date)); setIsDateContentModalOpen(true); };
+  const closeDateContentModal = () => { setIsDateContentModalOpen(false); setSelectedDate(null); setActiveCalendarDate(null); };
+  const handleClearDateFilter = () => setActiveCalendarDate(null);
+  const openEventModal = (event = null) => { setEditingEvent(event); setIsEventModalOpen(true); };
+  const closeEventModal = () => { setIsEventModalOpen(false); setEditingEvent(null); };
+  const openImportModal = () => setIsImportModalOpen(true);
+  const closeImportModal = () => { setIsImportModalOpen(false); setImportProgress(0); };
+  const openAddMediaModal = (eventId = null) => { setPreselectedEventId(eventId); setIsAddMediaModalOpen(true); };
+  const closeAddMediaModal = () => { setIsAddMediaModalOpen(false); setPreselectedEventId(null); };
+  
+  const openMediaViewer = (media, mediaArray = null) => {
+    const list = mediaArray || galleryData;
+    const index = list.findIndex(m => m.id === media.id);
+    setCurrentMediaList(list);
+    setCurrentMediaIndex(index >= 0 ? index : 0);
+    setSelectedMedia(media);
+    setIsMediaViewerOpen(true);
+  };
+  
+  const handleNavigateMedia = (newIndex) => { if (currentMediaList[newIndex]) { setCurrentMediaIndex(newIndex); setSelectedMedia(currentMediaList[newIndex]); } };
+  const closeMediaViewer = () => { setIsMediaViewerOpen(false); setSelectedMedia(null); setCurrentMediaList([]); setCurrentMediaIndex(0); };
 
   const openEditMediaModal = (media) => {
     setEditingMedia(media);
@@ -4985,1144 +4036,654 @@ export default function Programmes() {
     } });
   };
 
-    const handleAddMediaToGroup = (group) => {
-        if (group.id !== "without_event") {
-            openAddMediaModal(parseInt(group.id));
-        } else {
-            openAddMediaModal();
-        }
+  const handleAddMediaToGroup = (group) => { if (group.id !== 'without_event') openAddMediaModal(parseInt(group.id)); else openAddMediaModal(); };
+  const handleSelectAllMediaInGroup = (group) => { setSelectedGalleryMediaIds(group.medias.map(m => m.id)); setIsGallerySelectionMode(true); };
+  const handleScrollLeft = (groupId) => { const container = scrollRefs.current[groupId]; if (container) container.scrollBy({ left: -300, behavior: 'smooth' }); };
+  const handleScrollRight = (groupId) => { const container = scrollRefs.current[groupId]; if (container) container.scrollBy({ left: 300, behavior: 'smooth' }); };
+  const checkScrollButtons = (groupId) => { const container = scrollRefs.current[groupId]; if (!container) return { hasLeftScroll: false, hasRightScroll: false }; return { hasLeftScroll: container.scrollLeft > 0, hasRightScroll: container.scrollLeft + container.clientWidth < container.scrollWidth - 10 }; };
+  const [scrollStates, setScrollStates] = useState({});
+  const updateScrollState = (groupId) => setScrollStates(prev => ({ ...prev, [groupId]: checkScrollButtons(groupId) }));
+
+  useEffect(() => {
+    const intervals = {};
+    Object.keys(scrollRefs.current).forEach(groupId => { updateScrollState(groupId); intervals[groupId] = setInterval(() => updateScrollState(groupId), 500); });
+    return () => { Object.values(intervals).forEach(interval => clearInterval(interval)); };
+  }, [groupedGalleryMedia]);
+
+  const handleSaveEventModal = async (activities, eventId = null) => {
+    setIsLoading(true);
+    if (eventId && activities.length === 1) {
+      try {
+        const response = await axios.put(`/conducteur/programmes/event/${eventId}`, activities[0]);
+        if (response.data.success) {
+          const updatedEvent = response.data.event;
+          const eventDate = new Date(updatedEvent.start_date);
+          const now = new Date();
+          if (eventDate < now) { setClassHistory(prev => { const filtered = prev.filter(event => event.id !== eventId); return [updatedEvent, ...filtered]; }); setClassList(prev => prev.filter(event => event.id !== eventId)); }
+          else { setClassList(prev => { const filtered = prev.filter(event => event.id !== eventId); return [updatedEvent, ...filtered]; }); setClassHistory(prev => prev.filter(event => event.id !== eventId)); }
+          showToast(response.data.message || 'Événement modifié avec succès !', 'success'); closeEventModal();
+        } else showToast(response.data.message || 'Erreur lors de la modification', 'error');
+      } catch (error) { console.error('Erreur modification:', error); showToast(error.response?.data?.message || 'Erreur lors de la modification', 'error'); } finally { setIsLoading(false); }
+    } else {
+      try {
+        const response = await axios.post('/conducteur/programmes/events-multiple', { activities });
+        if (response.data.success) {
+          const newEvents = response.data.events || [];
+          const now = new Date();
+          newEvents.forEach(event => { const eventDate = new Date(event.start_date); if (eventDate < now) setClassHistory(prev => [event, ...prev]); else setClassList(prev => [event, ...prev]); });
+          showToast(response.data.message, 'success'); closeEventModal();
+        } else showToast(response.data.message || 'Erreur lors de la création', 'error');
+      } catch (error) { console.error('Erreur création:', error.response?.data || error.message); showToast(error.response?.data?.message || 'Erreur lors de la création', 'error'); } finally { setIsLoading(false); }
+    }
+  };
+
+  const handleImportEvents = async (events) => {
+    setIsLoading(true); setImportProgress(0);
+    try {
+      for (let i = 0; i <= 100; i += 20) { await new Promise(resolve => setTimeout(resolve, 300)); setImportProgress(i); }
+      const response = await axios.post('/conducteur/programmes/import-events', { events });
+      if (response.data.success) {
+        const importedEvents = response.data.events || [];
+        const now = new Date();
+        importedEvents.forEach(event => { const eventDate = new Date(event.start_date); if (eventDate < now) setClassHistory(prev => [...prev, event]); else setClassList(prev => [...prev, event]); });
+        showToast(response.data.message, 'success'); closeImportModal();
+      } else showToast('Erreur lors de l\'import', 'error');
+    } catch (error) { console.error('Erreur import:', error); showToast('Erreur lors de l\'import', 'error'); } finally { setIsLoading(false); }
+  };
+
+  const handleEditEvent = (event) => openEventModal(event);
+  const handleGoBack = () => router.visit('/conducteur/dashboard');
+  const handleViewAllProgrammes = () => router.visit('/conducteur/programmes/all');
+  const handleViewAllHistory = () => router.visit('/conducteur/programmes/history');
+
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [qrPayload, setQrPayload] = useState(null);
+  const [isQrLoading, setIsQrLoading] = useState(false);
+
+  const getQrAccessState = (event) => {
+    const rawDate = event.start_date || event.date;
+    const rawTime = event.start_time || event.time;
+    const rawEndDate = event.end_date || rawDate;
+    const rawEndTime = event.end_time || rawTime;
+    if (!rawDate) return { enabled: false, reason: "Date invalide pour le QR code." };
+    const build = (date, time, endOfDay = false) => {
+      const d = new Date(date);
+      if (endOfDay || !time) { d.setHours(23, 59, 59, 0); }
+      else { const [h, m] = time.split(':').map(Number); d.setHours(h, m, 0, 0); }
+      return d;
     };
+    const startAt = build(rawDate, rawTime);
+    const endAt = build(rawEndDate, rawEndTime, !rawEndTime);
+    const openingAt = new Date(startAt);
+    openingAt.setDate(openingAt.getDate() - 2);
+    const now = new Date();
+    if (now < openingAt) return { enabled: false, reason: `QR actif à partir du ${openingAt.toLocaleString('fr-FR')}.` };
+    if (now >= endAt) return { enabled: false, reason: "Activité passée. Scan non disponible." };
+    return { enabled: true, reason: "QR code actif — cliquez pour afficher." };
+  };
 
-    const handleSelectAllMediaInGroup = (group) => {
-        const groupMediaIds = group.medias.map((m) => m.id);
-        setSelectedGalleryMediaIds(groupMediaIds);
-        setIsGallerySelectionMode(true);
-    };
+  const openQrModal = async (event) => {
+    setIsQrModalOpen(true);
+    setIsQrLoading(true);
+    setQrPayload(null);
+    try {
+      const res = await axios.get(`/conducteur/programmes/event/${event.id}/qr/data`);
+      setQrPayload(res.data);
+    } catch {
+      setQrPayload({ error: true });
+    } finally {
+      setIsQrLoading(false);
+    }
+  };
 
-    const handleScrollLeft = (groupId) => {
-        const container = scrollRefs.current[groupId];
-        if (container) {
-            container.scrollBy({ left: -300, behavior: "smooth" });
-        }
-    };
+  const closeQrModal = () => {
+    setIsQrModalOpen(false);
+    setQrPayload(null);
+  };
 
-    const handleScrollRight = (groupId) => {
-        const container = scrollRefs.current[groupId];
-        if (container) {
-            container.scrollBy({ left: 300, behavior: "smooth" });
-        }
-    };
+  const copyQrLink = async () => {
+    if (!qrPayload?.scanUrl) return;
+    try {
+      await navigator.clipboard.writeText(qrPayload.scanUrl);
+      showToast('Lien copié dans le presse-papier !', 'success');
+    } catch {
+      showToast('Impossible de copier sur cet appareil.', 'error');
+    }
+  };
 
-    const checkScrollButtons = (groupId) => {
-        const container = scrollRefs.current[groupId];
-        if (!container) return { hasLeftScroll: false, hasRightScroll: false };
-        const hasLeftScroll = container.scrollLeft > 0;
-        const hasRightScroll =
-            container.scrollLeft + container.clientWidth <
-            container.scrollWidth - 10;
-        return { hasLeftScroll, hasRightScroll };
-    };
+  const printQr = () => {
+    if (!qrPayload?.event?.id) return;
+    window.open(`/conducteur/programmes/event/${qrPayload.event.id}/qr/fiche-pdf`, '_blank');
+  };
 
-    const [scrollStates, setScrollStates] = useState({});
+  // Composant EmptyDialog
+  const EmptyDialog = ({ onCreateClick }) => {
+    const currentMonthName = new Date().toLocaleString('fr-FR', { month: 'long' });
+    const currentMonthCapitalized = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
+    return (
+      <div className="empty-dialog" onClick={onCreateClick}>
+        <div className="empty-dialog-icon">📋</div>
+        <div className="empty-dialog-title">✨ Programme de la classe</div>
+        <div className="empty-dialog-message">
+          {activeCalendarDate 
+            ? `Aucun programme pour le ${formatDateFrench(activeCalendarDate)}. Créez-en un !`
+            : `Aucun programme pour le mois de ${currentMonthCapitalized} ${new Date().getFullYear()}. Créez votre premier programme !`}
+        </div>
+        <button className="empty-dialog-button" onClick={(e) => { e.stopPropagation(); onCreateClick(); }}><IconPlus /> Créer un programme</button>
+      </div>
+    );
+  };
 
-    const updateScrollState = (groupId) => {
-        setScrollStates((prev) => ({
-            ...prev,
-            [groupId]: checkScrollButtons(groupId),
-        }));
-    };
-
-    useEffect(() => {
-        const intervals = {};
-        Object.keys(scrollRefs.current).forEach((groupId) => {
-            updateScrollState(groupId);
-            intervals[groupId] = setInterval(
-                () => updateScrollState(groupId),
-                500,
-            );
-        });
-        return () => {
-            Object.values(intervals).forEach((interval) =>
-                clearInterval(interval),
-            );
-        };
-    }, [paginatedGroups]);
-
-    const handleSaveEventModal = async (activities, eventId = null) => {
-        console.log("Données envoyées:", activities, "eventId:", eventId);
-        setIsLoading(true);
-
-        if (eventId && activities.length === 1) {
-            try {
-                const response = await axios.put(
-                    `/conducteur/programmes/event/${eventId}`,
-                    activities[0],
-                );
-                console.log("Réponse modification:", response.data);
-
-                if (response.data.success) {
-                    showToast(
-                        response.data.message ||
-                            "Événement modifié avec succès !",
-                        "success",
-                    );
-                    closeEventModal();
-                    setTimeout(() => {
-                        router.reload();
-                    }, 1500);
-                } else {
-                    showToast(
-                        response.data.message ||
-                            "Erreur lors de la modification",
-                        "error",
-                    );
-                    setIsLoading(false);
-                }
-            } catch (error) {
-                console.error("Erreur modification:", error);
-                const errorMessage =
-                    error.response?.data?.message ||
-                    "Erreur lors de la modification";
-                showToast(errorMessage, "error");
-                setIsLoading(false);
-            }
-        } else {
-            try {
-                const response = await axios.post(
-                    "/conducteur/programmes/events-multiple",
-                    { activities },
-                );
-                console.log("Réponse serveur:", response.data);
-
-                if (response.data.success) {
-                    showToast(response.data.message, "success");
-                    closeEventModal();
-                    setTimeout(() => {
-                        router.reload();
-                    }, 1500);
-                } else {
-                    showToast(
-                        response.data.message || "Erreur lors de la création",
-                        "error",
-                    );
-                    setIsLoading(false);
-                }
-            } catch (error) {
-                console.error(
-                    "Erreur création:",
-                    error.response?.data || error.message,
-                );
-                const errorMessage =
-                    error.response?.data?.message ||
-                    "Erreur lors de la création";
-                showToast(errorMessage, "error");
-                setIsLoading(false);
-            }
-        }
-    };
-
-    const handleImportEvents = async (events) => {
-        setIsLoading(true);
-        setImportProgress(0);
-        try {
-            for (let i = 0; i <= 100; i += 20) {
-                await new Promise((resolve) => setTimeout(resolve, 300));
-                setImportProgress(i);
-            }
-            const response = await axios.post(
-                "/conducteur/programmes/import-events",
-                { events },
-            );
-            if (response.data.success) {
-                showToast(response.data.message, "success");
-                closeImportModal();
-                setTimeout(() => router.reload(), 1500);
-            } else {
-                showToast("Erreur lors de l'import", "error");
-                setIsLoading(false);
-            }
-        } catch (error) {
-            console.error("Erreur import:", error);
-            showToast("Erreur lors de l'import", "error");
-            setIsLoading(false);
-        }
-    };
-
-    const handleEditEvent = (event) => openEventModal(event);
-    const handleGoBack = () => router.visit("/conducteur/dashboard");
-    const handleViewAllProgrammes = () =>
-        router.visit("/conducteur/programmes/all");
-    const handleViewAllHistory = () =>
-        router.visit("/conducteur/programmes/history");
-
-    const openQrModal = async (event) => {
-        setIsQrModalOpen(true);
-        setIsQrLoading(true);
-        setQrPayload(null);
-
-        try {
-            const response = await axios.get(
-                `/conducteur/programmes/event/${event.id}/qr`,
-            );
-            if (response.data?.success) {
-                setQrPayload(response.data);
-            } else {
-                showToast(
-                    response.data?.message ||
-                        "Impossible de générer le QR code",
-                    "error",
-                );
-            }
-        } catch (error) {
-            const errorMessage =
-                error.response?.data?.message ||
-                "Impossible de générer le QR code";
-            showToast(errorMessage, "error");
-        } finally {
-            setIsQrLoading(false);
-        }
-    };
-
-    const closeQrModal = () => {
-        setIsQrModalOpen(false);
-        setQrPayload(null);
-        setIsQrLoading(false);
-    };
-
-    const copyQrUrl = async () => {
-        if (!qrPayload?.scan_url) return;
-
-        try {
-            await navigator.clipboard.writeText(qrPayload.scan_url);
-            showToast("Lien de présence copié", "success");
-        } catch (error) {
-            showToast("Copie impossible sur cet appareil", "error");
-        }
-    };
-
-    const downloadQrSheetPdf = () => {
-        if (!qrPayload?.event?.id) return;
-
-        const pdfUrl = `/conducteur/programmes/event/${qrPayload.event.id}/qr/fiche-pdf`;
-        window.open(pdfUrl, "_blank");
-    };
-
-    const renderContent = () => {
-        switch (activeTab) {
-            case "programmes":
-                const currentMonthName = new Date().toLocaleString("fr-FR", {
-                    month: "long",
-                });
-                const currentMonthCapitalized =
-                    currentMonthName.charAt(0).toUpperCase() +
-                    currentMonthName.slice(1);
-
-                return (
-                    <>
-                        <HeroCarousel
-                            mediaImages={mediaData}
-                            pastEvents={pastEvents}
-                        />
-
-                        <div className="action-bar">
-                            <h2>
-                                🔥 ACTIVITÉS EN COURS
-                                <span className="badge-count">
-                                    {filteredEvents.length} activité(s)
-                                    {!activeCalendarDate &&
-                                        ` - ${currentMonthCapitalized} ${new Date().getFullYear()}`}
-                                    {activeCalendarDate &&
-                                        ` - ${formatDateFrench(activeCalendarDate)}`}
-                                </span>
-                            </h2>
-                            <div className="action-buttons">
-                                <button
-                                    className="btn-import"
-                                    onClick={openImportModal}
-                                >
-                                    <IconUpload /> Import Excel
-                                </button>
-                                <button
-                                    className="btn-agenda"
-                                    onClick={() => openEventModal()}
-                                >
-                                    <IconPlus /> Créer un programme
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="glass-container">
-                            <div className="main-layout">
-                                <div className="cards-container">
-                                    {filteredEvents.length > 0 ? (
-                                        <div className="horizontal-scroller">
-                                            <div className="cards-wrapper">
-                                                {filteredEvents.map((event) => (
-                                                    <div
-                                                        key={event.id}
-                                                        className="special-card"
-                                                    >
-                                                        <button
-                                                            className="edit-btn-card"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleEditEvent(
-                                                                    event,
-                                                                );
-                                                            }}
-                                                        >
-                                                            <IconEdit />
-                                                        </button>
-                                                        <div>
-                                                            <div className="special-header">
-                                                                <span className="special-date">
-                                                                    {formatDateFrench(
-                                                                        event.date,
-                                                                    )}
-                                                                </span>
-                                                            </div>
-                                                            <h4 className="special-title">
-                                                                {event.title}
-                                                            </h4>
-                                                            {event.lieu && (
-                                                                <p className="special-lieu">
-                                                                    <IconLocation />{" "}
-                                                                    {event.lieu}
-                                                                </p>
-                                                            )}
-                                                            <div className="time-qr-row">
-                                                                <p>
-                                                                    <IconClock />{" "}
-                                                                    {event.time
-                                                                        ? event.time.substring(
-                                                                              0,
-                                                                              5,
-                                                                          )
-                                                                        : "--:--"}
-                                                                </p>
-                                                                <button
-                                                                    type="button"
-                                                                    className="btn-qr-inline"
-                                                                    onClick={(
-                                                                        e,
-                                                                    ) => {
-                                                                        e.stopPropagation();
-                                                                        openQrModal(
-                                                                            event,
-                                                                        );
-                                                                    }}
-                                                                >
-                                                                    Code Qr
-                                                                </button>
-                                                            </div>
-                                                            <div className="special-meta">
-                                                                {event.orateur && (
-                                                                    <div>
-                                                                        <span className="special-meta-label">
-                                                                            Orateur:
-                                                                        </span>{" "}
-                                                                        {
-                                                                            event.orateur
-                                                                        }
-                                                                    </div>
-                                                                )}
-                                                                {event.moderateur && (
-                                                                    <div>
-                                                                        <span className="special-meta-label">
-                                                                            Modérateur:
-                                                                        </span>{" "}
-                                                                        {
-                                                                            event.moderateur
-                                                                        }
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <EmptyDialog
-                                            onCreateClick={() =>
-                                                openEventModal()
-                                            }
-                                        />
-                                    )}
-                                </div>
-                                <div className="calendar-container">
-                                    <MiniCalendar
-                                        eventsDates={getAllEventDates()}
-                                        eventsData={allEventsData}
-                                        onDateClick={handleDateClick}
-                                        activeDate={activeCalendarDate}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {currentMonthEvents.length > 0 && (
-                            <div className="btn-view-all-wrapper">
-                                <button
-                                    className="btn-view-all"
-                                    onClick={handleViewAllProgrammes}
-                                >
-                                    <IconEye /> Voir tout les programmes
-                                </button>
-                            </div>
-                        )}
-                    </>
-                );
-            case "historique":
-                const currentYear = new Date().getFullYear();
-
-                return (
-                    <>
-                        <div className="action-bar">
-                            <h2>📜 DERNIÈRES ACTIVITÉS</h2>
-                            <div className="action-buttons">
-                                <span className="badge-count">
-                                    {pastEvents.length} activité(s) -{" "}
-                                    {currentYear}
-                                </span>
-                            </div>
-                        </div>
-                        <div className="glass-container">
-                            <div className="main-layout">
-                                <div className="cards-container">
-                                    {paginatedHistoryEvents.length > 0 ? (
-                                        <>
-                                            <div className="history-grid">
-                                                {paginatedHistoryEvents.map(
-                                                    (item) => {
-                                                        const eventMedia =
-                                                            mediaData.filter(
-                                                                (media) =>
-                                                                    media.special_event_id ===
-                                                                    item.id,
-                                                            );
-                                                        const hasMedia =
-                                                            eventMedia.length >
-                                                            0;
-
-                                                        return (
-                                                            <div
-                                                                key={item.id}
-                                                                className="history-card-v2"
-                                                            >
-                                                                <div
-                                                                    className="history-card-v2-header"
-                                                                    onClick={() =>
-                                                                        handleHistoricalCardClick(
-                                                                            item,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <h3 className="history-card-v2-title">
-                                                                        {
-                                                                            item.title
-                                                                        }
-                                                                    </h3>
-                                                                    <div className="history-card-v2-date">
-                                                                        <IconCalendar />
-                                                                        {formatDateFrench(
-                                                                            item.date,
-                                                                        )}
-                                                                        {item.time && (
-                                                                            <>
-                                                                                <span
-                                                                                    style={{
-                                                                                        margin: "0 4px",
-                                                                                    }}
-                                                                                >
-                                                                                    •
-                                                                                </span>
-                                                                                <IconClock />
-                                                                                {item.time.substring(
-                                                                                    0,
-                                                                                    5,
-                                                                                )}
-                                                                            </>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                                <div
-                                                                    className="history-card-v2-body"
-                                                                    onClick={() =>
-                                                                        handleHistoricalCardClick(
-                                                                            item,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <div className="history-card-v2-info">
-                                                                        {item.lieu && (
-                                                                            <div className="history-card-v2-info-item">
-                                                                                <IconLocation className="history-card-v2-info-icon" />
-                                                                                <span className="history-card-v2-info-label">
-                                                                                    Lieu
-                                                                                    :
-                                                                                </span>
-                                                                                <span className="history-card-v2-info-value">
-                                                                                    {
-                                                                                        item.lieu
-                                                                                    }
-                                                                                </span>
-                                                                            </div>
-                                                                        )}
-                                                                        {item.orateur && (
-                                                                            <div className="history-card-v2-info-item">
-                                                                                <IconMic className="history-card-v2-info-icon" />
-                                                                                <span className="history-card-v2-info-label">
-                                                                                    Orateur
-                                                                                    :
-                                                                                </span>
-                                                                                <span className="history-card-v2-info-value">
-                                                                                    {
-                                                                                        item.orateur
-                                                                                    }
-                                                                                </span>
-                                                                            </div>
-                                                                        )}
-                                                                        {item.moderateur && (
-                                                                            <div className="history-card-v2-info-item">
-                                                                                <IconUser className="history-card-v2-info-icon" />
-                                                                                <span className="history-card-v2-info-label">
-                                                                                    Modérateur
-                                                                                    :
-                                                                                </span>
-                                                                                <span className="history-card-v2-info-value">
-                                                                                    {
-                                                                                        item.moderateur
-                                                                                    }
-                                                                                </span>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                                <div className="history-card-v2-footer">
-                                                                    <span className="history-card-v2-badge">
-                                                                        {new Date(
-                                                                            item.date,
-                                                                        ).getFullYear()}
-                                                                    </span>
-                                                                    <div
-                                                                        style={{
-                                                                            display:
-                                                                                "flex",
-                                                                            gap: "8px",
-                                                                        }}
-                                                                    >
-                                                                        {hasMedia && (
-                                                                            <span
-                                                                                className="history-card-v2-media-badge"
-                                                                                onClick={() =>
-                                                                                    handleHistoricalCardClick(
-                                                                                        item,
-                                                                                    )
-                                                                                }
-                                                                            >
-                                                                                <IconGallery />{" "}
-                                                                                {
-                                                                                    eventMedia.length
-                                                                                }{" "}
-                                                                                média(s)
-                                                                            </span>
-                                                                        )}
-                                                                        <button
-                                                                            className="history-card-v2-add-btn"
-                                                                            onClick={() =>
-                                                                                handleAddMediaToHistory(
-                                                                                    item.id,
-                                                                                )
-                                                                            }
-                                                                        >
-                                                                            <IconPlus />{" "}
-                                                                            Ajouter
-                                                                            un
-                                                                            contenu
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    },
-                                                )}
-                                            </div>
-
-                                            {totalHistoryPages > 1 && (
-                                                <div className="pagination">
-                                                    <button
-                                                        className="pagination-btn"
-                                                        onClick={() =>
-                                                            setHistoryCurrentPage(
-                                                                (prev) =>
-                                                                    Math.max(
-                                                                        1,
-                                                                        prev -
-                                                                            1,
-                                                                    ),
-                                                            )
-                                                        }
-                                                        disabled={
-                                                            historyCurrentPage ===
-                                                            1
-                                                        }
-                                                    >
-                                                        ‹
-                                                    </button>
-                                                    <span className="pagination-info">
-                                                        Page{" "}
-                                                        {historyCurrentPage} sur{" "}
-                                                        {totalHistoryPages}
-                                                    </span>
-                                                    <button
-                                                        className="pagination-btn"
-                                                        onClick={() =>
-                                                            setHistoryCurrentPage(
-                                                                (prev) =>
-                                                                    Math.min(
-                                                                        totalHistoryPages,
-                                                                        prev +
-                                                                            1,
-                                                                    ),
-                                                            )
-                                                        }
-                                                        disabled={
-                                                            historyCurrentPage ===
-                                                            totalHistoryPages
-                                                        }
-                                                    >
-                                                        ›
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <div className="empty-state">
-                                            <div className="empty-icon">📜</div>
-                                            <div className="empty-title">
-                                                Aucune activité récente
-                                            </div>
-                                            <div className="empty-message">
-                                                Aucune activité passée n'est
-                                                disponible pour le moment.
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </>
-                );
-            case "parcours":
-                return (
-                    <>
-                        <div className="gallery-filters">
-                            <div className="gallery-filter-group">
-                                <input
-                                    type="text"
-                                    className="gallery-filter-input"
-                                    placeholder="🔍 Rechercher par titre, description ou activité..."
-                                    value={galleryFilter.search}
-                                    onChange={(e) =>
-                                        setGalleryFilter((prev) => ({
-                                            ...prev,
-                                            search: e.target.value,
-                                        }))
-                                    }
-                                />
-                                <select
-                                    className="gallery-filter-select"
-                                    value={galleryFilter.month}
-                                    onChange={(e) =>
-                                        setGalleryFilter((prev) => ({
-                                            ...prev,
-                                            month: e.target.value,
-                                        }))
-                                    }
-                                >
-                                    <option value="">Tous les mois</option>
-                                    {galleryAvailableMonths.map((month) => (
-                                        <option key={month} value={month}>
-                                            {month}
-                                        </option>
-                                    ))}
-                                </select>
-                                <select
-                                    className="gallery-filter-select"
-                                    value={galleryFilter.year}
-                                    onChange={(e) =>
-                                        setGalleryFilter((prev) => ({
-                                            ...prev,
-                                            year: e.target.value,
-                                        }))
-                                    }
-                                >
-                                    <option value="">Toutes les années</option>
-                                    {galleryAvailableYears.map((year) => (
-                                        <option key={year} value={year}>
-                                            {year}
-                                        </option>
-                                    ))}
-                                </select>
-                                {(galleryFilter.search ||
-                                    galleryFilter.month ||
-                                    galleryFilter.year) && (
-                                    <button
-                                        className="btn-clear"
-                                        onClick={() =>
-                                            setGalleryFilter({
-                                                search: "",
-                                                month: "",
-                                                year: "",
-                                            })
-                                        }
-                                    >
-                                        ✖ Réinitialiser
-                                    </button>
-                                )}
-                            </div>
-                            <div className="gallery-filter-stats">
-                                {filteredGalleryMedia.length} média(s)
-                                affiché(s) sur {mediaData.length} total
-                            </div>
-                        </div>
-
-                        <div className="glass-container">
-                            {paginatedGroups.length > 0 ? (
-                                paginatedGroups.map((group) => {
-                                    const scrollKey = group.id;
-                                    const scrollState = scrollStates[
-                                        scrollKey
-                                    ] || {
-                                        hasLeftScroll: false,
-                                        hasRightScroll: false,
-                                    };
-
-                                    return (
-                                        <div
-                                            key={group.id}
-                                            className="gallery-section"
-                                        >
-                                            <div className="gallery-group">
-                                                <div className="gallery-group-title">
-                                                    <div
-                                                        style={{
-                                                            display: "flex",
-                                                            alignItems:
-                                                                "center",
-                                                            gap: "10px",
-                                                            flexWrap: "wrap",
-                                                            flex: 1,
-                                                        }}
-                                                    >
-                                                        <IconGallery />
-                                                        {group.title}
-                                                        {group.date && (
-                                                            <span className="gallery-group-date">
-                                                                <IconCalendar
-                                                                    style={{
-                                                                        width: "12px",
-                                                                        height: "12px",
-                                                                        marginLeft:
-                                                                            "10px",
-                                                                    }}
-                                                                />
-                                                                {formatDateFrench(
-                                                                    group.date,
-                                                                )}
-                                                            </span>
-                                                        )}
-                                                        <span className="text-xs text-gray-500 ml-2">
-                                                            📷{" "}
-                                                            {group.imagesCount}{" "}
-                                                            | 🎬{" "}
-                                                            {group.videosCount}
-                                                        </span>
-                                                    </div>
-                                                    <div className="group-actions">
-                                                        <button
-                                                            className="btn-add-media-group"
-                                                            onClick={() =>
-                                                                handleAddMediaToGroup(
-                                                                    group,
-                                                                )
-                                                            }
-                                                        >
-                                                            <IconPlus /> Ajouter
-                                                            un contenu
-                                                        </button>
-                                                        {group.medias.length >
-                                                            0 && (
-                                                            <button
-                                                                className="btn-select-group"
-                                                                onClick={() =>
-                                                                    handleSelectAllMediaInGroup(
-                                                                        group,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <IconTrash />{" "}
-                                                                Tout
-                                                                sélectionner
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                {isGallerySelectionMode &&
-                                                    selectedGalleryMediaIds.filter(
-                                                        (id) =>
-                                                            group.medias.some(
-                                                                (m) =>
-                                                                    m.id === id,
-                                                            ),
-                                                    ).length > 0 && (
-                                                        <div className="group-selection-bar">
-                                                            <div className="selection-info">
-                                                                {
-                                                                    selectedGalleryMediaIds.filter(
-                                                                        (id) =>
-                                                                            group.medias.some(
-                                                                                (
-                                                                                    m,
-                                                                                ) =>
-                                                                                    m.id ===
-                                                                                    id,
-                                                                            ),
-                                                                    ).length
-                                                                }{" "}
-                                                                média(s)
-                                                                sélectionné(s)
-                                                            </div>
-                                                            <div className="selection-actions">
-                                                                <button
-                                                                    className="btn-selection-delete"
-                                                                    onClick={
-                                                                        handleDeleteSelectedGalleryMedia
-                                                                    }
-                                                                >
-                                                                    <IconTrash />{" "}
-                                                                    Supprimer
-                                                                </button>
-                                                                <button
-                                                                    className="btn-cancel-selection"
-                                                                    onClick={
-                                                                        cancelGallerySelection
-                                                                    }
-                                                                >
-                                                                    Annuler
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                <GalleryScrollNav
-                                                    onScrollLeft={() =>
-                                                        handleScrollLeft(
-                                                            scrollKey,
-                                                        )
-                                                    }
-                                                    onScrollRight={() =>
-                                                        handleScrollRight(
-                                                            scrollKey,
-                                                        )
-                                                    }
-                                                    hasLeftScroll={
-                                                        scrollState.hasLeftScroll
-                                                    }
-                                                    hasRightScroll={
-                                                        scrollState.hasRightScroll
-                                                    }
-                                                />
-
-                                                <div
-                                                    className="gallery-scroll-container"
-                                                    ref={(el) =>
-                                                        (scrollRefs.current[
-                                                            scrollKey
-                                                        ] = el)
-                                                    }
-                                                    onScroll={() =>
-                                                        updateScrollState(
-                                                            scrollKey,
-                                                        )
-                                                    }
-                                                >
-                                                    <div className="gallery-group-grid-scroll">
-                                                        {group.medias.map(
-                                                            (media) => (
-                                                                <div
-                                                                    key={
-                                                                        media.id
-                                                                    }
-                                                                    className="media-card-wrapper"
-                                                                >
-                                                                    <div
-                                                                        className={`media-card ${selectedGalleryMediaIds.includes(media.id) ? "selected" : ""}`}
-                                                                        onClick={() =>
-                                                                            openMediaViewer(
-                                                                                media,
-                                                                                group.medias,
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        {isGallerySelectionMode && (
-                                                                            <div
-                                                                                className="media-checkbox"
-                                                                                onClick={(
-                                                                                    e,
-                                                                                ) => {
-                                                                                    e.stopPropagation();
-                                                                                    toggleGalleryMediaSelection(
-                                                                                        media.id,
-                                                                                    );
-                                                                                }}
-                                                                            >
-                                                                                <input
-                                                                                    type="checkbox"
-                                                                                    checked={selectedGalleryMediaIds.includes(
-                                                                                        media.id,
-                                                                                    )}
-                                                                                    onChange={() => {}}
-                                                                                />
-                                                                                <div
-                                                                                    className={`checkbox-custom ${selectedGalleryMediaIds.includes(media.id) ? "checked" : ""}`}
-                                                                                ></div>
-                                                                            </div>
-                                                                        )}
-                                                                        <div className="media-thumbnail">
-                                                                            <img
-                                                                                src={
-                                                                                    media.type ===
-                                                                                    "video"
-                                                                                        ? media.thumbnail ||
-                                                                                          "/default-video-thumb.jpg"
-                                                                                        : media.url
-                                                                                }
-                                                                                alt={
-                                                                                    media.title
-                                                                                }
-                                                                            />
-                                                                            {media.type ===
-                                                                                "video" && (
-                                                                                <div className="media-play-icon">
-                                                                                    <svg
-                                                                                        className="w-8 h-8"
-                                                                                        fill="white"
-                                                                                        viewBox="0 0 24 24"
-                                                                                    >
-                                                                                        <path d="M8 5v14l11-7z" />
-                                                                                    </svg>
-                                                                                </div>
-                                                                            )}
-                                                                            {media.type ===
-                                                                                "photo" &&
-                                                                                media.is_featured && (
-                                                                                    <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 z-20 shadow-md">
-                                                                                        <IconStar />{" "}
-                                                                                        À
-                                                                                        la
-                                                                                        une
-                                                                                    </div>
-                                                                                )}
-                                                                            <div className="media-badge">
-                                                                                {media.type ===
-                                                                                "video" ? (
-                                                                                    <IconVideo />
-                                                                                ) : (
-                                                                                    <IconPhoto />
-                                                                                )}
-                                                                                {media.type ===
-                                                                                "video"
-                                                                                    ? "Vidéo"
-                                                                                    : "Photo"}
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="media-info">
-                                                                            <h4 className="media-title">
-                                                                                {
-                                                                                    media.title
-                                                                                }
-                                                                            </h4>
-                                                                            <p className="media-date">
-                                                                                <IconCalendar />
-                                                                                {formatDateFrench(
-                                                                                    media.date,
-                                                                                )}
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div
-                                                                        className="more-menu-container"
-                                                                        style={{
-                                                                            position:
-                                                                                "absolute",
-                                                                            bottom: "10px",
-                                                                            right: "10px",
-                                                                            zIndex: 15,
-                                                                        }}
-                                                                    >
-                                                                        <button
-                                                                            className="more-btn"
-                                                                            onClick={(
-                                                                                e,
-                                                                            ) => {
-                                                                                e.stopPropagation();
-                                                                                setOpenGalleryMenuId(
-                                                                                    openGalleryMenuId ===
-                                                                                        media.id
-                                                                                        ? null
-                                                                                        : media.id,
-                                                                                );
-                                                                            }}
-                                                                        >
-                                                                            <IconMoreVert />
-                                                                        </button>
-                                                                        {openGalleryMenuId ===
-                                                                            media.id && (
-                                                                            <div className="more-menu">
-                                                                                <div
-                                                                                    className="more-menu-item edit"
-                                                                                    onClick={() => {
-                                                                                        setOpenGalleryMenuId(
-                                                                                            null,
-                                                                                        );
-                                                                                        openEditMediaModal(
-                                                                                            media,
-                                                                                        );
-                                                                                    }}
-                                                                                >
-                                                                                    <IconEdit />{" "}
-                                                                                    Modifier
-                                                                                </div>
-                                                                                {media.type ===
-                                                                                    "photo" &&
-                                                                                    media.special_event_id && (
-                                                                                        <div
-                                                                                            className="more-menu-item featured"
-                                                                                            onClick={() => {
-                                                                                                setOpenGalleryMenuId(
-                                                                                                    null,
-                                                                                                );
-                                                                                                setAsFeaturedMedia(
-                                                                                                    media,
-                                                                                                );
-                                                                                            }}
-                                                                                        >
-                                                                                            <IconStar />{" "}
-                                                                                            Définir
-                                                                                            comme
-                                                                                            image
-                                                                                            à
-                                                                                            la
-                                                                                            une
-                                                                                        </div>
-                                                                                    )}
-                                                                                <div
-                                                                                    className="more-menu-item delete"
-                                                                                    onClick={() => {
-                                                                                        setOpenGalleryMenuId(
-                                                                                            null,
-                                                                                        );
-                                                                                        handleDeleteSingleMedia(
-                                                                                            media,
-                                                                                        );
-                                                                                    }}
-                                                                                >
-                                                                                    <IconTrash />{" "}
-                                                                                    Supprimer
-                                                                                </div>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            ),
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            ) : (
-                                <div
-                                    className="empty-state"
-                                    style={{ margin: 0 }}
-                                >
-                                    <div className="empty-icon">📸</div>
-                                    <div className="empty-title">
-                                        Aucun média trouvé
-                                    </div>
-                                    <div className="empty-message">
-                                        {mediaData.length === 0
-                                            ? "Aucun média disponible. Ajoutez vos premiers contenus !"
-                                            : "Aucun média ne correspond à vos critères de recherche."}
-                                    </div>
-                                    {mediaData.length > 0 && (
-                                        <button
-                                            className="btn-clear"
-                                            onClick={() =>
-                                                setGalleryFilter({
-                                                    search: "",
-                                                    month: "",
-                                                    year: "",
-                                                })
-                                            }
-                                            style={{ marginTop: "20px" }}
-                                        >
-                                            Réinitialiser les filtres
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {totalPages > 1 && (
-                            <Pagination
-                                currentPage={currentPage}
-                                totalPages={totalPages}
-                                onPageChange={setCurrentPage}
-                            />
-                        )}
-                    </>
-                );
-            default:
-                return null;
-        }
-    };
-
-    const EmptyDialog = ({ onCreateClick }) => {
-        const currentMonthName = new Date().toLocaleString("fr-FR", {
-            month: "long",
-        });
-        const currentMonthCapitalized =
-            currentMonthName.charAt(0).toUpperCase() +
-            currentMonthName.slice(1);
-
+  // Rendu du contenu selon l'onglet actif
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'programmes':
+        const currentMonthName = new Date().toLocaleString('fr-FR', { month: 'long' });
+        const currentMonthCapitalized = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
         return (
-            <div className="empty-dialog" onClick={onCreateClick}>
-                <div className="empty-dialog-icon">📋</div>
-                <div className="empty-dialog-title">
-                    ✨ Programme de la classe
-                </div>
-                <div className="empty-dialog-message">
-                    {activeCalendarDate
-                        ? `Aucun programme pour le ${formatDateFrench(activeCalendarDate)}. Créez-en un !`
-                        : `Aucun programme pour le mois de ${currentMonthCapitalized} ${new Date().getFullYear()}. Créez votre premier programme !`}
-                </div>
-                <button
-                    className="empty-dialog-button"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onCreateClick();
-                    }}
-                >
-                    <IconPlus /> Créer un programme
-                </button>
+          <>
+            <HeroCarousel mediaImages={mediaData} pastEvents={pastEvents} />
+            <div className="action-bar">
+              <h2>🔥 ACTIVITÉS EN COURS<span className="badge-count">{filteredEvents.length} activité(s){!activeCalendarDate && ` - ${currentMonthCapitalized} ${new Date().getFullYear()}`}{activeCalendarDate && ` - ${formatDateFrench(activeCalendarDate)}`}</span></h2>
+              <div className="action-buttons">
+                <button className="btn-import" onClick={openImportModal}><IconUpload /> Import Excel</button>
+                <button className="btn-agenda" onClick={() => openEventModal()}><IconPlus /> Créer un programme</button>
+              </div>
             </div>
+            <div className="glass-container">
+              <div className="main-layout">
+                <div className="cards-container">
+                  {filteredEvents.length > 0 ? (
+                    <div className="horizontal-scroller">
+                      <div className="cards-wrapper">
+                        {filteredEvents.map(event => {
+                          const eventStartDate = formatDateFrench(event.start_date);
+                          const eventEndDate = event.end_date ? formatDateFrench(event.end_date) : null;
+                          const isMultiDay = event.end_date && getLocalDateString(event.start_date) !== getLocalDateString(event.end_date);
+                          const qrState = getQrAccessState(event);
+                          return (
+                            <div key={event.id} className="special-card">
+                              <button className="edit-btn-card" onClick={(e) => { e.stopPropagation(); handleEditEvent(event); }}><IconEdit /></button>
+                              <div>
+                                <div className="special-header">
+                                  <span className="special-date">{isMultiDay ? `${eventStartDate} → ${eventEndDate}` : eventStartDate}</span>
+                                </div>
+                                <h4 className="special-title">{event.title}</h4>
+                                {event.lieu && <p className="special-lieu"><IconLocation /> {event.lieu}</p>}
+                                {event.start_time && (<p><IconClock /> {event.start_time.substring(0, 5)}{event.end_time ? ` → ${event.end_time.substring(0, 5)}` : ''}</p>)}
+                                <div className="special-meta">
+                                  {event.orateur && <div><span className="special-meta-label">Orateur:</span> {event.orateur}</div>}
+                                  {event.moderateur && <div><span className="special-meta-label">Modérateur:</span> {event.moderateur}</div>}
+                                </div>
+                                <button
+                                  className="btn-qr-card"
+                                  onClick={(e) => { e.stopPropagation(); if (qrState.enabled) openQrModal(event); }}
+                                  disabled={!qrState.enabled}
+                                  title={qrState.reason}
+                                >
+                                  <IconQr /> QR
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (<EmptyDialog onCreateClick={() => openEventModal()} />)}
+                </div>
+                <div className="calendar-container">
+                  <MiniCalendar eventsDates={getAllEventDates()} eventsData={allEventsData} onDateClick={handleDateClick} activeDate={activeCalendarDate} />
+                </div>
+              </div>
+            </div>
+            {/* Bouton "Voir tout les programmes" affiché toujours, sans condition */}
+            <div className="btn-view-all-wrapper">
+              <button className="btn-view-all" onClick={handleViewAllProgrammes}><IconEye /> Voir tout les programmes</button>
+            </div>
+          </>
         );
-    };
+        
+      case 'historique':
+        return (
+          <>
+            <div className="action-bar">
+              <h2>📜 DERNIÈRES ACTIVITÉS</h2>
+              <div className="action-buttons">
+                <span className="badge-count">{historyPagination.total} activité(s)</span>
+              </div>
+            </div>
+            
+            <div className="history-filters">
+              <div className="history-filter-group">
+                <div className="history-filter-item" style={{ flex: 2 }}>
+                  <label><IconFilter style={{ display: 'inline', marginRight: '4px' }} /> Recherche</label>
+                  <input 
+                    type="text" 
+                    className="history-filter-input" 
+                    placeholder="Rechercher par titre, orateur, modérateur, lieu..." 
+                    value={historyFilters.search} 
+                    onChange={(e) => setHistoryFilters(prev => ({ ...prev, search: e.target.value }))} 
+                  />
+                </div>
+                <div className="history-filter-item">
+                  <label>Année</label>
+                  <select 
+                    className="history-filter-select" 
+                    value={historyFilters.year} 
+                    onChange={(e) => setHistoryFilters(prev => ({ ...prev, year: e.target.value }))}
+                  >
+                    {historyAvailableYears.map(year => (<option key={year} value={year}>{year === 'all' ? 'Toutes les années' : year}</option>))}
+                  </select>
+                </div>
+                <div className="history-filter-item">
+                  <label>Mois</label>
+                  <select 
+                    className="history-filter-select" 
+                    value={historyFilters.month} 
+                    onChange={(e) => setHistoryFilters(prev => ({ ...prev, month: e.target.value }))}
+                  >
+                    {months.map(month => (<option key={month.value} value={month.value}>{month.label}</option>))}
+                  </select>
+                </div>
+                <div className="history-filter-item" style={{ minWidth: '150px' }}>
+                  <label>Trier par</label>
+                  <select 
+                    className="history-filter-select" 
+                    value={historySortOrder} 
+                    onChange={(e) => setHistorySortOrder(e.target.value)}
+                  >
+                    <option value="desc">Plus récentes d'abord</option>
+                    <option value="asc">Plus anciennes d'abord</option>
+                  </select>
+                </div>
+                <div className="history-filter-actions">
+                  <button className="btn-history-filter-reset" onClick={resetHistoryFilters}><IconRefresh /> Réinitialiser</button>
+                </div>
+              </div>
+              <div className="history-filter-stats">
+                {historyPagination.total} activité(s) au total
+              </div>
+            </div>
+            
+            <div className="glass-container">
+              <div className="main-layout">
+                <div className="cards-container">
+                  {historyLoading ? (
+                    <div className="empty-state">
+                      <div className="empty-icon">⏳</div>
+                      <div className="empty-title">Chargement...</div>
+                      <div className="empty-message">Veuillez patienter pendant le chargement des données.</div>
+                    </div>
+                  ) : historyData.length > 0 ? (
+                    <>
+                      <div className="history-grid">
+                        {historyData.map(item => {
+                          const eventMedia = mediaData.filter(media => media.special_event_id === item.id);
+                          const hasMedia = eventMedia.length > 0;
+                          const eventStartDate = formatDateFrench(item.start_date);
+                          const eventEndDate = item.end_date ? formatDateFrench(item.end_date) : null;
+                          const isMultiDay = item.end_date && getLocalDateString(item.start_date) !== getLocalDateString(item.end_date);
+                          return (
+                            <div key={item.id} className="history-card-v2">
+                              <div className="history-card-v2-header" onClick={() => handleHistoricalCardClick(item)}>
+                                <h3 className="history-card-v2-title">{item.title}</h3>
+                                <div className="history-card-v2-date">
+                                  <IconCalendar /> {isMultiDay ? `${eventStartDate} → ${eventEndDate}` : eventStartDate}
+                                  {item.start_time && (<span> • <IconClock /> {item.start_time.substring(0, 5)}{item.end_time ? ` → ${item.end_time.substring(0, 5)}` : ''}</span>)}
+                                </div>
+                              </div>
+                              <div className="history-card-v2-body" onClick={() => handleHistoricalCardClick(item)}>
+                                <div className="history-card-v2-info">
+                                  {item.lieu && (<div className="history-card-v2-info-item"><IconLocation className="history-card-v2-info-icon" /><span className="history-card-v2-info-label">Lieu :</span><span className="history-card-v2-info-value">{item.lieu}</span></div>)}
+                                  {item.orateur && (<div className="history-card-v2-info-item"><IconMic className="history-card-v2-info-icon" /><span className="history-card-v2-info-label">Orateur :</span><span className="history-card-v2-info-value">{item.orateur}</span></div>)}
+                                  {item.moderateur && (<div className="history-card-v2-info-item"><IconUser className="history-card-v2-info-icon" /><span className="history-card-v2-info-label">Modérateur :</span><span className="history-card-v2-info-value">{item.moderateur}</span></div>)}
+                                </div>
+                              </div>
+                              <div className="history-card-v2-footer">
+                                <span className="history-card-v2-badge">{new Date(item.start_date).getFullYear()}</span>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  {hasMedia && (<span className="history-card-v2-media-badge" onClick={() => handleHistoricalCardClick(item)}><IconGallery /> {eventMedia.length} média(s)</span>)}
+                                  <button className="history-card-v2-add-btn" onClick={() => handleAddMediaToHistory(item.id)}><IconPlus /> Ajouter un contenu</button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {historyPagination.last_page > 1 && (
+                        <div className="pagination">
+                          <button 
+                            className="pagination-btn" 
+                            onClick={() => setHistoryCurrentPage(prev => Math.max(1, prev - 1))} 
+                            disabled={historyCurrentPage === 1}
+                          >‹</button>
+                          <span className="pagination-info">Page {historyCurrentPage} sur {historyPagination.last_page}</span>
+                          <button 
+                            className="pagination-btn" 
+                            onClick={() => setHistoryCurrentPage(prev => Math.min(historyPagination.last_page, prev + 1))} 
+                            disabled={historyCurrentPage === historyPagination.last_page}
+                          >›</button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="empty-state">
+                      <div className="empty-icon">📜</div>
+                      <div className="empty-title">Aucune activité trouvée</div>
+                      <div className="empty-message">Aucune activité ne correspond à vos critères de recherche.</div>
+                      <button className="btn-clear" onClick={resetHistoryFilters} style={{ marginTop: '20px' }}>Réinitialiser les filtres</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
+        );
+        
+      case 'parcours':
+        return (
+          <>
+            {/* Barre "GALERIE MULTIMÉDIA" supprimée */}
+            
+            <div className="gallery-filters">
+              <div className="gallery-filter-group">
+                <input 
+                  type="text" 
+                  className="gallery-filter-input" 
+                  placeholder="🔍 Rechercher par titre ou description..." 
+                  value={galleryFilters.search} 
+                  onChange={(e) => setGalleryFilters(prev => ({ ...prev, search: e.target.value }))} 
+                />
+                <select 
+                  className="gallery-filter-select" 
+                  value={galleryFilters.month} 
+                  onChange={(e) => setGalleryFilters(prev => ({ ...prev, month: e.target.value }))}
+                >
+                  <option value="">Tous les mois</option>
+                  {galleryAvailableMonths.map(month => (
+                    <option key={month} value={month}>{month}</option>
+                  ))}
+                </select>
+                <select 
+                  className="gallery-filter-select" 
+                  value={galleryFilters.year} 
+                  onChange={(e) => setGalleryFilters(prev => ({ ...prev, year: e.target.value }))}
+                >
+                  <option value="">Toutes les années</option>
+                  {galleryAvailableYears.map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+                <select 
+                  className="gallery-filter-select" 
+                  value={galleryFilters.type} 
+                  onChange={(e) => setGalleryFilters(prev => ({ ...prev, type: e.target.value }))}
+                >
+                  <option value="all">📷 Tous les types</option>
+                  <option value="photo">🖼️ Photos uniquement</option>
+                  <option value="video">🎬 Vidéos uniquement</option>
+                </select>
+                <select 
+                  className="gallery-filter-select" 
+                  value={galleryFilters.sort_order} 
+                  onChange={(e) => setGalleryFilters(prev => ({ ...prev, sort_order: e.target.value }))}
+                >
+                  <option value="desc">Plus récents d'abord</option>
+                  <option value="asc">Plus anciens d'abord</option>
+                </select>
+                <button className="btn-clear" onClick={resetGalleryFilters}>
+                  <IconRefresh /> Réinitialiser
+                </button>
+              </div>
+              <div className="gallery-filter-stats">
+                {galleryPagination.total} média(s) trouvé(s)
+              </div>
+            </div>
+            
+            <div className="glass-container">
+              {galleryLoading ? (
+                <div className="empty-state">
+                  <div className="empty-icon">⏳</div>
+                  <div className="empty-title">Chargement...</div>
+                  <div className="empty-message">Veuillez patienter pendant le chargement de la galerie.</div>
+                </div>
+              ) : groupedGalleryMedia.length > 0 ? (
+                groupedGalleryMedia.map(group => {
+                  const scrollKey = `gallery_${group.id}`;
+                  const scrollState = scrollStates[scrollKey] || { hasLeftScroll: false, hasRightScroll: false };
+                  const imagesCount = group.medias.filter(m => m.type === 'photo').length;
+                  const videosCount = group.medias.filter(m => m.type === 'video').length;
+                  
+                  return (
+                    <div key={group.id} className="gallery-section">
+                      <div className="gallery-group">
+                        <div className="gallery-group-title">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', flex: 1 }}>
+                            <IconGallery /> {group.title}
+                            {group.date && (
+                              <span className="gallery-group-date">
+                                <IconCalendar style={{ width: '12px', height: '12px', marginLeft: '10px' }} /> 
+                                {formatDateFrench(group.date)}
+                              </span>
+                            )}
+                            <span className="text-xs text-gray-500 ml-2">
+                              📷 {imagesCount} | 🎬 {videosCount}
+                            </span>
+                          </div>
+                          <div className="group-actions">
+                            <button 
+                              className="btn-add-media-group" 
+                              onClick={() => {
+                                if (group.id !== 'without_event') {
+                                  openAddMediaModal(parseInt(group.id));
+                                } else {
+                                  openAddMediaModal();
+                                }
+                              }}
+                            >
+                              <IconPlus /> Ajouter un contenu
+                            </button>
+                            <button 
+                              className="btn-select-group" 
+                              onClick={() => {
+                                setSelectedGalleryMediaIds(group.medias.map(m => m.id));
+                                setIsGallerySelectionMode(true);
+                              }}
+                            >
+                              <IconTrash /> Tout sélectionner
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {/* Barre d'actions de sélection */}
+                        {isGallerySelectionMode && selectedGalleryMediaIds.filter(id => group.medias.some(m => m.id === id)).length > 0 && (
+                          <div className="group-selection-bar">
+                            <div className="selection-info">
+                              {selectedGalleryMediaIds.filter(id => group.medias.some(m => m.id === id)).length} média(s) sélectionné(s)
+                            </div>
+                            <div className="selection-actions">
+                              <button className="btn-selection-delete" onClick={handleDeleteSelectedGalleryMedia}>
+                                <IconTrash /> Supprimer
+                              </button>
+                              <button className="btn-cancel-selection" onClick={cancelGallerySelection}>
+                                Annuler
+                              </button>
+                              <button 
+                                className="btn-select-group" 
+                                onClick={() => {
+                                  if (selectedGalleryMediaIds.filter(id => group.medias.some(m => m.id === id)).length === group.medias.length) {
+                                    setSelectedGalleryMediaIds(prev => prev.filter(id => !group.medias.some(m => m.id === id)));
+                                  } else {
+                                    setSelectedGalleryMediaIds(prev => [...new Set([...prev, ...group.medias.map(m => m.id)])]);
+                                  }
+                                }}
+                              >
+                                {selectedGalleryMediaIds.filter(id => group.medias.some(m => m.id === id)).length === group.medias.length 
+                                  ? 'Tout désélectionner' 
+                                  : 'Tout sélectionner'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                        
+                        <GalleryScrollNav 
+                          onScrollLeft={() => handleScrollLeft(scrollKey)}
+                          onScrollRight={() => handleScrollRight(scrollKey)}
+                          hasLeftScroll={scrollState.hasLeftScroll}
+                          hasRightScroll={scrollState.hasRightScroll}
+                        />
+                        
+                        <div 
+                          className="gallery-scroll-container" 
+                          ref={el => scrollRefs.current[scrollKey] = el} 
+                          onScroll={() => updateScrollState(scrollKey)}
+                        >
+                          <div className="gallery-group-grid-scroll">
+                            {group.medias.map(media => (
+                              <div key={media.id} className="media-card-wrapper">
+                                <div className={`media-card ${selectedGalleryMediaIds.includes(media.id) ? 'selected' : ''}`} onClick={() => openMediaViewer(media, group.medias)}>
+                                  {isGallerySelectionMode && (
+                                    <div className="media-checkbox" onClick={(e) => { e.stopPropagation(); toggleGalleryMediaSelection(media.id); }}>
+                                      <input type="checkbox" checked={selectedGalleryMediaIds.includes(media.id)} onChange={() => {}} />
+                                      <div className={`checkbox-custom ${selectedGalleryMediaIds.includes(media.id) ? 'checked' : ''}`}></div>
+                                    </div>
+                                  )}
+                                  <div className="media-thumbnail">
+                                    {media.type === 'photo' ? (
+                                      <img src={media.url} alt={media.title} />
+                                    ) : (
+                                      <img src={media.thumbnail || media.url || '/default-video-thumb.jpg'} alt={media.title} />
+                                    )}
+                                    {media.type === 'video' && (
+                                      <div className="media-play-icon"><IconPlay /></div>
+                                    )}
+                                    {media.type === 'photo' && media.is_featured && (
+                                      <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 z-20 shadow-md">
+                                        <IconStar /> À la une
+                                      </div>
+                                    )}
+                                    <div className="media-badge">
+                                      {media.type === 'video' ? <IconVideo /> : <IconPhoto />}
+                                      {media.type === 'video' ? 'Vidéo' : 'Photo'}
+                                    </div>
+                                  </div>
+                                  <div className="media-info">
+                                    <h4 className="media-title">{media.title}</h4>
+                                    <p className="media-date">
+                                      <IconCalendar />{formatDateFrench(media.date)}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="more-menu-container" style={{ position: 'absolute', bottom: '10px', right: '10px', zIndex: 15 }}>
+                                  <button 
+                                    className="more-btn" 
+                                    onClick={(e) => { 
+                                      e.stopPropagation(); 
+                                      setOpenGalleryMenuId(openGalleryMenuId === media.id ? null : media.id); 
+                                    }}
+                                  >
+                                    <IconMoreVert />
+                                  </button>
+                                  {openGalleryMenuId === media.id && (
+                                    <div className="more-menu">
+                                      <div className="more-menu-item edit" onClick={() => { 
+                                        setOpenGalleryMenuId(null); 
+                                        openEditMediaModal(media); 
+                                      }}>
+                                        <IconEdit /> Modifier
+                                      </div>
+                                      {media.type === 'photo' && media.special_event_id && (
+                                        <div className="more-menu-item featured" onClick={() => { 
+                                          setOpenGalleryMenuId(null); 
+                                          setAsFeaturedMedia(media); 
+                                        }}>
+                                          <IconStar /> Définir comme image à la une
+                                        </div>
+                                      )}
+                                      <div className="more-menu-item delete" onClick={() => { 
+                                        setOpenGalleryMenuId(null); 
+                                        handleDeleteSingleMedia(media); 
+                                      }}>
+                                        <IconTrash /> Supprimer
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="empty-state" style={{ margin: 0 }}>
+                  <div className="empty-icon">📸</div>
+                  <div className="empty-title">Aucun média trouvé</div>
+                  <div className="empty-message">
+                    {galleryPagination.total === 0 && !galleryFilters.search && !galleryFilters.month && !galleryFilters.year && galleryFilters.type === 'all'
+                      ? "Aucun média disponible. Ajoutez vos premiers contenus !"
+                      : "Aucun média ne correspond à vos critères de recherche."}
+                  </div>
+                  {galleryPagination.total === 0 && !galleryFilters.search && !galleryFilters.month && !galleryFilters.year && galleryFilters.type === 'all' ? (
+                    <button className="btn-agenda" onClick={() => openAddMediaModal()} style={{ marginTop: '20px' }}>
+                      <IconPlus /> Ajouter des contenus
+                    </button>
+                  ) : (
+                    <button className="btn-clear" onClick={resetGalleryFilters} style={{ marginTop: '20px' }}>
+                      Réinitialiser les filtres
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            {/* PAGINATION */}
+            {galleryPagination.last_page > 1 && (
+              <div className="pagination">
+                <button 
+                  className="pagination-btn" 
+                  onClick={() => setGalleryCurrentPage(prev => Math.max(1, prev - 1))} 
+                  disabled={galleryCurrentPage === 1}
+                >
+                  ‹
+                </button>
+                <div className="pagination-info">
+                  Page {galleryCurrentPage} sur {galleryPagination.last_page}
+                </div>
+                <button 
+                  className="pagination-btn" 
+                  onClick={() => setGalleryCurrentPage(prev => Math.min(galleryPagination.last_page, prev + 1))} 
+                  disabled={galleryCurrentPage === galleryPagination.last_page}
+                >
+                  ›
+                </button>
+              </div>
+            )}
+            
+            {/* Indicateur supplémentaire */}
+            {galleryPagination.last_page > 1 && (
+              <div style={{ textAlign: 'center', marginTop: '10px', marginBottom: '20px' }}>
+                <span style={{ 
+                  background: 'rgba(0,0,0,0.5)', 
+                  color: 'white', 
+                  padding: '4px 12px', 
+                  borderRadius: '20px', 
+                  fontSize: '0.75rem',
+                  backdropFilter: 'blur(4px)'
+                }}>
+                  {galleryPagination.total} média(s) au total
+                </span>
+              </div>
+            )}
+          </>
+        );
+        
+      default:
+        return null;
+    }
+  };
 
   return (
     <>
@@ -6196,6 +4757,49 @@ export default function Programmes() {
       
       <EventPlannerModal isOpen={isEventModalOpen} onClose={closeEventModal} onSave={handleSaveEventModal} editingEvent={editingEvent} isLoading={isLoading} />
       <ImportExcelModal isOpen={isImportModalOpen} onClose={closeImportModal} onImport={handleImportEvents} isLoading={isLoading} progress={importProgress} />
+
+      {/* Modale QR Code */}
+      {isQrModalOpen && (
+        <div className="qr-modal-overlay" onClick={closeQrModal}>
+          <div className="qr-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="qr-modal-header">
+              <h3>📲 Code QR — Présence</h3>
+              <button className="qr-modal-close" onClick={closeQrModal}>✕</button>
+            </div>
+            <div className="qr-modal-body">
+              {isQrLoading && (
+                <div className="qr-modal-loading">Génération du QR code…</div>
+              )}
+              {!isQrLoading && qrPayload?.error && (
+                <div className="qr-modal-loading" style={{ color: '#ef4444' }}>
+                  Impossible de charger le QR code.
+                </div>
+              )}
+              {!isQrLoading && qrPayload && !qrPayload.error && (
+                <>
+                  <div className="qr-modal-event-title">{qrPayload.event.title}</div>
+                  {qrPayload.event.date && (
+                    <div className="qr-modal-event-meta">
+                      {new Date(qrPayload.event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {qrPayload.event.time ? ` · ${qrPayload.event.time.substring(0, 5)}` : ''}
+                    </div>
+                  )}
+                  <img className="qr-modal-img" src={qrPayload.qrCode} alt="QR Code présence" />
+                  <div className="qr-modal-url">{qrPayload.scanUrl}</div>
+                  <div className="qr-modal-actions">
+                    <button className="btn-qr-copy" onClick={copyQrLink}>
+                      📋 Copier le lien
+                    </button>
+                    <button className="btn-qr-print" onClick={printQr}>
+                      🖨️ Imprimer
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <AddMediaModal isOpen={isAddMediaModalOpen} onClose={closeAddMediaModal} onAdd={handleAddMedia} isLoading={isLoading} events={allEvents} preselectedEventId={preselectedEventId} />
       <MediaViewerModal isOpen={isMediaViewerOpen} onClose={closeMediaViewer} media={selectedMedia} mediaList={currentMediaList} currentIndex={currentMediaIndex} onNavigate={handleNavigateMedia} />
       <PastEventContentModal isOpen={isDateContentModalOpen} onClose={closeDateContentModal} date={selectedDate} events={allEvents} mediaData={mediaData} />

@@ -41,6 +41,8 @@ export default function BaptemeForm({
             can_date_bap: "",
             can_anciennete: "",
             decl1: false,
+            // parrain: "",
+            // marraine: "",
             observations: "",
         },
         pieces_jointes: [],
@@ -93,8 +95,12 @@ export default function BaptemeForm({
         setSuccessMsg("");
 
         if (form.details.want_communion === "Oui") {
+            const validationErrors = {};
             if (!form.details.can_baptise) {
-                setErrors((prev) => ({ ...prev, "details.can_baptise": "Champ requis." }));
+                validationErrors["details.can_baptise"] = "Champ requis.";
+            }
+            if (Object.keys(validationErrors).length) {
+                setErrors((prev) => ({ ...prev, ...validationErrors }));
                 setProcessing(false);
                 return;
             }
@@ -139,6 +145,8 @@ export default function BaptemeForm({
             form.details.can_anciennete || "",
         );
         payload.append("details[decl1]", form.details.decl1 ? "1" : "");
+        // payload.append("details[parrain]", form.details.parrain || "");
+        // payload.append("details[marraine]", form.details.marraine || "");
         payload.append(
             "details[observations]",
             form.details.observations || "",
@@ -173,7 +181,7 @@ export default function BaptemeForm({
 
     const reset = () => {
         setSuccess(false);
-        setErrors({});
+        // setErrors({});
         setSuccessMsg("");
         setForm({
             membre_id: defaultMemberId,
@@ -190,6 +198,8 @@ export default function BaptemeForm({
                 can_date_bap: "",
                 can_anciennete: "",
                 decl1: false,
+                // parrain: "",
+                // marraine: "",
                 observations: "",
             },
             pieces_jointes: [],
@@ -237,7 +247,7 @@ export default function BaptemeForm({
                                 </p>
 
                                 <div className="grid grid-cols-1 gap-4 mb-6">
-                                    <Field label="Personne concernée">
+                                    <Field label="Personne concernée *">
                                         <select
                                             value={form.membre_id}
                                             onChange={(e) => {
@@ -253,8 +263,8 @@ export default function BaptemeForm({
                                                     membre_id: e.target.value,
                                                 }));
                                             }}
-                                            disabled={!canSelectMember}
                                         >
+                                        <option value="">-- Sélectionner un membre --</option> 
                                             {familyMembers.map((m) => (
                                                 <option key={m.id} value={m.id}>
                                                     {m.prenom} {m.nom}
@@ -266,6 +276,40 @@ export default function BaptemeForm({
                                         )}
                                     </Field>
                                 </div>
+
+                                {/* Si membre inscrit : afficher les infos juste en dessous du select */}
+                                {form.membre_id && currentMember && (
+                                    <div className="bg-blue-50 border border-blue-200 rounded-sm p-4 mb-6">
+                                        <p className="text-sm text-blue-800 font-medium mb-2">
+                                            ✓ Informations du membre préremplies automatiquement
+                                        </p>
+                                        <p className="text-xs text-blue-700 mb-3">
+                                            Les informations ci-dessous proviennent du profil du membre.
+                                        </p>
+                                        <div className="bg-white border border-blue-200 rounded-sm p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                                <p className="text-xs font-semibold text-slate-500 uppercase">Prénom</p>
+                                                <p className="text-sm text-slate-800">{currentMember.prenom}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-semibold text-slate-500 uppercase">Nom</p>
+                                                <p className="text-sm text-slate-800">{currentMember.nom}</p>
+                                            </div>
+                                            {currentMember.genre && (
+                                                <div>
+                                                    <p className="text-xs font-semibold text-slate-500 uppercase">Sexe</p>
+                                                    <p className="text-sm text-slate-800">{currentMember.genre}</p>
+                                                </div>
+                                            )}
+                                            {currentMember.classe?.nom && (
+                                                <div>
+                                                    <p className="text-xs font-semibold text-slate-500 uppercase">Classe</p>
+                                                    <p className="text-sm text-slate-800">{currentMember.classe.nom}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <Field label="Nom complet">
@@ -406,6 +450,29 @@ export default function BaptemeForm({
                                     </div>
                                 )}
 
+                                {/*
+                                {form.details.want_communion === "Oui" && (
+                                    <Field label="Ancienneté dans l'église">
+                                        <select
+                                            value={form.details.can_anciennete}
+                                            onChange={(e) =>
+                                                setDetail(
+                                                    "can_anciennete",
+                                                    e.target.value,
+                                                )
+                                            }
+                                        >
+                                            <option value="">Choisir</option>
+                                            <option value="<6m">Moins de 6 mois</option>
+                                            <option value="6m-1a">6 mois-1 an</option>
+                                            <option value="1a-3a">1-3 ans</option>
+                                            <option value=">3a">Plus de 3 ans</option>
+                                        </select>
+                                    </Field>
+                                )}
+                                */}
+
+                                
 
                                 <Field label="Observations / Précisions">
                                     <textarea
@@ -536,16 +603,3 @@ function Err({ children }) {
     return <p className="text-xs text-red-600 mt-1">{children}</p>;
 }
 
-function CheckRow({ checked, text, onChange }) {
-    return (
-        <label className="flex items-center gap-3 border border-amber-200 rounded-sm px-3 py-2 bg-amber-50 cursor-pointer">
-            <input
-                type="checkbox"
-                checked={checked}
-                onChange={(e) => onChange(e.target.checked)}
-                className="w-4 h-4 accent-blue-700"
-            />
-            <span className="text-sm text-slate-700">{text}</span>
-        </label>
-    );
-}

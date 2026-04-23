@@ -5,26 +5,29 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 use Carbon\Carbon;
 
 class SpecialEvent extends Model
 {
     protected $fillable = [
         'title',
-        'date',
-        'time',
-        'end_time',
-        'start_date',
-        'end_date',
-        'start_time',
+        'start_date',      // NOUVEAU : date de début
+        'end_date',        // NOUVEAU : date de fin (nullable)
+        'start_time',      // NOUVEAU : heure de début (nullable)
+        'end_time',        // NOUVEAU : heure de fin (nullable)
         'orateur',
         'moderateur',
         'famille_reception',
         'lieu',
         'class_id',
         'created_by',
-        'is_parish'
+        'is_parish',
+        'qr_token',
+        'qr_expires_at',
     ];
+    
+    protected $appends = ['date', 'time'];
 
     protected $casts = [
         'start_date' => 'date',
@@ -32,20 +35,47 @@ class SpecialEvent extends Model
         'start_time' => 'datetime:H:i',
         'end_time' => 'datetime:H:i',
         'is_parish' => 'boolean',
+        'qr_expires_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    /**
+     * Generer (ou reutiliser) un token QR et definir son expiration.
+     */
+    public function ensureQrToken(): string
+    {
+        $endAt = Carbon::parse($this->start_date);
+        if (!empty($this->end_time)) {
+            $endTime = Carbon::parse($this->end_time);
+            $endAt->setTime($endTime->hour, $endTime->minute, $endTime->second);
+        } elseif (!empty($this->start_time)) {
+            $startTime = Carbon::parse($this->start_time);
+            $endAt->setTime($startTime->hour, $startTime->minute, $startTime->second);
+        } else {
+            $endAt->setTime(23, 59, 59);
+        }
+
+        if (empty($this->qr_token)) {
+            $this->qr_token = Str::random(40);
+        }
+
+        $this->qr_expires_at = $endAt;
+        $this->save();
+
+        return $this->qr_token;
+    }
     
     // ========== ACCESSEURS POUR COMPATIBILITÉ AVEC L'ANCIEN CODE ==========
-
+    
     /**
      * Accesseur pour 'date' (compatibilité avec l'ancien code)
      */
     public function getDateAttribute()
     {
-        return $this->start_date;
+        return $this->start_date ? $this->start_date->format('Y-m-d') : null;
     }
-
+    
     /**
      * Mutateur pour 'date' (compatibilité avec l'ancien code)
      */
@@ -53,15 +83,15 @@ class SpecialEvent extends Model
     {
         $this->attributes['start_date'] = $value;
     }
-
+    
     /**
      * Accesseur pour 'time' (compatibilité avec l'ancien code)
      */
     public function getTimeAttribute()
     {
-        return $this->start_time;
+        return $this->start_time ? Carbon::parse($this->start_time)->format('H:i') : null;
     }
-
+    
     /**
      * Mutateur pour 'time' (compatibilité avec l'ancien code)
      */
@@ -71,7 +101,7 @@ class SpecialEvent extends Model
     }
     
     // ========== RELATIONS ==========
-
+    
     /**
      * Relation avec la classe
      */
@@ -79,7 +109,7 @@ class SpecialEvent extends Model
     {
         return $this->belongsTo(Classe::class, 'class_id');
     }
-
+    
     /**
      * Relation avec le créateur (conducteur)
      */
@@ -87,7 +117,7 @@ class SpecialEvent extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
-
+    
     /**
      * Relation avec les médias associés
      */
@@ -97,7 +127,7 @@ class SpecialEvent extends Model
     }
     
     // ========== ACCESSEURS DE FORMATAGE ==========
-
+    
     /**
      * Accesseur pour la date de début formatée
      */
@@ -105,7 +135,7 @@ class SpecialEvent extends Model
     {
         return $this->start_date ? $this->start_date->format('d/m/Y') : '';
     }
-
+    
     /**
      * Accesseur pour la date de fin formatée
      */
@@ -113,7 +143,7 @@ class SpecialEvent extends Model
     {
         return $this->end_date ? $this->end_date->format('d/m/Y') : '';
     }
-
+    
     /**
      * Accesseur pour la plage de dates formatée
      */
@@ -122,14 +152,14 @@ class SpecialEvent extends Model
         if (!$this->start_date) {
             return '';
         }
-
+        
         if ($this->end_date && $this->start_date->format('Y-m-d') !== $this->end_date->format('Y-m-d')) {
             return $this->start_date->format('d/m/Y') . ' → ' . $this->end_date->format('d/m/Y');
         }
-
+        
         return $this->start_date->format('d/m/Y');
     }
-
+    
     /**
      * Accesseur pour l'heure de début formatée
      */
@@ -137,7 +167,7 @@ class SpecialEvent extends Model
     {
         return $this->start_time ? Carbon::parse($this->start_time)->format('H:i') : '';
     }
-
+    
     /**
      * Accesseur pour l'heure de fin formatée
      */
@@ -145,7 +175,7 @@ class SpecialEvent extends Model
     {
         return $this->end_time ? Carbon::parse($this->end_time)->format('H:i') : '';
     }
-
+    
     /**
      * Accesseur pour la plage horaire formatée
      */
@@ -154,17 +184,17 @@ class SpecialEvent extends Model
         if (!$this->start_time) {
             return '';
         }
-
+        
         $start = Carbon::parse($this->start_time)->format('H:i');
-
+        
         if ($this->end_time) {
             $end = Carbon::parse($this->end_time)->format('H:i');
             return $start . ' → ' . $end;
         }
-
+        
         return $start;
     }
-
+    
     /**
      * Accesseur pour la date complète formatée (date de début)
      */
@@ -174,7 +204,7 @@ class SpecialEvent extends Model
     }
     
     // ========== SCOPES ==========
-
+    
     /**
      * Scope pour les événements à venir
      */
@@ -184,7 +214,7 @@ class SpecialEvent extends Model
             ->orderBy('start_date', 'asc')
             ->orderBy('start_time', 'asc');
     }
-
+    
     /**
      * Scope pour les événements passés
      */
@@ -194,7 +224,7 @@ class SpecialEvent extends Model
             ->orderBy('start_date', 'desc')
             ->orderBy('start_time', 'desc');
     }
-
+    
     /**
      * Scope pour les événements d'une année spécifique
      */
@@ -202,7 +232,7 @@ class SpecialEvent extends Model
     {
         return $query->whereYear('start_date', $year);
     }
-
+    
     /**
      * Scope pour les événements d'une classe spécifique
      */
@@ -210,7 +240,7 @@ class SpecialEvent extends Model
     {
         return $query->where('class_id', $classId);
     }
-
+    
     /**
      * Scope pour les événements non paroissiaux
      */
@@ -218,7 +248,7 @@ class SpecialEvent extends Model
     {
         return $query->where('is_parish', false);
     }
-
+    
     /**
      * Scope pour les événements d'un mois spécifique
      */
@@ -228,7 +258,7 @@ class SpecialEvent extends Model
     }
     
     // ========== MÉTHODES UTILITAIRES ==========
-
+    
     /**
      * Vérifier si l'événement est à venir
      */
@@ -236,7 +266,7 @@ class SpecialEvent extends Model
     {
         return $this->start_date >= now()->startOfDay();
     }
-
+    
     /**
      * Vérifier si l'événement est passé
      */
@@ -244,7 +274,7 @@ class SpecialEvent extends Model
     {
         return $this->start_date < now()->startOfDay();
     }
-
+    
     /**
      * Vérifier si l'événement est aujourd'hui
      */
@@ -252,7 +282,7 @@ class SpecialEvent extends Model
     {
         return $this->start_date && $this->start_date->isToday();
     }
-
+    
     /**
      * Vérifier si l'événement est multi-jours
      */
@@ -260,7 +290,7 @@ class SpecialEvent extends Model
     {
         return $this->end_date && $this->start_date->format('Y-m-d') !== $this->end_date->format('Y-m-d');
     }
-
+    
     /**
      * Obtenir le nombre de médias associés
      */
@@ -268,7 +298,7 @@ class SpecialEvent extends Model
     {
         return $this->medias()->count();
     }
-
+    
     /**
      * Obtenir la durée en jours de l'événement
      */
@@ -277,7 +307,7 @@ class SpecialEvent extends Model
         if (!$this->end_date) {
             return 1;
         }
-
+        
         return $this->start_date->diffInDays($this->end_date) + 1;
     }
 }

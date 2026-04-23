@@ -424,6 +424,11 @@ const styles = `
     bottom: 0;
     background-size: cover;
     background-position: center;
+    animation: carouselFadeIn 0.6s ease;
+}
+@keyframes carouselFadeIn {
+    from { opacity: 0; transform: scale(1.04); }
+    to   { opacity: 1; transform: scale(1); }
 }
 .carousel-simple-image-bg::after {
     content: '';
@@ -1668,27 +1673,33 @@ const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
     { id: 3, image: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&h=500&fit=crop', title: 'Galerie', description: 'Revivez les moments forts', date: new Date().toISOString() },
   ];
 
-  const getActivityImage = (activityId) => {
+  const getActivityMedia = (activityId) => {
     if (!mediaImages) return null;
-    const featuredImage = mediaImages.find(media => media.special_event_id === activityId && media.type === 'photo' && media.is_featured === true);
-    if (featuredImage) return featuredImage.url;
-    const firstPhoto = mediaImages.find(media => media.special_event_id === activityId && media.type === 'photo');
-    return firstPhoto ? firstPhoto.url : null;
+    const featured = mediaImages.find(m => m.special_event_id === activityId && m.type === 'photo' && m.is_featured === true);
+    if (featured) return featured;
+    return mediaImages.find(m => m.special_event_id === activityId && m.type === 'photo') || null;
   };
 
   const slides = useMemo(() => {
     if (!pastEvents || pastEvents.length === 0) return defaultSlides;
-    const sortedPastEvents = [...pastEvents].sort((a, b) => new Date(b.start_date) - new Date(a.start_date)).slice(0, 4);
+    const sortedPastEvents = [...pastEvents]
+      .sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
+      .slice(0, 6);
     if (sortedPastEvents.length === 0) return defaultSlides;
     const activitySlides = [];
     for (const activity of sortedPastEvents) {
-      const activityImage = getActivityImage(activity.id);
-      if (activityImage) {
+      const media = getActivityMedia(activity.id);
+      if (media) {
+        const lieuOrateur = [activity.lieu, activity.orateur].filter(Boolean).join(' · ');
+        const description =
+          (media.description && media.description.trim()) ? media.description :
+          (media.title && media.title.trim()) ? media.title :
+          (lieuOrateur || 'Moment de partage');
         activitySlides.push({
           id: activity.id,
-          image: activityImage,
+          image: media.url,
           title: activity.title,
-          description: activity.lieu || activity.orateur ? `${activity.lieu || ''} ${activity.orateur ? '· ' + activity.orateur : ''}` : 'Moment de partage',
+          description,
           date: activity.start_date,
         });
       }
@@ -1697,23 +1708,35 @@ const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
   }, [pastEvents, mediaImages]);
 
   useEffect(() => {
-    if (isAutoPlaying && slides.length > 0) {
+    setCurrentSlide(prev => (prev >= slides.length ? 0 : prev));
+  }, [slides.length]);
+
+  useEffect(() => {
+    if (isAutoPlaying && slides.length > 1) {
       if (autoPlayIntervalRef.current) clearInterval(autoPlayIntervalRef.current);
-      autoPlayIntervalRef.current = setInterval(() => setCurrentSlide((prev) => (prev + 1) % slides.length), 5000);
+      autoPlayIntervalRef.current = setInterval(
+        () => setCurrentSlide(prev => (prev + 1) % slides.length),
+        5000
+      );
     }
     return () => { if (autoPlayIntervalRef.current) clearInterval(autoPlayIntervalRef.current); };
   }, [isAutoPlaying, slides.length]);
 
   if (slides.length === 0) return null;
 
-  const currentSlideData = slides[currentSlide];
+  const safeIndex = Math.min(currentSlide, slides.length - 1);
+  const currentSlideData = slides[safeIndex];
   const formattedDate = formatDateFrench(currentSlideData.date);
 
   return (
     <div className="carousel-simple" onMouseEnter={() => setIsAutoPlaying(false)} onMouseLeave={() => setIsAutoPlaying(true)}>
       <div className="carousel-simple-wrapper">
         <div className="carousel-simple-image">
-          <div className="carousel-simple-image-bg" style={{ backgroundImage: `url(${currentSlideData.image})` }} />
+          <div
+            key={safeIndex}
+            className="carousel-simple-image-bg"
+            style={{ backgroundImage: `url("${encodeURI(currentSlideData.image)}")` }}
+          />
         </div>
         <div className="carousel-simple-info">
           <div className="carousel-simple-header">ACTIVITÉ RÉCENTES</div>
@@ -1728,7 +1751,7 @@ const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
           <button className="carousel-simple-nav carousel-simple-nav-right" onClick={() => setCurrentSlide((prev) => (prev + 1) % slides.length)}>›</button>
           <div className="carousel-simple-dots">
             {slides.map((_, index) => (
-              <button key={index} className={`carousel-simple-dot ${currentSlide === index ? 'active' : ''}`} onClick={() => setCurrentSlide(index)} />
+              <button key={index} className={`carousel-simple-dot ${safeIndex === index ? 'active' : ''}`} onClick={() => setCurrentSlide(index)} />
             ))}
           </div>
         </>
@@ -1786,7 +1809,7 @@ const MiniCalendar = ({ eventsDates = [], eventsData = [], onDateClick, activeDa
     return `${events[0].title} + ${events.length - 1} autre(s)`;
   };
 
-  const daysOfWeek = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+  const daysOfWeek = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   const days = getDaysInMonth(currentDate);
   const today = new Date();
 

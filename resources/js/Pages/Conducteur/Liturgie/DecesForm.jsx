@@ -46,8 +46,6 @@ export default function DecesForm({
             def_classe: "",
             def_baptise: "",
             lien_familial: "lui-meme",
-            date_souhaitee_culte: "",
-            heure_culte: "",
             programme_obseques: "",
         },
         programme_piece: null,
@@ -115,8 +113,6 @@ export default function DecesForm({
             ddec: form.details.date_deces || "-",
             lieu: form.details.lieu_deces || "-",
             membre: form.details.def_membre || "-",
-            dateCulte: form.details.date_souhaitee_culte || "-",
-            heureCulte: form.details.heure_culte || "-",
         };
     }, [form.details]);
 
@@ -129,9 +125,11 @@ export default function DecesForm({
         if (step === 1) {
             const nextErrors = {};
 
+            // Si "Autre membre" est sélectionné, "dec_lien" est requis
             if (form.membre_id === "autre" && !form.details.dec_lien) {
                 nextErrors["details.dec_lien"] = "Champ requis.";
             }
+
             if (!form.details.nom_defunt)
                 nextErrors["details.nom_defunt"] = "Champ requis.";
             if (!form.details.prenom_defunt)
@@ -142,7 +140,7 @@ export default function DecesForm({
             if (Object.keys(nextErrors).length)
                 return setErrors((prev) => ({ ...prev, ...nextErrors }));
         }
-        setStep((s) => Math.min(2, s + 1));
+        setStep((s) => Math.min(3, s + 1));
     };
 
     const prev = () => setStep((s) => Math.max(1, s - 1));
@@ -165,7 +163,7 @@ export default function DecesForm({
 
         payload.append("membre_id", membreIdToSend || "");
         payload.append("classe_id", form.classe_id || "");
-        payload.append("date_souhaitee", form.details.date_souhaitee_culte || "");
+        payload.append("date_souhaitee", form.details.date_deces || "");
         payload.append(
             "details[nom_defunt]",
             `${form.details.prenom_defunt} ${form.details.nom_defunt}`.trim(),
@@ -184,11 +182,6 @@ export default function DecesForm({
         payload.append("details[def_membre]", form.details.def_membre || "");
         payload.append("details[def_classe]", form.details.def_classe || "");
         payload.append("details[def_baptise]", form.details.def_baptise || "");
-        payload.append(
-            "details[date_souhaitee_culte]",
-            form.details.date_souhaitee_culte || "",
-        );
-        payload.append("details[heure_culte]", form.details.heure_culte || "");
         payload.append(
             "details[programme_obseques]",
             form.details.programme_obseques || "",
@@ -249,8 +242,6 @@ export default function DecesForm({
                 def_classe: "",
                 def_baptise: "",
                 lien_familial: "lui-meme",
-                date_souhaitee_culte: "",
-                heure_culte: "",
                 programme_obseques: "",
             },
             programme_piece: null,
@@ -290,8 +281,8 @@ export default function DecesForm({
                     {!success && (
                         <>
                             <div className="h-[3px] bg-gradient-to-r from-transparent via-slate-500 to-transparent" />
-                            <div className="grid grid-cols-2 bg-slate-50 border-b border-slate-200">
-                                {["Déclaration décès", "Confirmation"].map(
+                            <div className="grid grid-cols-3 bg-slate-50 border-b border-slate-200">
+                                {["Membre concerné", "Defunt(e)", "Obseques"].map(
                                     (label, idx) => {
                                         const sn = idx + 1;
                                         const active = step === sn;
@@ -346,8 +337,8 @@ export default function DecesForm({
                                                     membre_id: e.target.value,
                                                 }))
                                             }
-                                            disabled={!canSelectMember}
                                         >
+                                            <option value="">-- Sélectionner un membre --</option>
                                             {familyMembers.map((m) => (
                                                 <option key={m.id} value={m.id}>
                                                     {m.prenom} {m.nom}
@@ -479,6 +470,40 @@ export default function DecesForm({
                                                 </Err>
                                             )}
                                         </Field>
+                                    </div>
+                                )}
+
+                                {/* Si membre inscrit (pas "autre") : afficher les infos en dessous du select */}
+                                {form.membre_id && form.membre_id !== "autre" && (
+                                    <div className="bg-blue-50 border border-blue-200 rounded-sm p-4 mb-6">
+                                        <p className="text-sm text-blue-800 font-medium mb-2">
+                                            ✓ Informations du membre préremplies automatiquement
+                                        </p>
+                                        <p className="text-xs text-blue-700 mb-3">
+                                            Les informations ci-dessous proviennent du profil du membre.
+                                        </p>
+                                        <div className="bg-white border border-blue-200 rounded-sm p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                                <p className="text-xs font-semibold text-slate-500 uppercase">Prénom</p>
+                                                <p className="text-sm text-slate-800">{form.details.prenom_defunt}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-semibold text-slate-500 uppercase">Nom</p>
+                                                <p className="text-sm text-slate-800">{form.details.nom_defunt}</p>
+                                            </div>
+                                            {form.details.genre_defunt && (
+                                                <div>
+                                                    <p className="text-xs font-semibold text-slate-500 uppercase">Sexe</p>
+                                                    <p className="text-sm text-slate-800">{form.details.genre_defunt}</p>
+                                                </div>
+                                            )}
+                                            {form.details.def_classe && (
+                                                <div>
+                                                    <p className="text-xs font-semibold text-slate-500 uppercase">Classe</p>
+                                                    <p className="text-sm text-slate-800">{form.details.def_classe}</p>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
 
@@ -743,39 +768,6 @@ export default function DecesForm({
                                     </>
                                 )}
 
-                                {/* Nouveaux champs : date souhaitée et heure du culte */}
-                                <div className="mt-6 mb-4 p-4 bg-slate-50 border border-slate-200 rounded-sm">
-                                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
-                                        Culte / Obsèques
-                                    </p>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <Field label="Date souhaitée du culte">
-                                            <input
-                                                type="date"
-                                                value={form.details.date_souhaitee_culte}
-                                                onChange={(e) =>
-                                                    setDetail(
-                                                        "date_souhaitee_culte",
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            />
-                                        </Field>
-                                        <Field label="Heure du culte">
-                                            <input
-                                                type="time"
-                                                value={form.details.heure_culte}
-                                                onChange={(e) =>
-                                                    setDetail(
-                                                        "heure_culte",
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            />
-                                        </Field>
-                                    </div>
-                                </div>
-
                                 <Field label="Disposez-vous d'un programme d'enterrement ?">
                                     <select
                                         value={form.details.programme_obseques}
@@ -819,23 +811,31 @@ export default function DecesForm({
                         {!success && step === 2 && (
                             <section>
                                 <h2 className="text-2xl font-semibold text-slate-800 mb-1">
-                                    Confirmation de la déclaration
+                                    Recapitulatif de la declaration
                                 </h2>
                                 <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">
-                                    Vérifiez attentivement avant de soumettre.
+                                    Verifiez attentivement avant de soumettre.
                                 </p>
-                                <RecapCard title="Déclarant">
-                                    <RecapRow k="Lien avec le défunt" v={recap.lien} />
+                                <RecapCard title="Declaration de Deces">
+                                    <RecapRow k="Lien" v={recap.lien} />
                                 </RecapCard>
-                                <RecapCard title="Défunt / Défunte">
-                                    <RecapRow k="Identité" v={recap.defunt} />
-                                    <RecapRow k="Date de décès" v={recap.ddec} />
-                                    <RecapRow k="Lieu du décès" v={recap.lieu} />
-                                    <RecapRow k="Membre de l'église" v={recap.membre} />
+                                <RecapCard title="Defunt / Defunte">
+                                    <RecapRow k="Identite" v={recap.defunt} />
+                                    <RecapRow
+                                        k="Date de deces"
+                                        v={recap.ddec}
+                                    />
+                                    <RecapRow
+                                        k="Lieu du deces"
+                                        v={recap.lieu}
+                                    />
+                                    <RecapRow
+                                        k="Membre de l'eglise"
+                                        v={recap.membre}
+                                    />
                                 </RecapCard>
-                                <RecapCard title="Culte / Obsèques">
-                                    <RecapRow k="Date souhaitée du culte" v={recap.dateCulte} />
-                                    <RecapRow k="Heure du culte" v={recap.heureCulte} />
+                                <RecapCard title="Obseques">
+                                    <RecapRow k="Statut" v="SOUMISE" />
                                 </RecapCard>
                                 {errors.submit && <Err>{errors.submit}</Err>}
                                 <div className="flex justify-between gap-3 mt-8 pt-5 border-t border-slate-200">
@@ -849,47 +849,64 @@ export default function DecesForm({
                                     <button
                                         type="submit"
                                         disabled={processing}
-                                        className="btn-main"
+                                        className={`btn-main ${processing ? "btn-green" : ""}`}
                                     >
                                         {processing
                                             ? "Soumission..."
-                                            : "Soumettre la déclaration"}
+                                            : "Soumettre la declaration"}
                                     </button>
                                 </div>
                             </section>
                         )}
 
-                        {success && (
+                        {!success && step === 3 && (
                             <section className="text-center py-12">
-                                <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center">
+                                <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center">
                                     <CheckCircle2 size={32} />
                                 </div>
-                                <h2 className="text-3xl font-semibold text-slate-800 mb-2">
-                                    Déclaration soumise
+                                <h2 className="text-2xl font-semibold text-slate-800 mb-4">
+                                    Declaration transmise au conducteur
                                 </h2>
-                                <p className="text-slate-600 max-w-md mx-auto">
-                                    La déclaration de décès a été transmise à
-                                    votre conducteur. L'église reste à vos
-                                    côtés.
+                                <p className="text-slate-600 max-w-md mx-auto mb-6">
+                                    Votre declaration a ete soumise avec succes.
+                                    Elle sera validee par le conducteur, puis
+                                    par le pasteur.
                                 </p>
-                                <div className="bg-blue-50 border border-blue-200 rounded-sm p-4 mt-6 mb-4 text-left max-w-md mx-auto">
+                                <div className="bg-blue-50 border border-blue-200 rounded-sm p-4 mb-6 text-left max-w-md mx-auto">
                                     <p className="text-sm font-semibold text-blue-900 mb-3">
-                                        Processus de validation :
+                                        Processus de validation:
                                     </p>
                                     <ul className="text-sm text-blue-800 space-y-2">
-                                        <li>✓ <strong>Soumis</strong> — Votre déclaration</li>
-                                        <li>⏳ <strong>Validation Conducteur</strong> — En attente</li>
-                                        <li>⏳ <strong>Validation Pasteur</strong> — En attente</li>
+                                        <li>
+                                            ✓ <strong>Soumis</strong> - Votre
+                                            declaration
+                                        </li>
+                                        <li>
+                                            ⏳{" "}
+                                            <strong>
+                                                Validation Conducteur
+                                            </strong>{" "}
+                                            - En attente
+                                        </li>
+                                        <li>
+                                            ⏳{" "}
+                                            <strong>Validation Pasteur</strong>{" "}
+                                            - En attente
+                                        </li>
                                     </ul>
                                     <p className="text-xs text-blue-700 mt-3 italic">
-                                        Dès que le pasteur validera, vous recevrez une notification avec la fiche PDF.
+                                        Des le pasteur validera, vous recevrez
+                                        une notification avec le certificat PDF.
                                     </p>
                                 </div>
                                 <p className="text-sm italic text-slate-500 mt-4">
-                                    "L'Éternel est proche de ceux qui ont le cœur brisé." — Psaume 34.19
+                                    "L'Eternel est proche de ceux qui ont le
+                                    coeur brise." - Psaume 34.19
                                 </p>
                                 {successMsg && (
-                                    <p className="text-sm text-slate-700 mt-3">{successMsg}</p>
+                                    <p className="text-sm text-slate-700 mt-3">
+                                        {successMsg}
+                                    </p>
                                 )}
                                 <div className="mt-6">
                                     <button
@@ -897,7 +914,41 @@ export default function DecesForm({
                                         onClick={reset}
                                         className="btn-main"
                                     >
-                                        Nouvelle déclaration
+                                        Retour au tableau de bord
+                                    </button>
+                                </div>
+                            </section>
+                        )}
+
+                        {success && step === 3 && (
+                            <section className="text-center py-12">
+                                <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center">
+                                    <CheckCircle2 size={32} />
+                                </div>
+                                <h2 className="text-3xl font-semibold text-slate-800 mb-2">
+                                    Declaration soumise
+                                </h2>
+                                <p className="text-slate-600 max-w-md mx-auto">
+                                    La declaration de deces a ete transmise a
+                                    votre conducteur. L'eglise reste a vos
+                                    cotes.
+                                </p>
+                                <p className="text-sm italic text-slate-500 mt-4">
+                                    "L'Eternel est proche de ceux qui ont le
+                                    coeur brise." - Psaume 34.19
+                                </p>
+                                {successMsg && (
+                                    <p className="text-sm text-slate-700 mt-3">
+                                        {successMsg}
+                                    </p>
+                                )}
+                                <div className="mt-6">
+                                    <button
+                                        type="button"
+                                        onClick={reset}
+                                        className="btn-main"
+                                    >
+                                        Nouvelle declaration
                                     </button>
                                 </div>
                             </section>

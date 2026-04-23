@@ -20,7 +20,6 @@ export default defineConfig({
     build: {
         // Optimisation du code splitting
         rollupOptions: {
-            external: ['xlsx'],
             output: {
                 manualChunks: (id) => {
                     if (id.includes('@inertiajs')) {

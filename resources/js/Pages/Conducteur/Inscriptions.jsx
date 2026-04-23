@@ -43,6 +43,8 @@ import {
 import DeleteConfirmationModal from "../../Components/DeleteConfirmationModal";
 import { normalizePhotoUrl } from "@/Helpers/PhotoUrlHelper";
 import ProfilePhoto from "@/Components/ProfilePhoto";
+import useToast from "../../Hooks/useToast";
+import ToastContainer from "../../Components/ToastContainer";
 
 // Mapping des icônes Lucide pour usage dans les composants
 const lucideIcons = {
@@ -268,6 +270,7 @@ export default function Inscriptions({
     };
 
     const { flash, auth } = usePage().props;
+    const { toasts, removeToast, error: showError } = useToast();
     const [showSuccessNotification, setShowSuccessNotification] =
         useState(false);
     const [successTitle, setSuccessTitle] = useState("Inscription validée !");
@@ -1301,13 +1304,11 @@ export default function Inscriptions({
                                     `${field}: ${Array.isArray(messages) ? messages.join(", ") : messages}`,
                             )
                             .join("\n");
-                        alert(`Erreurs de validation:\n${errorMessages}`);
+                        showError(`Erreurs de validation:\n${errorMessages}`, 6000);
                     } else if (message) {
-                        alert(`Erreur: ${message}`);
+                        showError(message, 5000);
                     } else {
-                        alert(
-                            `Erreur: Vérifiez les données saisies. Consultez la console pour plus de détails.`,
-                        );
+                        showError("Vérifiez les données saisies.", 5000);
                     }
                 });
         } else {
@@ -1381,6 +1382,7 @@ export default function Inscriptions({
     return (
         <>
             <Head title={`Gestion Membres - ${className}`} />
+            <ToastContainer toasts={toasts} removeToast={removeToast} />
 
             {/* Notification de succès */}
             <div

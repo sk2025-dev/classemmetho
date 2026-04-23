@@ -348,16 +348,16 @@ class PresencesController extends Controller
         if (Schema::hasTable('special_events')) {
             $events2026 = SpecialEvent::query()
                 ->leftJoin('classes as c', 'c.id', '=', 'special_events.class_id')
-                ->whereYear('special_events.date', 2026)
+                ->whereYear('special_events.start_date', 2026)
                 ->where('special_events.is_parish', false)
-                ->orderBy('special_events.date')
-                ->orderBy('special_events.time')
+                ->orderBy('special_events.start_date')
+                ->orderBy('special_events.start_time')
                 ->get([
                     'special_events.id',
                     'special_events.class_id',
                     'special_events.title',
-                    'special_events.date',
-                    'special_events.time',
+                    'special_events.start_date',
+                    'special_events.start_time',
                     'special_events.end_time',
                     'special_events.lieu',
                     'c.nom as classe_nom',
@@ -366,21 +366,30 @@ class PresencesController extends Controller
 
         $activitesParMois2026 = $this->emptyMonths2026();
         foreach ($events2026 as $event) {
-            if (empty($event->date)) {
+            $dateVal = $event->start_date instanceof \Carbon\Carbon
+                ? $event->start_date->format('Y-m-d')
+                : (string) ($event->start_date ?? '');
+            if (empty($dateVal)) {
                 continue;
             }
 
-            $monthKey = Carbon::parse($event->date)->format('Y-m');
+            $monthKey = Carbon::parse($dateVal)->format('Y-m');
             if (! array_key_exists($monthKey, $activitesParMois2026)) {
                 continue;
             }
 
+            $heureVal = $event->start_time instanceof \Carbon\Carbon
+                ? $event->start_time->format('H:i')
+                : (string) ($event->start_time ?? '');
+
             $activitesParMois2026[$monthKey][] = [
                 'id' => $event->id,
                 'titre' => (string) ($event->title ?? 'Activite'),
-                'date' => $event->date,
-                'heure' => $event->time,
-                'heure_fin' => $event->end_time,
+                'date' => $dateVal,
+                'heure' => $heureVal,
+                'heure_fin' => $event->end_time instanceof \Carbon\Carbon
+                    ? $event->end_time->format('H:i')
+                    : (string) ($event->end_time ?? ''),
                 'classe' => $event->classe_nom,
                 'lieu' => $event->lieu,
             ];
@@ -400,21 +409,30 @@ class PresencesController extends Controller
             $monthMap = $this->emptyMonths2026();
 
             foreach ($events2026->where('class_id', $classe->id) as $event) {
-                if (empty($event->date)) {
+                $dateVal = $event->start_date instanceof \Carbon\Carbon
+                    ? $event->start_date->format('Y-m-d')
+                    : (string) ($event->start_date ?? '');
+                if (empty($dateVal)) {
                     continue;
                 }
 
-                $monthKey = Carbon::parse($event->date)->format('Y-m');
+                $monthKey = Carbon::parse($dateVal)->format('Y-m');
                 if (! array_key_exists($monthKey, $monthMap)) {
                     continue;
                 }
 
+                $heureVal = $event->start_time instanceof \Carbon\Carbon
+                    ? $event->start_time->format('H:i')
+                    : (string) ($event->start_time ?? '');
+
                 $monthMap[$monthKey][] = [
                     'id' => $event->id,
                     'titre' => (string) ($event->title ?? 'Activite'),
-                    'date' => $event->date,
-                    'heure' => $event->time,
-                    'heure_fin' => $event->end_time,
+                    'date' => $dateVal,
+                    'heure' => $heureVal,
+                    'heure_fin' => $event->end_time instanceof \Carbon\Carbon
+                        ? $event->end_time->format('H:i')
+                        : (string) ($event->end_time ?? ''),
                     'classe' => $event->classe_nom,
                     'lieu' => $event->lieu,
                 ];

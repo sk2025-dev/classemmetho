@@ -23,51 +23,46 @@ use App\Models\User;
 class ProgrammesClasseController extends Controller
 {
     /**
-     * Afficher les événements pour la classe du conducteur connecté
+     * Afficher les evenements pour la classe du conducteur connecte
      */
     public function index()
     {
         $user = Auth::user();
-        
         $classe = $user->classe;
-        
+
         if (!$classe) {
-            return redirect()->back()->with('error', 'Aucune classe associée à votre compte.');
+            return redirect()->back()->with('error', 'Aucune classe associee a votre compte.');
         }
-        
-        // MODIFIÉ: utilisation de start_date et start_time
+
         $evenementsActuels = SpecialEvent::where('is_parish', false)
             ->where('class_id', $classe->id)
             ->where('start_date', '>=', now()->startOfDay())
             ->orderBy('start_date', 'asc')
             ->orderBy('start_time', 'asc')
             ->get()
-            ->map(function($event) {
-                // Ajouter les champs compatibles pour le frontend
+            ->map(function ($event) {
                 $event->date = $event->start_date;
                 $event->time = $event->start_time;
                 return $event;
             });
 
-        // MODIFIÉ: utilisation de start_date et start_time - SUPPRESSION DU limit(10)
         $evenementsHistorique = SpecialEvent::where('is_parish', false)
             ->where('class_id', $classe->id)
             ->where('start_date', '<', now()->startOfDay())
             ->orderBy('start_date', 'desc')
             ->orderBy('start_time', 'desc')
             ->get()
-            ->map(function($event) {
-                // Ajouter les champs compatibles pour le frontend
+            ->map(function ($event) {
                 $event->date = $event->start_date;
                 $event->time = $event->start_time;
                 return $event;
             });
-        
+
         $galleryMedia = Media::where('class_id', $classe->id)
             ->with('specialEvent')
             ->orderBy('created_at', 'desc')
             ->get();
-        
+
         return Inertia::render('Conducteur/Programmes', [
             'initialClassList' => $evenementsActuels,
             'initialClassHistory' => $evenementsHistorique,
@@ -75,38 +70,37 @@ class ProgrammesClasseController extends Controller
             'galleryMedia' => $galleryMedia,
         ]);
     }
-    
+
     /**
-     * Afficher tous les programmes de l'année en cours
+     * Afficher tous les programmes de l'annee en cours
      */
     public function allProgrammes()
     {
         $user = Auth::user();
         $classe = $user->classe;
-        
+
         if (!$classe) {
-            return redirect()->back()->with('error', 'Aucune classe associée à votre compte.');
+            return redirect()->back()->with('error', 'Aucune classe associee a votre compte.');
         }
-        
-        // MODIFIÉ: utilisation de start_date
+
         $allProgrammes = SpecialEvent::where('is_parish', false)
             ->where('class_id', $classe->id)
             ->whereYear('start_date', now()->year)
             ->orderBy('start_date', 'asc')
             ->orderBy('start_time', 'asc')
             ->get()
-            ->map(function($event) {
+            ->map(function ($event) {
                 $event->date = $event->start_date;
                 $event->time = $event->start_time;
                 return $event;
             });
-        
+
         return Inertia::render('Conducteur/AllProgrammes', [
             'allProgrammes' => $allProgrammes,
             'currentClass' => $classe,
         ]);
     }
-    
+
     /**
      * Afficher tout l'historique des programmes
      */
@@ -114,12 +108,11 @@ class ProgrammesClasseController extends Controller
     {
         $user = Auth::user();
         $classe = $user->classe;
-        
+
         if (!$classe) {
-            return redirect()->back()->with('error', 'Aucune classe associée à votre compte.');
+            return redirect()->back()->with('error', 'Aucune classe associee a votre compte.');
         }
-        
-        // MODIFIÉ: utilisation de start_date
+
         $historyProgrammes = SpecialEvent::where('is_parish', false)
             ->where('class_id', $classe->id)
             ->where('start_date', '<', now()->startOfDay())
@@ -127,82 +120,76 @@ class ProgrammesClasseController extends Controller
             ->orderBy('start_date', 'desc')
             ->orderBy('start_time', 'desc')
             ->get()
-            ->map(function($event) {
+            ->map(function ($event) {
                 $event->date = $event->start_date;
                 $event->time = $event->start_time;
                 return $event;
             });
-        
+
         $galleryMedia = Media::where('class_id', $classe->id)
             ->with('specialEvent')
             ->orderBy('created_at', 'desc')
             ->get();
-        
+
         return Inertia::render('Conducteur/HistoryProgrammes', [
             'historyProgrammes' => $historyProgrammes,
             'currentClass' => $classe,
             'galleryMedia' => $galleryMedia,
         ]);
     }
-    
+
     /**
-     * Récupérer l'historique des programmes avec filtres (API)
+     * Recuperer l'historique des programmes avec filtres (API)
      */
     public function getHistoryProgrammes(Request $request)
     {
         try {
             $user = Auth::user();
             $classe = $user->classe;
-            
+
             if (!$classe) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Aucune classe associée'
+                    'message' => 'Aucune classe associee'
                 ], 403);
             }
-            
+
             $query = SpecialEvent::where('is_parish', false)
                 ->where('class_id', $classe->id)
                 ->where('start_date', '<', now()->startOfDay());
-            
-            // Filtre par recherche (titre, orateur, moderateur, lieu, famille_reception)
+
             if ($request->filled('search')) {
                 $search = $request->search;
-                $query->where(function($q) use ($search) {
+                $query->where(function ($q) use ($search) {
                     $q->where('title', 'like', "%{$search}%")
-                      ->orWhere('orateur', 'like', "%{$search}%")
-                      ->orWhere('moderateur', 'like', "%{$search}%")
-                      ->orWhere('lieu', 'like', "%{$search}%")
-                      ->orWhere('famille_reception', 'like', "%{$search}%");
+                        ->orWhere('orateur', 'like', "%{$search}%")
+                        ->orWhere('moderateur', 'like', "%{$search}%")
+                        ->orWhere('lieu', 'like', "%{$search}%")
+                        ->orWhere('famille_reception', 'like', "%{$search}%");
                 });
             }
-            
-            // Filtre par année
+
             if ($request->filled('year') && $request->year !== 'all') {
                 $query->whereYear('start_date', $request->year);
             }
-            
-            // Filtre par mois
+
             if ($request->filled('month') && $request->month !== 'all') {
                 $query->whereMonth('start_date', $request->month);
             }
-            
-            // Tri (desc = plus récentes d'abord, asc = plus anciennes d'abord)
+
             $sortOrder = $request->get('sort_order', 'desc');
             $query->orderBy('start_date', $sortOrder)
-                  ->orderBy('start_time', $sortOrder);
-            
-            // Pagination
+                ->orderBy('start_time', $sortOrder);
+
             $perPage = $request->get('per_page', 6);
             $historyProgrammes = $query->paginate($perPage);
-            
-            // Ajouter les champs compatibles pour le frontend
-            $historyProgrammes->getCollection()->transform(function($event) {
+
+            $historyProgrammes->getCollection()->transform(function ($event) {
                 $event->date = $event->start_date;
                 $event->time = $event->start_time;
                 return $event;
             });
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $historyProgrammes->items(),
@@ -213,40 +200,38 @@ class ProgrammesClasseController extends Controller
                     'total' => $historyProgrammes->total(),
                 ]
             ]);
-            
         } catch (\Exception $e) {
-            Log::error('Erreur récupération historique filtré', [
+            Log::error('Erreur recuperation historique filtre', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur: ' . $e->getMessage()
             ], 500);
         }
     }
-    
-    /**
-     * Récupérer les médias de la galerie avec filtres (API)
+
+        /**
+     * Recuperer les medias de la galerie avec filtres (API)
      */
     public function getGalleryMediaFiltered(Request $request)
     {
         try {
             $user = Auth::user();
             $classe = $user->classe;
-            
+
             if (!$classe) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Aucune classe associée'
+                    'message' => 'Aucune classe associee'
                 ], 403);
             }
-            
+
             $query = Media::where('class_id', $classe->id)
                 ->with('specialEvent');
-            
-            // Filtre par recherche (titre ou description)
+
             if ($request->filled('search')) {
                 $search = $request->search;
                 $query->where(function($q) use ($search) {
@@ -254,33 +239,28 @@ class ProgrammesClasseController extends Controller
                       ->orWhere('description', 'like', "%{$search}%");
                 });
             }
-            
-            // Filtre par mois
+
             if ($request->filled('month')) {
                 $monthNum = $this->getMonthNumber($request->month);
                 if ($monthNum) {
                     $query->whereMonth('date', $monthNum);
                 }
             }
-            
-            // Filtre par année
+
             if ($request->filled('year')) {
                 $query->whereYear('date', $request->year);
             }
-            
-            // Filtre par type (photo/video)
+
             if ($request->filled('type') && $request->type !== 'all') {
                 $query->where('type', $request->type);
             }
-            
-            // Tri par date
+
             $sortOrder = $request->get('sort_order', 'desc');
             $query->orderBy('date', $sortOrder);
-            
-            // Pagination
+
             $perPage = $request->get('per_page', 12);
             $medias = $query->paginate($perPage);
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $medias->items(),
@@ -291,17 +271,45 @@ class ProgrammesClasseController extends Controller
                     'total' => $medias->total(),
                 ]
             ]);
-            
+
         } catch (\Exception $e) {
-            Log::error('Erreur récupération galerie filtrée', [
+            Log::error('Erreur recuperation galerie filtree', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Generer le QR code d'un programme.
+     */
+    public function qrCode(int $id)
+    {
+        $user = Auth::user();
+        $classe = $user->classe;
+
+        if (!$classe) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Aucune classe associee a votre compte.'
+            ], 403);
+        }
+
+        $event = SpecialEvent::where('id', $id)
+            ->where('class_id', $classe->id)
+            ->where('is_parish', false)
+            ->first();
+
+        if (!$event) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Programme introuvable.'
+            ], 404);
         }
 
         $window = $this->resolveQrWindow($event);
@@ -337,9 +345,71 @@ class ProgrammesClasseController extends Controller
             ],
         ]);
     }
-    
+
     /**
-     * Convertir le nom du mois en numéro
+     * Exporter une fiche PDF imprimable avec QR.
+     */
+    public function qrSheetPdf(int $id)
+    {
+        $user = Auth::user();
+        $classe = $user->classe;
+
+        if (!$classe) {
+            return redirect()->back()->with('error', 'Aucune classe associee a votre compte.');
+        }
+
+        $event = SpecialEvent::where('id', $id)
+            ->where('class_id', $classe->id)
+            ->where('is_parish', false)
+            ->first();
+
+        if (!$event) {
+            return redirect()->back()->with('error', 'Programme introuvable.');
+        }
+
+        $window = $this->resolveQrWindow($event);
+        if (!$window['is_open']) {
+            return redirect()->back()->with('error', $window['message']);
+        }
+
+        $token = $event->ensureQrToken();
+        $scanUrl = url('/presence/' . $token);
+
+        $writer = new PngWriter();
+        $result = $writer->write(
+            new QrCode(
+                data: $scanUrl,
+                size: 420,
+                margin: 12
+            )
+        );
+
+        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+            body{font-family:DejaVu Sans,sans-serif;padding:30px;color:#111827}
+            .box{border:2px solid #e5e7eb;border-radius:16px;padding:24px;text-align:center}
+            h1{font-size:22px;margin:0 0 8px}
+            .meta{margin:6px 0;font-size:14px;color:#374151}
+            .qr{margin:20px 0}
+            .url{font-size:12px;color:#6b7280;word-break:break-all}
+        </style></head><body>
+            <div class="box">
+                <h1>Fiche QR - Programme</h1>
+                <div class="meta"><strong>Titre:</strong> '.e($event->title).'</div>
+                <div class="meta"><strong>Date:</strong> '.e((string) $event->date).'</div>
+                <div class="meta"><strong>Heure:</strong> '.e((string) $event->time).'</div>
+                <div class="meta"><strong>Lieu:</strong> '.e((string) $event->lieu).'</div>
+                <div class="qr"><img src="'.$result->getDataUri().'" width="280" height="280" /></div>
+                <div class="url">'.$scanUrl.'</div>
+            </div>
+        </body></html>';
+
+        $pdf = Pdf::loadHTML($html)->setPaper('a4');
+
+        return $pdf->stream('fiche-qr-programme-' . $event->id . '.pdf');
+    }
+
+    /**
+     * Convertir le nom du mois en numero
      */
     private function getMonthNumber($monthName)
     {
@@ -402,6 +472,56 @@ class ProgrammesClasseController extends Controller
         ]);
     }
 
+    /**
+     * Retourner les données QR en JSON pour la modale frontend.
+     */
+    public function qrData(int $id): \Illuminate\Http\JsonResponse
+    {
+        $user = Auth::user();
+        $classe = $user->classe;
+
+        if (!$classe) {
+            return response()->json(['error' => 'Aucune classe associée.'], 403);
+        }
+
+        $event = SpecialEvent::where('id', $id)
+            ->where('class_id', $classe->id)
+            ->where('is_parish', false)
+            ->first();
+
+        if (!$event) {
+            return response()->json(['error' => 'Programme introuvable.'], 404);
+        }
+
+        $window = $this->resolveQrWindow($event);
+        if (!$window['is_open']) {
+            return response()->json(['error' => $window['message']], 403);
+        }
+
+        $token = $event->ensureQrToken();
+        $scanUrl = url('/presence/' . $token);
+
+        $writer = new \Endroid\QrCode\Writer\PngWriter();
+        $result = $writer->write(
+            new \Endroid\QrCode\QrCode(
+                data: $scanUrl,
+                size: 320,
+                margin: 12
+            )
+        );
+
+        return response()->json([
+            'event' => [
+                'id'    => $event->id,
+                'title' => $event->title,
+                'date'  => $event->date,
+                'time'  => $event->time,
+            ],
+            'scanUrl' => $scanUrl,
+            'qrCode'  => $result->getDataUri(),
+        ]);
+    }
+
     private function resolveQrWindow(SpecialEvent $event): array
     {
         $startAt = Carbon::parse($event->date);
@@ -416,9 +536,6 @@ class ProgrammesClasseController extends Controller
         if (!empty($event->end_time)) {
             $endTime = Carbon::parse($event->end_time);
             $endAt->setTime($endTime->hour, $endTime->minute, $endTime->second);
-        } elseif (!empty($event->time)) {
-            $startTime = Carbon::parse($event->time);
-            $endAt->setTime($startTime->hour, $startTime->minute, $startTime->second);
         } else {
             $endAt->setTime(23, 59, 59);
         }
@@ -464,8 +581,6 @@ class ProgrammesClasseController extends Controller
             
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
-                'date' => 'required|date',
-                'time' => 'nullable|date_format:H:i',
                 'start_date' => 'required|date',
                 'end_date' => 'nullable|date|after_or_equal:start_date',
                 'start_time' => 'nullable|date_format:H:i',
@@ -489,8 +604,6 @@ class ProgrammesClasseController extends Controller
             
             $event = SpecialEvent::create([
                 'title' => $validated['title'],
-                'date' => $validated['date'],
-                'time' => $validated['time'] ?? null,
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'] ?? null,
                 'start_time' => $validated['start_time'] ?? null,
@@ -557,8 +670,6 @@ class ProgrammesClasseController extends Controller
             $validated = $request->validate([
                 'activities' => 'required|array|min:1',
                 'activities.*.title' => 'required|string|max:255',
-                'activities.*.date' => 'required|date',
-                'activities.*.time' => 'nullable|date_format:H:i',
                 'activities.*.start_date' => 'required|date',
                 'activities.*.end_date' => 'nullable|date|after_or_equal:activities.*.start_date',
                 'activities.*.start_time' => 'nullable|date_format:H:i',
@@ -638,8 +749,6 @@ class ProgrammesClasseController extends Controller
                     // Créer l'événement
                     $event = SpecialEvent::create([
                         'title' => $activity['title'],
-                        'date' => $activity['date'],
-                        'time' => $activity['time'] ?? null,
                         'start_date' => $activity['start_date'],
                         'end_date' => $activity['end_date'] ?? null,
                         'start_time' => $activity['start_time'] ?? null,
@@ -740,13 +849,15 @@ class ProgrammesClasseController extends Controller
 
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
-                'date' => 'required|date',
-                'time' => 'nullable|date_format:H:i',
+                'start_date' => 'nullable|date',
+                'end_date' => 'nullable|date',
+                'start_time' => 'nullable|date_format:H:i',
                 'end_time' => 'nullable|date_format:H:i',
                 'orateur' => 'nullable|string|max:255',
                 'moderateur' => 'nullable|string|max:255',
                 'famille_reception' => 'nullable|string|max:255',
                 'lieu' => 'nullable|string|max:500',
+            ]);
             
             // Récupérer TOUTES les données
             $data = $request->all();
@@ -879,8 +990,6 @@ class ProgrammesClasseController extends Controller
             $validated = $request->validate([
                 'events' => 'required|array',
                 'events.*.title' => 'required|string|max:255',
-                'events.*.date' => 'required|date',
-                'events.*.time' => 'nullable|date_format:H:i',
                 'events.*.start_date' => 'required|date',
                 'events.*.end_date' => 'nullable|date',
                 'events.*.start_time' => 'nullable|date_format:H:i',
@@ -955,8 +1064,6 @@ class ProgrammesClasseController extends Controller
                     // Créer l'événement
                     $event = SpecialEvent::create([
                         'title' => $eventData['title'],
-                        'date' => $eventData['date'],
-                        'time' => $eventData['time'] ?? null,
                         'start_date' => $eventData['start_date'],
                         'end_date' => $eventData['end_date'] ?? null,
                         'start_time' => $eventData['start_time'] ?? null,

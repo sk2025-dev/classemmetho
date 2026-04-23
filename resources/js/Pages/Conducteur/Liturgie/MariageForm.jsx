@@ -208,7 +208,7 @@ export default function MariageForm({
                                 </p>
 
                                 <div className="grid grid-cols-1 gap-4 mb-6">
-                                    <Field label="Membre concerné">
+                                    <Field label="Membre concerné *">
                                         <select
                                             value={form.membre_id}
                                             onChange={(e) =>
@@ -216,9 +216,9 @@ export default function MariageForm({
                                                     ...prev,
                                                     membre_id: e.target.value,
                                                 }))
-                                            }
-                                            disabled={!canSelectMember}
+                                            } 
                                         >
+                                        <option value="">-- Sélectionner un membre --</option> 
                                             {familyMembers.map((m) => (
                                                 <option key={m.id} value={m.id}>
                                                     {m.prenom} {m.nom}
@@ -230,6 +230,40 @@ export default function MariageForm({
                                         )}
                                     </Field>
                                 </div>
+
+                                {/* Si membre inscrit : afficher les infos juste en dessous du select */}
+                                {form.membre_id && currentMember && (
+                                    <div className="bg-blue-50 border border-blue-200 rounded-sm p-4 mb-6">
+                                        <p className="text-sm text-blue-800 font-medium mb-2">
+                                            ✓ Informations du membre préremplies automatiquement
+                                        </p>
+                                        <p className="text-xs text-blue-700 mb-3">
+                                            Les informations ci-dessous proviennent du profil du membre.
+                                        </p>
+                                        <div className="bg-white border border-blue-200 rounded-sm p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                                <p className="text-xs font-semibold text-slate-500 uppercase">Prénom</p>
+                                                <p className="text-sm text-slate-800">{currentMember.prenom}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-semibold text-slate-500 uppercase">Nom</p>
+                                                <p className="text-sm text-slate-800">{currentMember.nom}</p>
+                                            </div>
+                                            {currentMember.genre && (
+                                                <div>
+                                                    <p className="text-xs font-semibold text-slate-500 uppercase">Sexe</p>
+                                                    <p className="text-sm text-slate-800">{currentMember.genre}</p>
+                                                </div>
+                                            )}
+                                            {currentMember.classe?.nom && (
+                                                <div>
+                                                    <p className="text-xs font-semibold text-slate-500 uppercase">Classe</p>
+                                                    <p className="text-sm text-slate-800">{currentMember.classe.nom}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="flex items-center gap-2 mb-6">
                                     <div className="h-px bg-slate-200 flex-1" />
@@ -478,8 +512,8 @@ export default function MariageForm({
                                     Inscription soumise avec succes
                                 </h2>
                                 <p className="text-slate-600 max-w-md mx-auto">
-                                    Votre inscription de mariage a ete transmise a
-                                    votre conducteur.
+                                    Votre inscription de mariage a ete transmise
+                                    a votre conducteur.
                                 </p>
                                 {successMsg && (
                                     <p className="text-sm text-rose-700 mt-3">

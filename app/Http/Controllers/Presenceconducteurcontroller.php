@@ -61,9 +61,9 @@ class PresenceConducteurController extends Controller
         $items = SpecialEvent::query()
             ->where('class_id', $classe->id)
             ->where('is_parish', false)
-            ->orderByDesc('date')
-            ->orderByDesc('time')
-            ->get(['id', 'title', 'date', 'time', 'end_time', 'lieu'])
+            ->orderByDesc('start_date')
+            ->orderByDesc('start_time')
+            ->get(['id', 'title', 'start_date', 'start_time', 'end_time', 'lieu'])
             ->map(function (SpecialEvent $event) {
                 $dateHeure = $this->resolveSpecialEventDateTime($event);
                 $dateHeureFin = $this->resolveSpecialEventEndDateTime($event);
@@ -301,9 +301,9 @@ class PresenceConducteurController extends Controller
         $activites = SpecialEvent::query()
             ->where('class_id', $classe->id)
             ->where('is_parish', false)
-            ->orderByDesc('date')
-            ->orderByDesc('time')
-            ->get(['id', 'title', 'date', 'time', 'end_time', 'lieu'])
+            ->orderByDesc('start_date')
+            ->orderByDesc('start_time')
+            ->get(['id', 'title', 'start_date', 'start_time', 'end_time', 'lieu'])
             ->map(function (SpecialEvent $event) {
                 $dateHeure = $this->resolveSpecialEventDateTime($event);
                 $dateHeureFin = $this->resolveSpecialEventEndDateTime($event);

@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Head, Link } from "@inertiajs/react";
 import { withBasePath } from "../../../Utils/urlHelper";
-import Select2Single from "../../../Components/Select2Single";
 import {
     ArrowLeft,
     Download,
@@ -696,15 +695,14 @@ export default function ConducteurTresorerie({
         nom: "",
         periodicite: "MENSUEL",
         target_scope: "INDIVIDUELLE",
-        ciblage: "GENRE",
+        ciblage: "AUCUN",
+        montant: "",
+        montants: { F: "", M: "", TRAVAILLEUR: "", RETRAITE: "", SANS_EMPLOI: "", ETUDIANT: "", ENFANT: "" },
         description: "",
         date_debut: new Date().toISOString().slice(0, 10),
         date_fin: "",
         date_echeance: "",
         late_after_days: 2,
-        target_rules: [
-            { target: "GENRE", option: "M", amount: "", priority: 1 },
-        ],
     });
     const [editCotisation, setEditCotisation] = useState(null);
     const [newCollecte, setNewCollecte] = useState({
@@ -779,94 +777,102 @@ export default function ConducteurTresorerie({
         setTimeout(() => window.location.reload(), 700);
     };
 
+    const buildRules = (ciblage, montants) => {
+        const rules = [];
+        if (ciblage === "GENRE") {
+            if (Number(montants.F) >= 100) rules.push({ type: "GENRE", value: "F", amount: Number(montants.F), priority: 1 });
+            if (Number(montants.M) >= 100) rules.push({ type: "GENRE", value: "M", amount: Number(montants.M), priority: 2 });
+            if (Number(montants.ENFANT) >= 100) rules.push({ type: "ENFANT", value: "ENFANT", amount: Number(montants.ENFANT), priority: 3 });
+        } else if (ciblage === "EMPLOI") {
+            if (Number(montants.TRAVAILLEUR) >= 100) rules.push({ type: "EMPLOI", value: "TRAVAILLEUR", amount: Number(montants.TRAVAILLEUR), priority: 1 });
+            if (Number(montants.RETRAITE) >= 100) rules.push({ type: "EMPLOI", value: "RETRAITE", amount: Number(montants.RETRAITE), priority: 2 });
+            if (Number(montants.SANS_EMPLOI) >= 100) rules.push({ type: "EMPLOI", value: "SANS_EMPLOI", amount: Number(montants.SANS_EMPLOI), priority: 3 });
+            if (Number(montants.ETUDIANT) >= 100) rules.push({ type: "EMPLOI", value: "ETUDIANT", amount: Number(montants.ETUDIANT), priority: 4 });
+            if (Number(montants.ENFANT) >= 100) rules.push({ type: "ENFANT", value: "ENFANT", amount: Number(montants.ENFANT), priority: 5 });
+        }
+        return rules;
+    };
+
+    const parseRulesToMontants = (rawRules) => {
+        const rules = Array.isArray(rawRules) ? rawRules : [];
+        const montants = { F: "", M: "", TRAVAILLEUR: "", RETRAITE: "", SANS_EMPLOI: "", ETUDIANT: "", ENFANT: "" };
+        const hasGenre = rules.some((r) => String(r?.type || "").toUpperCase() === "GENRE");
+        const hasEmploi = rules.some((r) => String(r?.type || "").toUpperCase() === "EMPLOI");
+        let ciblage = "AUCUN";
+        if (hasGenre) {
+            ciblage = "GENRE";
+            for (const r of rules) {
+                const type = String(r?.type || "").toUpperCase();
+                const value = String(r?.value || r?.option || "").toUpperCase();
+                const amount = String(r?.amount || "");
+                if (type === "GENRE" && value === "F") montants.F = amount;
+                if (type === "GENRE" && value === "M") montants.M = amount;
+                if (type === "ENFANT") montants.ENFANT = amount;
+            }
+        } else if (hasEmploi) {
+            ciblage = "EMPLOI";
+            for (const r of rules) {
+                const type = String(r?.type || "").toUpperCase();
+                const value = String(r?.value || r?.option || "").toUpperCase();
+                const amount = String(r?.amount || "");
+                if (type === "EMPLOI" && value === "TRAVAILLEUR") montants.TRAVAILLEUR = amount;
+                if (type === "EMPLOI" && value === "RETRAITE") montants.RETRAITE = amount;
+                if (type === "EMPLOI" && value === "SANS_EMPLOI") montants.SANS_EMPLOI = amount;
+                if (type === "EMPLOI" && value === "ETUDIANT") montants.ETUDIANT = amount;
+                if (type === "ENFANT") montants.ENFANT = amount;
+            }
+        }
+        return { ciblage, montants };
+    };
+
     const handleCreateCotisation = async () => {
-        const rules = Array.isArray(newCotisation.target_rules)
-            ? newCotisation.target_rules
-                  .map((rule, index) => {
-                      const target = String(
-                          rule.target || rule.type || "",
-                      ).toUpperCase();
-                      const option = String(
-                          rule.option ||
-                              (Array.isArray(rule.values)
-                                  ? rule.values[0]
-                                  : rule.value) ||
-                              "",
-                      )
-                          .toUpperCase()
-                          .trim();
-                      const amount = Number(rule.amount || 0);
-                      const priority = Number(rule.priority || index + 1);
-
-                      if (option === "ENFANT") {
-                          return {
-                              type: "ENFANT",
-                              value: "MEMBRE_FAMILLE",
-                              amount,
-                              priority,
-                          };
-                      }
-
-                      return {
-                          type: target,
-                          value: option,
-                          amount,
-                          priority,
-                      };
-                  })
-                  .filter((rule) => rule.type && rule.value)
-                  .filter((rule) => rule.amount >= 100)
-            : [];
-
-        const fallbackMontant =
-            rules.length > 0
-                ? Math.max(
-                      100,
-                      Math.min(
-                          ...rules.map((rule) => Number(rule.amount || 0)),
-                      ),
-                  )
-                : 100;
+        const { ciblage, montant, montants } = newCotisation;
+        const rules = buildRules(ciblage, montants || {});
 
         if (!newCotisation.nom.trim()) {
-            alert("Nom de cotisation requis.");
+            showToast("Nom de cotisation requis.", "error");
             return;
         }
 
-        if (
-            newCotisation.target_scope === "INDIVIDUELLE" &&
-            rules.length === 0
-        ) {
-            alert(
-                "Ajoute au moins une règle de ciblage avec un montant >= 100.",
-            );
+        if (ciblage === "AUCUN" && Number(montant) < 100) {
+            showToast("Le montant doit être au moins 100 F CFA.", "error");
             return;
         }
 
-        if (
-            newCotisation.date_fin &&
-            newCotisation.date_debut &&
-            newCotisation.date_fin < newCotisation.date_debut
-        ) {
-            alert(
-                "La date de fin doit être postérieure ou égale à la date de début.",
-            );
+        if ((ciblage === "GENRE" || ciblage === "EMPLOI") && rules.length === 0) {
+            showToast("Au moins une catégorie doit avoir un montant >= 100 F CFA.", "error");
             return;
         }
+
+        if (newCotisation.date_fin && newCotisation.date_debut && newCotisation.date_fin < newCotisation.date_debut) {
+            showToast("La date de fin doit être postérieure ou égale à la date de début.", "error");
+            return;
+        }
+
+        const fallbackMontant = ciblage === "AUCUN"
+            ? Number(montant)
+            : rules.length > 0
+                ? Math.min(...rules.map((r) => Number(r.amount)))
+                : 100;
 
         setLoading(true);
         try {
-            const { ciblage, ...cotisationPayload } = newCotisation;
             await postJson("/conducteur/tresorerie/cotisations", {
-                ...cotisationPayload,
-                montant: fallbackMontant,
+                nom: newCotisation.nom,
+                periodicite: newCotisation.periodicite,
+                target_scope: newCotisation.target_scope,
+                description: newCotisation.description,
+                date_debut: newCotisation.date_debut,
+                date_fin: newCotisation.date_fin || null,
+                date_echeance: newCotisation.date_echeance || null,
                 late_after_days: Number(newCotisation.late_after_days || 2),
+                montant: fallbackMontant,
                 target_rules: rules,
             });
             reloadWithToast("Cotisation créée avec succès.");
             setModalCotisation(false);
         } catch (e) {
-            alert(e.message);
+            showToast(e.message, "error");
         } finally {
             setLoading(false);
         }
@@ -874,76 +880,36 @@ export default function ConducteurTresorerie({
     const handleUpdateCotisation = async () => {
         if (!editCotisation?.id) return;
 
-        const rules = Array.isArray(editCotisation.target_rules)
-            ? editCotisation.target_rules
-                  .map((rule, index) => {
-                      const target = String(
-                          rule.target || rule.type || "",
-                      ).toUpperCase();
-                      const option = String(
-                          rule.option ||
-                              (Array.isArray(rule.values)
-                                  ? rule.values[0]
-                                  : rule.value) ||
-                              "",
-                      )
-                          .toUpperCase()
-                          .trim();
-                      const amount = Number(rule.amount || 0);
-                      const priority = Number(rule.priority || index + 1);
-
-                      if (option === "ENFANT") {
-                          return {
-                              type: "ENFANT",
-                              value: "MEMBRE_FAMILLE",
-                              amount,
-                              priority,
-                          };
-                      }
-
-                      return {
-                          type: target,
-                          value: option,
-                          amount,
-                          priority,
-                      };
-                  })
-                  .filter((rule) => rule.type && rule.value)
-                  .filter((rule) => rule.amount >= 100)
-            : [];
-
-        const fallbackMontant =
-            rules.length > 0
-                ? Math.max(
-                      100,
-                      Math.min(
-                          ...rules.map((rule) => Number(rule.amount || 0)),
-                      ),
-                  )
-                : 100;
+        const ciblage = editCotisation.ciblage || "AUCUN";
+        const montant = editCotisation.montant || "";
+        const montants = editCotisation.montants || {};
+        const rules = buildRules(ciblage, montants);
 
         if (!String(editCotisation.nom || "").trim()) {
             alert("Nom de cotisation requis.");
             return;
         }
 
-        if (rules.length === 0) {
-            alert(
-                "Ajoute au moins une règle de ciblage avec un montant >= 100.",
-            );
+        if (ciblage === "AUCUN" && Number(montant) < 100) {
+            alert("Le montant doit être au moins 100 F CFA.");
             return;
         }
 
-        if (
-            editCotisation.date_fin &&
-            editCotisation.date_debut &&
-            editCotisation.date_fin < editCotisation.date_debut
-        ) {
-            alert(
-                "La date de fin doit être postérieure ou égale à la date de début.",
-            );
+        if ((ciblage === "GENRE" || ciblage === "EMPLOI") && rules.length === 0) {
+            alert("Au moins une catégorie doit avoir un montant >= 100 F CFA.");
             return;
         }
+
+        if (editCotisation.date_fin && editCotisation.date_debut && editCotisation.date_fin < editCotisation.date_debut) {
+            alert("La date de fin doit être postérieure ou égale à la date de début.");
+            return;
+        }
+
+        const fallbackMontant = ciblage === "AUCUN"
+            ? Number(montant)
+            : rules.length > 0
+                ? Math.min(...rules.map((r) => Number(r.amount)))
+                : 100;
 
         setLoading(true);
         try {
@@ -955,9 +921,7 @@ export default function ConducteurTresorerie({
                     description: editCotisation.description,
                     date_debut: editCotisation.date_debut || null,
                     date_fin: editCotisation.date_fin || null,
-                    late_after_days: Number(
-                        editCotisation.late_after_days || 2,
-                    ),
+                    late_after_days: Number(editCotisation.late_after_days || 2),
                     target_scope: "INDIVIDUELLE",
                     montant: fallbackMontant,
                     target_rules: rules,
@@ -1124,86 +1088,6 @@ export default function ConducteurTresorerie({
         };
     }, [selectedCotisation, selectedMember]);
 
-    const setRule = (index, key, value) => {
-        setNewCotisation((prev) => {
-            const next = [...(prev.target_rules || [])];
-            next[index] = { ...next[index], [key]: value };
-            return { ...prev, target_rules: next };
-        });
-    };
-
-    const setRuleTarget = (index, target) => {
-        setNewCotisation((prev) => {
-            const next = [...(prev.target_rules || [])];
-            const current = next[index] || {};
-            next[index] = {
-                ...current,
-                target,
-                option: target === "GENRE" ? "M" : "TRAVAILLEUR",
-            };
-            return { ...prev, target_rules: next };
-        });
-    };
-
-    const setEditRule = (index, key, value) => {
-        setEditCotisation((prev) => {
-            if (!prev) return prev;
-            const next = [...(prev.target_rules || [])];
-            next[index] = { ...next[index], [key]: value };
-            return { ...prev, target_rules: next };
-        });
-    };
-
-    const setEditRuleTarget = (index, target) => {
-        setEditCotisation((prev) => {
-            if (!prev) return prev;
-            const next = [...(prev.target_rules || [])];
-            const current = next[index] || {};
-            next[index] = {
-                ...current,
-                target,
-                option: target === "GENRE" ? "M" : "TRAVAILLEUR",
-            };
-            return { ...prev, target_rules: next };
-        });
-    };
-
-    const addRule = () => {
-        setNewCotisation((prev) => ({
-            ...prev,
-            target_rules: [
-                ...(prev.target_rules || []),
-                {
-                    target: String(prev.ciblage || "GENRE").toUpperCase(),
-                    option:
-                        String(prev.ciblage || "GENRE").toUpperCase() ===
-                        "GENRE"
-                            ? "F"
-                            : "TRAVAILLEUR",
-                    amount: "",
-                    priority: (prev.target_rules?.length || 0) + 1,
-                },
-            ],
-        }));
-    };
-
-    const addEditRule = () => {
-        setEditCotisation((prev) => {
-            if (!prev) return prev;
-            return {
-                ...prev,
-                target_rules: [
-                    ...(prev.target_rules || []),
-                    {
-                        target: "GENRE",
-                        option: "F",
-                        amount: "",
-                        priority: (prev.target_rules?.length || 0) + 1,
-                    },
-                ],
-            };
-        });
-    };
 
     const targetLabel = (type) => {
         const key = String(type || "").toUpperCase();
@@ -1277,38 +1161,9 @@ export default function ConducteurTresorerie({
         return labels.join(" / ");
     };
 
-    const removeRule = (index) => {
-        setNewCotisation((prev) => ({
-            ...prev,
-            target_rules: (prev.target_rules || []).filter(
-                (_, i) => i !== index,
-            ),
-        }));
-    };
-
-    const removeEditRule = (index) => {
-        setEditCotisation((prev) => {
-            if (!prev) return prev;
-            return {
-                ...prev,
-                target_rules: (prev.target_rules || []).filter(
-                    (_, i) => i !== index,
-                ),
-            };
-        });
-    };
-
     const openEditCotisation = (c) => {
-        const normalizedRules = rulesForDisplay(c).map((r, index) => {
-            const option = r.type === "ENFANT" ? "ENFANT" : r.value;
-            const target = r.type === "ENFANT" ? "GENRE" : r.type;
-            return {
-                target,
-                option,
-                amount: String(r.amount || ""),
-                priority: Number(r.priority || index + 1),
-            };
-        });
+        const { ciblage, montants } = parseRulesToMontants(c.target_rules);
+        const resolvedMontant = ciblage === "AUCUN" ? String(c.montant || "") : "";
 
         setEditCotisation({
             id: c.id,
@@ -1318,17 +1173,9 @@ export default function ConducteurTresorerie({
             date_debut: c.date_debut || new Date().toISOString().slice(0, 10),
             date_fin: c.date_fin || "",
             late_after_days: Number(c.late_after_days || 2),
-            target_rules:
-                normalizedRules.length > 0
-                    ? normalizedRules
-                    : [
-                          {
-                              target: "GENRE",
-                              option: "M",
-                              amount: "",
-                              priority: 1,
-                          },
-                      ],
+            ciblage,
+            montant: resolvedMontant,
+            montants,
         });
         setModalEditCotisation(true);
     };
@@ -3680,221 +3527,54 @@ export default function ConducteurTresorerie({
                         span2
                     />
                     <FW label="Ciblage" span2>
-                        <Select2Single
-                            id="cotisation-ciblage"
-                            name="ciblage"
-                            value={newCotisation.ciblage || "GENRE"}
-                            onChange={(e) => {
-                                const nextTarget = String(
-                                    e?.target?.value || "GENRE",
-                                ).toUpperCase();
-                                setNewCotisation((prev) => {
-                                    const sourceRules = [
-                                        ...(prev.target_rules || []),
-                                    ];
-                                    const currentRules =
-                                        sourceRules.length > 0
-                                            ? sourceRules
-                                            : [
-                                                  {
-                                                      target: nextTarget,
-                                                      option:
-                                                          nextTarget === "GENRE"
-                                                              ? "M"
-                                                              : "TRAVAILLEUR",
-                                                      amount: "",
-                                                      priority: 1,
-                                                  },
-                                              ];
-
-                                    const nextRules = currentRules.map(
-                                        (rule, index) => {
-                                            const normalizedOption = String(
-                                                rule.option ||
-                                                    (Array.isArray(rule.values)
-                                                        ? rule.values[0]
-                                                        : rule.value) ||
-                                                    "",
-                                            )
-                                                .toUpperCase()
-                                                .trim();
-                                            const option =
-                                                nextTarget === "GENRE"
-                                                    ? [
-                                                          "M",
-                                                          "F",
-                                                          "ENFANT",
-                                                      ].includes(
-                                                          normalizedOption,
-                                                      )
-                                                        ? normalizedOption
-                                                        : "M"
-                                                    : [
-                                                            "TRAVAILLEUR",
-                                                            "RETRAITE",
-                                                            "SANS_EMPLOI",
-                                                            "ETUDIANT",
-                                                            "ENFANT",
-                                                        ].includes(
-                                                            normalizedOption,
-                                                        )
-                                                      ? normalizedOption
-                                                      : "TRAVAILLEUR";
-
-                                            return {
-                                                ...rule,
-                                                target: nextTarget,
-                                                option,
-                                                priority: Number(
-                                                    rule.priority || index + 1,
-                                                ),
-                                            };
-                                        },
-                                    );
-
-                                    return {
-                                        ...prev,
-                                        ciblage: nextTarget,
-                                        target_rules: nextRules,
-                                    };
-                                });
-                            }}
-                            options={[
-                                {
-                                    value: "GENRE",
-                                    label: "Genre",
-                                    description: "Homme, Femme, Enfant",
-                                },
-                                {
-                                    value: "EMPLOI",
-                                    label: "Statut d'emploi",
-                                    description:
-                                        "Travailleur, Retraité, Sans emploi, Étudiant, Enfant",
-                                },
-                            ]}
-                            placeholder="Sélectionner un ciblage"
-                            isClearable={false}
-                            allowClearOption={false}
-                        />
-                    </FW>
-                </FormGrid>
-                <div
-                    style={{
-                        background: "#F9F8F5",
-                        border: "1px solid #E8E6DF",
-                        borderRadius: 12,
-                        padding: "12px 14px",
-                        marginBottom: 16,
-                    }}
-                >
-                    <div
-                        style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            marginBottom: 10,
-                        }}
-                    >
-                        <strong style={{ fontSize: 13, color: "#2C2C2A" }}>
-                            Ciblage et montants
-                        </strong>
-                        <OutlineBtn color="amber" sm onClick={addRule}>
-                            Ajouter une règle
-                        </OutlineBtn>
-                    </div>
-                    {(newCotisation.target_rules || []).map((rule, idx) => (
-                        <div
-                            key={idx}
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns: "1fr 1fr 1fr auto",
-                                gap: 8,
-                                marginBottom: 8,
-                                alignItems: "center",
-                            }}
+                        <select
+                            value={newCotisation.ciblage}
+                            onChange={(e) => setNewCotisation((p) => ({ ...p, ciblage: e.target.value }))}
+                            style={{ ...inputStyle }}
                         >
-                            <select
-                                value={newCotisation.ciblage || "GENRE"}
-                                onChange={() => {}}
-                                disabled
-                                style={{ ...inputStyle, background: "#F3F4F6" }}
-                            >
-                                <option value="GENRE">Ciblage: Genre</option>
-                                <option value="EMPLOI">
-                                    Ciblage: Statut d'emploi
-                                </option>
-                            </select>
-                            <select
-                                value={
-                                    rule.option ||
-                                    (Array.isArray(rule.values)
-                                        ? rule.values[0]
-                                        : rule.value) ||
-                                    ""
-                                }
-                                onChange={(e) =>
-                                    setRule(idx, "option", e.target.value)
-                                }
-                                style={{ ...inputStyle }}
-                            >
-                                {String(
-                                    newCotisation.ciblage || "GENRE",
-                                ).toUpperCase() === "GENRE" ? (
-                                    <>
-                                        <option value="M">Homme</option>
-                                        <option value="F">Femme</option>
-                                        <option value="ENFANT">Enfant</option>
-                                    </>
-                                ) : (
-                                    <>
-                                        <option value="TRAVAILLEUR">
-                                            Travailleur
-                                        </option>
-                                        <option value="RETRAITE">
-                                            Retraité
-                                        </option>
-                                        <option value="SANS_EMPLOI">
-                                            Sans emploi
-                                        </option>
-                                        <option value="ETUDIANT">
-                                            Étudiant
-                                        </option>
-                                        <option value="ENFANT">Enfant</option>
-                                    </>
-                                )}
-                            </select>
-                            <input
-                                type="number"
-                                min="100"
-                                value={rule.amount}
-                                onChange={(e) =>
-                                    setRule(idx, "amount", e.target.value)
-                                }
-                                placeholder="Montant"
-                                style={{ ...inputStyle }}
-                            />
-                            <button
-                                type="button"
-                                onClick={() => removeRule(idx)}
-                                style={{
-                                    border: "none",
-                                    background: "#FCEBEB",
-                                    color: "#9F1239",
-                                    borderRadius: 8,
-                                    padding: "8px 10px",
-                                    cursor: "pointer",
-                                    fontWeight: 700,
-                                }}
-                            >
-                                Retirer
-                            </button>
+                            <option value="AUCUN">Aucun — montant unique pour tous</option>
+                            <option value="GENRE">Par genre (Femme / Homme / Enfant)</option>
+                            <option value="EMPLOI">Par statut d'emploi</option>
+                        </select>
+                    </FW>
+                    {newCotisation.ciblage === "AUCUN" && (
+                        <FInput
+                            label="Montant (F CFA)"
+                            type="number"
+                            min="100"
+                            value={newCotisation.montant}
+                            onChange={(e) => setNewCotisation((p) => ({ ...p, montant: e.target.value }))}
+                            placeholder="Ex: 5000"
+                            span2
+                        />
+                    )}
+                </FormGrid>
+                {(newCotisation.ciblage === "GENRE" || newCotisation.ciblage === "EMPLOI") && (
+                    <div style={{ background: "#F9F8F5", border: "1px solid #E8E6DF", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+                        <strong style={{ fontSize: 13, color: "#2C2C2A", display: "block", marginBottom: 4 }}>
+                            Montants par catégorie
+                        </strong>
+                        <p style={{ fontSize: 11, color: "#6B7280", marginBottom: 12 }}>
+                            Laissez vide ou à 0 pour exclure une catégorie (ces membres ne cotiseront pas).
+                        </p>
+                        <div style={{ display: "grid", gridTemplateColumns: newCotisation.ciblage === "GENRE" ? "1fr 1fr 1fr" : "1fr 1fr", gap: 10 }}>
+                            {newCotisation.ciblage === "GENRE"
+                                ? [["F", "Femme"], ["M", "Homme"], ["ENFANT", "Enfant (< 20 ans)"]].map(([key, lbl]) => (
+                                    <div key={key}>
+                                        <label style={{ fontSize: 11, color: "#374151", fontWeight: 600, marginBottom: 4, display: "block" }}>{lbl}</label>
+                                        <input type="number" min="0" value={newCotisation.montants[key]} onChange={(e) => setNewCotisation((p) => ({ ...p, montants: { ...p.montants, [key]: e.target.value } }))} placeholder="Montant F CFA" style={{ ...inputStyle }} />
+                                    </div>
+                                ))
+                                : [["TRAVAILLEUR", "Travailleur"], ["RETRAITE", "Retraité"], ["SANS_EMPLOI", "Sans emploi"], ["ETUDIANT", "Étudiant"], ["ENFANT", "Enfant (< 20 ans)"]].map(([key, lbl]) => (
+                                    <div key={key}>
+                                        <label style={{ fontSize: 11, color: "#374151", fontWeight: 600, marginBottom: 4, display: "block" }}>{lbl}</label>
+                                        <input type="number" min="0" value={newCotisation.montants[key]} onChange={(e) => setNewCotisation((p) => ({ ...p, montants: { ...p.montants, [key]: e.target.value } }))} placeholder="Montant F CFA" style={{ ...inputStyle }} />
+                                    </div>
+                                ))
+                            }
                         </div>
-                    ))}
-                    <p style={{ fontSize: 11, color: "#6B7280", marginTop: 4 }}>
-                        Priorité: les règles sont appliquées dans l'ordre
-                        d'affichage (de haut en bas).
-                    </p>
-                </div>
+                    </div>
+                )}
                 <div
                     style={{
                         display: "flex",
@@ -4179,154 +3859,50 @@ export default function ConducteurTresorerie({
                             />
                         </FormGrid>
 
-                        <div
-                            style={{
-                                background: "#F9F8F5",
-                                border: "1px solid #E8E6DF",
-                                borderRadius: 12,
-                                padding: "12px 14px",
-                                marginBottom: 16,
-                            }}
-                        >
-                            <div
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                    marginBottom: 10,
-                                }}
+                        <div style={{ marginBottom: 16 }}>
+                            <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>Ciblage</label>
+                            <select
+                                value={editCotisation.ciblage || "AUCUN"}
+                                onChange={(e) => setEditCotisation((p) => ({ ...p, ciblage: e.target.value }))}
+                                style={{ ...inputStyle, width: "100%" }}
                             >
-                                <strong
-                                    style={{
-                                        fontSize: 13,
-                                        color: "#2C2C2A",
-                                    }}
-                                >
-                                    Ciblage et montants
-                                </strong>
-                                <OutlineBtn
-                                    color="amber"
-                                    sm
-                                    onClick={addEditRule}
-                                >
-                                    Ajouter une règle
-                                </OutlineBtn>
-                            </div>
-                            {(editCotisation.target_rules || []).map(
-                                (rule, idx) => (
-                                    <div
-                                        key={idx}
-                                        style={{
-                                            display: "grid",
-                                            gridTemplateColumns:
-                                                "1fr 1fr 1fr auto",
-                                            gap: 8,
-                                            marginBottom: 8,
-                                            alignItems: "center",
-                                        }}
-                                    >
-                                        <select
-                                            value={
-                                                rule.target ||
-                                                rule.type ||
-                                                "GENRE"
-                                            }
-                                            onChange={(e) => {
-                                                setEditRuleTarget(
-                                                    idx,
-                                                    e.target.value,
-                                                );
-                                            }}
-                                            style={{ ...inputStyle }}
-                                        >
-                                            <option value="GENRE">
-                                                Ciblage: Genre
-                                            </option>
-                                            <option value="EMPLOI">
-                                                Ciblage: Statut d'emploi
-                                            </option>
-                                        </select>
-                                        <select
-                                            value={
-                                                rule.option ||
-                                                (Array.isArray(rule.values)
-                                                    ? rule.values[0]
-                                                    : rule.value) ||
-                                                ""
-                                            }
-                                            onChange={(e) =>
-                                                setEditRule(
-                                                    idx,
-                                                    "option",
-                                                    e.target.value,
-                                                )
-                                            }
-                                            style={{ ...inputStyle }}
-                                        >
-                                            {(rule.target ||
-                                                rule.type ||
-                                                "GENRE") === "GENRE" ? (
-                                                <>
-                                                    <option value="M">
-                                                        Homme
-                                                    </option>
-                                                    <option value="F">
-                                                        Femme
-                                                    </option>
-                                                    <option value="ENFANT">
-                                                        Enfant
-                                                    </option>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <option value="TRAVAILLEUR">
-                                                        Travailleur
-                                                    </option>
-                                                    <option value="RETRAITE">
-                                                        Retraité
-                                                    </option>
-                                                    <option value="SANS_EMPLOI">
-                                                        Sans emploi
-                                                    </option>
-                                                    <option value="ENFANT">
-                                                        Enfant
-                                                    </option>
-                                                </>
-                                            )}
-                                        </select>
-                                        <input
-                                            type="number"
-                                            min="100"
-                                            value={rule.amount}
-                                            onChange={(e) =>
-                                                setEditRule(
-                                                    idx,
-                                                    "amount",
-                                                    e.target.value,
-                                                )
-                                            }
-                                            placeholder="Montant"
-                                            style={{ ...inputStyle }}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => removeEditRule(idx)}
-                                            style={{
-                                                border: "none",
-                                                background: "#FCEBEB",
-                                                color: "#9F1239",
-                                                borderRadius: 8,
-                                                padding: "8px 10px",
-                                                cursor: "pointer",
-                                                fontWeight: 700,
-                                            }}
-                                        >
-                                            Retirer
-                                        </button>
-                                    </div>
-                                ),
-                            )}
+                                <option value="AUCUN">Aucun — montant unique pour tous</option>
+                                <option value="GENRE">Par genre (Femme / Homme / Enfant)</option>
+                                <option value="EMPLOI">Par statut d'emploi</option>
+                            </select>
                         </div>
+                        {(editCotisation.ciblage || "AUCUN") === "AUCUN" && (
+                            <div style={{ marginBottom: 16 }}>
+                                <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>Montant (F CFA)</label>
+                                <input type="number" min="100" value={editCotisation.montant || ""} onChange={(e) => setEditCotisation((p) => ({ ...p, montant: e.target.value }))} placeholder="Ex: 5000" style={{ ...inputStyle, width: "100%" }} />
+                            </div>
+                        )}
+                        {((editCotisation.ciblage || "AUCUN") === "GENRE" || (editCotisation.ciblage || "AUCUN") === "EMPLOI") && (
+                            <div style={{ background: "#F9F8F5", border: "1px solid #E8E6DF", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+                                <strong style={{ fontSize: 13, color: "#2C2C2A", display: "block", marginBottom: 4 }}>
+                                    Montants par catégorie
+                                </strong>
+                                <p style={{ fontSize: 11, color: "#6B7280", marginBottom: 12 }}>
+                                    Laissez vide ou à 0 pour exclure une catégorie.
+                                </p>
+                                <div style={{ display: "grid", gridTemplateColumns: (editCotisation.ciblage || "AUCUN") === "GENRE" ? "1fr 1fr 1fr" : "1fr 1fr", gap: 10 }}>
+                                    {(editCotisation.ciblage || "AUCUN") === "GENRE"
+                                        ? [["F", "Femme"], ["M", "Homme"], ["ENFANT", "Enfant (< 20 ans)"]].map(([key, lbl]) => (
+                                            <div key={key}>
+                                                <label style={{ fontSize: 11, color: "#374151", fontWeight: 600, marginBottom: 4, display: "block" }}>{lbl}</label>
+                                                <input type="number" min="0" value={(editCotisation.montants || {})[key] || ""} onChange={(e) => setEditCotisation((p) => ({ ...p, montants: { ...(p.montants || {}), [key]: e.target.value } }))} placeholder="Montant F CFA" style={{ ...inputStyle }} />
+                                            </div>
+                                        ))
+                                        : [["TRAVAILLEUR", "Travailleur"], ["RETRAITE", "Retraité"], ["SANS_EMPLOI", "Sans emploi"], ["ETUDIANT", "Étudiant"], ["ENFANT", "Enfant (< 20 ans)"]].map(([key, lbl]) => (
+                                            <div key={key}>
+                                                <label style={{ fontSize: 11, color: "#374151", fontWeight: 600, marginBottom: 4, display: "block" }}>{lbl}</label>
+                                                <input type="number" min="0" value={(editCotisation.montants || {})[key] || ""} onChange={(e) => setEditCotisation((p) => ({ ...p, montants: { ...(p.montants || {}), [key]: e.target.value } }))} placeholder="Montant F CFA" style={{ ...inputStyle }} />
+                                            </div>
+                                        ))
+                                    }
+                                </div>
+                            </div>
+                        )}
 
                         <div
                             style={{

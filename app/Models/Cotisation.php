@@ -77,68 +77,145 @@ class Cotisation extends Model
     }
 
     /**
-     * Vérifier si une cotisation s'applique à un utilisateur
+     * Un membre est considéré enfant s'il a moins de 20 ans.
      */
-    public function appliesToUser(User $user): bool
+    public function isEnfant(User $user): bool
     {
-        // Vérifier les dates
-        $today = now()->toDateString();
-        if ($this->date_debut && $this->date_debut > $today) {
+        if (!$user->date_naissance) {
             return false;
         }
-        if ($this->date_fin && $this->date_fin < $today) {
-            return false;
-        }
-
-        // Vérifier le statut d'emploi si critères définis
-        if (!empty($this->target_employment_statuses) && is_array($this->target_employment_statuses)) {
-            if (!in_array($user->employment_status, $this->target_employment_statuses)) {
-                return false;
-            }
-        }
-
-        // Vérifier le genre si critères définis
-        if (!empty($this->target_genders) && is_array($this->target_genders)) {
-            if (!in_array($user->genre, $this->target_genders)) {
-                return false;
-            }
-        }
-
-        return true;
+        return $user->date_naissance->age < 20;
     }
 
     /**
-     * Retourne le montant cible pour un utilisateur selon les regles priorisees.
+     * Détermine le mode de ciblage à partir des règles stockées.
+     * Retourne 'GENRE', 'EMPLOI' ou 'UNIVERSAL'.
+     */
+    private function getTargetMode(): string
+    {
+        $rules = collect($this->target_rules ?? []);
+        if ($rules->where('type', self::RULE_TYPE_GENRE)->isNotEmpty()) {
+            return self::RULE_TYPE_GENRE;
+        }
+        if ($rules->where('type', self::RULE_TYPE_EMPLOI)->isNotEmpty()) {
+            return self::RULE_TYPE_EMPLOI;
+        }
+        return 'UNIVERSAL';
+    }
+
+    /**
+     * Vérifier si une cotisation s'applique à un utilisateur.
+     */
+    public function appliesToUser(User $user): bool
+    {
+        $today = now()->toDateString();
+        if ($this->date_debut && $this->date_debut->toDateString() > $today) {
+            return false;
+        }
+        if ($this->date_fin && $this->date_fin->toDateString() < $today) {
+            return false;
+        }
+
+        $rules = collect($this->target_rules ?? []);
+
+        // Pas de règles → s'applique à tous
+        if ($rules->isEmpty()) {
+            return true;
+        }
+
+        $mode = $this->getTargetMode();
+
+        // Pas de mode genre ni emploi → universel
+        if ($mode === 'UNIVERSAL') {
+            return true;
+        }
+
+        $isEnfant = $this->isEnfant($user);
+
+        // Enfant : on cherche une règle ENFANT avec montant valide
+        if ($isEnfant) {
+            return $rules->contains(fn($r) =>
+                strtoupper($r['type'] ?? '') === self::RULE_TYPE_ENFANT &&
+                (int) ($r['amount'] ?? 0) >= 100
+            );
+        }
+
+        // Ciblage par genre
+        if ($mode === self::RULE_TYPE_GENRE) {
+            $userGenre = strtoupper($user->genre ?? '');
+            return $rules->contains(fn($r) =>
+                strtoupper($r['type'] ?? '') === self::RULE_TYPE_GENRE &&
+                strtoupper($r['value'] ?? '') === $userGenre &&
+                (int) ($r['amount'] ?? 0) >= 100
+            );
+        }
+
+        // Ciblage par statut d'emploi
+        if ($mode === self::RULE_TYPE_EMPLOI) {
+            $userEmploi = strtoupper($user->employment_status ?? '');
+            // Statut inconnu → montant par défaut appliqué
+            if (!$userEmploi) {
+                return (int) $this->montant >= 100;
+            }
+            return $rules->contains(fn($r) =>
+                strtoupper($r['type'] ?? '') === self::RULE_TYPE_EMPLOI &&
+                strtoupper($r['value'] ?? '') === $userEmploi &&
+                (int) ($r['amount'] ?? 0) >= 100
+            );
+        }
+
+        return false;
+    }
+
+    /**
+     * Retourne le montant applicable pour un utilisateur selon son profil.
+     * Retourne null si la cotisation ne s'applique pas à cet utilisateur.
      */
     public function resolveAmountForUser(User $user): ?int
     {
         $rules = collect($this->target_rules ?? [])
-            ->filter(fn($rule) => is_array($rule))
-            ->sortBy(fn($rule) => (int) ($rule['priority'] ?? 999));
+            ->filter(fn($r) => is_array($r) && (int) ($r['amount'] ?? 0) >= 100);
 
-        foreach ($rules as $rule) {
-            $type = strtoupper((string) ($rule['type'] ?? ''));
-            $value = strtoupper((string) ($rule['value'] ?? ''));
-            $amount = (int) ($rule['amount'] ?? 0);
-
-            if ($amount <= 0) {
-                continue;
-            }
-
-            if ($type === self::RULE_TYPE_ENFANT && $user->role === 'membre_famille') {
-                return $amount;
-            }
-
-            if ($type === self::RULE_TYPE_GENRE && strtoupper((string) $user->genre) === $value) {
-                return $amount;
-            }
-
-            if ($type === self::RULE_TYPE_EMPLOI && strtoupper((string) $user->employment_status) === $value) {
-                return $amount;
-            }
+        // Pas de règles → montant par défaut pour tous
+        if ($rules->isEmpty()) {
+            return (int) $this->montant >= 100 ? (int) $this->montant : null;
         }
 
-        return (int) $this->montant > 0 ? (int) $this->montant : null;
+        $isEnfant = $this->isEnfant($user);
+
+        // Les enfants (< 20 ans) ont toujours la règle ENFANT, peu importe le mode
+        if ($isEnfant) {
+            $rule = $rules->first(fn($r) => strtoupper($r['type'] ?? '') === self::RULE_TYPE_ENFANT);
+            return $rule ? (int) $rule['amount'] : null;
+        }
+
+        $mode = $this->getTargetMode();
+
+        if ($mode === self::RULE_TYPE_GENRE) {
+            $userGenre = strtoupper($user->genre ?? '');
+            $rule = $rules->first(fn($r) =>
+                strtoupper($r['type'] ?? '') === self::RULE_TYPE_GENRE &&
+                strtoupper($r['value'] ?? '') === $userGenre
+            );
+            // Pas de règle pour ce genre → ne cotise pas
+            return $rule ? (int) $rule['amount'] : null;
+        }
+
+        if ($mode === self::RULE_TYPE_EMPLOI) {
+            $userEmploi = strtoupper($user->employment_status ?? '');
+            // Statut inconnu → montant par défaut
+            if (!$userEmploi) {
+                return (int) $this->montant >= 100 ? (int) $this->montant : null;
+            }
+            $rule = $rules->first(fn($r) =>
+                strtoupper($r['type'] ?? '') === self::RULE_TYPE_EMPLOI &&
+                strtoupper($r['value'] ?? '') === $userEmploi
+            );
+            // Pas de règle pour ce statut → ne cotise pas
+            return $rule ? (int) $rule['amount'] : null;
+        }
+
+        return (int) $this->montant >= 100 ? (int) $this->montant : null;
     }
 
     public function graceDays(): int

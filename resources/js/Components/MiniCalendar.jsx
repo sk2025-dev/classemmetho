@@ -33,9 +33,22 @@ const formatLabel = (value) => {
     });
 };
 
+const STATUT_LABELS = {
+    SOUMISE: "Soumise",
+    EN_ATTENTE_CONDUCTEUR: "En attente conducteur",
+    TRANSMISE_AU_PASTEUR: "Transmise au pasteur",
+    VALIDEE: "Validée",
+    PUBLIEE: "Publiée",
+    ARCHIVEE: "Archivée",
+    CELEBRE: "Célébré",
+    TERMINE: "Terminé",
+    REFUSEE_PAR_CONDUCTEUR: "Refusée (conducteur)",
+    REFUSEE_PAR_PASTEUR: "Refusée (pasteur)",
+};
+
 const formatStatus = (statut) => {
     if (!statut) return "";
-    return statut
+    return STATUT_LABELS[statut] ?? statut
         .toLowerCase()
         .split("_")
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -338,11 +351,28 @@ export default function MiniCalendar({
                             </div>
                         );
                     }
-                    const style = {
-                        ...baseStyle,
-                        ...(cell.hasEvents ? { borderColor: "#cbd5f5" } : {}),
-                        ...(isSelected ? STYLES.cellSelected : {}),
-                    };
+                    // Correction du warning : ne pas mélanger border et borderColor
+                    let style = { ...baseStyle };
+                    if (cell.hasEvents) {
+                        // On remplace border par borderColor
+                        style = {
+                            ...style,
+                            border: undefined, // retire le raccourci
+                            borderColor: "#cbd5f5",
+                            borderStyle: "solid",
+                            borderWidth: 1,
+                        };
+                    }
+                    if (isSelected) {
+                        // On applique le style sélectionné sans borderColor
+                        style = {
+                            ...style,
+                            ...STYLES.cellSelected,
+                            borderColor: STYLES.cellSelected.border?.split(" ")[2] || "#5b3faf",
+                            borderStyle: "solid",
+                            borderWidth: 1,
+                        };
+                    }
                     return (
                         <button
                             key={`${cell.key}-${index}`}
@@ -368,26 +398,62 @@ export default function MiniCalendar({
                     </div>
                 ) : (
                     <div style={STYLES.eventList}>
-                        {selectedEvents.map((event) => (
+                        {selectedEvents.map((event) => {
+                            const conjoint =
+                                [event.details?.conjoint_prenom, event.details?.conjoint_nom].filter(Boolean).join(" ") ||
+                                [event.details?.epoux_prenom, event.details?.epoux_nom].filter(Boolean).join(" ") ||
+                                [event.details?.conjoint_1, event.details?.conjoint_2].filter(Boolean).join(" ") ||
+                                "—";
+                            const lieu = event.details?.lieu_ceremonie || event.details?.lieu || "—";
+                            return (
                             <div key={event.id} style={STYLES.eventItem}>
-                                <div style={STYLES.eventLabel}>
-                                    {event.membre?.prenom || ""}{" "}
-                                    {event.membre?.nom || ""}{" "}
-                                    {event.classe?.nom
-                                        ? `(${event.classe.nom})`
-                                        : ""}
+                                {/* Nom du membre */}
+                                <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 6 }}>
+                                    {[event.membre?.prenom, event.membre?.nom].filter(Boolean).join(" ") || "—"}
                                 </div>
-                                <div style={STYLES.eventMeta}>
-                                    {event.reference && (
-                                        <span>Réf. {event.reference} • </span>
-                                    )}
-                                    {event.classe?.nom && (
-                                        <span>{event.classe.nom} • </span>
-                                    )}
-                                    <span>{formatStatus(event.statut)}</span>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#475569" }}>
+                                    {/* Classe */}
+                                    <div style={{ display: "flex", gap: 6 }}>
+                                        <span style={{ color: "#9ca3af", minWidth: 70 }}>Classe</span>
+                                        <span style={{ fontWeight: 600, color: "#374151" }}>
+                                            {event.classe?.nom || "—"}
+                                        </span>
+                                    </div>
+                                    {/* Conjoint */}
+                                    <div style={{ display: "flex", gap: 6 }}>
+                                        <span style={{ color: "#9ca3af", minWidth: 70 }}>💍 Conjoint(e)</span>
+                                        <span style={{ fontWeight: 600, color: "#374151" }}>
+                                            {conjoint}
+                                        </span>
+                                    </div>
+                                    {/* Lieu */}
+                                    <div style={{ display: "flex", gap: 6 }}>
+                                        <span style={{ color: "#9ca3af", minWidth: 70 }}>📍 Lieu</span>
+                                        <span style={{ fontWeight: 600, color: "#374151" }}>
+                                            {lieu}
+                                        </span>
+                                    </div>
+                                    {/* Statut */}
+                                    <div style={{ marginTop: 4 }}>
+                                        <span style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: 4,
+                                            padding: "2px 10px",
+                                            borderRadius: 999,
+                                            fontSize: 11,
+                                            fontWeight: 600,
+                                            background: ["CELEBRE", "TERMINE"].includes(event.statut) ? "#dcfce7" : "#f1f5f9",
+                                            color: ["CELEBRE", "TERMINE"].includes(event.statut) ? "#15803d" : "#475569",
+                                        }}>
+                                            {["CELEBRE", "TERMINE"].includes(event.statut) ? "✅" : "🕐"}{" "}
+                                            {formatStatus(event.statut)}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>

@@ -115,6 +115,17 @@ export default function Index({
         message:
             "Bonjour,\n\nVeuillez trouver en piece jointe la fiche finale des mariages.\n\nBien cordialement.",
     });
+
+    // ── BAPTEME FICHE STATE ──
+    const [ficheBaptemeModalOpen, setFicheBaptemeModalOpen] = useState(false);
+    const [sendingFicheBapteme, setSendingFicheBapteme] = useState(false);
+    const [ficheBaptemeEmailForm, setFicheBaptemeEmailForm] = useState({
+        destinataire: "",
+        subject: "Fiche finale des baptêmes",
+        message:
+            "Bonjour,\n\nVeuillez trouver en pièce jointe la fiche finale des baptêmes.\n\nBien cordialement.",
+    });
+
     const pendingPerPage = actesPaginator?.per_page || 10;
     const [selectedIds, setSelectedIds] = useState([]);
     const [selectedHistoryIds, setSelectedHistoryIds] = useState([]);
@@ -480,6 +491,42 @@ export default function Index({
         });
         return `/pasteur/liturgie/${firstId}/fiche?${params.toString()}`;
     }, [selectedUnsentCeremonyActes]);
+
+    const unsentBaptemeActes = useMemo(() => {
+        const isSent = (value) => {
+            if (value === true || value === 1) return true;
+            if (typeof value === "string") {
+                const n = value.trim().toLowerCase();
+                return n === "1" || n === "true";
+            }
+            return false;
+        };
+
+        const merged = new Map();
+        [...localActes, ...historiqueList].forEach((acte) => {
+            if (acte?.id && !merged.has(acte.id)) merged.set(acte.id, acte);
+        });
+
+        return Array.from(merged.values()).filter((acte) => {
+            const type = String(acte?.type_acte || "").trim().toLowerCase();
+            const statut = String(acte?.statut || "").trim().toUpperCase();
+            const details = acte?.details || {};
+            const eligible = [
+                "TRANSMISE_AU_PASTEUR",
+                "VALIDEE",
+                "PUBLIEE",
+                "ARCHIVEE",
+                "CELEBRE",
+                "TERMINE",
+            ].includes(statut);
+            return type === "bapteme" && eligible && !isSent(details?.fiche_bapteme_envoyee);
+        });
+    }, [localActes, historiqueList]);
+
+    const ficheBaptemeListLink = useMemo(() => {
+        if (!unsentBaptemeActes.length) return null;
+        return `/pasteur/liturgie/bapteme/liste-pdf`;
+    }, [unsentBaptemeActes]);
 
     const ceremonyActs = useMemo(() => {
         return historiqueList
@@ -1040,6 +1087,68 @@ export default function Index({
     const closeFicheModal = () => {
         if (sendingFiche) return;
         setFicheModalOpen(false);
+    };
+
+    const openFicheBaptemeModal = () => {
+        setFicheBaptemeEmailForm({
+            destinataire: "",
+            subject: "Fiche finale des baptêmes",
+            message:
+                "Bonjour,\n\nVeuillez trouver en pièce jointe la fiche finale des baptêmes.\n\nBien cordialement.",
+        });
+        setFicheBaptemeModalOpen(true);
+    };
+
+    const closeFicheBaptemeModal = () => {
+        if (sendingFicheBapteme) return;
+        setFicheBaptemeModalOpen(false);
+    };
+
+    const handleSendFicheBapteme = async () => {
+        if (!unsentBaptemeActes.length) {
+            notify("Aucune fiche de baptême en attente d'envoi.");
+            return;
+        }
+        if (!ficheBaptemeEmailForm.destinataire.trim()) {
+            notify("Veuillez renseigner l'email du destinataire.");
+            return;
+        }
+        try {
+            setSendingFicheBapteme(true);
+            const res = await axios.post(
+                withBasePath("", "/pasteur/liturgie/bapteme/fiche/envoyer"),
+                {
+                    ids: unsentBaptemeActes.map((a) => a.id),
+                    destinataire: ficheBaptemeEmailForm.destinataire.trim(),
+                    subject: ficheBaptemeEmailForm.subject.trim(),
+                    message: ficheBaptemeEmailForm.message.trim(),
+                },
+            );
+            const updatedActes = Array.isArray(res.data?.actes) ? res.data.actes : [];
+            if (updatedActes.length) {
+                setLocalActes((prev) =>
+                    prev.map((item) => {
+                        const match = updatedActes.find((a) => a.id === item.id);
+                        return match ? match : item;
+                    }),
+                );
+                setHistoriqueList((prev) =>
+                    prev.map((item) => {
+                        const match = updatedActes.find((a) => a.id === item.id);
+                        return match ? { ...item, ...match } : item;
+                    }),
+                );
+            }
+            notify(res.data?.message || "La fiche baptême a été envoyée.");
+            setFicheBaptemeModalOpen(false);
+        } catch (error) {
+            notify(
+                error?.response?.data?.message ||
+                    "Impossible d'envoyer la fiche baptême.",
+            );
+        } finally {
+            setSendingFicheBapteme(false);
+        }
     };
 
     const handleSendFiche = async () => {
@@ -2862,6 +2971,21 @@ export default function Index({
                                                         mariage
                                                     </>
                                                 </button>
+                                                {unsentBaptemeActes.length > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        className="hs-gmail-btn"
+                                                        style={{ background: "linear-gradient(120deg,#1565C0)", borderColor: "rgba(21,101,192,0.7)" }}
+                                                        onClick={openFicheBaptemeModal}
+                                                    >
+                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1z" />
+                                                            <path d="M3 6l9 7 9-7" />
+                                                        </svg>
+                                                        Envoyer la fiche
+                                                        baptême
+                                                    </button>
+                                                )}
                                                 {sessionRefuses > 0 && (
                                                     <span className="hs-pill red">
                                                         {sessionRefuses} refusé
@@ -3432,6 +3556,7 @@ export default function Index({
                                             <table className="history-table">
                                                 <thead>
                                                     <tr>
+                                                        <th>N</th>
                                                         <th>Référence</th>
                                                         <th>Membre concerné</th>
                                                         <th>
@@ -3445,7 +3570,7 @@ export default function Index({
                                                 </thead>
                                                 <tbody>
                                                     {pagedCeremonyHistoryRows.map(
-                                                        (row) => {
+                                                        (row, idx) => {
                                                             const canMarkCelebrated =
                                                                 String(
                                                                     row.typeActe ||
@@ -3482,6 +3607,13 @@ export default function Index({
                                                                         row.rowKey
                                                                     }
                                                                 >
+                                                                    <td>
+                                                                        {idx +
+                                                                            1 +
+                                                                            (dateHistoryPage -
+                                                                                1) *
+                                                                                dateHistoryPerPage}
+                                                                    </td>
                                                                     <td>
                                                                         {
                                                                             row.reference
@@ -5172,338 +5304,390 @@ export default function Index({
 
             {ficheModalOpen && (
                 <div className="modal-overlay open" onClick={closeFicheModal}>
-                    <div
-                        className="modal"
-                        onClick={(e) => e.stopPropagation()}
-                        style={{ maxWidth: 640 }}
-                    >
-                        <div className="modal-head">
-                            <div className="modal-head-left">
-                                <div className="modal-head-icon blue">
-                                    <svg
-                                        width="16"
-                                        height="16"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h6"
-                                        />
+                    <div className="modal" onClick={(e) => e.stopPropagation()} style={{
+                        maxWidth: 560, borderRadius: 20,
+                        boxShadow: "0 32px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.08)",
+                        overflow: "hidden", background: "#ffffff",
+                    }}>
+                        {/* HEADER */}
+                        <div style={{
+                            display: "flex", alignItems: "flex-start", justifyContent: "space-between",
+                            padding: "22px 24px 20px", borderBottom: "1px solid #f0f0f0",
+                            background: "linear-gradient(to bottom,#fafbff,#ffffff)",
+                        }}>
+                            <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+                                <div style={{
+                                    width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                                    background: "linear-gradient(135deg,#fce7f3,#ede9fe)",
+                                    border: "1px solid #fbcfe8", display: "flex",
+                                    alignItems: "center", justifyContent: "center", color: "#ec4899",
+                                }}>
+                                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
                                 </div>
                                 <div>
-                                    <div className="modal-title">
-                                        Revue de la fiche finale mariage
+                                    <div style={{ fontSize: 17, fontWeight: 700, color: "#0f172a", marginBottom: 3, letterSpacing: "-0.01em" }}>
+                                        Fiche finale — Mariages
                                     </div>
-                                    <div className="modal-sub">
-                                        Vérifiez la liste de tous les membres
-                                        concernés avant de télécharger la fiche
-                                        finale puis d'envoyer le mail. Tant que
-                                        le mail n'est pas envoyé, vous pouvez
-                                        consulter la fiche autant de fois que
-                                        nécessaire.
+                                    <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5 }}>
+                                        Envoi consolidé au pasteur ou responsable
                                     </div>
                                 </div>
                             </div>
-                            <button
-                                className="modal-close"
-                                onClick={closeFicheModal}
-                            >
-                                <svg
-                                    width="13"
-                                    height="13"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    strokeWidth="2.5"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
+                            <button onClick={closeFicheModal} style={{
+                                width: 32, height: 32, borderRadius: 8, background: "#f1f5f9",
+                                border: "1px solid #e2e8f0", color: "#64748b", cursor: "pointer",
+                                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                            }}>
+                                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             </button>
                         </div>
-                        <div className="modal-body">
+
+                        {/* BODY */}
+                        <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
                             {unsentCeremonyActes.length === 0 ? (
                                 <div className="empty-state">
-                                    <svg
-                                        width="32"
-                                        height="32"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        strokeWidth="1.5"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            d="M12 5v14m7-7H5"
-                                        />
-                                    </svg>
-                                    <div className="empty-title">
-                                        Aucune fiche en attente
-                                    </div>
-                                    <div className="empty-sub">
-                                        Les fiches ont toutes été envoyées.
-                                    </div>
+                                    <div className="empty-title">Aucune fiche en attente</div>
+                                    <div className="empty-sub">Les fiches ont toutes été envoyées.</div>
                                 </div>
                             ) : (
                                 <>
-                                    <div className="modal-detail-box">
-                                        <div className="modal-detail-row">
-                                            <span className="modal-key">
-                                                Date de lot
-                                            </span>
-                                            <span className="modal-val">
-                                                {selectedFicheBatchDate
-                                                    ? formatDate(
-                                                          `${selectedFicheBatchDate}T00:00:00`,
-                                                      )
-                                                    : "—"}
-                                            </span>
-                                        </div>
-                                        <div className="modal-detail-row">
-                                            <span className="modal-key">
-                                                Demandes prêtes (même jour)
-                                            </span>
-                                            <span className="modal-val">
-                                                {
-                                                    selectedUnsentCeremonyActes.length
-                                                }
-                                            </span>
-                                        </div>
-                                        {selectedUnsentClassNames.length >
-                                            0 && (
-                                            <div className="modal-detail-row">
-                                                <span className="modal-key">
-                                                    Classes concernées
-                                                </span>
-                                                <span className="modal-val mono">
-                                                    {selectedUnsentClassNames.join(
-                                                        " · ",
-                                                    )}
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div
-                                        className="modal-field"
-                                        style={{ marginBottom: 16 }}
-                                    >
-                                        <label className="modal-label">
-                                            Sélectionner le jour de demande
-                                        </label>
-                                        <select
-                                            className="modal-select"
-                                            value={selectedFicheBatchDate}
-                                            onChange={(e) =>
-                                                setSelectedFicheBatchDate(
-                                                    e.target.value,
-                                                )
-                                            }
-                                        >
-                                            {unsentBatchDates.map(
-                                                (batchDate) => (
-                                                    <option
-                                                        key={`batch-${batchDate}`}
-                                                        value={batchDate}
-                                                    >
-                                                        {formatDate(
-                                                            `${batchDate}T00:00:00`,
-                                                        )}
+                                    {/* BATCH DATE SELECTOR */}
+                                    {unsentBatchDates.length > 1 && (
+                                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                            <label style={{ fontSize: 10.5, fontWeight: 700, color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                                                Jour de demande
+                                            </label>
+                                            <select
+                                                className="modal-select"
+                                                value={selectedFicheBatchDate}
+                                                onChange={(e) => setSelectedFicheBatchDate(e.target.value)}
+                                                style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1.5px solid #e2e8f0", background: "#fafafa", fontSize: 13, color: "#0f172a", outline: "none", fontFamily: "inherit" }}
+                                            >
+                                                {unsentBatchDates.map((batchDate) => (
+                                                    <option key={`batch-${batchDate}`} value={batchDate}>
+                                                        {formatDate(`${batchDate}T00:00:00`)}
                                                     </option>
-                                                ),
-                                            )}
-                                        </select>
-                                    </div>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
 
-                                    <div
-                                        className="fiche-actions"
+                                    {/* PREVIEW BUTTON */}
+                                    <button
+                                        type="button"
+                                        onClick={() => { if (ficheMariageFinaleLink) window.open(ficheMariageFinaleLink, "_blank"); }}
+                                        disabled={!ficheMariageFinaleLink}
                                         style={{
-                                            justifyContent: "flex-end",
-                                            marginBottom: 16,
+                                            display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                                            width: "100%", padding: "11px 16px", borderRadius: 10,
+                                            border: "1.5px dashed #cbd5e1", background: "transparent",
+                                            color: "#475569", fontSize: 13, fontWeight: 600, cursor: "pointer",
                                         }}
                                     >
-                                        <button
-                                            type="button"
-                                            className="btn-mini"
-                                            onClick={() => {
-                                                if (ficheMariageFinaleLink) {
-                                                    window.open(
-                                                        ficheMariageFinaleLink,
-                                                        "_blank",
-                                                    );
-                                                }
-                                            }}
-                                            disabled={!ficheMariageFinaleLink}
-                                        >
-                                            Consulter la fiche
-                                        </button>
+                                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                        Consulter la fiche PDF
+                                    </button>
+
+                                    {/* SEPARATOR */}
+                                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                        <div style={{ flex: 1, height: 1, background: "#f0f0f0" }} />
+                                        <span style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>
+                                            Composition du mail
+                                        </span>
+                                        <div style={{ flex: 1, height: 1, background: "#f0f0f0" }} />
                                     </div>
 
-                                    <div
-                                        className="modal-detail-box"
-                                        style={{ marginBottom: 16 }}
-                                    >
-                                        <div className="modal-field">
-                                            <label className="modal-label">
-                                                Destinataire
-                                            </label>
+                                    {/* DESTINATAIRE */}
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                        <label style={{ fontSize: 10.5, fontWeight: 700, color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                                            Destinataire
+                                        </label>
+                                        <div style={{ position: "relative" }}>
+                                            <svg style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }} width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                            </svg>
                                             <input
                                                 type="email"
-                                                className="modal-input"
+                                                className="fbap-input"
                                                 placeholder="contact@eglise.org"
-                                                value={
-                                                    ficheEmailForm.destinataire
-                                                }
-                                                onChange={(e) =>
-                                                    setFicheEmailForm(
-                                                        (prev) => ({
-                                                            ...prev,
-                                                            destinataire:
-                                                                e.target.value,
-                                                        }),
-                                                    )
-                                                }
+                                                value={ficheEmailForm.destinataire}
+                                                onChange={(e) => setFicheEmailForm((prev) => ({ ...prev, destinataire: e.target.value }))}
+                                                style={{ width: "100%", padding: "10px 14px 10px 36px", borderRadius: 10, border: "1.5px solid #e2e8f0", background: "#fafafa", fontSize: 13.5, color: "#0f172a", outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
                                             />
-                                        </div>
-                                        <div className="modal-field">
-                                            <label className="modal-label">
-                                                Objet
-                                            </label>
-                                            <input
-                                                type="text"
-                                                className="modal-input"
-                                                placeholder="Objet du mail"
-                                                value={ficheEmailForm.subject}
-                                                onChange={(e) =>
-                                                    setFicheEmailForm(
-                                                        (prev) => ({
-                                                            ...prev,
-                                                            subject:
-                                                                e.target.value,
-                                                        }),
-                                                    )
-                                                }
-                                            />
-                                        </div>
-                                        <div className="modal-field">
-                                            <label className="modal-label">
-                                                Contenu du mail
-                                            </label>
-                                            <textarea
-                                                className="ann-textarea"
-                                                rows={4}
-                                                placeholder="Contenu du message"
-                                                value={ficheEmailForm.message}
-                                                onChange={(e) =>
-                                                    setFicheEmailForm(
-                                                        (prev) => ({
-                                                            ...prev,
-                                                            message:
-                                                                e.target.value,
-                                                        }),
-                                                    )
-                                                }
-                                            />
-                                        </div>
-                                        <div
-                                            className="fiche-actions"
-                                            style={{
-                                                justifyContent: "flex-end",
-                                                marginTop: 8,
-                                            }}
-                                        >
-                                            <button
-                                                type="button"
-                                                className="btn-mini btn-mini-send"
-                                                onClick={handleSendFiche}
-                                                disabled={sendingFiche}
-                                            >
-                                                {sendingFiche
-                                                    ? "Envoi en cours..."
-                                                    : "Envoyer le mail"}
-                                            </button>
                                         </div>
                                     </div>
 
-                                    <div className="fiche-list">
-                                        {selectedUnsentCeremonyActes.map(
-                                            (acte) => (
-                                                <div
-                                                    className="fiche-item"
-                                                    key={`fiche-${acte.id}`}
-                                                >
-                                                    <div className="fiche-meta">
-                                                        <div>
-                                                            <strong>
-                                                                {acte.reference}
-                                                            </strong>
-                                                        </div>
-                                                        <div>
-                                                            {acte.membre
-                                                                ? `${acte.membre.prenom || ""} ${acte.membre.nom || ""}`
-                                                                : "Membre inconnu"}
-                                                        </div>
-                                                        <div>
-                                                            Conjoint :{" "}
-                                                            {[
-                                                                acte.details
-                                                                    ?.conjoint_prenom,
-                                                                acte.details
-                                                                    ?.conjoint_nom,
-                                                            ]
-                                                                .filter(Boolean)
-                                                                .join(" ") ||
-                                                                [
-                                                                    acte.details
-                                                                        ?.epoux_prenom,
-                                                                    acte.details
-                                                                        ?.epoux_nom,
-                                                                ]
-                                                                    .filter(
-                                                                        Boolean,
-                                                                    )
-                                                                    .join(
-                                                                        " ",
-                                                                    ) ||
-                                                                "Non renseigné"}
-                                                        </div>
-                                                        <div>
-                                                            {acte.classe?.nom ||
-                                                                acte.classe_id ||
-                                                                "Classe non renseignée"}
-                                                        </div>
-                                                        <div>
-                                                            Contact :{" "}
-                                                            {acte.membre
-                                                                ?.telephone ||
-                                                                acte.family
-                                                                    ?.telephone ||
-                                                                "—"}
-                                                        </div>
-                                                        <div>
-                                                            Date de demande :{" "}
-                                                            {formatDate(
-                                                                acte.created_at ||
-                                                                    acte.updated_at,
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ),
-                                        )}
+                                    {/* OBJET */}
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                        <label style={{ fontSize: 10.5, fontWeight: 700, color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                                            Objet
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="fbap-input"
+                                            placeholder="Objet du mail"
+                                            value={ficheEmailForm.subject}
+                                            onChange={(e) => setFicheEmailForm((prev) => ({ ...prev, subject: e.target.value }))}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1.5px solid #e2e8f0", background: "#fafafa", fontSize: 13.5, color: "#0f172a", outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
+                                        />
                                     </div>
+
+                                    {/* CONTENU */}
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                        <label style={{ fontSize: 10.5, fontWeight: 700, color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                                            Contenu du mail
+                                        </label>
+                                        <textarea
+                                            className="fbap-input"
+                                            rows={4}
+                                            placeholder="Contenu du message"
+                                            value={ficheEmailForm.message}
+                                            onChange={(e) => setFicheEmailForm((prev) => ({ ...prev, message: e.target.value }))}
+                                            style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: "1.5px solid #e2e8f0", background: "#fafafa", fontSize: 13, color: "#334155", fontFamily: "inherit", outline: "none", resize: "vertical", lineHeight: 1.65, boxSizing: "border-box" }}
+                                        />
+                                    </div>
+
                                 </>
                             )}
                         </div>
+
+                        {/* FOOTER */}
+                        {unsentCeremonyActes.length > 0 && (
+                            <div style={{
+                                display: "flex", justifyContent: "flex-end", gap: 10,
+                                padding: "16px 24px", borderTop: "1px solid #f0f0f0", background: "#fafbff",
+                            }}>
+                                <button onClick={closeFicheModal} style={{
+                                    padding: "10px 20px", borderRadius: 10, border: "1.5px solid #e2e8f0",
+                                    background: "white", color: "#64748b", fontSize: 13, fontWeight: 600,
+                                    cursor: "pointer", fontFamily: "inherit",
+                                }}>
+                                    Annuler
+                                </button>
+                                <button
+                                    onClick={handleSendFiche}
+                                    disabled={sendingFiche}
+                                    style={{
+                                        display: "flex", alignItems: "center", gap: 7,
+                                        padding: "10px 22px", borderRadius: 10, border: "none",
+                                        background: sendingFiche ? "#e2e8f0" : "linear-gradient(135deg,#ec4899,#a855f7)",
+                                        color: sendingFiche ? "#94a3b8" : "white",
+                                        fontSize: 13, fontWeight: 700, cursor: sendingFiche ? "not-allowed" : "pointer",
+                                        fontFamily: "inherit",
+                                        boxShadow: sendingFiche ? "none" : "0 4px 14px rgba(168,85,247,0.35)",
+                                    }}
+                                >
+                                    {sendingFiche ? (
+                                        <>
+                                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                            </svg>
+                                            Envoi en cours…
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                            </svg>
+                                            Envoyer le mail
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════
+                MODAL FICHE BAPTEME
+            ══════════════════════════════════════════════════ */}
+            {ficheBaptemeModalOpen && (
+                <div className="modal-overlay open" onClick={closeFicheBaptemeModal}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()} style={{
+                        maxWidth: 560, borderRadius: 20,
+                        boxShadow: "0 32px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.08)",
+                        overflow: "hidden", background: "#ffffff",
+                    }}>
+                        {/* HEADER */}
+                        <div style={{
+                            display: "flex", alignItems: "flex-start", justifyContent: "space-between",
+                            padding: "22px 24px 20px", borderBottom: "1px solid #f0f0f0",
+                            background: "linear-gradient(to bottom,#fafbff,#ffffff)",
+                        }}>
+                            <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+                                <div style={{
+                                    width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                                    background: "linear-gradient(135deg,#dbeafe,#ede9fe)",
+                                    border: "1px solid #bfdbfe", display: "flex",
+                                    alignItems: "center", justifyContent: "center", color: "#3b82f6",
+                                }}>
+                                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 17, fontWeight: 700, color: "#0f172a", marginBottom: 3, letterSpacing: "-0.01em" }}>
+                                        Fiche finale — Baptêmes
+                                    </div>
+                                    <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5 }}>
+                                        Envoi consolidé au pasteur ou responsable
+                                    </div>
+                                </div>
+                            </div>
+                            <button onClick={closeFicheBaptemeModal} style={{
+                                width: 32, height: 32, borderRadius: 8, background: "#f1f5f9",
+                                border: "1px solid #e2e8f0", color: "#64748b", cursor: "pointer",
+                                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                            }}>
+                                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* BODY */}
+                        <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
+                            {unsentBaptemeActes.length === 0 ? (
+                                <div className="empty-state">
+                                    <div className="empty-title">Aucune demande en attente</div>
+                                    <div className="empty-sub">Toutes les fiches baptême ont été envoyées.</div>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* PREVIEW BUTTON */}
+                                    <button
+                                        type="button"
+                                        onClick={() => { if (ficheBaptemeListLink) window.open(ficheBaptemeListLink, "_blank"); }}
+                                        disabled={!ficheBaptemeListLink}
+                                        style={{
+                                            display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                                            width: "100%", padding: "11px 16px", borderRadius: 10,
+                                            border: "1.5px dashed #cbd5e1", background: "transparent",
+                                            color: "#475569", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                                        }}
+                                    >
+                                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                        Consulter la fiche PDF
+                                    </button>
+
+                                    {/* SEPARATOR */}
+                                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                        <div style={{ flex: 1, height: 1, background: "#f0f0f0" }} />
+                                        <span style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>
+                                            Composition du mail
+                                        </span>
+                                        <div style={{ flex: 1, height: 1, background: "#f0f0f0" }} />
+                                    </div>
+
+                                    {/* DESTINATAIRE */}
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                        <label style={{ fontSize: 10.5, fontWeight: 700, color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                                            Destinataire
+                                        </label>
+                                        <div style={{ position: "relative" }}>
+                                            <svg style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }} width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                            </svg>
+                                            <input
+                                                type="email"
+                                                className="fbap-input"
+                                                placeholder="contact@eglise.org"
+                                                value={ficheBaptemeEmailForm.destinataire}
+                                                onChange={(e) => setFicheBaptemeEmailForm((prev) => ({ ...prev, destinataire: e.target.value }))}
+                                                style={{ width: "100%", padding: "10px 14px 10px 36px", borderRadius: 10, border: "1.5px solid #e2e8f0", background: "#fafafa", fontSize: 13.5, color: "#0f172a", outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* OBJET */}
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                        <label style={{ fontSize: 10.5, fontWeight: 700, color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                                            Objet
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="fbap-input"
+                                            placeholder="Objet du mail"
+                                            value={ficheBaptemeEmailForm.subject}
+                                            onChange={(e) => setFicheBaptemeEmailForm((prev) => ({ ...prev, subject: e.target.value }))}
+                                            style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1.5px solid #e2e8f0", background: "#fafafa", fontSize: 13.5, color: "#0f172a", outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
+                                        />
+                                    </div>
+
+                                    {/* CONTENU */}
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                        <label style={{ fontSize: 10.5, fontWeight: 700, color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                                            Contenu du mail
+                                        </label>
+                                        <textarea
+                                            className="fbap-input"
+                                            rows={4}
+                                            placeholder="Contenu du message"
+                                            value={ficheBaptemeEmailForm.message}
+                                            onChange={(e) => setFicheBaptemeEmailForm((prev) => ({ ...prev, message: e.target.value }))}
+                                            style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: "1.5px solid #e2e8f0", background: "#fafafa", fontSize: 13, color: "#334155", fontFamily: "inherit", outline: "none", resize: "vertical", lineHeight: 1.65, boxSizing: "border-box" }}
+                                        />
+                                    </div>
+
+                                </>
+                            )}
+                        </div>
+
+                        {/* FOOTER */}
+                        {unsentBaptemeActes.length > 0 && (
+                            <div style={{
+                                display: "flex", justifyContent: "flex-end", gap: 10,
+                                padding: "16px 24px", borderTop: "1px solid #f0f0f0", background: "#fafbff",
+                            }}>
+                                <button onClick={closeFicheBaptemeModal} style={{
+                                    padding: "10px 20px", borderRadius: 10, border: "1.5px solid #e2e8f0",
+                                    background: "white", color: "#64748b", fontSize: 13, fontWeight: 600,
+                                    cursor: "pointer", fontFamily: "inherit",
+                                }}>
+                                    Annuler
+                                </button>
+                                <button
+                                    onClick={handleSendFicheBapteme}
+                                    disabled={sendingFicheBapteme}
+                                    style={{
+                                        display: "flex", alignItems: "center", gap: 7,
+                                        padding: "10px 22px", borderRadius: 10, border: "none",
+                                        background: sendingFicheBapteme ? "#e2e8f0" : "linear-gradient(135deg,#3b82f6,#6366f1)",
+                                        color: sendingFicheBapteme ? "#94a3b8" : "white",
+                                        fontSize: 13, fontWeight: 700, cursor: sendingFicheBapteme ? "not-allowed" : "pointer",
+                                        fontFamily: "inherit",
+                                        boxShadow: sendingFicheBapteme ? "none" : "0 4px 14px rgba(99,102,241,0.35)",
+                                    }}
+                                >
+                                    {sendingFicheBapteme ? (
+                                        <>
+                                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                            </svg>
+                                            Envoi en cours…
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                            </svg>
+                                            Envoyer le mail
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -6896,6 +7080,7 @@ h1.hero-title{
 @keyframes tIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .spin{animation:spin 1s linear infinite}
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.fbap-input:focus{border-color:#6366f1!important;box-shadow:0 0 0 3px rgba(99,102,241,0.12)!important;background:white!important;outline:none!important}
 
 @media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}.layout-grid{grid-template-columns:1fr}.hero-header-inner{flex-wrap:wrap;justify-content:center}.hero-header-center{order:1;width:100%}.hero-header-actions{order:2;flex-direction:row}}
 @media(max-width:700px){.content{padding:14px}.kpi-row{grid-template-columns:1fr 1fr}.acte-actions{flex-direction:column}.pastoral-box{flex-wrap:wrap}.pastoral-stats{width:100%;justify-content:center}.tab-toolbar{align-items:stretch}.main-tabs{width:100%}.quick-tools{width:100%;justify-content:flex-start}.quick-dropdown{width:100%;min-width:0}.quick-search{width:100%;min-width:0}.ann-type-grid{grid-template-columns:1fr}.hero-stats-row{flex-wrap:wrap}.h1.hero-title{font-size:20px}.date-shell-head{flex-direction:column;align-items:flex-start}.date-shell-tools{width:100%;justify-content:flex-start}.date-shell-count{min-width:0}.date-card{min-height:auto;padding:18px}.date-history-head{flex-direction:column;align-items:flex-start}.date-history-tools{width:100%;justify-content:flex-start}.date-history-search{min-width:0;width:100%}.date-history-count{min-width:0}}
@@ -6910,4 +7095,4 @@ table tbody tr:nth-child(odd){background:rgba(248,250,252,0.5)}
 table tbody tr:hover{background:rgba(248,250,252,1)}
 table tbody td{padding:11px 16px;font-size:13px;color:#0f172a;vertical-align:top}
 table tbody input[type="checkbox"]{cursor:pointer}
-`;
+`

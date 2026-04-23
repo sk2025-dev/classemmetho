@@ -490,6 +490,12 @@ const GLOBAL_STYLES = `
         width: 1rem;
         height: 1rem;
     }
+    .grid-card-profession {
+        font-size: 0.78rem;
+        color: #9ca3af;
+        font-style: italic;
+        margin-top: 0.35rem;
+    }
 
     /* Vues familles et classes */
     .families-list, .classes-list { display: flex; flex-direction: column; gap: 1.5rem; }
@@ -1604,6 +1610,11 @@ const Annuaire = ({
                                         </svg>
                                         {member.email || "-"}
                                     </div>
+                                    {member.profession && member.profession !== "-" && (
+                                        <div className="grid-card-profession">
+                                            💼 {member.profession}
+                                        </div>
+                                    )}
                                     <button
                                         onClick={() => openModal(member)}
                                         className="btn btn-view mt-3 w-full"

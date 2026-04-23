@@ -492,6 +492,12 @@ const GLOBAL_STYLES = `
         width: 1rem;
         height: 1rem;
     }
+    .grid-card-profession {
+        font-size: 0.78rem;
+        color: #9ca3af;
+        font-style: italic;
+        margin-top: 0.35rem;
+    }
 
     /* Vues familles et classes */
     .families-list, .classes-list { display: flex; flex-direction: column; gap: 1.5rem; }
@@ -1401,7 +1407,9 @@ const Annuaire = ({
                         reader.onloadend = () => resolve(reader.result);
                         reader.readAsDataURL(blob);
                     });
-                    doc.addImage(logoData, "PNG", 257, 10, 30, 15);
+                    // Logo carré 22×22mm, aligné à droite avec marge 10mm
+                    const pageW = doc.internal.pageSize.getWidth();
+                    doc.addImage(logoData, "PNG", pageW - 32, 4, 22, 22);
                 }
             } catch (e) {
                 console.log("Logo non chargé, génération sans logo.");
@@ -1417,7 +1425,7 @@ const Annuaire = ({
                 { header: "Nom", dataKey: "nom" },
                 { header: "Prénoms", dataKey: "prenoms" },
                 { header: "Genre", dataKey: "genre" },
-                { header: "Famille", dataKey: "famille" },
+                // { header: "Famille", dataKey: "famille" }, // supprimé
                 { header: "Code famille", dataKey: "codeFamille" },
                 { header: "Code membre", dataKey: "codeMembre" },
                 { header: "Classe", dataKey: "classe" },
@@ -1439,13 +1447,28 @@ const Annuaire = ({
                 const normalized = normalizeMember(member);
                 const rowNumber =
                     (membersCurrentPage - 1) * membersPerPage + idx + 1;
+                // Formatage de la date de naissance JJ/MM/AAAA
+                let formattedDate = "";
+                if (normalized.dateNaissance) {
+                    const d = new Date(normalized.dateNaissance);
+                    if (!isNaN(d.getTime())) {
+                        const day = String(d.getDate()).padStart(2, "0");
+                        const month = String(d.getMonth() + 1).padStart(2, "0");
+                        const year = d.getFullYear();
+                        formattedDate = `${day}/${month}/${year}`;
+                    } else {
+                        formattedDate = normalized.dateNaissance;
+                    }
+                }
+                // Code famille = même logique que le tableau web (normalized.famille)
+                const familleCode = normalized.famille !== "-" ? normalized.famille : "";
                 return {
                     index: rowNumber,
                     nom: normalized.nom || "",
                     prenoms: normalized.prenoms || "",
                     genre: normalized.sexe === "M" ? "Masculin" : "Féminin",
-                    famille: normalized.famille || "",
-                    codeFamille: normalized.codeFamille || "",
+                    // famille: familleNom, // supprimé
+                    codeFamille: familleCode,
                     codeMembre: normalized.codeMembre || "",
                     classe: normalized.classeMethodiste || "",
                     telephone: normalized.telephone || "",
@@ -1461,20 +1484,83 @@ const Annuaire = ({
                         : "Non",
                     dote: normalized.dote ? "Oui" : "Non",
                     veuf: normalized.veuf ? "Oui" : "Non",
-                    dateNaissance: normalized.dateNaissance || "",
+                    dateNaissance: formattedDate,
                     fonction: normalized.fonction || "",
                     profession: normalized.profession || "",
                 };
             });
 
+            // Largeurs en mm — total ~270mm pour tenir sur A4 paysage (277mm utiles)
+            const columnStyles = {
+                index:               { cellWidth: 6,  halign: "center" },
+                nom:                 { cellWidth: 17 },
+                prenoms:             { cellWidth: 20 },
+                genre:               { cellWidth: 12, halign: "center" },
+                codeFamille:         { cellWidth: 13, halign: "center" },
+                codeMembre:          { cellWidth: 13, halign: "center" },
+                classe:              { cellWidth: 15 },
+                telephone:           { cellWidth: 20 },
+                email:               { cellWidth: 26 },
+                baptise:             { cellWidth: 10, halign: "center" },
+                relation:            { cellWidth: 12 },
+                premiereCommunion:   { cellWidth: 13, halign: "center" },
+                mariageCivil:        { cellWidth: 12, halign: "center" },
+                marieReligieusement: { cellWidth: 13, halign: "center" },
+                dote:                { cellWidth: 8,  halign: "center" },
+                veuf:                { cellWidth: 8,  halign: "center" },
+                dateNaissance:       { cellWidth: 14, halign: "center" },
+                fonction:            { cellWidth: 16 },
+                profession:          { cellWidth: 16 },
+            };
+            // Total : 6+17+20+12+13+13+15+20+26+10+12+13+12+13+8+8+14+16+16 = 264mm ✓
+
             autoTable(doc, {
                 columns,
                 body: data,
-                startY: 40,
-                styles: { fontSize: 8, cellPadding: 2 },
-                headStyles: { fillColor: [37, 99, 235], textColor: 255 },
-                alternateRowStyles: { fillColor: [245, 247, 250] },
+                startY: 38,
+                // margin: { left: 10, right: 10 },
+                tableWidth: 264,
+                styles: {
+                    fontSize: 7.5,
+                    cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
+                    overflow: "linebreak",
+                    lineColor: [220, 225, 235],
+                    lineWidth: 0.2,
+                    valign: "middle",
+                },
+                headStyles: {
+                    fillColor: [37, 99, 235],
+                    textColor: 255,
+                    fontSize: 7,
+                    fontStyle: "bold",
+                    cellPadding: { top: 4, right: 3, bottom: 4, left: 3 },
+                    halign: "center",
+                    lineWidth: 0,
+                },
+                alternateRowStyles: { fillColor: [247, 249, 252] },
+                columnStyles,
+                tableLineColor: [200, 210, 225],
+                tableLineWidth: 0.2,
+                didDrawPage: (hookData) => {
+                    // Pied de page : numéro de page
+                    const pageCount = doc.getNumberOfPages();
+                    const currentPage = hookData.pageNumber;
+                    doc.setFontSize(7);
+                    doc.setTextColor(150);
+                    doc.text(
+                        `Page ${currentPage} / ${pageCount}`,
+                        doc.internal.pageSize.getWidth() / 2,
+                        doc.internal.pageSize.getHeight() - 6,
+                        { align: "center" }
+                    );
+                    doc.text(
+                        `Eglise Méthodiste du Jubilé de Cocody — Annuaire des membres`,
+                        10,
+                        doc.internal.pageSize.getHeight() - 6,
+                    );
+                },
             });
+
             doc.save(
                 `annuaire_membres_${new Date().toISOString().slice(0, 10)}.pdf`,
             );
@@ -1561,7 +1647,7 @@ const Annuaire = ({
                                 <th className="text-center">Photo</th>
                                 <th className="text-center">Nom & Prénoms</th>
                                 <th className="text-center">Genre</th>
-                                <th className="text-center">Famille</th>
+
                                 <th className="text-center">Code famille</th>
                                 <th className="text-center">Code membre</th>
                                 <th className="text-center">Classe</th>
@@ -1634,9 +1720,6 @@ const Annuaire = ({
                                             </td>
                                             <td className="text-center">
                                                 {member.famille || "-"}
-                                            </td>
-                                            <td className="text-center">
-                                                {member.codeFamille || "-"}
                                             </td>
                                             <td className="text-center">
                                                 {member.codeMembre || "-"}
@@ -1833,6 +1916,11 @@ const Annuaire = ({
                                             </svg>
                                             {member.email || "-"}
                                         </div>
+                                        {member.profession && member.profession !== "-" && (
+                                            <div className="grid-card-profession">
+                                                💼 {member.profession}
+                                            </div>
+                                        )}
                                         <button
                                             onClick={() => openModal(member)}
                                             className="btn btn-view mt-3 w-full"

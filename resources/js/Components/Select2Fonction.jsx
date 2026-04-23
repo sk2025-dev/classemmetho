@@ -14,6 +14,7 @@ const Select2Fonction = ({
     placeholder = "Sélectionner des fonctions...",
     disabled = false,
     maxSelections = null,
+    menuPortalTarget,
 }) => {
     const normalizedFieldKey = String(name || id || "")
         .trim()
@@ -123,6 +124,11 @@ const Select2Fonction = ({
             boxShadow: "0 10px 25px rgba(0,0,0,.1)",
             marginTop: "4px",
             overflow: "hidden",
+            zIndex: 9999,
+        }),
+        menuPortal: (provided) => ({
+            ...provided,
+            zIndex: 9999,
         }),
         menuList: (provided) => ({
             ...provided,
@@ -198,6 +204,8 @@ const Select2Fonction = ({
                 classNamePrefix="react-select"
                 noOptionsMessage={() => "Aucune fonction ne correspond"}
                 isSearchable={true}
+                menuPortalTarget={menuPortalTarget !== undefined ? menuPortalTarget : (typeof document !== "undefined" ? document.body : null)}
+                menuPosition="fixed"
             />
         </div>
     );

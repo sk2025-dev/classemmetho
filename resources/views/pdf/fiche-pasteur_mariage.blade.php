@@ -292,7 +292,7 @@ $logoSrc = $logoDataUri ?? null;
     </div>
 
     <div class="main-title-wrapper">
-        <span class="main-title">Liste Complementaire</span>
+        <span class="main-title">Liste de formation - mariage</span>
     </div>
 
     <div class="table-wrapper">

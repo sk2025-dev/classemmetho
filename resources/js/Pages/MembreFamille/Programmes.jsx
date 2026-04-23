@@ -1786,7 +1786,7 @@ const MiniCalendar = ({ eventsDates = [], eventsData = [], onDateClick, activeDa
     return `${events[0].title} + ${events.length - 1} autre(s)`;
   };
 
-  const daysOfWeek = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+  const daysOfWeek = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   const days = getDaysInMonth(currentDate);
   const today = new Date();
 

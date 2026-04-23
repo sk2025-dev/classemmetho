@@ -880,6 +880,147 @@ class LiturgieController extends Controller
         ]);
     }
 
+    public function ficheBaptemeList(Request $request)
+    {
+        $actes = ActeLiturgique::with(['membre', 'classe', 'family', 'historiques.acteur'])
+            ->where('type_acte', ActeLiturgique::TYPE_BAPTEME)
+            ->whereIn('statut', ['TRANSMISE_AU_PASTEUR', 'VALIDEE', 'PUBLIEE'])
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        if ($actes->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Aucune demande de baptême disponible.',
+            ], 422);
+        }
+
+        $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
+
+        $pdf = Pdf::loadView('pdf.fiche-pasteur-bapteme', [
+            'actes' => $actes,
+            'logoDataUri' => $logoDataUri,
+            'documentLabel' => 'Fiche finale des baptêmes',
+            'generatedAt' => now(),
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->stream('liste-baptemes-' . now()->format('Ymd') . '.pdf');
+    }
+
+    public function envoyerFicheBapteme(Request $request)
+    {
+        $payload = $request->validate([
+            'destinataire' => ['required', 'email'],
+            'subject'      => ['nullable', 'string', 'max:255'],
+            'message'      => ['nullable', 'string', 'max:2000'],
+            'ids'          => ['required', 'array', 'min:1'],
+            'ids.*'        => ['integer'],
+        ]);
+
+        $user = $request->user();
+
+        $acteIds = array_filter(
+            array_unique(array_map('intval', $payload['ids'] ?? [])),
+        );
+
+        $actes = ActeLiturgique::with(['membre', 'classe', 'family', 'historiques.acteur'])
+            ->where('type_acte', ActeLiturgique::TYPE_BAPTEME)
+            ->whereIn('id', $acteIds)
+            ->get()
+            ->filter(function (ActeLiturgique $acte) {
+                $details = (array) ($acte->details ?? []);
+                $ficheSentFlag = $details['fiche_bapteme_envoyee'] ?? null;
+
+                $isSent = false;
+                if ($ficheSentFlag === true || $ficheSentFlag === 1) {
+                    $isSent = true;
+                } elseif (is_string($ficheSentFlag)) {
+                    $isSent = in_array(strtolower(trim($ficheSentFlag)), ['1', 'true'], true);
+                }
+
+                $statut = strtoupper(trim((string) ($acte->statut ?? '')));
+                $eligible = in_array($statut, ['TRANSMISE_AU_PASTEUR', 'VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'], true);
+
+                return $eligible && !$isSent;
+            })->values();
+
+        if ($actes->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Aucune fiche de baptême en attente d\'envoi.',
+            ], 422);
+        }
+
+        $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
+
+        try {
+            $pdf = Pdf::loadView('pdf.fiche-pasteur-bapteme', [
+                'actes' => $actes,
+                'logoDataUri' => $logoDataUri,
+                'documentLabel' => 'Fiche finale des baptêmes',
+                'generatedAt' => now(),
+            ])->setPaper('a4', 'landscape');
+        } catch (\Throwable $e) {
+            Log::error('Echec generation PDF fiche bapteme (pasteur)', [
+                'acte_ids' => $actes->pluck('id')->toArray(),
+                'error'    => $e->getMessage(),
+                'file'     => $e->getFile(),
+                'line'     => $e->getLine(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Impossible de générer la fiche PDF pour le moment.',
+            ], 500);
+        }
+
+        $filename     = 'fiche-finale-baptemes-pasteur-' . now()->format('Ymd-His') . '.pdf';
+        $mailSubject  = trim((string) ($payload['subject'] ?? '')) ?: 'Fiche finale des baptêmes';
+        $mailMessage  = trim((string) ($payload['message'] ?? ''))
+            ?: "Bonjour,\n\nVeuillez trouver en pièce jointe la fiche finale des baptêmes.\n\nBien cordialement.";
+
+        try {
+            Mail::raw($mailMessage, function ($message) use ($payload, $mailSubject, $pdf, $filename) {
+                $message
+                    ->to($payload['destinataire'])
+                    ->subject($mailSubject)
+                    ->attachData($pdf->output(), $filename, ['mime' => 'application/pdf']);
+            });
+        } catch (\Throwable $e) {
+            Log::error('Echec envoi email fiche bapteme (pasteur)', [
+                'acte_ids'    => $actes->pluck('id')->toArray(),
+                'destinataire' => $payload['destinataire'] ?? null,
+                'error'       => $e->getMessage(),
+                'file'        => $e->getFile(),
+                'line'        => $e->getLine(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Impossible d\'envoyer l\'email pour le moment.',
+            ], 500);
+        }
+
+        $actes->each(function (ActeLiturgique $acte) use ($payload, $user) {
+            $details = (array) ($acte->details ?? []);
+            $details['fiche_bapteme_envoyee']       = true;
+            $details['fiche_bapteme_envoyee_at']    = now()->toISOString();
+            $details['fiche_bapteme_destinataire']  = $payload['destinataire'] ?? null;
+            $details['fiche_bapteme_envoyee_par']   = $user->id;
+            $acte->update(['details' => $details]);
+        });
+
+        $updatedActes = ActeLiturgique::with(['membre', 'classe', 'family', 'historiques.acteur'])
+            ->whereIn('id', $actes->pluck('id')->toArray())
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'La fiche finale des baptêmes a été envoyée par email.',
+            'actes'   => $updatedActes,
+        ]);
+    }
+
     private function buildQrDataUri(string $payload): ?string
     {
         if (!class_exists(\Endroid\QrCode\QrCode::class) || !class_exists(\Endroid\QrCode\Writer\PngWriter::class)) {

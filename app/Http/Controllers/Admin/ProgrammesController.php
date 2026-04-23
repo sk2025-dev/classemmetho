@@ -29,8 +29,8 @@ class ProgrammesController extends Controller
         $eventsByClass = SpecialEvent::query()
             ->where('is_parish', false)
             ->whereIn('class_id', $classIds)
-            ->orderBy('date', 'asc')
-            ->orderBy('time', 'asc')
+            ->orderBy('start_date', 'asc')
+            ->orderBy('start_time', 'asc')
             ->get()
             ->groupBy('class_id');
 

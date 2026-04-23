@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import axios from "axios";
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import ConfirmationModal from "@/Components/ConfirmationModal";
 import ProfilePhoto from "@/Components/ProfilePhoto";
@@ -38,6 +39,11 @@ export default function Inscriptions() {
         action: null,
         inscription: null,
     });
+
+    // ─── Sélection groupée ───────────────────────────────────────────
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [bulkProcessing, setBulkProcessing] = useState(false);
+    const [bulkConfirmDelete, setBulkConfirmDelete] = useState(false);
 
     useEffect(() => {
         setInscriptions(initialInscriptions);
@@ -191,6 +197,117 @@ export default function Inscriptions() {
         );
     };
 
+    // ─── Helpers sélection ───────────────────────────────────────────
+    const isSelected = (id) => selectedIds.includes(id);
+    const isAllPageSelected =
+        paginatedInscriptions.length > 0 &&
+        paginatedInscriptions.every((i) => selectedIds.includes(i.id));
+
+    const toggleSelect = (id) =>
+        setSelectedIds((prev) =>
+            prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+        );
+
+    const toggleSelectAll = () => {
+        if (isAllPageSelected) {
+            setSelectedIds((prev) =>
+                prev.filter(
+                    (id) => !paginatedInscriptions.some((i) => i.id === id),
+                ),
+            );
+        } else {
+            const pageIds = paginatedInscriptions.map((i) => i.id);
+            setSelectedIds((prev) => [...new Set([...prev, ...pageIds])]);
+        }
+    };
+
+    const clearSelection = () => setSelectedIds([]);
+
+    // ─── Actions groupées ────────────────────────────────────────────
+    const handleBulkApprove = async () => {
+        if (!selectedIds.length || bulkProcessing) return;
+        setBulkProcessing(true);
+        try {
+            await Promise.all(
+                selectedIds.map((id) =>
+                    axios.post(`/admin/inscriptions/${id}/approve`),
+                ),
+            );
+            setInscriptions((prev) =>
+                prev.map((i) =>
+                    selectedIds.includes(i.id)
+                        ? { ...i, status: "approuve" }
+                        : i,
+                ),
+            );
+            addToast(
+                `${selectedIds.length} inscription(s) approuvée(s) avec succès.`,
+                "success",
+            );
+            clearSelection();
+        } catch {
+            addToast("Une erreur est survenue lors de l'approbation.", "error", 5000);
+        } finally {
+            setBulkProcessing(false);
+        }
+    };
+
+    const handleBulkReject = async () => {
+        if (!selectedIds.length || bulkProcessing) return;
+        setBulkProcessing(true);
+        try {
+            await Promise.all(
+                selectedIds.map((id) =>
+                    axios.post(`/admin/inscriptions/${id}/reject`),
+                ),
+            );
+            setInscriptions((prev) =>
+                prev.map((i) =>
+                    selectedIds.includes(i.id)
+                        ? { ...i, status: "rejete" }
+                        : i,
+                ),
+            );
+            addToast(
+                `${selectedIds.length} inscription(s) refusée(s).`,
+                "warning",
+                4500,
+            );
+            clearSelection();
+        } catch {
+            addToast("Une erreur est survenue lors du refus.", "error", 5000);
+        } finally {
+            setBulkProcessing(false);
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (!selectedIds.length || bulkProcessing) return;
+        setBulkProcessing(true);
+        setBulkConfirmDelete(false);
+        try {
+            await axios.post("/admin/inscriptions/bulk-delete", {
+                ids: selectedIds,
+            });
+            setInscriptions((prev) =>
+                prev.filter((i) => !selectedIds.includes(i.id)),
+            );
+            addToast(
+                `${selectedIds.length} inscription(s) supprimée(s).`,
+                "success",
+            );
+            clearSelection();
+        } catch {
+            addToast(
+                "Une erreur est survenue lors de la suppression.",
+                "error",
+                5000,
+            );
+        } finally {
+            setBulkProcessing(false);
+        }
+    };
+
     const confirmCurrentAction = () => {
         const { action, inscription } = confirmationState;
 
@@ -321,6 +438,77 @@ export default function Inscriptions() {
                     </select>
                 </div>
 
+                {/* ── Barre d'actions groupées ── */}
+                {selectedIds.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-3 mb-3 px-4 py-3 bg-white rounded-xl shadow border border-gray-200">
+                        <span className="text-sm font-bold text-gray-700">
+                            {selectedIds.length} inscription(s) sélectionnée(s)
+                        </span>
+                        <div className="flex gap-2 ml-auto flex-wrap">
+                            <button
+                                onClick={handleBulkApprove}
+                                disabled={bulkProcessing}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg transition disabled:opacity-50"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
+                                Approuver
+                            </button>
+                            <button
+                                onClick={handleBulkReject}
+                                disabled={bulkProcessing}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition disabled:opacity-50"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                                Refuser
+                            </button>
+                            <button
+                                onClick={() => setBulkConfirmDelete(true)}
+                                disabled={bulkProcessing}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition disabled:opacity-50"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                Supprimer
+                            </button>
+                            <button
+                                onClick={clearSelection}
+                                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-semibold rounded-lg transition"
+                            >
+                                Annuler
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* ── Modale confirmation suppression groupée ── */}
+                {bulkConfirmDelete && (
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
+                        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4">
+                            <div className="text-4xl text-center mb-4">🗑️</div>
+                            <h3 className="text-lg font-bold text-gray-800 text-center mb-2">
+                                Supprimer {selectedIds.length} inscription(s) ?
+                            </h3>
+                            <p className="text-sm text-gray-500 text-center mb-6">
+                                Cette action est irréversible.
+                            </p>
+                            <div className="flex gap-3 justify-center">
+                                <button
+                                    onClick={() => setBulkConfirmDelete(false)}
+                                    className="px-5 py-2 rounded-lg border border-gray-300 text-gray-600 font-semibold hover:bg-gray-50 transition"
+                                >
+                                    Annuler
+                                </button>
+                                <button
+                                    onClick={handleBulkDelete}
+                                    disabled={bulkProcessing}
+                                    className="px-5 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition disabled:opacity-50"
+                                >
+                                    {bulkProcessing ? "Suppression..." : "Supprimer"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="bg-white rounded-xl shadow-xl overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200 text-sm">
                         <thead
@@ -328,6 +516,15 @@ export default function Inscriptions() {
                             style={{ backgroundColor: "#B6C01A" }}
                         >
                             <tr>
+                                <th className="px-4 py-3 text-center">
+                                    <input
+                                        type="checkbox"
+                                        className="w-4 h-4 rounded accent-white cursor-pointer"
+                                        checked={isAllPageSelected}
+                                        onChange={toggleSelectAll}
+                                        title="Tout sélectionner / désélectionner"
+                                    />
+                                </th>
                                 <th className="px-4 py-3 text-left font-semibold text-white">
                                     #
                                 </th>

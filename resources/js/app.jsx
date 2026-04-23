@@ -230,21 +230,13 @@ router.on("navigate", () => {
 
 router.on("finish", (event) => {
     const visit = event.detail.visit;
-    const method = String(visit?.method || "").toLowerCase();
-    const isMutationRequest = ["post", "put", "patch", "delete"].includes(
-        method,
-    );
 
-    if (
-        visit.cancelled ||
-        visit.interrupted ||
-        !visit.completed ||
-        isMutationRequest
-    ) {
-        requestAnimationFrame(() => {
-            hideNavigationLoader();
-        });
-    }
+    // Toujours cacher le loader de navigation à la fin d'une visite.
+    // En Inertia v2, l'événement "navigate" n'est pas émis pour replace:true,
+    // donc c'est ici qu'on doit systématiquement cacher le loader.
+    requestAnimationFrame(() => {
+        hideNavigationLoader();
+    });
 
     hideInitialLoadingScreen();
 
@@ -265,26 +257,28 @@ router.on("invalid", () => {
  * Configuration de l'app Inertia
  */
 createInertiaApp({
-    resolve: (name) => {
-        const pages = import.meta.glob("./Pages/**/*.jsx", { eager: true });
+    resolve: async (name) => {
+        const pages = import.meta.glob("./Pages/**/*.jsx");
         const requestedPath = `./Pages/${name}.jsx`;
-        let page = pages[requestedPath];
+        let pageResolver = pages[requestedPath];
 
-        if (!page) {
+        if (!pageResolver) {
             const requestedPathLower = requestedPath.toLowerCase();
             const matchedKey = Object.keys(pages).find(
                 (key) => key.toLowerCase() === requestedPathLower,
             );
 
             if (matchedKey) {
-                page = pages[matchedKey];
+                pageResolver = pages[matchedKey];
             }
         }
 
-        if (!page) {
+        if (!pageResolver) {
             console.error(`Page not found: ./Pages/${name}.jsx`);
             console.log("Available pages:", Object.keys(pages));
         }
+
+        const page = pageResolver ? await pageResolver() : null;
 
         // Appliquer automatiquement MainLayout à TOUTES les pages AUTHENTIFIÉES UNIQUEMENT
         // (sauf les pages d'authentification qui n'ont pas besoin de layout)
@@ -298,7 +292,7 @@ createInertiaApp({
         ];
 
         // Si la page n'a pas déjà un layout défini et qu'elle n'est pas une page d'authentification
-        if (page && !page.default.layout && !authRoutes.includes(name)) {
+        if (page?.default && !page.default.layout && !authRoutes.includes(name)) {
             page.default.layout = (pageContent) => {
                 const content = pageContent.props.auth?.user ? (
                     <MainLayout auth={pageContent.props.auth}>

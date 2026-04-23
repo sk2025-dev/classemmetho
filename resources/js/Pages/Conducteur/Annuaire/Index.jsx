@@ -490,6 +490,12 @@ const GLOBAL_STYLES = `
         width: 1rem;
         height: 1rem;
     }
+    .grid-card-profession {
+        font-size: 0.78rem;
+        color: #9ca3af;
+        font-style: italic;
+        margin-top: 0.35rem;
+    }
 
     /* Vues familles et classes */
     .families-list, .classes-list { display: flex; flex-direction: column; gap: 1.5rem; }
@@ -1211,7 +1217,8 @@ const Annuaire = ({
                         reader.onloadend = () => resolve(reader.result);
                         reader.readAsDataURL(blob);
                     });
-                    doc.addImage(logoData, "PNG", 257, 10, 30, 15);
+                    const pageW = doc.internal.pageSize.getWidth();
+                    doc.addImage(logoData, "PNG", pageW - 32, 4, 22, 22);
                 }
             } catch (e) {
                 console.log("Logo non chargé, génération sans logo.");
@@ -1220,71 +1227,138 @@ const Annuaire = ({
             doc.text("Annuaire des membres", 14, 22);
             doc.setFontSize(11);
             doc.setTextColor(100);
-            doc.text(`Export du ${new Date().toLocaleDateString()}`, 14, 30);
+            doc.text(
+                `Export du ${new Date().toLocaleDateString()} — ${paginatedMembers.length} membre(s) affichés`,
+                14, 30
+            );
 
             const columns = [
-                { header: "#", dataKey: "index" },
-                { header: "Nom", dataKey: "nom" },
-                { header: "Prénoms", dataKey: "prenoms" },
-                { header: "Genre", dataKey: "genre" },
-                { header: "Famille", dataKey: "famille" },
-                { header: "Code famille", dataKey: "codeFamille" },
-                { header: "Code membre", dataKey: "codeMembre" },
-                { header: "Classe", dataKey: "classe" },
-                { header: "Téléphone", dataKey: "telephone" },
-                { header: "Email", dataKey: "email" },
-                { header: "Baptême", dataKey: "baptise" },
-                { header: "Relation", dataKey: "relation" },
+                { header: "#",              dataKey: "index" },
+                { header: "Nom",            dataKey: "nom" },
+                { header: "Prénoms",        dataKey: "prenoms" },
+                { header: "Genre",          dataKey: "genre" },
+                { header: "Code famille",   dataKey: "codeFamille" },
+                { header: "Code membre",    dataKey: "codeMembre" },
+                { header: "Classe",         dataKey: "classe" },
+                { header: "Téléphone",      dataKey: "telephone" },
+                { header: "Email",          dataKey: "email" },
+                { header: "Baptême",        dataKey: "baptise" },
+                { header: "Relation",       dataKey: "relation" },
                 { header: "1ère communion", dataKey: "premiereCommunion" },
-                { header: "Mariage civil", dataKey: "mariageCivil" },
-                { header: "Mariage religieux", dataKey: "marieReligieusement" },
-                { header: "Doté", dataKey: "dote" },
-                { header: "Veuf", dataKey: "veuf" },
-                { header: "Date naiss.", dataKey: "dateNaissance" },
-                { header: "Fonction", dataKey: "fonction" },
-                { header: "Profession", dataKey: "profession" },
+                { header: "Mariage civil",  dataKey: "mariageCivil" },
+                { header: "Mariage relig.", dataKey: "marieReligieusement" },
+                { header: "Doté",           dataKey: "dote" },
+                { header: "Veuf",           dataKey: "veuf" },
+                { header: "Date naiss.",    dataKey: "dateNaissance" },
+                { header: "Fonction",       dataKey: "fonction" },
+                { header: "Profession",     dataKey: "profession" },
             ];
 
             const data = paginatedMembers.map((member, idx) => {
                 const normalized = normalizeMember(member);
-                const rowNumber =
-                    (membersCurrentPage - 1) * membersPerPage + idx + 1;
+                const rowNumber = (membersCurrentPage - 1) * membersPerPage + idx + 1;
+                const familleCode = normalized.famille !== "-" ? normalized.famille : (normalized.codeFamille || "");
+                let formattedDate = "";
+                if (normalized.dateNaissance) {
+                    const d = new Date(normalized.dateNaissance);
+                    if (!isNaN(d.getTime())) {
+                        formattedDate = `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
+                    } else {
+                        formattedDate = normalized.dateNaissance;
+                    }
+                }
                 return {
                     index: rowNumber,
                     nom: normalized.nom || "",
                     prenoms: normalized.prenoms || "",
                     genre: normalized.sexe === "M" ? "Masculin" : "Féminin",
-                    famille: normalized.famille || "",
-                    codeFamille: normalized.codeFamille || "",
+                    codeFamille: familleCode,
                     codeMembre: normalized.codeMembre || "",
                     classe: normalized.classeMethodiste || "",
                     telephone: normalized.telephone || "",
                     email: normalized.email || "",
                     baptise: normalized.baptise ? "Oui" : "Non",
                     relation: normalized.relation || "",
-                    premiereCommunion: normalized.premiereCommunion
-                        ? "Oui"
-                        : "Non",
+                    premiereCommunion: normalized.premiereCommunion ? "Oui" : "Non",
                     mariageCivil: normalized.mariageCivil ? "Oui" : "Non",
-                    marieReligieusement: normalized.marieReligieusement
-                        ? "Oui"
-                        : "Non",
+                    marieReligieusement: normalized.marieReligieusement ? "Oui" : "Non",
                     dote: normalized.dote ? "Oui" : "Non",
                     veuf: normalized.veuf ? "Oui" : "Non",
-                    dateNaissance: normalized.dateNaissance || "",
+                    dateNaissance: formattedDate,
                     fonction: normalized.fonction || "",
                     profession: normalized.profession || "",
                 };
             });
 
+            // Largeurs en mm — total 264mm pour A4 paysage (277mm utiles)
+            const columnStyles = {
+                index:               { cellWidth: 6,  halign: "center" },
+                nom:                 { cellWidth: 18 },
+                prenoms:             { cellWidth: 21 },
+                genre:               { cellWidth: 13, halign: "center" },
+                codeFamille:         { cellWidth: 14, halign: "center" },
+                codeMembre:          { cellWidth: 13, halign: "center" },
+                classe:              { cellWidth: 16 },
+                telephone:           { cellWidth: 21 },
+                email:               { cellWidth: 28 },
+                baptise:             { cellWidth: 10, halign: "center" },
+                relation:            { cellWidth: 13 },
+                premiereCommunion:   { cellWidth: 13, halign: "center" },
+                mariageCivil:        { cellWidth: 13, halign: "center" },
+                marieReligieusement: { cellWidth: 13, halign: "center" },
+                dote:                { cellWidth: 8,  halign: "center" },
+                veuf:                { cellWidth: 8,  halign: "center" },
+                dateNaissance:       { cellWidth: 14, halign: "center" },
+                fonction:            { cellWidth: 15 },
+                profession:          { cellWidth: 15 },
+            };
+
             autoTable(doc, {
                 columns,
                 body: data,
-                startY: 40,
-                styles: { fontSize: 8, cellPadding: 2 },
-                headStyles: { fillColor: [37, 99, 235], textColor: 255 },
-                alternateRowStyles: { fillColor: [245, 247, 250] },
+                startY: 38,
+                margin: { left: 10, right: 10 },
+                tableWidth: 277,
+                styles: {
+                    fontSize: 7.5,
+                    cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
+                    overflow: "linebreak",
+                    lineColor: [220, 225, 235],
+                    lineWidth: 0.2,
+                    valign: "middle",
+                },
+                headStyles: {
+                    fillColor: [37, 99, 235],
+                    textColor: 255,
+                    fontSize: 7,
+                    fontStyle: "bold",
+                    cellPadding: { top: 4, right: 3, bottom: 4, left: 3 },
+                    halign: "center",
+                    lineWidth: 0,
+                },
+                alternateRowStyles: { fillColor: [247, 249, 252] },
+                columnStyles,
+                tableLineColor: [200, 210, 225],
+                tableLineWidth: 0.2,
+                didDrawPage: (hookData) => {
+                    const currentPage = hookData.pageNumber;
+                    const pageCount = doc.getNumberOfPages();
+                    doc.setFontSize(7);
+                    doc.setTextColor(150);
+                    doc.text(
+                        `Page ${currentPage} / ${pageCount}`,
+                        doc.internal.pageSize.getWidth() / 2,
+                        doc.internal.pageSize.getHeight() - 6,
+                        { align: "center" }
+                    );
+                    doc.text(
+                        "Eglise Méthodiste du Jubilé de Cocody — Annuaire des membres",
+                        10,
+                        doc.internal.pageSize.getHeight() - 6,
+                    );
+                },
             });
+
             doc.save(
                 `annuaire_membres_${new Date().toISOString().slice(0, 10)}.pdf`,
             );
@@ -1643,6 +1717,11 @@ const Annuaire = ({
                                             </svg>
                                             {member.email || "-"}
                                         </div>
+                                        {member.profession && member.profession !== "-" && (
+                                            <div className="grid-card-profession">
+                                                💼 {member.profession}
+                                            </div>
+                                        )}
                                         <button
                                             onClick={() => openModal(member)}
                                             className="btn btn-view mt-3 w-full"
