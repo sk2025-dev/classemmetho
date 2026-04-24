@@ -19,6 +19,7 @@ class AdminSeeder extends Seeder
             ['email' => 'admin@classemetho.local'],
             [
                 'identifier' => 'ADMIN001',
+                'code_membre' => 'ADMIN001',
                 'nom' => 'Administrateur',
                 'prenom' => 'Admin',
                 'password' => Hash::make('admin123'),

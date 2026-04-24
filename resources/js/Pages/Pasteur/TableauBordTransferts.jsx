@@ -12,6 +12,7 @@ import {
     Search,
     X,
     Info,
+    MapPin,
     Layers,
 } from "lucide-react";
 import { withBasePath } from "../../Utils/urlHelper";
@@ -1067,8 +1068,42 @@ export default function Index({
         member_id: "",
         target_class_id: "",
         reason: "",
+        destination_city: "",
+        destination_church: "",
     });
     const [processing, setProcessing] = useState(false);
+    const isMemberTransferType = ["member", "member_external"].includes(
+        formData.type,
+    );
+    const isExternalTransferType = ["member_external", "family_external"].includes(
+        formData.type,
+    );
+
+    const getMemberOptionLabel = (member) =>
+        member.transfer_status
+            ? `${member.nom} ${member.prenom} - ${member.transfer_label || "Action bloquee"}`
+            : `${member.nom} ${member.prenom}`;
+
+    const getTransferTypeLabel = (type) => {
+        switch (type) {
+            case "member":
+                return "Transfert d'un membre";
+            case "family":
+                return "Transfert d'une famille";
+            case "member_external":
+                return "Sortie externe d'un membre";
+            case "family_external":
+                return "Sortie externe d'une famille";
+            default:
+                return type || "Transfert";
+        }
+    };
+
+    const memberOptions = members.map((member) => ({
+        value: member.id,
+        label: getMemberOptionLabel(member),
+        disabled: Boolean(member.transfer_status),
+    }));
 
     const stats = useMemo(
         () => ({
@@ -1103,17 +1138,22 @@ export default function Index({
             member_id: "",
             target_class_id: "",
             reason: "",
+            destination_city: "",
+            destination_church: "",
         });
     };
 
     const handleNextStep = () => {
+        if (modalStep === 2 && isMemberTransferType && !formData.member_id)
+            return;
         if (
             modalStep === 2 &&
-            formData.type === "member" &&
-            !formData.member_id
+            isExternalTransferType &&
+            (!formData.destination_city || !formData.destination_church)
         )
             return;
-        if (modalStep === 2 && !formData.target_class_id) return;
+        if (modalStep === 2 && !isExternalTransferType && !formData.target_class_id)
+            return;
         setModalStep((s) => s + 1);
     };
 
@@ -1122,12 +1162,21 @@ export default function Index({
         router.post(
             withBasePath("", "/pasteur/transferts"),
             {
-                type: formData.type,
+                type: isMemberTransferType ? "member" : "family",
+                transfer_mode: isExternalTransferType ? "external" : "internal",
                 user_id:
-                    formData.type === "member"
+                    isMemberTransferType
                         ? parseInt(formData.member_id)
                         : null,
-                target_class_id: parseInt(formData.target_class_id),
+                target_class_id: isExternalTransferType
+                    ? null
+                    : parseInt(formData.target_class_id),
+                destination_city: isExternalTransferType
+                    ? formData.destination_city
+                    : null,
+                destination_church: isExternalTransferType
+                    ? formData.destination_church
+                    : null,
                 reason: formData.reason || null,
             },
             {
@@ -1541,6 +1590,18 @@ export default function Index({
                                                 icon: UsersRound,
                                                 desc: "Transfert groupé de la famille",
                                             },
+                                            {
+                                                value: "member_external",
+                                                label: "Sortie externe d'un membre",
+                                                icon: MapPin,
+                                                desc: "Archive un membre comme ancien membre vers une autre eglise",
+                                            },
+                                            {
+                                                value: "family_external",
+                                                label: "Sortie externe d'une famille",
+                                                icon: MapPin,
+                                                desc: "Archive toute la famille hors communaute vers une autre eglise",
+                                            },
                                         ].map((opt) => (
                                             <div
                                                 key={opt.value}
@@ -1556,6 +1617,9 @@ export default function Index({
                                                         ...formData,
                                                         type: opt.value,
                                                         member_id: "",
+                                                        target_class_id: "",
+                                                        destination_city: "",
+                                                        destination_church: "",
                                                     })
                                                 }
                                             >
@@ -1653,7 +1717,7 @@ export default function Index({
                                         gap: 16,
                                     }}
                                 >
-                                    {formData.type === "member" && (
+                                    {isMemberTransferType && (
                                         <div>
                                             <label
                                                 style={{
@@ -1688,58 +1752,144 @@ export default function Index({
                                                 <option value="">
                                                     Sélectionner un membre…
                                                 </option>
-                                                {members.map((m) => (
+                                                {memberOptions.map((m) => (
                                                     <option
                                                         key={m.id}
                                                         value={m.id}
+                                                        disabled={m.disabled}
                                                     >
-                                                        {m.nom} {m.prenom}
+                                                        {m.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <div
+                                                style={{
+                                                    marginTop: 8,
+                                                    fontSize: 12,
+                                                    color: "#64748b",
+                                                    lineHeight: 1.5,
+                                                }}
+                                            >
+                                                Les anciens membres et les membres avec un transfert en cours restent visibles, mais ils sont desactives pour eviter une nouvelle action.
+                                            </div>
+                                        </div>
+                                    )}
+                                    {!isExternalTransferType ? (
+                                        <div>
+                                            <label
+                                                style={{
+                                                    display: "block",
+                                                    fontSize: 12,
+                                                    fontWeight: 600,
+                                                    color: "#555",
+                                                    textTransform: "uppercase",
+                                                    letterSpacing: "0.06em",
+                                                    marginBottom: 8,
+                                                }}
+                                            >
+                                                Classe cible
+                                            </label>
+                                            <select
+                                                value={formData.target_class_id}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        target_class_id:
+                                                            e.target.value,
+                                                    })
+                                                }
+                                                className="input-field"
+                                                style={{
+                                                    width: "100%",
+                                                    padding: "10px 14px",
+                                                    fontSize: 13,
+                                                    color: "#111",
+                                                }}
+                                            >
+                                                <option value="">
+                                                    Selectionner une classe...
+                                                </option>
+                                                {classes.map((c) => (
+                                                    <option key={c.id} value={c.id}>
+                                                        {c.nom}
                                                     </option>
                                                 ))}
                                             </select>
                                         </div>
+                                    ) : (
+                                        <>
+                                            <div>
+                                                <label
+                                                    style={{
+                                                        display: "block",
+                                                        fontSize: 12,
+                                                        fontWeight: 600,
+                                                        color: "#555",
+                                                        textTransform: "uppercase",
+                                                        letterSpacing: "0.06em",
+                                                        marginBottom: 8,
+                                                    }}
+                                                >
+                                                    Ville de destination
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.destination_city}
+                                                    onChange={(e) =>
+                                                        setFormData({
+                                                            ...formData,
+                                                            destination_city:
+                                                                e.target.value,
+                                                        })
+                                                    }
+                                                    className="input-field"
+                                                    placeholder="Ex: Abidjan"
+                                                    style={{
+                                                        width: "100%",
+                                                        padding: "10px 14px",
+                                                        fontSize: 13,
+                                                        color: "#111",
+                                                        boxSizing: "border-box",
+                                                    }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label
+                                                    style={{
+                                                        display: "block",
+                                                        fontSize: 12,
+                                                        fontWeight: 600,
+                                                        color: "#555",
+                                                        textTransform: "uppercase",
+                                                        letterSpacing: "0.06em",
+                                                        marginBottom: 8,
+                                                    }}
+                                                >
+                                                    Eglise de destination
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.destination_church}
+                                                    onChange={(e) =>
+                                                        setFormData({
+                                                            ...formData,
+                                                            destination_church:
+                                                                e.target.value,
+                                                        })
+                                                    }
+                                                    className="input-field"
+                                                    placeholder="Ex: Eglise Genese"
+                                                    style={{
+                                                        width: "100%",
+                                                        padding: "10px 14px",
+                                                        fontSize: 13,
+                                                        color: "#111",
+                                                        boxSizing: "border-box",
+                                                    }}
+                                                />
+                                            </div>
+                                        </>
                                     )}
-                                    <div>
-                                        <label
-                                            style={{
-                                                display: "block",
-                                                fontSize: 12,
-                                                fontWeight: 600,
-                                                color: "#555",
-                                                textTransform: "uppercase",
-                                                letterSpacing: "0.06em",
-                                                marginBottom: 8,
-                                            }}
-                                        >
-                                            Classe cible
-                                        </label>
-                                        <select
-                                            value={formData.target_class_id}
-                                            onChange={(e) =>
-                                                setFormData({
-                                                    ...formData,
-                                                    target_class_id:
-                                                        e.target.value,
-                                                })
-                                            }
-                                            className="input-field"
-                                            style={{
-                                                width: "100%",
-                                                padding: "10px 14px",
-                                                fontSize: 13,
-                                                color: "#111",
-                                            }}
-                                        >
-                                            <option value="">
-                                                Sélectionner une classe…
-                                            </option>
-                                            {classes.map((c) => (
-                                                <option key={c.id} value={c.id}>
-                                                    {c.nom}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
                                     <div>
                                         <label
                                             style={{
@@ -1812,12 +1962,11 @@ export default function Index({
                                         {[
                                             {
                                                 key: "Type",
-                                                val:
-                                                    formData.type === "member"
-                                                        ? "Membre"
-                                                        : "Famille",
+                                                val: getTransferTypeLabel(
+                                                    formData.type,
+                                                ),
                                             },
-                                            ...(formData.type === "member"
+                                            ...(isMemberTransferType
                                                 ? [
                                                       {
                                                           key: "Membre",
@@ -1837,15 +1986,28 @@ export default function Index({
                                                       },
                                                   ]
                                                 : []),
-                                            {
-                                                key: "Classe cible",
-                                                val:
-                                                    classes.find(
-                                                        (c) =>
-                                                            String(c.id) ===
-                                                            formData.target_class_id,
-                                                    )?.nom || "—",
-                                            },
+                                            ...(isExternalTransferType
+                                                ? [
+                                                      {
+                                                          key: "Ville de destination",
+                                                          val: formData.destination_city || "â€”",
+                                                      },
+                                                      {
+                                                          key: "Eglise de destination",
+                                                          val: formData.destination_church || "â€”",
+                                                      },
+                                                  ]
+                                                : [
+                                                      {
+                                                          key: "Classe cible",
+                                                          val:
+                                                              classes.find(
+                                                                  (c) =>
+                                                                      String(c.id) ===
+                                                                      formData.target_class_id,
+                                                              )?.nom || "â€”",
+                                                      },
+                                                  ]),
                                             ...(formData.reason
                                                 ? [
                                                       {
@@ -2074,6 +2236,16 @@ export default function Index({
                             >
                                 {[
                                     {
+                                        label: "Type",
+                                        value: getTransferTypeLabel(
+                                            selectedTransfer.transfer_mode ===
+                                                "external"
+                                                ? `${selectedTransfer.type}_external`
+                                                : selectedTransfer.type,
+                                        ),
+                                        color: "#555",
+                                    },
+                                    {
                                         label: "Source",
                                         value: selectedTransfer.classe_source
                                             ?.nom,
@@ -2089,15 +2261,6 @@ export default function Index({
                                         color: "#ea580c",
                                         bold: true,
                                     },
-                                    ...(selectedTransfer.destination_note
-                                        ? [
-                                              {
-                                                  label: "Détails",
-                                                  value: selectedTransfer.destination_note,
-                                                  color: "#777",
-                                              },
-                                          ]
-                                        : []),
                                     ...(selectedTransfer.reason
                                         ? [
                                               {

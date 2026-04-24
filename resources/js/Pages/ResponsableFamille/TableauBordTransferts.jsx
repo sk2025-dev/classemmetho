@@ -1082,15 +1082,35 @@ export default function Index({
         target_class_id: "",
         reason: "",
         destination_city: "",
-        destination_country: "",
-        destination_note: "",
+        destination_church: "",
     });
     const [processing, setProcessing] = useState(false);
+    const isMemberTransferType = ["member", "member_external"].includes(
+        formData.type,
+    );
+    const isExternalTransferType = ["member_external", "family_external"].includes(
+        formData.type,
+    );
 
     const getMemberOptionLabel = (member) =>
         member.transfer_status
             ? `${member.nom} ${member.prenom} - ${member.transfer_label || "Action bloquee"}`
             : `${member.nom} ${member.prenom}`;
+
+    const getTransferTypeLabel = (type) => {
+        switch (type) {
+            case "member":
+                return "Transfert d'un membre";
+            case "family":
+                return "Transfert d'une famille";
+            case "member_external":
+                return "Sortie externe d'un membre";
+            case "family_external":
+                return "Sortie externe d'une famille";
+            default:
+                return type || "Transfert";
+        }
+    };
 
     const statusOptions = [
         { value: "SOUMISE", label: "Soumise" },
@@ -1147,17 +1167,16 @@ export default function Index({
             target_class_id: "",
             reason: "",
             destination_city: "",
-            destination_country: "",
-            destination_note: "",
+            destination_church: "",
         });
     };
 
     const handleNextStep = () => {
         if (modalStep === 1 && !formData.type) return;
         if (modalStep === 2) {
-            if (formData.type === "member" && !formData.member_id) return;
-            if (formData.type === "external") {
-                if (!formData.destination_city || !formData.destination_country)
+            if (isMemberTransferType && !formData.member_id) return;
+            if (isExternalTransferType) {
+                if (!formData.destination_city || !formData.destination_church)
                     return;
             } else {
                 if (!formData.target_class_id) return;
@@ -1171,26 +1190,23 @@ export default function Index({
         router.post(
             withBasePath("", "/responsable-famille/transferts"),
             {
-                type: formData.type,
+                type: isMemberTransferType ? "member" : "family",
+                transfer_mode: isExternalTransferType ? "external" : "internal",
                 user_id:
-                    formData.type === "member"
+                    isMemberTransferType
                         ? parseInt(formData.member_id)
                         : null,
                 target_class_id:
-                    formData.type === "external"
+                    isExternalTransferType
                         ? null
                         : parseInt(formData.target_class_id),
                 destination_city:
-                    formData.type === "external"
+                    isExternalTransferType
                         ? formData.destination_city
                         : null,
-                destination_country:
-                    formData.type === "external"
-                        ? formData.destination_country
-                        : null,
-                destination_note:
-                    formData.type === "external"
-                        ? formData.destination_note || null
+                destination_church:
+                    isExternalTransferType
+                        ? formData.destination_church
                         : null,
                 reason: formData.reason || null,
             },
@@ -1597,10 +1613,16 @@ export default function Index({
                                                 desc: "Transfert groupé de la famille",
                                             },
                                             {
-                                                value: "external",
-                                                label: "Hors communauté",
+                                                value: "member_external",
+                                                label: "Sortie externe d'un membre",
                                                 icon: MapPin,
-                                                desc: "Sortie vers une autre ville ou pays",
+                                                desc: "Archive un membre comme ancien membre vers une autre eglise",
+                                            },
+                                            {
+                                                value: "family_external",
+                                                label: "Sortie externe d'une famille",
+                                                icon: MapPin,
+                                                desc: "Archive toute la famille hors communaute vers une autre eglise",
                                             },
                                         ].map((opt) => (
                                             <div
@@ -1619,8 +1641,7 @@ export default function Index({
                                                         member_id: "",
                                                         target_class_id: "",
                                                         destination_city: "",
-                                                        destination_country: "",
-                                                        destination_note: "",
+                                                        destination_church: "",
                                                     })
                                                 }
                                             >
@@ -1671,7 +1692,7 @@ export default function Index({
                                             </div>
                                         ))}
                                     </div>
-                                    {formData.type === "member" && (
+                                    {isMemberTransferType && (
                                         <div
                                             style={{
                                                 display: "flex",
@@ -1761,7 +1782,7 @@ export default function Index({
                                         </div>
                                     )}
 
-                                    {formData.type !== "external" ? (
+                                    {!isExternalTransferType ? (
                                         <div>
                                             <label
                                                 style={{
@@ -1845,66 +1866,27 @@ export default function Index({
                                                         marginBottom: 8,
                                                     }}
                                                 >
-                                                    Pays de destination
+                                                    Eglise de destination
                                                 </label>
                                                 <input
                                                     type="text"
                                                     value={
-                                                        formData.destination_country
+                                                        formData.destination_church
                                                     }
                                                     onChange={(e) =>
                                                         setFormData({
                                                             ...formData,
-                                                            destination_country:
+                                                            destination_church:
                                                                 e.target.value,
                                                         })
                                                     }
                                                     className="input-field"
-                                                    placeholder="Ex: Sénégal"
+                                                    placeholder="Ex: Eglise Genese"
                                                     style={{
                                                         width: "100%",
                                                         padding: "10px 14px",
                                                         fontSize: 13,
                                                         color: "#111",
-                                                        boxSizing: "border-box",
-                                                    }}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label
-                                                    style={{
-                                                        display: "block",
-                                                        fontSize: 12,
-                                                        fontWeight: 600,
-                                                        color: "#555",
-                                                        textTransform:
-                                                            "uppercase",
-                                                        letterSpacing: "0.06em",
-                                                        marginBottom: 8,
-                                                    }}
-                                                >
-                                                    Détails complémentaires
-                                                </label>
-                                                <textarea
-                                                    value={
-                                                        formData.destination_note
-                                                    }
-                                                    onChange={(e) =>
-                                                        setFormData({
-                                                            ...formData,
-                                                            destination_note:
-                                                                e.target.value,
-                                                        })
-                                                    }
-                                                    rows={2}
-                                                    className="input-field"
-                                                    placeholder="Optionnel : précisez l'église d'accueil, contact, etc."
-                                                    style={{
-                                                        width: "100%",
-                                                        padding: "10px 14px",
-                                                        fontSize: 13,
-                                                        color: "#111",
-                                                        resize: "none",
                                                         boxSizing: "border-box",
                                                     }}
                                                 />
@@ -1984,15 +1966,11 @@ export default function Index({
                                         {[
                                             {
                                                 key: "Type",
-                                                val:
-                                                    formData.type === "member"
-                                                        ? "Membre"
-                                                        : formData.type ===
-                                                            "external"
-                                                          ? "Hors communauté"
-                                                          : "Famille",
+                                                val: getTransferTypeLabel(
+                                                    formData.type,
+                                                ),
                                             },
-                                            ...(formData.type === "member"
+                                            ...(isMemberTransferType
                                                 ? [
                                                       {
                                                           key: "Membre",
@@ -2012,32 +1990,30 @@ export default function Index({
                                                       },
                                                   ]
                                                 : []),
-                                            formData.type === "external"
-                                                ? {
-                                                      key: "Destination",
-                                                      val: formData.destination_city
-                                                          ? `${formData.destination_city}${formData.destination_country ? ` • ${formData.destination_country}` : ""}`
-                                                          : "—",
-                                                  }
-                                                : {
-                                                      key: "Classe cible",
-                                                      val:
-                                                          classes.find(
-                                                              (c) =>
-                                                                  String(
-                                                                      c.id,
-                                                                  ) ===
-                                                                  formData.target_class_id,
-                                                          )?.nom || "—",
-                                                  },
-                                            ...(formData.destination_note
+                                            ...(isExternalTransferType
                                                 ? [
                                                       {
-                                                          key: "Détails",
-                                                          val: formData.destination_note,
+                                                          key: "Ville de destination",
+                                                          val: formData.destination_city || "â€”",
+                                                      },
+                                                      {
+                                                          key: "Eglise de destination",
+                                                          val: formData.destination_church || "â€”",
                                                       },
                                                   ]
-                                                : []),
+                                                : [
+                                                      {
+                                                          key: "Classe cible",
+                                                          val:
+                                                              classes.find(
+                                                                  (c) =>
+                                                                      String(
+                                                                          c.id,
+                                                                      ) ===
+                                                                      formData.target_class_id,
+                                                              )?.nom || "â€”",
+                                                      },
+                                                  ]),
                                             ...(formData.reason
                                                 ? [
                                                       {
@@ -2267,6 +2243,16 @@ export default function Index({
                             >
                                 {[
                                     {
+                                        label: "Type",
+                                        value: getTransferTypeLabel(
+                                            selectedTransfer.transfer_mode ===
+                                                "external"
+                                                ? `${selectedTransfer.type}_external`
+                                                : selectedTransfer.type,
+                                        ),
+                                        color: "#555",
+                                    },
+                                    {
                                         label: "Source",
                                         value: selectedTransfer.classe_source
                                             ?.nom,
@@ -2282,15 +2268,6 @@ export default function Index({
                                         color: "#ea580c",
                                         bold: true,
                                     },
-                                    ...(selectedTransfer.destination_note
-                                        ? [
-                                              {
-                                                  label: "Détails",
-                                                  value: selectedTransfer.destination_note,
-                                                  color: "#777",
-                                              },
-                                          ]
-                                        : []),
                                     ...(selectedTransfer.reason
                                         ? [
                                               {
