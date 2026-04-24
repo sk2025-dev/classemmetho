@@ -120,7 +120,7 @@ export default function NaissanceForm({
                 ? selectedMemberName || "-"
                 : form.details.nom_mere || "-",
             datePres: form.details.date_presentation || "-",
-            heureCulte: form.details.heure || "-",
+            heurePresentation: form.details.heure || "-",
             classe: currentClasse?.nom || "-",
         }),
         [
@@ -527,7 +527,8 @@ export default function NaissanceForm({
                                     Ceremonie de presentation
                                 </h2>
                                 <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">
-                                    Date et heure souhaitees pour la presentation.
+                                    Date et heure souhaitees pour la
+                                    presentation.
                                 </p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <Field label="Date souhaitee">
@@ -544,12 +545,15 @@ export default function NaissanceForm({
                                             }
                                         />
                                     </Field>
-                                    <Field label="Heure du culte">
+                                    <Field label="Heure de presentation">
                                         <input
                                             type="time"
                                             value={form.details.heure}
                                             onChange={(e) =>
-                                                setDetail("heure", e.target.value)
+                                                setDetail(
+                                                    "heure",
+                                                    e.target.value,
+                                                )
                                             }
                                         />
                                     </Field>
@@ -622,8 +626,8 @@ export default function NaissanceForm({
                                         v={recap.datePres}
                                     />
                                     <RecapRow
-                                        k="Heure du culte"
-                                        v={recap.heureCulte}
+                                        k="Heure de presentation"
+                                        v={recap.heurePresentation}
                                     />
                                     <RecapRow k="Statut" v="SOUMISE" />
                                 </RecapCard>

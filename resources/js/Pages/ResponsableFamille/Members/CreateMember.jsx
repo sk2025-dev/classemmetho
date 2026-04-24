@@ -102,7 +102,13 @@ export default function CreateMember({ family, errors }) {
     const [fieldErrors, setFieldErrors] = useState({});
 
     // Toast hook
-    const { toasts, removeToast, success: showSuccess } = useToast();
+    const {
+        toasts,
+        removeToast,
+        success: showSuccess,
+        error: showError,
+        warning: showWarning,
+    } = useToast();
 
     // Données du formulaire avec persistance
     const [data, setData] = usePersistentState(
@@ -120,6 +126,7 @@ export default function CreateMember({ family, errors }) {
             lieu_mariage: "",
             profession: "",
             fonction_id: "",
+            fonction_ids: [],
             relation: "",
             // Photo
             photo: null,
@@ -214,8 +221,12 @@ export default function CreateMember({ family, errors }) {
             case "profession":
                 if (!value) error = "La profession est obligatoire";
                 break;
-            case "fonction_id":
-                if (!value) error = "La fonction est obligatoire";
+            case "fonction_ids":
+                if (!Array.isArray(value) || value.length === 0) {
+                    error = "Au moins une fonction est obligatoire";
+                } else if (value.length > 2) {
+                    error = "Maximum 2 fonctions";
+                }
                 break;
             case "date_mariage":
                 if (
@@ -279,8 +290,8 @@ export default function CreateMember({ family, errors }) {
             newErrors.statut_marital = "Le statut marital est obligatoire";
         if (!data.profession)
             newErrors.profession = "La profession est obligatoire";
-        if (!data.fonction_id)
-            newErrors.fonction_id = "La fonction est obligatoire";
+        if (!Array.isArray(data.fonction_ids) || data.fonction_ids.length === 0)
+            newErrors.fonction_ids = "Au moins une fonction est obligatoire";
 
         // Vérifier conditions statut marital
         if (
@@ -300,7 +311,7 @@ export default function CreateMember({ family, errors }) {
         }
 
         if (Object.keys(newErrors).length > 0) {
-            alert(`Erreurs:\n${Object.values(newErrors).join("\n")}`);
+            showError(Object.values(newErrors).join("\n"), 6000);
             return;
         }
 
@@ -310,8 +321,25 @@ export default function CreateMember({ family, errors }) {
 
         // Données du membre
         Object.entries(data).forEach(([k, v]) => {
-            if (k === "photo" && v) {
-                formData.append("photo", v);
+            if (k === "photo") {
+                const photoValue = v || data.photoPreview || null;
+                if (photoValue instanceof File) {
+                    formData.append("photo", photoValue);
+                } else if (
+                    typeof photoValue === "string" &&
+                    photoValue &&
+                    !photoValue.startsWith("blob:")
+                ) {
+                    formData.append("photo", photoValue);
+                }
+            } else if (k === "fonction_ids") {
+                if (Array.isArray(v)) {
+                    v.slice(0, 2).forEach((id) => {
+                        if (id !== null && id !== undefined && id !== "") {
+                            formData.append("fonction_ids[]", id);
+                        }
+                    });
+                }
             } else if (k !== "photoPreview") {
                 // Nettoyer le téléphone si présent
                 let valueToSend = v;
@@ -382,6 +410,7 @@ export default function CreateMember({ family, errors }) {
                     lieu_mariage: "",
                     profession: "",
                     fonction_id: "",
+                    fonction_ids: [],
                     relation: "",
                     photo: null,
                     photoPreview: null,
@@ -416,9 +445,9 @@ export default function CreateMember({ family, errors }) {
                 const errorMessages = Object.values(apiErrors)
                     .flat()
                     .join("\n");
-                alert(`Erreur:\n${errorMessages}`);
+                showError(errorMessages, 7000);
             } else {
-                alert("Une erreur est survenue.");
+                showWarning("Une erreur est survenue.");
             }
         } finally {
             setLoading(false);
@@ -484,19 +513,6 @@ export default function CreateMember({ family, errors }) {
                                         <h3 className="text-xs font-bold text-gray-800">
                                             Photo
                                         </h3>
-                                        <div className="w-14 h-14 rounded-full bg-white overflow-hidden border-2 border-blue-400 shadow-md">
-                                            {data.photoPreview ? (
-                                                <img
-                                                    src={data.photoPreview}
-                                                    alt="profil"
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                                                    <User className="w-6 h-6 text-gray-400" />
-                                                </div>
-                                            )}
-                                        </div>
                                         <PhotoUploadInput
                                             size="md"
                                             initialPhotoUrl={data.photoPreview}
@@ -743,30 +759,35 @@ export default function CreateMember({ family, errors }) {
                                         required
                                     >
                                         <Select2Fonction
-                                            value={
-                                                data.fonction_id
-                                                    ? [data.fonction_id]
-                                                    : []
-                                            }
+                                            value={data.fonction_ids || []}
+                                            maxSelections={2}
                                             onChange={(e) => {
-                                                const value =
-                                                    e.target.value &&
-                                                    e.target.value.length > 0
-                                                        ? e.target.value[0]
-                                                        : "";
+                                                const values = Array.isArray(
+                                                    e.target.value,
+                                                )
+                                                    ? e.target.value
+                                                          .slice(0, 2)
+                                                          .map((v) =>
+                                                              Number(v),
+                                                          )
+                                                    : [];
+                                                handleFieldChange(
+                                                    "fonction_ids",
+                                                    values,
+                                                );
                                                 handleFieldChange(
                                                     "fonction_id",
-                                                    value,
+                                                    values[0] || "",
                                                 );
                                             }}
                                             options={fonctions}
-                                            placeholder="Sélectionner une fonction..."
+                                            placeholder="Sélectionner jusqu'à 2 fonctions..."
                                         />
-                                        {(fieldErrors.fonction_id ||
-                                            errors.fonction_id) && (
+                                        {(fieldErrors.fonction_ids ||
+                                            errors.fonction_ids) && (
                                             <p className="text-red-500 text-xs mt-1">
-                                                {fieldErrors.fonction_id ||
-                                                    errors.fonction_id}
+                                                {fieldErrors.fonction_ids ||
+                                                    errors.fonction_ids}
                                             </p>
                                         )}
                                     </FormField>
@@ -1120,3 +1141,4 @@ export default function CreateMember({ family, errors }) {
         </div>
     );
 }
+

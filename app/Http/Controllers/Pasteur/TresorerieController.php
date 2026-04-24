@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Pasteur;
 
 use App\Http\Controllers\Controller;
-use App\Models\Campagne;
 use App\Models\Classe;
+use App\Models\Cotisation;
 use App\Models\Don;
 use App\Models\Family;
 use App\Models\Paiement;
@@ -15,18 +15,18 @@ class TresorerieController extends Controller
 {
     public function index()
     {
-        if (!Schema::hasTable('paiements') || !Schema::hasTable('dons') || !Schema::hasTable('campagnes')) {
+        if (!Schema::hasTable('paiements') || !Schema::hasTable('dons') || !Schema::hasTable('cotisations')) {
             return Inertia::render('Pasteur/Tresorerie/Index', [
                 'globalStats' => [
                     'cotisationsTotales' => 0,
                     'cotisationsPayees' => 0,
                     'tauxPaiement' => 0,
                     'donsTotaux' => 0,
-                    'campaignesActives' => 0,
+                    'cotisationsActives' => 0,
                     'famillesActives' => 0,
                 ],
                 'classes' => [],
-                'campaignesActives' => [],
+                'cotisationsParClasse' => [],
             ]);
         }
 
@@ -53,41 +53,146 @@ class TresorerieController extends Controller
             ];
         })->values();
 
-        $campagnes = Campagne::query()
-            ->with('classe:id,nom')
-            ->where('statut', Campagne::STATUT_ACTIVE)
+        $cotisationsParClasse = Cotisation::query()
+            ->with(['classe:id,nom', 'creator:id,nom,prenom,role'])
+            ->whereNotNull('classe_id')
+            ->whereHas('creator', function ($query) {
+                $query->where('role', 'conducteur');
+            })
             ->orderByDesc('created_at')
             ->get()
-            ->map(function (Campagne $campagne) {
+            ->groupBy('classe_id')
+            ->map(function ($cotisations, $classeId) {
+                $famillesClasse = Family::query()
+                    ->where('classe_id', $classeId)
+                    ->select('id', 'nom')
+                    ->get();
+
+                $familyIds = $famillesClasse->pluck('id')->values();
+                $cotisationIds = $cotisations->pluck('id')->values();
+
+                $paiementsQuery = Paiement::query()
+                    ->whereIn('cotisation_id', $cotisationIds)
+                    ->with(['family:id,nom', 'cotisation:id,nom', 'user:id,nom,prenom,classe_id'])
+                    ->orderByDesc('date_paiement')
+                    ->orderByDesc('id');
+
+                if ($familyIds->isNotEmpty()) {
+                    $paiementsQuery->where(function ($query) use ($familyIds, $classeId) {
+                        $query->whereIn('family_id', $familyIds)
+                            ->orWhereHas('user', function ($userQuery) use ($classeId) {
+                                $userQuery->where('classe_id', $classeId);
+                            });
+                    });
+                } else {
+                    $paiementsQuery->whereHas('user', function ($userQuery) use ($classeId) {
+                        $userQuery->where('classe_id', $classeId);
+                    });
+                }
+
+                $paiements = $paiementsQuery->get();
+                $totalPaye = (int) $paiements->sum('montant');
+
+                $cotisationsRows = $cotisations
+                    ->map(function (Cotisation $cotisation) use ($paiements) {
+                        $totalCotisation = (int) $paiements
+                            ->where('cotisation_id', $cotisation->id)
+                            ->sum('montant');
+
+                        return [
+                            'id' => $cotisation->id,
+                            'nom' => $cotisation->nom,
+                            'montant' => (int) $cotisation->montant,
+                            'periodicite' => $cotisation->periodicite,
+                            'statut' => $cotisation->statut,
+                            'createdBy' => trim((string) (($cotisation->creator?->prenom ?? '') . ' ' . ($cotisation->creator?->nom ?? ''))),
+                            'createdAt' => optional($cotisation->created_at)->format('Y-m-d'),
+                            'dateDebut' => optional($cotisation->date_debut)->format('Y-m-d'),
+                            'dateFin' => optional($cotisation->date_fin)->format('Y-m-d'),
+                            'dateEcheance' => optional($cotisation->date_echeance)->format('Y-m-d'),
+                            'totalPaye' => $totalCotisation,
+                        ];
+                    })
+                    ->values();
+
+                $paiementsRows = $paiements
+                    ->map(function (Paiement $paiement) {
+                        return [
+                            'id' => $paiement->id,
+                            'cotisation' => $paiement->cotisation?->nom ?? '-',
+                            'famille' => $paiement->family?->nom ?? '-',
+                            'montant' => (int) $paiement->montant,
+                            'date' => optional($paiement->date_paiement)->format('d/m/Y'),
+                            'mode' => $paiement->mode_paiement,
+                            'statut' => $paiement->payment_status ?? $paiement->statut,
+                            'saisiPar' => trim((string) (($paiement->user?->prenom ?? '') . ' ' . ($paiement->user?->nom ?? ''))),
+                        ];
+                    })
+                    ->values();
+
+                $montantCibleTotal = (int) $cotisationsRows->sum('montant');
+
                 return [
-                    'nom' => $campagne->titre,
-                    'objectif' => (int) $campagne->objectif_montant,
-                    'collecté' => (int) $campagne->montant_collecte,
-                    'collecte' => (int) $campagne->montant_collecte,
-                    'progression' => $campagne->objectif_montant > 0
-                        ? round(($campagne->montant_collecte / $campagne->objectif_montant) * 100)
+                    'classeId' => (int) $classeId,
+                    'classeNom' => $cotisations->first()?->classe?->nom ?? 'Classe',
+                    'familles' => $famillesClasse->count(),
+                    'cotisationsCreees' => $cotisationsRows->count(),
+                    'montantCibleTotal' => $montantCibleTotal,
+                    'montantPayeTotal' => $totalPaye,
+                    'tauxPaiement' => $montantCibleTotal > 0
+                        ? max(0, min(100, round(($totalPaye / $montantCibleTotal) * 100)))
                         : 0,
-                    'statut' => $campagne->statut,
-                    'classes' => $campagne->scope === Campagne::SCOPE_GLOBAL
-                        ? 'Global'
-                        : ($campagne->classe?->nom ?? 'Classe'),
+                    'paiementsCount' => $paiementsRows->count(),
+                    'cotisations' => $cotisationsRows,
+                    'paiements' => $paiementsRows,
                 ];
+            })
+            ->sortBy('classeNom')
+            ->values();
+
+        $cotisationsParClasseById = $cotisationsParClasse->keyBy(function ($item) {
+            return (int) ($item['classeId'] ?? 0);
+        });
+
+        $cotisationsParClasse = $classes
+            ->map(function (Classe $classe) use ($cotisationsParClasseById) {
+                return $cotisationsParClasseById->get($classe->id, [
+                    'classeId' => (int) $classe->id,
+                    'classeNom' => $classe->nom,
+                    'familles' => (int) Family::query()->where('classe_id', $classe->id)->count(),
+                    'cotisationsCreees' => 0,
+                    'montantCibleTotal' => 0,
+                    'montantPayeTotal' => 0,
+                    'tauxPaiement' => 0,
+                    'paiementsCount' => 0,
+                    'cotisations' => [],
+                    'paiements' => [],
+                ]);
             })
             ->values();
 
+        $cotisationsActives = Cotisation::query()
+            ->where('statut', Cotisation::STATUT_ACTIVE)
+            ->whereHas('creator', function ($query) {
+                $query->where('role', 'conducteur');
+            })
+            ->count();
+
+        $globalTarget = (int) $classRows->sum('cotisations');
+
         $globalStats = [
-            'cotisationsTotales' => max(0, $globalCotisationsTotales),
+            'cotisationsTotales' => max(0, $globalTarget),
             'cotisationsPayees' => max(0, $globalCotisationsTotales),
-            'tauxPaiement' => 100,
+            'tauxPaiement' => $globalTarget > 0 ? round(($globalCotisationsTotales / $globalTarget) * 100) : 0,
             'donsTotaux' => max(0, $donsTotaux),
-            'campaignesActives' => $campagnes->count(),
+            'cotisationsActives' => $cotisationsActives,
             'famillesActives' => $famillesActives,
         ];
 
         return Inertia::render('Pasteur/Tresorerie/Index', [
             'globalStats' => $globalStats,
             'classes' => $classRows,
-            'campaignesActives' => $campagnes,
+            'cotisationsParClasse' => $cotisationsParClasse,
         ]);
     }
 }

@@ -104,6 +104,7 @@ const NotificationBadge = ({ count }) => (
 export default function Dashboard({
     role,
     isClassTresorier = false,
+    isClassPresenceMarker = false,
     pendingInscriptions,
     surveyBadgeCount = 0,
     prayerBadgeCount = 0,
@@ -185,6 +186,18 @@ export default function Dashboard({
                       href: "/tresorier/tresorerie",
                       color: "text-emerald-700",
                       bg: "bg-emerald-100",
+                  },
+              ]
+            : []),
+        ...(isClassPresenceMarker
+            ? [
+                  {
+                      title: "Marquage présences classe",
+                      desc: "Vérification finale des présences",
+                      icon: "presence",
+                      href: "/membre-famille/presences/marquage",
+                      color: "text-cyan-700",
+                      bg: "bg-cyan-100",
                   },
               ]
             : []),

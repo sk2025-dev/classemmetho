@@ -2317,39 +2317,26 @@ export default function RegisterFamille({
                                 )}
 
                                 {/* Photo Upload */}
-                                <div className="w-full p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200">
-                                    <div className="flex flex-col items-center gap-3">
-                                        <h5 className="text-sm font-bold text-gray-800">
-                                            Photo du membre
-                                        </h5>
-                                        <div className="w-20 h-20 rounded-full bg-white overflow-hidden border-3 border-blue-400 shadow-lg">
-                                            {membreTemp.photoPreview ? (
-                                                <img
-                                                    src={
-                                                        membreTemp.photoPreview
-                                                    }
-                                                    alt="profil"
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                                                    <Users className="w-10 h-10 text-gray-400" />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={(e) =>
-                                                handlePhotoChange(e, "membre")
-                                            }
-                                            className="file:py-1 file:px-3 file:rounded file:bg-blue-600 file:text-white file:cursor-pointer file:font-semibold"
-                                        />
-                                        <p className="text-xs text-gray-600">
-                                            JPG, PNG (max 5MB)
-                                        </p>
-                                    </div>
-                                </div>
+                                {/* Photo Upload */}
+<div className="w-full p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200">
+    <div className="flex flex-col items-center gap-3">
+        <h5 className="text-sm font-bold text-gray-800">
+            Photo du membre
+        </h5>
+        <PhotoUploadInput
+            size="md"
+            enableCamera={true}
+            initialPhotoUrl={membreTemp.photoPreview}
+            onPhotoSelected={(photoUrl) => {
+                setMembreTemp((prev) => ({
+                    ...prev,
+                    photo: photoUrl,
+                    photoPreview: photoUrl,
+                }));
+            }}
+        />
+    </div>
+</div>
 
                                 {/* Champs du membre */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

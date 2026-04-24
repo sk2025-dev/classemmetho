@@ -1346,22 +1346,8 @@ export default function RegisterConducteur({
                                 <h3 className="text-sm font-bold text-gray-800">
                                     Photo de profil
                                 </h3>
-                                <div className="relative">
-                                    <div className="w-20 h-20 rounded-full bg-white overflow-hidden border-3 border-blue-400 shadow-lg ring-3 ring-blue-100">
-                                        {responsable.photoPreview ? (
-                                            <img
-                                                src={responsable.photoPreview}
-                                                alt="profil"
-                                                className="w-full h-full object-cover"
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                                                <User className="w-10 h-10 text-gray-400" />
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                                <PhotoUploadInput
+                                 
+                                 <PhotoUploadInput
                                     size="md"
                                     enableCamera={true}
                                     initialPhotoUrl={responsable.photoPreview}
@@ -1375,7 +1361,7 @@ export default function RegisterConducteur({
                                             photoPreview: photoUrl,
                                         }));
                                     }}
-                                />
+                                /> 
                             </div>
                         </div>
 
@@ -2135,23 +2121,6 @@ export default function RegisterConducteur({
                                             <h3 className="text-sm font-bold text-gray-800">
                                                 Photo du membre
                                             </h3>
-                                            <div className="relative">
-                                                <div className="w-20 h-20 rounded-full bg-white overflow-hidden border-3 border-blue-400 shadow-lg ring-3 ring-blue-100">
-                                                    {membreTemp.photoPreview ? (
-                                                        <img
-                                                            src={
-                                                                membreTemp.photoPreview
-                                                            }
-                                                            alt="profil"
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                                                            <Users className="w-10 h-10 text-gray-400" />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
                                             <PhotoUploadInput
                                                 size="md"
                                                 enableCamera={true}

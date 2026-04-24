@@ -220,7 +220,7 @@ export default function Inscriptions() {
             <Head title="Gestion des inscriptions" />
             <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
 
-            <div className="max-w-7xl mx-auto">
+            <div className="mx-auto">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                     <div className="flex items-center gap-3 text-white">
                         <Link

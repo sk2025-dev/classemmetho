@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Head, Link } from "@inertiajs/react";
 import { withBasePath } from "../../../Utils/urlHelper";
+import Select2Single from "../../../Components/Select2Single";
 import {
     ArrowLeft,
     Download,
@@ -695,6 +696,7 @@ export default function ConducteurTresorerie({
         nom: "",
         periodicite: "MENSUEL",
         target_scope: "INDIVIDUELLE",
+        ciblage: "GENRE",
         description: "",
         date_debut: new Date().toISOString().slice(0, 10),
         date_fin: "",
@@ -854,8 +856,9 @@ export default function ConducteurTresorerie({
 
         setLoading(true);
         try {
+            const { ciblage, ...cotisationPayload } = newCotisation;
             await postJson("/conducteur/tresorerie/cotisations", {
-                ...newCotisation,
+                ...cotisationPayload,
                 montant: fallbackMontant,
                 late_after_days: Number(newCotisation.late_after_days || 2),
                 target_rules: rules,
@@ -1171,8 +1174,12 @@ export default function ConducteurTresorerie({
             target_rules: [
                 ...(prev.target_rules || []),
                 {
-                    target: "GENRE",
-                    option: "F",
+                    target: String(prev.ciblage || "GENRE").toUpperCase(),
+                    option:
+                        String(prev.ciblage || "GENRE").toUpperCase() ===
+                        "GENRE"
+                            ? "F"
+                            : "TRAVAILLEUR",
                     amount: "",
                     priority: (prev.target_rules?.length || 0) + 1,
                 },
@@ -1221,6 +1228,7 @@ export default function ConducteurTresorerie({
             if (v === "TRAVAILLEUR") return "Travailleur";
             if (v === "RETRAITE") return "Retraité";
             if (v === "SANS_EMPLOI") return "Sans emploi";
+            if (v === "ETUDIANT") return "Étudiant";
         }
 
         return value || "-";
@@ -1377,12 +1385,15 @@ export default function ConducteurTresorerie({
 
     const handleUnassignTresorier = async () => {
         if (!tresorierClasse?.id) {
-            alert("Aucun tresorier n'est actuellement assigne.");
+            showToast("Aucun tresorier n'est actuellement assigne.", "warning");
             return;
         }
 
         if (!String(motifRetraitTresorier || "").trim()) {
-            alert("Veuillez saisir le motif de retrait du tresorier.");
+            showToast(
+                "Veuillez saisir le motif de retrait du tresorier.",
+                "warning",
+            );
             return;
         }
 
@@ -2453,14 +2464,6 @@ export default function ConducteurTresorerie({
                                 accent="red"
                                 right={
                                     <div style={{ display: "flex", gap: 8 }}>
-                                        <OutlineBtn
-                                            color="red"
-                                            icon={Download}
-                                            sm
-                                            onClick={() => handleExport("pdf")}
-                                        >
-                                            Export PDF
-                                        </OutlineBtn>
                                         <GradBtn
                                             color="red"
                                             icon={Send}
@@ -3676,6 +3679,104 @@ export default function ConducteurTresorerie({
                         rows={3}
                         span2
                     />
+                    <FW label="Ciblage" span2>
+                        <Select2Single
+                            id="cotisation-ciblage"
+                            name="ciblage"
+                            value={newCotisation.ciblage || "GENRE"}
+                            onChange={(e) => {
+                                const nextTarget = String(
+                                    e?.target?.value || "GENRE",
+                                ).toUpperCase();
+                                setNewCotisation((prev) => {
+                                    const sourceRules = [
+                                        ...(prev.target_rules || []),
+                                    ];
+                                    const currentRules =
+                                        sourceRules.length > 0
+                                            ? sourceRules
+                                            : [
+                                                  {
+                                                      target: nextTarget,
+                                                      option:
+                                                          nextTarget === "GENRE"
+                                                              ? "M"
+                                                              : "TRAVAILLEUR",
+                                                      amount: "",
+                                                      priority: 1,
+                                                  },
+                                              ];
+
+                                    const nextRules = currentRules.map(
+                                        (rule, index) => {
+                                            const normalizedOption = String(
+                                                rule.option ||
+                                                    (Array.isArray(rule.values)
+                                                        ? rule.values[0]
+                                                        : rule.value) ||
+                                                    "",
+                                            )
+                                                .toUpperCase()
+                                                .trim();
+                                            const option =
+                                                nextTarget === "GENRE"
+                                                    ? [
+                                                          "M",
+                                                          "F",
+                                                          "ENFANT",
+                                                      ].includes(
+                                                          normalizedOption,
+                                                      )
+                                                        ? normalizedOption
+                                                        : "M"
+                                                    : [
+                                                            "TRAVAILLEUR",
+                                                            "RETRAITE",
+                                                            "SANS_EMPLOI",
+                                                            "ETUDIANT",
+                                                            "ENFANT",
+                                                        ].includes(
+                                                            normalizedOption,
+                                                        )
+                                                      ? normalizedOption
+                                                      : "TRAVAILLEUR";
+
+                                            return {
+                                                ...rule,
+                                                target: nextTarget,
+                                                option,
+                                                priority: Number(
+                                                    rule.priority || index + 1,
+                                                ),
+                                            };
+                                        },
+                                    );
+
+                                    return {
+                                        ...prev,
+                                        ciblage: nextTarget,
+                                        target_rules: nextRules,
+                                    };
+                                });
+                            }}
+                            options={[
+                                {
+                                    value: "GENRE",
+                                    label: "Genre",
+                                    description: "Homme, Femme, Enfant",
+                                },
+                                {
+                                    value: "EMPLOI",
+                                    label: "Statut d'emploi",
+                                    description:
+                                        "Travailleur, Retraité, Sans emploi, Étudiant, Enfant",
+                                },
+                            ]}
+                            placeholder="Sélectionner un ciblage"
+                            isClearable={false}
+                            allowClearOption={false}
+                        />
+                    </FW>
                 </FormGrid>
                 <div
                     style={{
@@ -3713,11 +3814,10 @@ export default function ConducteurTresorerie({
                             }}
                         >
                             <select
-                                value={rule.target || rule.type || "GENRE"}
-                                onChange={(e) => {
-                                    setRuleTarget(idx, e.target.value);
-                                }}
-                                style={{ ...inputStyle }}
+                                value={newCotisation.ciblage || "GENRE"}
+                                onChange={() => {}}
+                                disabled
+                                style={{ ...inputStyle, background: "#F3F4F6" }}
                             >
                                 <option value="GENRE">Ciblage: Genre</option>
                                 <option value="EMPLOI">
@@ -3737,8 +3837,9 @@ export default function ConducteurTresorerie({
                                 }
                                 style={{ ...inputStyle }}
                             >
-                                {(rule.target || rule.type || "GENRE") ===
-                                "GENRE" ? (
+                                {String(
+                                    newCotisation.ciblage || "GENRE",
+                                ).toUpperCase() === "GENRE" ? (
                                     <>
                                         <option value="M">Homme</option>
                                         <option value="F">Femme</option>
@@ -3754,6 +3855,9 @@ export default function ConducteurTresorerie({
                                         </option>
                                         <option value="SANS_EMPLOI">
                                             Sans emploi
+                                        </option>
+                                        <option value="ETUDIANT">
+                                            Étudiant
                                         </option>
                                         <option value="ENFANT">Enfant</option>
                                     </>
@@ -4271,7 +4375,6 @@ export default function ConducteurTresorerie({
                         }
                     >
                         <option value="LIBRE">Libre</option>
-                        <option value="CAMPAGNE">Campagne</option>
                     </FSelect>
                     <div />
                     <FInput

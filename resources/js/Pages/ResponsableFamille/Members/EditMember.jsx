@@ -5,6 +5,9 @@ import axios from "axios";
 import Select2Fonction from "../../../Components/Select2Fonction";
 import Select2Single from "../../../Components/Select2Single";
 import FormField from "@/Components/FormField";
+import useToast from "../../../Hooks/useToast";
+import ToastContainer from "../../../Components/ToastContainer";
+import { clearFormPersistedData } from "../../../Hooks/usePersistentState";
 import { resolveMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
 import { sanitizeUppercasePrenom } from "../../../Helpers/nameSanitizers";
 import { withBasePath } from "../../../Utils/urlHelper";
@@ -125,6 +128,13 @@ export default function EditMember({ member, family }) {
     const [fonctionsState, setFonctionsState] = useState([]);
     const [loading, setLoading] = useState(false);
     const currentDataRef = useRef(null);
+    const {
+        toasts,
+        removeToast,
+        success: showSuccess,
+        error: showError,
+        warning: showWarning,
+    } = useToast();
 
     // Préparer les sacrements existants (maintenant c'est un objet unique)
     const sacrements = member.sacrements || {};
@@ -143,6 +153,11 @@ export default function EditMember({ member, family }) {
         lieu_mariage: member.lieu_mariage || "",
         profession: member.profession || "",
         fonction_id: member.fonction_id || "",
+        fonction_ids: Array.isArray(member.fonction_ids)
+            ? member.fonction_ids
+            : member.fonction_id
+              ? [member.fonction_id]
+              : [],
         relation: member.relation || "",
         photo: null,
         photoPreview: resolveMemberPhotoUrl(member),
@@ -179,6 +194,11 @@ export default function EditMember({ member, family }) {
             lieu_mariage: member.lieu_mariage || "",
             profession: member.profession || "",
             fonction_id: member.fonction_id || "",
+            fonction_ids: Array.isArray(member.fonction_ids)
+                ? member.fonction_ids
+                : member.fonction_id
+                  ? [member.fonction_id]
+                  : [],
             relation: member.relation || "",
             photo: null,
             photoPreview: resolveMemberPhotoUrl(member),
@@ -231,7 +251,7 @@ export default function EditMember({ member, family }) {
         const file = e.target.files?.[0];
         if (file) {
             if (file.size > 5 * 1024 * 1024) {
-                alert("Le fichier est trop volumineux (max 5MB).");
+                showWarning("Le fichier est trop volumineux (max 5MB).");
                 return;
             }
             const preview = URL.createObjectURL(file);
@@ -252,17 +272,17 @@ export default function EditMember({ member, family }) {
 
         // Valider que les champs requis ne sont pas vides
         if (!data.nom || !data.nom.trim()) {
-            alert("Le nom est obligatoire");
+            showError("Le nom est obligatoire");
             setLoading(false);
             return;
         }
         if (!data.prenom || !data.prenom.trim()) {
-            alert("Le prénom est obligatoire");
+            showError("Le prénom est obligatoire");
             setLoading(false);
             return;
         }
         if (!data.genre) {
-            alert("Le genre est obligatoire");
+            showError("Le genre est obligatoire");
             setLoading(false);
             return;
         }
@@ -290,6 +310,21 @@ export default function EditMember({ member, family }) {
                     return;
                 }
 
+                if (k === "fonction_ids") {
+                    if (Array.isArray(v)) {
+                        v.slice(0, 2).forEach((id) => {
+                            if (
+                                id !== null &&
+                                id !== undefined &&
+                                id !== ""
+                            ) {
+                                formData.append("fonction_ids[]", id);
+                            }
+                        });
+                    }
+                    return;
+                }
+
                 // Inclure tous les autres champs
                 formData.append(k, v ?? "");
             });
@@ -302,7 +337,7 @@ export default function EditMember({ member, family }) {
                 formData,
                 {
                     onSuccess: () => {
-                        alert("Modifications sauvegardées avec succès !");
+                        showSuccess("Modifications sauvegardées avec succès !");
                         clearFormPersistedData("editMember_");
                         window.localStorage.removeItem("editMember_memberId");
                     },
@@ -316,8 +351,9 @@ export default function EditMember({ member, family }) {
                                 return `${field}: ${message}`;
                             },
                         );
-                        alert(
+                        showError(
                             `Erreur de validation:\n${errorMessages.join("\n")}`,
+                            7000,
                         );
                     },
                     onFinish: () => {
@@ -361,7 +397,7 @@ export default function EditMember({ member, family }) {
                 submitData,
                 {
                     onSuccess: () => {
-                        alert("Modifications sauvegardées avec succès !");
+                        showSuccess("Modifications sauvegardées avec succès !");
                         clearFormPersistedData("editMember_");
                         window.localStorage.removeItem("editMember_memberId");
                     },
@@ -375,8 +411,9 @@ export default function EditMember({ member, family }) {
                                 return `${field}: ${message}`;
                             },
                         );
-                        alert(
+                        showError(
                             `Erreur de validation:\n${errorMessages.join("\n")}`,
+                            7000,
                         );
                     },
                     onFinish: () => {
@@ -395,6 +432,7 @@ export default function EditMember({ member, family }) {
                     "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
             }}
         >
+            <ToastContainer toasts={toasts} removeToast={removeToast} />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-6">
@@ -623,24 +661,24 @@ export default function EditMember({ member, family }) {
                                 icon={Award}
                             >
                                 <Select2Fonction
-                                    value={
-                                        data.fonction_id
-                                            ? [data.fonction_id]
-                                            : []
-                                    }
+                                    value={data.fonction_ids || []}
+                                    maxSelections={2}
                                     onChange={(e) => {
-                                        const value =
-                                            e.target.value &&
-                                            e.target.value.length > 0
-                                                ? e.target.value[0]
-                                                : "";
+                                        const values = Array.isArray(
+                                            e.target.value,
+                                        )
+                                            ? e.target.value
+                                                  .slice(0, 2)
+                                                  .map((v) => Number(v))
+                                            : [];
                                         setData({
                                             ...data,
-                                            fonction_id: value,
+                                            fonction_ids: values,
+                                            fonction_id: values[0] || "",
                                         });
                                     }}
                                     options={fonctionsState}
-                                    placeholder="S\u00e9lectionner une fonction..."
+                                    placeholder="Sélectionner jusqu'à 2 fonctions..."
                                 />
                             </FormField>
 
@@ -902,3 +940,4 @@ export default function EditMember({ member, family }) {
         </div>
     );
 }
+

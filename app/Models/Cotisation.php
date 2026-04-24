@@ -149,14 +149,15 @@ class Cotisation extends Model
 
     public function isLate(?\Carbon\CarbonInterface $today = null): bool
     {
-        if (!$this->date_echeance) {
+        $baseDate = $this->date_echeance ?: $this->date_fin;
+        if (!$baseDate) {
             return false;
         }
 
         $today = $today ? $today->copy()->startOfDay() : now()->startOfDay();
-        $lateAt = $this->date_echeance->copy()->addDays($this->graceDays())->startOfDay();
+        $lateAt = $baseDate->copy()->subDays($this->graceDays())->startOfDay();
 
-        return $today->greaterThan($lateAt);
+        return $today->greaterThanOrEqualTo($lateAt);
     }
 
     /**

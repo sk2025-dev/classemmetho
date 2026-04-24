@@ -267,7 +267,20 @@ router.on("invalid", () => {
 createInertiaApp({
     resolve: (name) => {
         const pages = import.meta.glob("./Pages/**/*.jsx", { eager: true });
-        const page = pages[`./Pages/${name}.jsx`];
+        const requestedPath = `./Pages/${name}.jsx`;
+        let page = pages[requestedPath];
+
+        if (!page) {
+            const requestedPathLower = requestedPath.toLowerCase();
+            const matchedKey = Object.keys(pages).find(
+                (key) => key.toLowerCase() === requestedPathLower,
+            );
+
+            if (matchedKey) {
+                page = pages[matchedKey];
+            }
+        }
+
         if (!page) {
             console.error(`Page not found: ./Pages/${name}.jsx`);
             console.log("Available pages:", Object.keys(pages));
@@ -337,4 +350,3 @@ createInertiaApp({
     },
     progress: false, // Désactiver la progress bar d'Inertia (on gère le loader manuellement)
 });
-

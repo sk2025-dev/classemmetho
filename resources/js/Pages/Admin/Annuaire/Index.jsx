@@ -3,6 +3,8 @@ import { Head, Link, router } from "@inertiajs/react";
 import { withBasePath } from "../../../Utils/urlHelper";
 
 // ==================== STYLES GLOBAUX ====================
+const ANNUAIRE_STATE_STORAGE_KEY = "admin-annuaire-state";
+
 const GLOBAL_STYLES = `
     :root {
         --primary: #2563eb; --primary-hover: #1d4ed8;
@@ -861,6 +863,50 @@ const Annuaire = ({
     const [actesLiturgiques, setActesLiturgiques] = useState([]);
     const [classMemberPages, setClassMemberPages] = useState({});
     const hasMountedRef = useRef(false);
+    const hasRestoredStateRef = useRef(false);
+
+    const cleanCurrentUrl = useCallback(() => {
+        if (typeof window === "undefined") {
+            return;
+        }
+
+        const cleanUrl = `${window.location.pathname}${window.location.hash || ""}`;
+
+        if (window.location.search) {
+            window.history.replaceState(window.history.state, "", cleanUrl);
+        }
+    }, []);
+
+    const persistAnnuaireState = useCallback((payload) => {
+        if (typeof window === "undefined") {
+            return;
+        }
+
+        try {
+            window.sessionStorage.setItem(
+                ANNUAIRE_STATE_STORAGE_KEY,
+                JSON.stringify(payload),
+            );
+        } catch {
+            // Ignore storage failures and keep the page usable.
+        }
+    }, []);
+
+    const readAnnuaireState = useCallback(() => {
+        if (typeof window === "undefined") {
+            return null;
+        }
+
+        try {
+            const rawValue = window.sessionStorage.getItem(
+                ANNUAIRE_STATE_STORAGE_KEY,
+            );
+
+            return rawValue ? JSON.parse(rawValue) : null;
+        } catch {
+            return null;
+        }
+    }, []);
 
     const buildQueryPayload = useCallback(
         (overrides = {}) => ({
@@ -885,28 +931,165 @@ const Annuaire = ({
         ],
     );
 
-    const isSameQueryAsCurrentUrl = useCallback((payload) => {
-        const current = new URLSearchParams(window.location.search || "");
+    const normalizeAnnuairePayload = useCallback(
+        (payload = {}) => ({
+            search: String(payload.search ?? ""),
+            classe: String(payload.classe ?? ""),
+            famille: String(payload.famille ?? ""),
+            profession: String(payload.profession ?? ""),
+            role: String(payload.role ?? ""),
+            perPage: Math.max(1, Number(payload.perPage ?? itemsPerPage ?? 10)),
+            view: String(payload.view ?? currentView ?? "all"),
+            page: Math.max(1, Number(payload.page ?? 1)),
+            familiesPerPage: Math.max(
+                1,
+                Number(payload.familiesPerPage ?? familiesPage.per_page ?? 5),
+            ),
+            classesPerPage: Math.max(
+                1,
+                Number(payload.classesPerPage ?? classesPage.per_page ?? 1),
+            ),
+        }),
+        [itemsPerPage, currentView, familiesPage.per_page, classesPage.per_page],
+    );
 
-        return Object.entries(payload).every(([key, value]) => {
-            const normalized =
-                value === null || value === undefined ? "" : String(value);
-            return (current.get(key) || "") === normalized;
-        });
-    }, []);
+    const currentServerPayload = normalizeAnnuairePayload({
+        search: filters.search || "",
+        classe: filters.classe || "",
+        famille: filters.famille || "",
+        profession: filters.profession || "",
+        role: filters.role || "",
+        perPage: filters.perPage || 10,
+        view,
+        page:
+            view === "families"
+                ? familiesPage.current_page
+                : view === "classes"
+                  ? classesPage.current_page
+                  : membersCurrentPage,
+        familiesPerPage: familiesPage.per_page,
+        classesPerPage: classesPage.per_page,
+    });
+
+    const isSamePayload = useCallback(
+        (left, right) => {
+            const normalizedLeft = normalizeAnnuairePayload(left);
+            const normalizedRight = normalizeAnnuairePayload(right);
+
+            return Object.keys(normalizedLeft).every(
+                (key) =>
+                    String(normalizedLeft[key] ?? "") ===
+                    String(normalizedRight[key] ?? ""),
+            );
+        },
+        [normalizeAnnuairePayload],
+    );
+
+    const visitAnnuaire = useCallback(
+        (payloadOverrides = {}, options = {}) => {
+            const payload = normalizeAnnuairePayload(
+                buildQueryPayload(payloadOverrides),
+            );
+
+            persistAnnuaireState(payload);
+
+            router.get(window.location.pathname, payload, {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+                ...options,
+                onSuccess: (...args) => {
+                    cleanCurrentUrl();
+                    options.onSuccess?.(...args);
+                },
+            });
+        },
+        [
+            normalizeAnnuairePayload,
+            buildQueryPayload,
+            persistAnnuaireState,
+            cleanCurrentUrl,
+        ],
+    );
+
+    const parsePaginationPayload = useCallback(
+        (url) => {
+            const parsedUrl = new URL(url, window.location.origin);
+            const params = parsedUrl.searchParams;
+
+            return {
+                search: params.get("search") ?? searchTerm,
+                classe: params.get("classe") ?? classeFilter,
+                famille: params.get("famille") ?? familleFilter,
+                profession: params.get("profession") ?? professionFilter,
+                role: params.get("role") ?? roleFilter,
+                perPage: params.get("perPage") ?? itemsPerPage,
+                view: params.get("view") ?? currentView,
+                page: params.get("page") ?? 1,
+                familiesPerPage:
+                    params.get("familiesPerPage") ?? familiesPage.per_page ?? 5,
+                classesPerPage:
+                    params.get("classesPerPage") ?? classesPage.per_page ?? 1,
+            };
+        },
+        [
+            searchTerm,
+            classeFilter,
+            familleFilter,
+            professionFilter,
+            roleFilter,
+            itemsPerPage,
+            currentView,
+            familiesPage.per_page,
+            classesPage.per_page,
+        ],
+    );
 
     const applyFilters = useCallback(() => {
-        const payload = buildQueryPayload();
-        if (isSameQueryAsCurrentUrl(payload)) {
+        visitAnnuaire({
+            page: 1,
+            familiesPerPage: 5,
+            classesPerPage: 1,
+        });
+    }, [visitAnnuaire]);
+
+    useEffect(() => {
+        if (hasRestoredStateRef.current) {
             return;
         }
 
-        router.get(window.location.pathname, payload, {
+        hasRestoredStateRef.current = true;
+
+        if (typeof window === "undefined") {
+            return;
+        }
+
+        if (window.location.search) {
+            persistAnnuaireState(currentServerPayload);
+            cleanCurrentUrl();
+            return;
+        }
+
+        const savedState = readAnnuaireState();
+        if (!savedState || isSamePayload(savedState, currentServerPayload)) {
+            return;
+        }
+
+        router.get(window.location.pathname, savedState, {
             preserveState: true,
             preserveScroll: true,
             replace: true,
+            onSuccess: () => {
+                cleanCurrentUrl();
+            },
         });
-    }, [buildQueryPayload, isSameQueryAsCurrentUrl]);
+    }, [
+        currentServerPayload,
+        readAnnuaireState,
+        persistAnnuaireState,
+        cleanCurrentUrl,
+        isSamePayload,
+    ]);
 
     useEffect(() => {
         if (!hasMountedRef.current) {
@@ -916,43 +1099,37 @@ const Annuaire = ({
 
         const handler = setTimeout(() => {
             applyFilters();
-        }, 100);
+        }, 350);
         return () => clearTimeout(handler);
     }, [applyFilters]);
 
     const switchView = (newView) => {
         setCurrentView(newView);
-        router.get(
-            window.location.pathname,
-            {
-                search: searchTerm,
-                classe: classeFilter,
-                famille: familleFilter,
-                profession: professionFilter,
-                role: roleFilter,
-                view: newView,
-                page: 1,
-                familiesPerPage: 5,
-                classesPerPage: 1,
-            },
-            { preserveState: true, preserveScroll: true },
-        );
+        visitAnnuaire({
+            view: newView,
+            page: 1,
+            familiesPerPage: 5,
+            classesPerPage: 1,
+        });
         setClassMemberPages({});
     };
 
     const handlePageChange = (url) => {
-        if (url)
-            router.get(url, {}, { preserveState: true, preserveScroll: true });
+        if (url) {
+            visitAnnuaire(parsePaginationPayload(url));
+        }
     };
 
     const handleFamilyPageChange = (url) => {
-        if (url)
-            router.get(url, {}, { preserveState: true, preserveScroll: true });
+        if (url) {
+            visitAnnuaire(parsePaginationPayload(url));
+        }
     };
 
     const handleClassPageChange = (url) => {
-        if (url)
-            router.get(url, {}, { preserveState: true, preserveScroll: true });
+        if (url) {
+            visitAnnuaire(parsePaginationPayload(url));
+        }
         setClassMemberPages({});
     };
 

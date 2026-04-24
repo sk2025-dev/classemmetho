@@ -25,7 +25,7 @@ const CHURCH_DATA = {
     stats: [
         { label: "Membres Actifs", value: "500+" },
         { label: "Années de Service", value: "25+" },
-        { label: "Cultes par An", value: "52" },
+        { label: "Activités par An", value: "52" },
     ],
     services: [
         {

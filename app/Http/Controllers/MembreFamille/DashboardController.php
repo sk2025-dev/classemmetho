@@ -24,6 +24,29 @@ class DashboardController extends Controller
             ['trésorier', 'tresorier'],
             true,
         );
+        $normalizedFonction = strtr(
+            mb_strtolower(trim((string) ($user->fonction?->nom ?? ''))),
+            [
+                'é' => 'e',
+                'è' => 'e',
+                'ê' => 'e',
+                'ë' => 'e',
+                'à' => 'a',
+                'â' => 'a',
+                'ù' => 'u',
+                'û' => 'u',
+                'î' => 'i',
+                'ï' => 'i',
+                'ô' => 'o',
+                'ö' => 'o',
+                'ç' => 'c',
+            ],
+        );
+        $isClassPresenceMarker = in_array(
+            $normalizedFonction,
+            ['marqueur de presence', 'marqueur presence'],
+            true,
+        );
         $surveyBadgeCount = $user
             ? $this->sondageService
             ->getVisibleSondagesForUser($user)
@@ -45,6 +68,7 @@ class DashboardController extends Controller
         return Inertia::render('MembreFamille/Dashboard', [
             'role' => $user->role,
             'isClassTresorier' => $isClassTresorier,
+            'isClassPresenceMarker' => $isClassPresenceMarker,
             'surveyBadgeCount' => $surveyBadgeCount,
             'prayerBadgeCount' => $prayerBadgeCount,
             'familyName' => $user->family?->nom,

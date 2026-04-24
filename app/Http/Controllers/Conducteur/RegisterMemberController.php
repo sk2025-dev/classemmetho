@@ -67,6 +67,8 @@ class RegisterMemberController extends Controller
                 'responsable.genre' => 'nullable|in:M,F,Masculin,Féminin',
                 'responsable.profession' => 'nullable|string|max:255',
                 'responsable.fonction_professionnelle' => 'nullable|string|max:255',
+                'responsable.fonction_ids' => 'nullable|array|max:2',
+                'responsable.fonction_ids.*' => 'integer|exists:fonctions,id',
                 'responsable.adresse' => 'nullable|string|max:1000',
                 'responsable.ville_id' => 'nullable|exists:villes,id',
                 'responsable.statutMarital' => 'nullable|string|max:255',
@@ -113,6 +115,8 @@ class RegisterMemberController extends Controller
                 'membres.*.dateMariageReligieux' => 'nullable|date',
                 'membres.*.lieuMariageReligieux' => 'nullable|string|max:255',
                 'membres.*.fonction' => 'nullable|string|max:255',
+                'membres.*.fonction_ids' => 'nullable|array|max:2',
+                'membres.*.fonction_ids.*' => 'integer|exists:fonctions,id',
                 'membres.*.profession' => 'nullable|string|max:255',
                 'membres.*.photo' => 'nullable',
 
@@ -142,6 +146,10 @@ class RegisterMemberController extends Controller
 
             // 4. CRÉER LE RESPONSABLE (User)
             $responsableData = $validated['responsable'];
+            $responsableFonctionIds = $this->resolveFonctionIdsFromPayload(
+                $responsableData['fonction_ids'] ?? null,
+                $responsableData['fonction'] ?? null,
+            );
             $identifiant = self::generateIdentifier(
                 $responsableData['nom'],
                 $responsableData['prenom'],
@@ -170,11 +178,13 @@ class RegisterMemberController extends Controller
                 'genre' => $responsableData['genre'] ?? null,
                 'date_naissance' => $responsableData['dateNaissance'] ?? null,
                 'profession' => $responsableData['profession'] ?? $responsableData['fonction_professionnelle'] ?? null,
+                'fonction_id' => $responsableFonctionIds[0] ?? null,
                 'statut' => 'actif',
                 'ville_id' => $responsableData['ville_id'] ?? null,
                 'must_change_password' => true,
                 'email_verified_at' => now(),
             ]);
+            $responsableUser->fonctions()->sync($responsableFonctionIds);
 
             // Créer les sacrements pour le responsable
             UserSacrement::create([
@@ -222,6 +232,10 @@ class RegisterMemberController extends Controller
             // 6. CRÉER LES MEMBRES DE LA FAMILLE
             if (isset($validated['membres']) && is_array($validated['membres'])) {
                 foreach ($validated['membres'] as $i => $membreData) {
+                    $membreFonctionIds = $this->resolveFonctionIdsFromPayload(
+                        $membreData['fonction_ids'] ?? null,
+                        $membreData['fonction'] ?? null,
+                    );
                     // Créer un User pour chaque membre (toujours, même sans email)
                     $membreIdentifiant = self::generateIdentifier(
                         $membreData['nom'],
@@ -263,6 +277,7 @@ class RegisterMemberController extends Controller
                         'genre' => $membreData['genre'] ?? null,
                         'date_naissance' => $membreData['dateNaissance'] ?? null,
                         'profession' => $membreData['profession'] ?? null,
+                        'fonction_id' => $membreFonctionIds[0] ?? null,
                         'relation' => $membreData['relation'] ?? null,
                         'family_id' => $family->id,
                         'statut' => 'actif',
@@ -271,6 +286,7 @@ class RegisterMemberController extends Controller
                     ]);
 
                     // Créer les sacrements pour le membre
+                    $membreUser->fonctions()->sync($membreFonctionIds);
                     UserSacrement::create([
                         'user_id' => $membreUser->id,
                         'est_marie' => $this->stringToBoolean($membreData['statutMarital'] === 'marie'),
@@ -378,4 +394,31 @@ class RegisterMemberController extends Controller
 
         return (bool) $value ? 1 : 0;
     }
+
+    private function resolveFonctionIdsFromPayload($fonctionIdsPayload, $fonctionLegacyPayload): array
+    {
+        $ids = [];
+
+        if (is_array($fonctionIdsPayload)) {
+            $ids = $fonctionIdsPayload;
+        } elseif (is_string($fonctionLegacyPayload) && $fonctionLegacyPayload !== '') {
+            $ids = array_map('trim', explode(',', $fonctionLegacyPayload));
+        } elseif (!is_null($fonctionLegacyPayload) && $fonctionLegacyPayload !== '') {
+            $ids = [$fonctionLegacyPayload];
+        }
+
+        return collect($ids)
+            ->filter(fn ($id) => !is_null($id) && $id !== '')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->take(2)
+            ->all();
+    }
 }
+
+
+
+
+
+
