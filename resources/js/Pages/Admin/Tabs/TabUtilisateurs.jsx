@@ -127,7 +127,7 @@ const exportToPDF = (membres, filters = {}) => {
     const startYTable = 48;
 
     const columns = [
-        
+
         { header: "Nom & Prénom", dataKey: "nom" },
         { header: "Téléphone", dataKey: "tel" },
         { header: "Genre", dataKey: "genre" },
@@ -447,6 +447,26 @@ const StatusBadgeValue = ({ value, type = "boolean" }) => {
             }`}
         >
             {isTrue ? "Oui" : "Non"}
+        </span>
+    );
+};
+
+const renderTransferBadge = (member) => {
+    if (!member) return null;
+    const archived = member.transfer_status === "completed";
+    const historyOnly = !member?.transfer_locked && member?.transfer_history_label;
+
+    return (
+        <span
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+                historyOnly
+                    ? "bg-blue-100 text-blue-700 border border-blue-200"
+                    : archived
+                      ? "bg-slate-200 text-slate-700 border border-slate-300"
+                      : "bg-orange-100 text-orange-700 border border-orange-300"
+            }`}
+        >
+            {member.transfer_history_label || member.transfer_label || (archived ? "Ancien membre" : "Transfert en cours")}
         </span>
     );
 };
@@ -2718,13 +2738,7 @@ const TabUtilisateurs = ({
                                     currentItems.map((m, idx) => (
                                         <tr
                                             key={m.id}
-                                            className="hover:bg-white/90 transition-all duration-200"
-                                            style={{
-                                                backgroundColor:
-                                                    idx % 2 === 0
-                                                        ? "#ffffff"
-                                                        : "#f5f7fa",
-                                            }}
+                                            className={`transition-all duration-200 ${m.transfer_status === 'completed' ? 'bg-[#eef2f7] text-slate-500 filter grayscale pointer-events-auto' : (idx % 2 === 0 ? 'bg-white' : 'bg-[#f5f7fa] hover:bg-white/90')}`}
                                         >
                                             <td className="px-3 py-3 text-sm font-semibold text-gray-900 text-center whitespace-nowrap">
                                                 {idx + 1}
@@ -2760,7 +2774,14 @@ const TabUtilisateurs = ({
                                                     .length === 0 && "-"}
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-700 text-center whitespace-nowrap font-semibold">
-                                                {m.code_membre || "-"}
+                                                <div className="flex flex-col items-center">
+                                                    <div className="font-mono text-sm">{m.code_membre || "-"}</div>
+                                                    {m.transfer_status === 'completed' && (
+                                                        <span className="mt-1 inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-slate-200 text-slate-700 border border-slate-300">
+                                                            Ancien membre
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-3 py-3 text-sm font-semibold text-gray-900 text-center whitespace-nowrap">
                                                 {m.nom}
@@ -2898,6 +2919,7 @@ const TabUtilisateurs = ({
                                                         : "Inactif"}
                                                 </span>
                                             </td>
+                                            {/* Transfert column removed - badge now shown beside photo */}
                                             <td className="px-3 py-3 text-sm text-center whitespace-nowrap">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <button
@@ -2909,15 +2931,14 @@ const TabUtilisateurs = ({
                                                             backgroundColor:
                                                                 "rgba(37, 99, 235, 0.1)",
                                                             border: "2px solid rgba(37, 99, 235, 0.2)",
+                                                            filter: 'none',
                                                         }}
                                                         title="Voir détails"
                                                     >
                                                         <Eye className="w-5 h-5 text-blue-600" />
                                                     </button>
                                                     <button
-                                                        onClick={() =>
-                                                            setEditingMember(m)
-                                                        }
+                                                        onClick={() => setEditingMember(m)}
                                                         className="p-2 rounded-lg transition-all"
                                                         style={{
                                                             backgroundColor:
@@ -2929,9 +2950,7 @@ const TabUtilisateurs = ({
                                                         <Pencil className="w-5 h-5 text-blue-600" />
                                                     </button>
                                                     <button
-                                                        onClick={() =>
-                                                            openToggleAlert(m)
-                                                        }
+                                                        onClick={() => openToggleAlert(m)}
                                                         className="p-2 rounded-lg transition-all"
                                                         style={{
                                                             backgroundColor:
@@ -2941,12 +2960,9 @@ const TabUtilisateurs = ({
                                                             border: m.is_active
                                                                 ? "2px solid rgba(22, 163, 74, 0.2)"
                                                                 : "2px solid rgba(220, 38, 38, 0.2)",
+                                                            filter: 'none',
                                                         }}
-                                                        title={
-                                                            m.is_active
-                                                                ? "Désactiver"
-                                                                : "Activer"
-                                                        }
+                                                        title={m.is_active ? "Désactiver" : "Activer"}
                                                     >
                                                         {m.is_active ? (
                                                             <Lock className="w-5 h-5 text-green-600" />
@@ -2955,14 +2971,13 @@ const TabUtilisateurs = ({
                                                         )}
                                                     </button>
                                                     <button
-                                                        onClick={() =>
-                                                            openDeleteAlert(m)
-                                                        }
+                                                        onClick={() => openDeleteAlert(m)}
                                                         className="p-2 rounded-lg transition-all"
                                                         style={{
                                                             backgroundColor:
                                                                 "rgba(220, 38, 38, 0.1)",
                                                             border: "2px solid rgba(220, 38, 38, 0.2)",
+                                                            filter: 'none',
                                                         }}
                                                         title="Supprimer"
                                                     >

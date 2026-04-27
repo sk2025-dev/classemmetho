@@ -2271,6 +2271,9 @@ export default function Inscriptions({
                                                 Code Famille
                                             </th>
                                             <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                Code Membre
+                                            </th>
+                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
                                                 Email
                                             </th>
                                             <th className="p-5 text-xs font-bold uppercase tracking-wider">
@@ -2300,7 +2303,7 @@ export default function Inscriptions({
                                         {filteredItems.length === 0 ? (
                                             <tr>
                                                 <td
-                                                    colSpan="12"
+                                                    colSpan="13"
                                                     className="p-12 text-center text-slate-500"
                                                 >
                                                     Aucun membre créé.
@@ -2445,6 +2448,12 @@ export default function Inscriptions({
                                                                                 </span>
                                                                             )}
                                                                     </div>
+                                                                </td>
+                                                                <td className="p-5 text-slate-600">
+                                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-slate-50 border border-slate-200 rounded-full text-xs font-semibold text-slate-700">
+                                                                        {member.code_membre ||
+                                                                            "N/A"}
+                                                                    </span>
                                                                 </td>
                                                                 <td className="p-5 text-slate-600">
                                                                     {

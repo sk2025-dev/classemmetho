@@ -19,6 +19,7 @@ class TransferWorkflowController extends Controller
     public function index()
     {
         $user = Auth::user();
+        $transferService = app(TransferWorkflowService::class);
 
         $pendingTransfers = ClassTransferRequest::with([
             'family',
@@ -77,10 +78,10 @@ class TransferWorkflowController extends Controller
             ->withCount('users')
             ->where('classe_id', $user->classe_id)
             ->orderBy('nom')
-            ->get()
-            ->reject(fn (Family $family) => $family->transfer_status === 'completed'
-                && !empty($family->transferred_to_family_id)
-                && (int) $family->transferred_to_family_id !== (int) $family->id)
+            ->get();
+
+        $families = $transferService
+            ->hydrateFamiliesTransferState($families)
             ->values()
             ->map(function (Family $family) {
                 return [
@@ -89,7 +90,7 @@ class TransferWorkflowController extends Controller
                     'code_famille' => $family->code_famille,
                     'transfer_status' => $family->transfer_status,
                     'transfer_label' => $family->transfer_label,
-                    'transfer_locked' => in_array((string) $family->transfer_status, ['pending', 'completed'], true),
+                    'transfer_locked' => (bool) $family->transfer_locked,
                     'responsable' => $family->responsable
                         ? trim($family->responsable->nom . ' ' . $family->responsable->prenom)
                         : null,
@@ -112,11 +113,11 @@ class TransferWorkflowController extends Controller
                 'telephone',
                 'code_membre',
                 'family_id',
-                'transfer_status',
-                'transfer_label',
-                'transferred_to_user_id',
-            ])
-            ->reject(fn (User $member) => $member->transfer_status === 'completed' && !empty($member->transferred_to_user_id))
+                'is_family_responsible',
+            ]);
+
+        $members = $transferService
+            ->hydrateUsersTransferState($members)
             ->values()
             ->map(function (User $member) {
                 return [
@@ -132,7 +133,7 @@ class TransferWorkflowController extends Controller
                     'family_code' => $member->family?->code_famille,
                     'transfer_status' => $member->transfer_status,
                     'transfer_label' => $member->transfer_label,
-                    'transfer_locked' => in_array((string) $member->transfer_status, ['pending', 'completed'], true),
+                    'transfer_locked' => (bool) $member->transfer_locked,
                 ];
             });
 

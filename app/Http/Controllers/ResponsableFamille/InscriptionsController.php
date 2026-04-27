@@ -2,26 +2,25 @@
 
 namespace App\Http\Controllers\ResponsableFamille;
 
-use App\Http\Controllers\Controller;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
-use App\Models\Family;
-use App\Models\Classe;
 use App\Helpers\PhotoHelper;
+use App\Http\Controllers\Controller;
+use App\Models\Classe;
+use App\Models\Family;
+use App\Services\TransferWorkflowService;
+use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class InscriptionsController extends Controller
 {
     public function index()
     {
         $user = Auth::user();
+        $transferService = app(TransferWorkflowService::class);
 
-        // Récupérer la famille du responsable
         $family = Family::with('ville', 'classe')
             ->where('responsable_id', $user->id)
             ->first();
 
-        // Correction automatique : si ville_id est null, chercher dans l'inscription liée
         if ($family && !$family->ville_id) {
             $inscription = \App\Models\Inscription::where('responsable_email', $family->email)
                 ->whereIn('status', ['approuve', 'approved'])
@@ -37,16 +36,16 @@ class InscriptionsController extends Controller
                 $family->ville_id = (int) $inscVilleId;
                 $family->save();
                 $family->load('ville');
-                // Corriger aussi tous les membres sans ville_id
                 $family->users()->whereNull('ville_id')->update(['ville_id' => $family->ville_id]);
             }
         }
 
-        // AJOUT : Récupérer toutes les classes pour le modal de transfert
-        // On sélectionne seulement l'ID et le nom pour alléger la requête
+        if ($family) {
+            $family = $transferService->hydrateFamiliesTransferState([$family])->first();
+        }
+
         $classes = Classe::orderBy('nom')->get(['id', 'nom']);
 
-        // Statistiques de la famille
         $familyStats = [];
         $familyData = null;
         $members = [];
@@ -54,24 +53,19 @@ class InscriptionsController extends Controller
         if ($family) {
             $allMembers = $family->users()
                 ->with('classe', 'fonction', 'ville', 'sacrements')
-                ->get()
-                ->reject(fn ($member) => $this->isSupersededTransferredUser($member))
-                ->values();
+                ->get();
+
+            $allMembers = $transferService->hydrateUsersTransferState($allMembers)->values();
 
             $familyStats = [
                 'totalMembers' => $allMembers->count(),
-                'maleMembers' => $allMembers->filter(function ($m) {
-                    return $m->genre === 'M';
-                })->count(),
-                'femaleMembers' => $allMembers->filter(function ($m) {
-                    return $m->genre === 'F';
-                })->count(),
+                'maleMembers' => $allMembers->where('genre', 'M')->count(),
+                'femaleMembers' => $allMembers->where('genre', 'F')->count(),
                 'familyName' => $family->nom,
                 'className' => $family->classe?->nom ?? 'N/A',
                 'familyId' => $family->id,
             ];
 
-            // Préparer les données de la famille
             $familyData = [
                 'id' => $family->id,
                 'nom' => $family->nom,
@@ -84,42 +78,32 @@ class InscriptionsController extends Controller
                 'quartier' => $family->quartier,
                 'transfer_status' => $family->transfer_status,
                 'transfer_label' => $family->transfer_label,
-                'transfer_locked' => in_array((string) $family->transfer_status, ['pending', 'completed'], true),
+                'transfer_locked' => (bool) $family->transfer_locked,
             ];
 
-            // Préparer les données des membres
-            $members = $allMembers->map(function ($m) use ($family) {
-                \Log::debug('Membre trouvé:', [
-                    'user_id' => $m->id,
-                    'nom' => $m->nom,
-                    'fonction_id' => $m->fonction_id,
-                    'fonction' => $m->fonction?->nom,
-                    'ville_id' => $m->ville_id,
-                    'ville' => $m->ville?->nom,
-                    'profession' => $m->profession,
-                ]);
-
+            $members = $allMembers->map(function ($member) use ($family) {
                 return [
-                    'id' => $m->id,
-                    'nom' => $m->nom,
-                    'prenom' => $m->prenom,
-                    'email' => $m->email,
-                    'telephone' => $m->telephone,
-                    'code_membre' => $m->code_membre,
-                    'created_at' => optional($m->created_at)->format('d/m/Y H:i'),
-                    'updated_at' => optional($m->updated_at ?? $m->created_at)->format('d/m/Y H:i'),
-                    'genre' => $m->genre,
-                    'ville_name' => $m->ville?->nom ?? $family->ville?->nom ?? 'N/A',
-                    'fonction_name' => $m->fonction?->nom ?? 'N/A',
-                    'profession' => $m->profession ?? 'N/A',
-                    'relation' => $m->relation ?? 'N/A',
-                    'classe_name' => $m->classe?->nom ?? 'N/A',
-                    'role' => $m->id === $family->responsable_id ? 'responsable_famille' : 'membre',
-                    'is_responsable' => $m->id === $family->responsable_id,
-                    'transfer_status' => $m->transfer_status,
-                    'transfer_label' => $m->transfer_label,
-                    'transfer_locked' => in_array((string) $m->transfer_status, ['pending', 'completed'], true),
-                    'profile_photo_url' => $m->profile_photo_url ?: PhotoHelper::getPhotoUrl($m->photo_path, $m->prenom, $m->nom),
+                    'id' => $member->id,
+                    'nom' => $member->nom,
+                    'prenom' => $member->prenom,
+                    'email' => $member->email,
+                    'telephone' => $member->telephone,
+                    'code_membre' => $member->code_membre,
+                    'created_at' => optional($member->created_at)->format('d/m/Y H:i'),
+                    'updated_at' => optional($member->updated_at ?? $member->created_at)->format('d/m/Y H:i'),
+                    'genre' => $member->genre,
+                    'ville_name' => $member->ville?->nom ?? $family->ville?->nom ?? 'N/A',
+                    'fonction_name' => $member->fonction?->nom ?? 'N/A',
+                    'profession' => $member->profession ?? 'N/A',
+                    'relation' => $member->relation ?? 'N/A',
+                    'classe_name' => $member->classe?->nom ?? 'N/A',
+                    'role' => $member->id === $family->responsable_id ? 'responsable_famille' : 'membre',
+                    'is_responsable' => $member->id === $family->responsable_id,
+                    'transfer_status' => $member->transfer_status,
+                    'transfer_label' => $member->transfer_label,
+                    'transfer_locked' => (bool) $member->transfer_locked,
+                    'profile_photo_url' => $member->profile_photo_url
+                        ?: PhotoHelper::getPhotoUrl($member->photo_path, $member->prenom, $member->nom),
                 ];
             })->values();
         }
@@ -128,12 +112,7 @@ class InscriptionsController extends Controller
             'family' => $familyData,
             'familyStats' => $familyStats,
             'members' => $members,
-            'classes' => $classes, // AJOUT : On passe les classes à la vue
+            'classes' => $classes,
         ]);
-    }
-    private function isSupersededTransferredUser($user): bool
-    {
-        return $user->transfer_status === 'completed'
-            && !empty($user->transferred_to_user_id);
     }
 }

@@ -7,6 +7,7 @@ use App\Helpers\PhotoHelper;
 use App\Models\Family;
 use App\Models\User;
 use App\Models\Fonction;
+use App\Services\TransferWorkflowService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -17,11 +18,7 @@ class MemberController extends Controller
 {
     private function isTransferLocked(User|Family|null $record): bool
     {
-        if (!$record) {
-            return false;
-        }
-
-        return in_array((string) $record->transfer_status, ['pending', 'completed'], true);
+        return app(TransferWorkflowService::class)->isTransferLocked($record);
     }
 
     public function show($id)

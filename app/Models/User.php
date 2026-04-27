@@ -179,21 +179,6 @@ class User extends Authenticatable
         return $this->belongsTo(Family::class, 'family_id');
     }
 
-    public function transferOriginFamily()
-    {
-        return $this->belongsTo(Family::class, 'transfer_origin_family_id');
-    }
-
-    public function transferredToFamily()
-    {
-        return $this->belongsTo(Family::class, 'transferred_to_family_id');
-    }
-
-    public function transferredToUser()
-    {
-        return $this->belongsTo(User::class, 'transferred_to_user_id');
-    }
-
     /**
      * La classe de cet utilisateur
      */

@@ -11,6 +11,7 @@ use App\Models\Inscription;
 use App\Models\Family;
 use App\Models\Classe;
 use App\Models\ClassTransferRequest;
+use App\Services\TransferWorkflowService;
 use App\Helpers\PhotoHelper;
 
 use App\Models\Fonction; // <--- MODÈLE FONCTIONS CONSERVÉ
@@ -32,6 +33,8 @@ class AdministrationController extends Controller
         // ÉTAPE 1: CHARGER TOUTES LES DONNÉES DE BASE
         // ═══════════════════════════════════════════════════════════════
 
+        $transferService = app(TransferWorkflowService::class);
+
         // Utilisateurs avec relations
         $allUsers = User::with([
             'family',
@@ -42,11 +45,8 @@ class AdministrationController extends Controller
             'ville',
             'fonction',
             'sacrements',
-            'transferOriginFamily',
-            'transferOriginFamily.classe',
-        ])->get()
-            ->reject(fn (User $user) => $this->isSupersededTransferredUser($user))
-            ->values();
+        ])->get();
+        $allUsers = $transferService->hydrateUsersTransferState($allUsers)->values();
         $totalUsersCount = $allUsers->count();
 
         $completedTransfers = ClassTransferRequest::with('sourceClass:id,nom')
@@ -192,8 +192,9 @@ class AdministrationController extends Controller
         $membersFormatted = $allUsers->map(function ($m) use ($completedTransfersByUserId, $completedTransfersByFamilyId) {
             // Charger les sacrements s'ils existent
             $sacrements = $m->sacrements;
+            $originFamilyCode = $m->getRelation('computedOriginFamilyTransferRequest')?->family?->code_famille;
             $familyCodeHistory = collect([
-                $m->transferOriginFamily?->code_famille,
+                $originFamilyCode,
                 $m->family?->code_famille,
             ])->filter()->unique()->values()->all();
             $latestMemberTransfer = $completedTransfersByUserId->get($m->id);
@@ -202,7 +203,7 @@ class AdministrationController extends Controller
                 : null;
             $ancienneClasse = $latestMemberTransfer?->sourceClass?->nom
                 ?? $latestFamilyTransfer?->sourceClass?->nom
-                ?? $m->transferOriginFamily?->classe?->nom;
+                ?? $m->getRelation('computedOriginFamilyTransferRequest')?->sourceClass?->nom;
 
             if ($ancienneClasse === $m->classe?->nom) {
                 $ancienneClasse = null;
@@ -247,9 +248,15 @@ class AdministrationController extends Controller
                     ?? ($m->family?->ville_id ? ('Ville ID: ' . $m->family->ville_id) : null),
                 'famille' => $m->family?->nom,
                 'code_famille' => $m->family?->code_famille,
-                'ancienne_famille_code' => $m->transferOriginFamily?->code_famille,
+                'ancienne_famille_code' => $originFamilyCode,
                 'nouvelle_famille_code' => count($familyCodeHistory) > 1 ? $m->family?->code_famille : null,
                 'code_famille_historique' => $familyCodeHistory,
+
+                	// Champs de transfert (hydrate par TransferWorkflowService)
+                	'transfer_status' => $m->transfer_status ?? null,
+                	'transfer_label' => $m->transfer_label ?? null,
+                	'transfer_history_label' => count($familyCodeHistory) > 1 ? 'Nouveau membre' : null,
+                	'transfer_locked' => (bool) ($m->transfer_locked ?? false),
                 'code_membre' => $m->code_membre,
 
                 // === CHAMPS SUPPLÉMENTAIRES POUR LA MODIFICATION ===
@@ -571,10 +578,5 @@ class AdministrationController extends Controller
         $user->delete();
 
         return back()->with('success', 'Membre supprimé avec succès.');
-    }
-    private function isSupersededTransferredUser(User $user): bool
-    {
-        return $user->transfer_status === 'completed'
-            && !empty($user->transferred_to_user_id);
     }
 }
