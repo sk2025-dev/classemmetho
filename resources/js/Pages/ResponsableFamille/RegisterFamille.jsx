@@ -314,11 +314,11 @@ export default function RegisterFamille({
             lieuDivorce: "",
             dateDeces: "",
             lieuDeces: "",
-            // Champs religieux - bapt?me
+            // Champs religieux - baptême
             baptise: false,
             dateBapteme: "",
             lieuBapteme: "",
-            // Champs religieux - premi?re communion
+            // Champs religieux - première communion
             premiereCommunion: false,
             datePremiereCommunion: "",
             lieuPremiereCommunion: "",
@@ -356,11 +356,11 @@ export default function RegisterFamille({
             dote: "",
             lieuDote: "",
             lienParente: "",
-            // Champs religieux - bapt?me
+            // Champs religieux - baptême
             baptise: false,
             dateBapteme: "",
             lieuBapteme: "",
-            // Champs religieux - premi?re communion
+            // Champs religieux - première communion
             premiereCommunion: false,
             datePremiereCommunion: "",
             lieuPremiereCommunion: "",
@@ -546,7 +546,7 @@ export default function RegisterFamille({
     /**
      * Formatter le numéro de téléphone
      * UNIQUEMENT les 10 premiers chiffres
-     * Enlève tous les caractères non-num?riques
+    * Enlève tous les caractères non-numériques
      */
     const formatPhoneNumber = (text) => {
         // Garder UNIQUEMENT les chiffres
@@ -637,7 +637,7 @@ export default function RegisterFamille({
             newErrors["membre.profession_detail"] = "Profession requise";
         // niveau_etude optionnel
 
-        // V?rifier conditions statut marital
+        // Vérifier conditions statut marital
         if (membreTemp.statutMarital === "marie") {
             if (!membreTemp.dateMariage)
                 newErrors["membre.dateMariage"] = "Date requise";
@@ -1432,7 +1432,7 @@ export default function RegisterFamille({
             case 2:
                 return (
                     <div className="space-y-6 animate-fadeIn">
-                        {/* Photo Upload avec background complet - LARGEUR COMPL?TE */}
+                        {/* Photo Upload avec background complet - LARGEUR COMPLÈTE */}
                         <div className="w-full p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-md">
                             <div className="flex flex-col items-center gap-3">
                                 <h3 className="text-sm font-bold text-gray-800">
@@ -1708,18 +1708,14 @@ export default function RegisterFamille({
                                     )}
                                 </FormField>
                             )}
-                        </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                            {/* Déplacer ici la fonction d'église */}
                             <FormField
                                 label="Fonction dans l'église"
                                 icon={Users}
-                                hint="Cliquez pour sélectionner"
                             >
                                 <Select2Fonction
-                                    value={Array.from(
-                                        selectedMembresRoles,
-                                    ).filter(Boolean)}
+                                    value={Array.from(selectedMembresRoles).filter(Boolean)}
                                     onChange={(e) => {
                                         if (!e.target.value) return;
                                         setSelectedMembresRoles(e.target.value);
@@ -1929,14 +1925,14 @@ export default function RegisterFamille({
                             </div>
                         )}
 
-                        {/* Champs Religieux - Section Compl?te */}
+                        {/* Champs Religieux - Section Complète */}
                         <div className="border-t pt-6 mt-6">
                             <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
                                 <Heart className="w-5 h-5 text-blue-600" />
                                 Informations Religieuses
                             </h3>
 
-                            {/* Bapt?me */}
+                            {/* Baptême */}
                             <div className="space-y-3 mb-4">
                                 <label className="flex items-center gap-3 cursor-pointer">
                                     <input
@@ -1957,7 +1953,7 @@ export default function RegisterFamille({
                                         className="w-5 h-5 rounded border-gray-300 text-blue-600"
                                     />
                                     <span className="text-sm font-semibold text-gray-700">
-                                        Baptis?(e)
+                                        Baptisé(e)
                                     </span>
                                 </label>
                                 {responsable.baptise === true && (
@@ -1994,7 +1990,7 @@ export default function RegisterFamille({
                                 )}
                             </div>
 
-                            {/* Premi?re Communion */}
+                            {/* Première Communion */}
                             <div className="space-y-3 mb-4">
                                 <label className="flex items-center gap-3 cursor-pointer">
                                     <input
@@ -2018,7 +2014,7 @@ export default function RegisterFamille({
                                         className="w-5 h-5 rounded border-gray-300 text-purple-600"
                                     />
                                     <span className="text-sm font-semibold text-gray-700">
-                                        Premi?re Communion
+                                        Première Communion
                                     </span>
                                 </label>
                                 {responsable.premiereCommunion === true && (
@@ -2085,7 +2081,7 @@ export default function RegisterFamille({
                                         className="w-5 h-5 rounded border-gray-300 text-pink-600"
                                     />
                                     <span className="text-sm font-semibold text-gray-700">
-                                        Mari?(e) religieusement
+                                        Marié(e) religieusement
                                     </span>
                                 </label>
                                 {responsable.marieReligieusement === true && (
@@ -2190,7 +2186,7 @@ export default function RegisterFamille({
                                     className="p-6 bg-white rounded-xl border border-gray-200 shadow-sm space-y-6"
                                     data-member-form
                                 >
-                                    {/* Photo Upload avec background complet - LARGEUR COMPL?TE */}
+                                    {/* Photo Upload avec background complet - LARGEUR COMPLÈTE */}
                                     <div className="w-full p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-md">
                                         <div className="flex flex-col items-center gap-3">
                                             <h3 className="text-sm font-bold text-gray-800">
@@ -2390,7 +2386,7 @@ export default function RegisterFamille({
                                             )}
                                         </FormField>
                                     </div>
-                                    {/* Fonction dans l'?glise et vide */}
+                                    {/* Fonction dans l'Église et vide */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <FormField
                                             label="Fonction dans l'église"
@@ -2684,7 +2680,7 @@ export default function RegisterFamille({
                                     {membreTemp.statutMarital === "veuf" && (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-gray-200">
                                             <FormField
-                                                label="Date du d?c?s"
+                                                label="Date du décès"
                                                 icon={Calendar}
                                                 required
                                             >
@@ -2711,7 +2707,7 @@ export default function RegisterFamille({
                                                 )}
                                             </FormField>
                                             <FormField
-                                                label="Lieu du d?c?s"
+                                                label="Lieu du décès"
                                                 icon={Building}
                                                 required
                                             >
@@ -2838,7 +2834,7 @@ export default function RegisterFamille({
 
                                             {membreTemp.baptise && (
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-8">
-                                                    <FormField label="Date de bapt?me">
+                                                    <FormField label="Date de baptême">
                                                         <input
                                                             type="date"
                                                             className={
@@ -2882,7 +2878,7 @@ export default function RegisterFamille({
                                             )}
                                         </div>
 
-                                        {/* Premi?re Communion */}
+                                        {/* Première Communion */}
                                         <div className="space-y-3 mb-4">
                                             <div className="flex items-center gap-3 mb-4">
                                                 <input
@@ -2901,18 +2897,18 @@ export default function RegisterFamille({
                                                         })
                                                     }
                                                 />
-                                                <label
+                                                    <label
                                                     htmlFor="premiereCommunion"
                                                     className="text-sm font-medium text-gray-700"
                                                 >
                                                     Cette personne a fait sa
-                                                    premi?re communion
+                                                    première communion
                                                 </label>
                                             </div>
 
                                             {membreTemp.premiereCommunion && (
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-8">
-                                                    <FormField label="Date de premi?re communion">
+                                                    <FormField label="Date de première communion">
                                                         <input
                                                             type="date"
                                                             className={
@@ -3395,7 +3391,7 @@ export default function RegisterFamille({
                                             </span>
                                             {m.baptise && (
                                                 <span className="text-xs text-blue-600">
-                                                    Baptis?
+                                                    Baptisé
                                                 </span>
                                             )}
                                         </li>

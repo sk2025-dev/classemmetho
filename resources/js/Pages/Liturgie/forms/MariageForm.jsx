@@ -191,7 +191,7 @@ export default function MariageForm({
                         Inscription de <em className="font-medium">Mariage</em>
                     </h1>
                     <p className="text-white/90 text-sm mt-2">
-                        Eglise Methodiste du Jubile de Cocody
+                        Église Méthodiste du Jubilé de Cocody
                     </p>
                 </div>
 
@@ -333,7 +333,7 @@ export default function MariageForm({
                                 </Field>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                    <Field label="Membre de cette eglise ?">
+                                    <Field label="Membre de cette église ?">
                                         <select
                                             value={form.details.epoux_membre}
                                             onChange={(e) =>
@@ -353,7 +353,7 @@ export default function MariageForm({
                                             <option value="non">Non</option>
                                         </select>
                                     </Field>
-                                    <Field label="A ete baptise ?">
+                                    <Field label="A été baptisé(e) ?">
                                         <select
                                             value={form.details.epoux_baptise}
                                             onChange={(e) =>
@@ -370,7 +370,7 @@ export default function MariageForm({
                                     </Field>
                                 </div>
                                 {form.details.epoux_membre === "non" && (
-                                    <Field label="Eglise du conjoint">
+                                    <Field label="Église du conjoint">
                                         <input
                                             value={form.details.epoux_eglise}
                                             onChange={(e) =>
@@ -385,7 +385,7 @@ export default function MariageForm({
                                 )}
                                 {form.details.epoux_baptise === "oui" && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                        <Field label="Eglise de bapteme *">
+                                        <Field label="Église de baptême *">
                                             <input
                                                 value={
                                                     form.details
@@ -404,7 +404,7 @@ export default function MariageForm({
                                                 </Err>
                                             )}
                                         </Field>
-                                        <Field label="Date du bapteme *">
+                                        <Field label="Date du baptême *">
                                             <input
                                                 type="date"
                                                 value={

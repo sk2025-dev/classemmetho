@@ -151,7 +151,7 @@ export default function BaptemeForm({
             const res = await axios.post(submitUrl, payload, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
-            const msg = res.data?.message || "Inscription de bapteme soumise.";
+            const msg = res.data?.message || "Inscription de baptême soumise.";
             setSuccessMsg(msg);
             setSuccess(true);
             showSuccess(msg);
@@ -217,10 +217,10 @@ export default function BaptemeForm({
                         Acte liturgique
                     </p>
                     <h1 className="text-4xl font-light text-white mt-4">
-                        Inscription de <em className="font-medium">Bapteme</em>
+                        Inscription de <em className="font-medium">Baptême</em>
                     </h1>
                     <p className="text-white/90 text-sm mt-2">
-                        Eglise Methodiste du Jubile de Cocody
+                        Église Méthodiste du Jubilé de Cocody
                     </p>
                 </div>
 
@@ -233,7 +233,7 @@ export default function BaptemeForm({
                                     Personne à baptiser
                                 </h2>
                                 <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">
-                                    Renseignez les informations complétes de la personne concernée.
+                                    Renseignez les informations complètes de la personne concernée.
                                 </p>
 
                                 <div className="grid grid-cols-1 gap-4 mb-6">
@@ -291,7 +291,7 @@ export default function BaptemeForm({
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4 mb-4">
-                                    <Field label="A déjà reçu un baptéme ?">
+                                    <Field label="A déjà reçu un baptême ?">
                                         <select
                                             value={form.details.deja_baptise}
                                             onChange={(e) =>
@@ -348,7 +348,7 @@ export default function BaptemeForm({
                                     <div className="h-px bg-slate-200 flex-1" />
                                 </div>
                                 <div className="grid grid-cols-1 gap-4 mb-4">
-                                    <Field label="Souhaitez-vous faire la premiére communion ?">
+                                    <Field label="Souhaitez-vous faire la première communion ?">
                                         <select
                                             value={form.details.want_communion}
                                             onChange={(e) =>

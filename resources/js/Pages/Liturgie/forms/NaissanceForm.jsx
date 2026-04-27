@@ -279,7 +279,7 @@ export default function NaissanceForm({
                         <em className="font-medium">Naissance</em>
                     </h1>
                     <p className="text-white/90 text-sm mt-2">
-                        Eglise Methodiste du Jubile de Cocody
+                        Église Méthodiste du Jubilé de Cocody
                     </p>
                 </div>
 

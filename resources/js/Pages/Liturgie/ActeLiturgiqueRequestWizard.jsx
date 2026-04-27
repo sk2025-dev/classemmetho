@@ -4,36 +4,36 @@ import { Link, usePage } from "@inertiajs/react";
 import { ArrowLeft, ArrowRight, CheckCircle, Home, User, Send, Upload } from "lucide-react";
 
 const ACTE_TYPES = [
-    { value: "bapteme", label: "Bapteme", icon: "BT" },
-    { value: "premiere_communion", label: "Premiere Communion", icon: "PC" },
+    { value: "bapteme", label: "Baptême", icon: "BT" },
+    { value: "premiere_communion", label: "Première Communion", icon: "PC" },
     { value: "mariage", label: "Mariage", icon: "MG" },
-    { value: "naissance", label: "Declaration de Naissance", icon: "NS" },
-    { value: "deces", label: "Declaration de Deces", icon: "DC" },
+    { value: "naissance", label: "Déclaration de naissance", icon: "NS" },
+    { value: "deces", label: "Déclaration de décès", icon: "DC" },
 ];
 
 const TYPE_FIELDS = {
     bapteme: [
-        { key: "personne", label: "Nom de la personne a baptiser", required: true },
-        { key: "date", label: "Date du bapteme", type: "date", required: true },
-        { key: "lieu", label: "Lieu du bapteme", required: true },
-        { key: "celebrant", label: "Nom du celebrant" },
+        { key: "personne", label: "Nom de la personne à baptiser", required: true },
+        { key: "date", label: "Date du baptême", type: "date", required: true },
+        { key: "lieu", label: "Lieu du baptême", required: true },
+        { key: "celebrant", label: "Nom du célébrant" },
         { key: "parents", label: "Nom des parents (si enfant)" },
     ],
     premiere_communion: [
         { key: "personne", label: "Nom complet", required: true },
-        { key: "date", label: "Date de communion", type: "date", required: true },
-        { key: "lieu", label: "Lieu de la ceremonie", required: true },
-        { key: "deja_baptise", label: "A deja ete baptise(e)?" },
+        { key: "date", label: "Date de la communion", type: "date", required: true },
+        { key: "lieu", label: "Lieu de la cérémonie", required: true },
+        { key: "deja_baptise", label: "A déjà été baptisé(e) ?" },
     ],
     mariage: [
-        { key: "conjoint_1", label: "Nom de l'epoux", required: true },
-        { key: "conjoint_2", label: "Nom de la fiancee", required: true },
+        { key: "conjoint_1", label: "Nom de l'époux", required: true },
+        { key: "conjoint_2", label: "Nom de la fiancée", required: true },
         { key: "date", label: "Date du mariage", type: "date", required: true },
         { key: "lieu", label: "Lieu du mariage", required: true },
         { key: "type_mariage", label: "Type de mariage", required: true },
         {
             key: "epoux_baptise",
-            label: "Epoux baptise ?",
+            label: "Époux baptisé ?",
             type: "select",
             options: [
                 { value: "", label: "Choisir" },
@@ -41,11 +41,11 @@ const TYPE_FIELDS = {
                 { value: "non", label: "Non" },
             ],
         },
-        { key: "epoux_date_bapteme", label: "Date bapteme epoux", type: "date" },
-        { key: "epoux_lieu_bapteme", label: "Lieu bapteme epoux" },
+        { key: "epoux_date_bapteme", label: "Date du baptême (époux)", type: "date" },
+        { key: "epoux_lieu_bapteme", label: "Lieu du baptême (époux)" },
         {
             key: "fiancee_baptisee",
-            label: "Fiancee baptisee ?",
+            label: "Fiancée baptisée ?",
             type: "select",
             options: [
                 { value: "", label: "Choisir" },
@@ -53,8 +53,8 @@ const TYPE_FIELDS = {
                 { value: "non", label: "Non" },
             ],
         },
-        { key: "fiancee_date_bapteme", label: "Date bapteme fiancee", type: "date" },
-        { key: "fiancee_lieu_bapteme", label: "Lieu bapteme fiancee" },
+        { key: "fiancee_date_bapteme", label: "Date du baptême (fiancée)", type: "date" },
+        { key: "fiancee_lieu_bapteme", label: "Lieu du baptême (fiancée)" },
         { key: "temoins", label: "Nom des temoins" },
     ],
     naissance: [
@@ -64,9 +64,9 @@ const TYPE_FIELDS = {
         { key: "lieu_naissance", label: "Lieu de naissance" },
     ],
     deces: [
-        { key: "nom_defunt", label: "Nom du defunt", required: true },
-        { key: "date_deces", label: "Date de deces", type: "date", required: true },
-        { key: "lieu_deces", label: "Lieu du deces" },
+        { key: "nom_defunt", label: "Nom du défunt", required: true },
+        { key: "date_deces", label: "Date du décès", type: "date", required: true },
+        { key: "lieu_deces", label: "Lieu du décès" },
         { key: "lien_familial", label: "Lien familial" },
         { key: "contact", label: "Contact principal" },
     ],
@@ -611,11 +611,11 @@ function prettyType(type) {
 
 function prettyKey(key) {
     const map = {
-        conjoint_1: "Epoux",
-        conjoint_2: "Fiancee",
-        fiancee_baptisee: "Fiancee baptisee",
-        fiancee_date_bapteme: "Date bapteme fiancee",
-        fiancee_lieu_bapteme: "Lieu bapteme fiancee",
+        conjoint_1: "Époux",
+        conjoint_2: "Fiancée",
+        fiancee_baptisee: "Fiancée baptisée",
+        fiancee_date_bapteme: "Date du baptême (fiancée)",
+        fiancee_lieu_bapteme: "Lieu du baptême (fiancée)",
     };
     if (map[key]) return map[key];
 
