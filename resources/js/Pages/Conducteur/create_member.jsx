@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+﻿import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import { Link, usePage } from "@inertiajs/react";
 import AddressAutocomplete from "../../Components/AddressAutocomplete";
@@ -1517,7 +1517,7 @@ export default function RegisterFamille({
                             >
                                 <Select2Fonction
                                     value={responsable.fonction_ids || []}
-                                    maxSelections={2}
+                                    maxSelections={10}
                                     onChange={(e) => {
                                         const values = Array.isArray(e.target.value)
                                             ? e.target.value.slice(0, 2).map((v) => Number(v))
@@ -1955,9 +1955,24 @@ export default function RegisterFamille({
                                         <h3 className="text-sm font-bold text-gray-800">
                                             Photo du membre
                                         </h3>
-                                            <input
-                                                type="file"
-                                                accept="image/*"
+                                        <div className="relative">
+                                            <div className="w-20 h-20 rounded-full bg-white overflow-hidden border-3 border-blue-400 shadow-lg ring-3 ring-blue-100">
+                                                {membreTemp.photoPreview ? (
+                                                    <img
+                                                        src={membreTemp.photoPreview}
+                                                        alt="profil membre"
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                                                        <User className="w-10 h-10 text-gray-400" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
                                             onChange={(e) =>
                                                 handlePhotoChange(e, "membre")
                                             }
@@ -2068,7 +2083,7 @@ export default function RegisterFamille({
                                     </FormField>
                                 </div>
 
-                                {/* Email et Téléphone */}
+                                {/* Email et Telephone */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField label="Email" icon={Mail}>
                                         <input
@@ -2090,7 +2105,7 @@ export default function RegisterFamille({
                                         )}
                                     </FormField>
                                     <FormField
-                                        label="Téléphone"
+                                        label="Telephone"
                                         icon={Phone}
                                         hint="Ex: 0102030405 (optionnel)"
                                     >
@@ -2123,19 +2138,23 @@ export default function RegisterFamille({
                                         )}
                                     </FormField>
                                 </div>
-                                {/* Fonction dans l'église et vide */}
+                                {/* Fonction dans l'eglise et vide */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField
-                                        label="Fonction dans l'église"
+                                        label="Fonction dans l'eglise"
                                         icon={Users}
-                                        hint="Jusqu'à 2 fonctions"
+                                        hint="Jusqu'a 2 fonctions"
                                     >
                                         <Select2Fonction
                                             value={membreTemp.fonction_ids || []}
                                             maxSelections={2}
                                             onChange={(e) => {
-                                                const values = Array.isArray(e.target.value)
-                                                    ? e.target.value.slice(0, 2).map((v) => Number(v))
+                                                const values = Array.isArray(
+                                                    e.target.value,
+                                                )
+                                                    ? e.target.value
+                                                          .slice(0, 2)
+                                                          .map((v) => Number(v))
                                                     : [];
                                                 setMembreTemp((prev) => ({
                                                     ...prev,
@@ -2144,7 +2163,7 @@ export default function RegisterFamille({
                                                 }));
                                             }}
                                             options={churchRoles}
-                                            placeholder="Sélectionner des fonctions..."
+                                            placeholder="Selectionner des fonctions..."
                                         />
                                     </FormField>
                                     <FormField
@@ -2214,243 +2233,6 @@ export default function RegisterFamille({
                                                 })
                                             }
                                             options={RELATION_OPTIONS}
-                                            placeholder="Sélectionner un lien de parenté"
-                                        />
-                                        {errors["membre.relation"] && (
-                                            <p className="text-red-500 text-xs mt-1">
-                                                {errors["membre.relation"]}
-                                            </p>
-                                        )}
-                                    </FormField>
-                                    <FormField
-                                        label="Statut marital"
-                                        icon={Heart}
-                                        required
-                                    >
-                                        <Select2Single
-                                            name="membre_statut_marital"
-                                            value={membreTemp.statutMarital}
-                                            onChange={(e) =>
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    statutMarital:
-                                                        e.target.value,
-                                                })
-                                            }
-                                            options={MARITAL_STATUS_OPTIONS}
-                                            placeholder="Sélectionner..."
-                                            hasError={Boolean(
-                                                errors["membre.statutMarital"],
-                                            )}
-                                        />
-                                        {errors["membre.statutMarital"] && (
-                                            <p className="text-red-500 text-xs mt-1">
-                                                {errors["membre.statutMarital"]}
-                                            </p>
-                                        )}
-                                    </FormField>
-                                </div>
-
-                                {membreTemp.statutMarital === "marie" && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-gray-200">
-                                        <FormField
-                                            label="Date du mariage"
-                                            icon={Calendar}
-                                            required
-                                        >
-                                            <input
-                                                type="date"
-                                                className={STYLES.input}
-                                                value={membreTemp.dateMariage}
-                                                onChange={(e) =>
-                                                    setMembreTemp({
-                                                        ...membreTemp,
-                                                        dateMariage:
-                                                            e.target.value,
-                                                    })
-                                                }
-                                            />
-                                            {errors["membre.dateMariage"] && (
-                                                <p className="text-red-500 text-xs mt-1">
-                                                    {
-                                                        errors[
-                                                            "membre.dateMariage"
-                                                        ]
-                                                    }
-                                                </p>
-                                            )}
-                                        </FormField>
-                                        <FormField
-                                            label="Lieu du mariage"
-                                            icon={Building}
-                                            required
-                                        >
-                                            <input
-                                                className={STYLES.input}
-                                                value={membreTemp.lieuMariage}
-                                                onChange={(e) =>
-                                                    setMembreTemp({
-                                                        ...membreTemp,
-                                                        lieuMariage:
-                                                            e.target.value,
-                                                    })
-                                                }
-                                                placeholder="Ville, Pays..."
-                                            />
-                                            {errors["membre.lieuMariage"] && (
-                                                <p className="text-red-500 text-xs mt-1">
-                                                    {
-                                                        errors[
-                                                            "membre.lieuMariage"
-                                                        ]
-                                                    }
-                                                </p>
-                                            )}
-                                        </FormField>
-                                    </div>
-                                )}
-
-                                {/* Email et Téléphone */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField label="Email" icon={Mail}>
-                                        <input
-                                            type="email"
-                                            className={STYLES.input}
-                                            value={membreTemp.email}
-                                            onChange={(e) =>
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    email: e.target.value,
-                                                })
-                                            }
-                                            placeholder="ex: jean.dupont@email.com"
-                                        />
-                                        {errors["membre.email"] && (
-                                            <p className="text-red-500 text-xs mt-1">
-                                                {errors["membre.email"]}
-                                            </p>
-                                        )}
-                                    </FormField>
-                                    <FormField
-                                        label="Téléphone"
-                                        icon={Phone}
-                                        hint="Ex: 0102030405 (optionnel)"
-                                    >
-                                        <div className="flex">
-                                            <span className="bg-gray-100 border border-gray-300 border-r-0 rounded-l-lg px-3 flex items-center text-gray-600">
-                                                +225
-                                            </span>
-                                            <input
-                                                type="tel"
-                                                className="flex-1 h-12 border border-gray-300 rounded-r-lg px-4 outline-none"
-                                                value={membreTemp.telephone}
-                                                onChange={(e) =>
-                                                    setMembreTemp({
-                                                        ...membreTemp,
-                                                        telephone:
-                                                            e.target.value,
-                                                    })
-                                                }
-                                                placeholder="ex: 0102030405"
-                                                maxLength="10"
-                                            />
-                                        </div>
-                                        {errors["membre.telephone"] && (
-                                            <p className="text-red-500 text-xs mt-1">
-                                                {errors["membre.telephone"]}
-                                            </p>
-                                        )}
-                                    </FormField>
-                                </div>
-                                {/* Fonction dans l'église et vide */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                        label="Fonction dans l'église"
-                                        icon={Users}
-                                        hint="Jusqu'à 2 fonctions"
-                                    >
-                                        <Select2Fonction
-                                            value={membreTemp.fonction_ids || []}
-                                            maxSelections={2}
-                                            onChange={(e) => {
-                                                const values = Array.isArray(e.target.value)
-                                                    ? e.target.value.slice(0, 2).map((v) => Number(v))
-                                                    : [];
-                                                setMembreTemp((prev) => ({
-                                                    ...prev,
-                                                    fonction: values.join(","),
-                                                    fonction_ids: values,
-                                                }));
-                                            }}
-                                            options={churchRoles}
-                                            placeholder="Sélectionner des fonctions..."
-                                        />
-                                    </FormField>
-                                    <FormField
-                                        label="Profession"
-                                        icon={Briefcase}
-                                        required
-                                    >
-                                        <input
-                                            className={STYLES.input}
-                                            value={membreTemp.profession}
-                                            onChange={(e) =>
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    profession: e.target.value,
-                                                })
-                                            }
-                                            placeholder="Ex: Enseignant, Infirmier..."
-                                        />
-                                        {errors["membre.profession"] && (
-                                            <p className="text-red-500 text-xs mt-1">
-                                                {errors["membre.profession"]}
-                                            </p>
-                                        )}
-                                    </FormField>
-                                </div>
-                                {/* Statut d'emploi */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                        label="Statut d'emploi"
-                                        icon={Briefcase}
-                                    >
-                                        <Select2Single
-                                            name="membre_employment_status"
-                                            value={membreTemp.employment_status || ""}
-                                            onChange={(e) =>
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    employment_status: e.target.value,
-                                                })
-                                            }
-                                            options={[
-                                                { value: "TRAVAILLEUR", label: "Travailleur" },
-                                                { value: "RETRAITE", label: "Retraité" },
-                                                { value: "ETUDIANT", label: "Étudiant" },
-                                                { value: "SANS_EMPLOI", label: "Sans emploi" },
-                                            ]}
-                                            placeholder="Sélectionner..."
-                                            isClearable={true}
-                                        />
-                                    </FormField>
-                                </div>
-                                {/* Lien de parenté et Statut marital */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                        label="Lien de parenté"
-                                        icon={Users}
-                                        required
-                                        hint="Relation avec le responsable"
-                                    >
-                                        <Select2Relation
-                                            value={membreTemp.relation}
-                                            onChange={(e) =>
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    relation: e.target.value,
-                                                })
-                                            }
                                             placeholder="Sélectionner un lien de parenté"
                                         />
                                         {errors["membre.relation"] && (
@@ -3562,5 +3344,3 @@ export default function RegisterFamille({
         </div>
     );
 }
-
-

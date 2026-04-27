@@ -129,6 +129,8 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::post('/inscriptions/{id}/reject', [\App\Http\Controllers\Admin\InscriptionApprovalController::class, 'reject'])
         ->name('admin.inscriptions.reject')
         ->middleware('verified');
+    Route::post('/inscriptions/bulk-delete', [\App\Http\Controllers\Admin\InscriptionApprovalController::class, 'bulkDelete'])
+        ->name('admin.inscriptions.bulk-delete');
 });
 
 // Routes authentifiées
@@ -173,6 +175,12 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('/admin/notifications', [\App\Http\Controllers\Admin\NotificationsController::class, 'index'])->name('admin.notifications');
         Route::get('/admin/notifications/{id}', [\App\Http\Controllers\Admin\NotificationsController::class, 'show'])->name('admin.notifications.show');
+
+        // Routes Annonces (Admin - flash info paroissial)
+        Route::get('/admin/annonces', [AnnonceController::class, 'index'])->name('admin.annonces.index');
+        Route::post('/admin/annonces', [AnnonceController::class, 'store'])->name('admin.annonces.store');
+        Route::post('/admin/annonces/{id}/archiver', [AnnonceController::class, 'archiver'])->name('admin.annonces.archiver');
+        Route::delete('/admin/annonces/{id}', [AnnonceController::class, 'destroy'])->name('admin.annonces.destroy');
 
         // Routes module Présences (Admin)
         Route::get('/admin/presences', [\App\Http\Controllers\Admin\PresencesController::class, 'index'])->name('admin.presences.index');
@@ -286,6 +294,7 @@ Route::middleware(['auth'])->group(function () {
 
         // Endpoint simplifié pour ajouter rapidement un simple membre
         Route::post('/conducteur/quick-member', [QuickMemberController::class, 'store'])->name('conducteur.quick_member.store');
+        Route::get('/conducteur/check-email', [QuickMemberController::class, 'checkEmail'])->name('conducteur.check_email');
 
         Route::put('/conducteur/members/{memberId}', [ConducteurInscriptionsController::class, 'update'])->name('conducteur.members.update');
         Route::delete('/conducteur/members/{memberId}', [ConducteurInscriptionsController::class, 'destroy'])->name('conducteur.members.destroy');
@@ -431,6 +440,9 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/responsable-famille/liturgie/{id}/ceremonie', [ResponsableFamilleLiturgieController::class, 'updateCeremonie'])->name('responsable_famille.liturgie.ceremonie.update');
         Route::get('/responsable-famille/liturgie/{id}/certificat', [ResponsableFamilleLiturgieController::class, 'certificat'])->name('responsable_famille.liturgie.certificat');
         Route::get('/responsable-famille/liturgie/{id}/fiche', [ResponsableFamilleLiturgieController::class, 'fiche'])->name('responsable_famille.liturgie.fiche');
+
+        // Routes Présences (ResponsableFamille)
+        Route::get('/responsable-famille/presences', [\App\Http\Controllers\ResponsableFamille\PresencesController::class, 'index'])->name('responsable_famille.presences.index');
 
         // Routes Annonces (ResponsableFamille)
         Route::get('/responsable-famille/annonces', [\App\Http\Controllers\ResponsableFamille\AnnonceController::class, 'index'])->name('responsable_famille.annonces.index');

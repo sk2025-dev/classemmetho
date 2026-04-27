@@ -6,7 +6,10 @@ import Select from "react-select";
 import FormField from "@/Components/FormField";
 import Select2Fonction from "../../Components/Select2Fonction";
 import Select2Single from "../../Components/Select2Single";
-import { RELATION_OPTIONS } from "../../Helpers/select2SingleOptions";
+import {
+    RELATION_OPTIONS,
+    EMPLOYMENT_STATUS_OPTIONS,
+} from "../../Helpers/select2SingleOptions";
 import { sanitizeUppercasePrenom } from "../../Helpers/nameSanitizers";
 import {
     Eye,
@@ -106,7 +109,8 @@ function renderTransferBadge(member) {
     }
 
     const archived = member.transfer_status === "completed";
-    const historyOnly = !member?.transfer_locked && member?.transfer_history_label;
+    const historyOnly =
+        !member?.transfer_locked && member?.transfer_history_label;
 
     return (
         <span
@@ -114,8 +118,8 @@ function renderTransferBadge(member) {
                 historyOnly
                     ? "bg-blue-100 text-blue-700 border border-blue-200"
                     : archived
-                    ? "bg-slate-200 text-slate-700 border border-slate-300"
-                    : "bg-orange-100 text-orange-700 border border-orange-300"
+                      ? "bg-slate-200 text-slate-700 border border-slate-300"
+                      : "bg-orange-100 text-orange-700 border border-orange-300"
             }`}
         >
             {member.transfer_history_label ||
@@ -270,7 +274,12 @@ export default function Inscriptions({
     };
 
     const { flash, auth } = usePage().props;
-    const { toasts, removeToast, error: showError } = useToast();
+    const {
+        toasts,
+        removeToast,
+        success: showSuccessToast,
+        error: showError,
+    } = useToast();
     const [showSuccessNotification, setShowSuccessNotification] =
         useState(false);
     const [successTitle, setSuccessTitle] = useState("Inscription validée !");
@@ -378,6 +387,9 @@ export default function Inscriptions({
     // États pour les données persistantes
     const [fonctions, setFonctions] = useState([]);
     const [fieldErrors, setFieldErrors] = useState({});
+    const [emailTaken, setEmailTaken] = useState(false);
+    const [emailChecking, setEmailChecking] = useState(false);
+    const emailCheckTimerRef = useRef(null);
 
     // --- FORMULAIRE (Add / Edit) ---
     const { data, setData, post, put, processing, reset, errors } = useForm({
@@ -391,7 +403,10 @@ export default function Inscriptions({
         statut_marital: "",
         date_mariage: "",
         lieu_mariage: "",
+        employment_status: "",
+        profession_detail: "",
         profession: "",
+        fonction_ids: [],
         fonction_id: "",
         relation: "",
         // Photo
@@ -772,7 +787,9 @@ export default function Inscriptions({
                 ? "cette demande d'inscription"
                 : "ce membre";
         if (
-            !window.confirm(`Êtes-vous sûr de vouloir supprimer ${itemText} ?`)
+            !window.confirm(
+                `Êtes-vous sûr de vouloir supprimer ${itemText} ?`,
+            )
         ) {
             return;
         }
@@ -944,7 +961,8 @@ export default function Inscriptions({
         if (["divorce", "divorcé", "divorcée", "divorcé(e)"].includes(value))
             return "Divorcé(e)";
         if (["veuf", "veuve", "veuf(ve)"].includes(value)) return "Veuf(ve)";
-        if (["dote", "doté", "dotée", "doté(e)"].includes(value)) return "Dote";
+        if (["dote", "doté", "dotée", "doté(e)"].includes(value))
+            return "Dote";
         if (["celibataire", "célibataire"].includes(value))
             return "Célibataire";
 
@@ -965,8 +983,36 @@ export default function Inscriptions({
             telephone: member.phone || member.telephone || "",
             genre: member.genre || "",
             date_naissance: formatDateForInput(member.date_naissance) || "",
+            employment_status:
+                member.employment_status || member.raw?.employment_status || "",
+            profession_detail:
+                member.profession_detail ||
+                member.raw?.profession_detail ||
+                member.profession ||
+                member.fonction_professionnelle ||
+                "",
             profession:
-                member.profession || member.fonction_professionnelle || "",
+                member.profession_detail ||
+                member.profession ||
+                member.fonction_professionnelle ||
+                "",
+            fonction_ids: Array.isArray(member.fonction_ids)
+                ? member.fonction_ids.map((id) => String(id))
+                : Array.isArray(member.raw?.fonction_ids)
+                  ? member.raw.fonction_ids.map((id) => String(id))
+                  : Array.isArray(member.fonctions)
+                    ? member.fonctions
+                          .map((fonction) => String(fonction?.id))
+                          .filter(Boolean)
+                    : Array.isArray(member.raw?.fonctions)
+                      ? member.raw.fonctions
+                            .map((fonction) => String(fonction?.id))
+                            .filter(Boolean)
+                      : member.fonction_id
+                        ? [String(member.fonction_id)]
+                        : member.raw?.fonction_id
+                          ? [String(member.raw.fonction_id)]
+                          : [],
             fonction_id: String(
                 member.fonction_id ??
                     member.raw?.fonction_id ??
@@ -1064,6 +1110,8 @@ export default function Inscriptions({
     const openCreateModal = () => {
         setModalMode("create");
         reset();
+        setEmailTaken(false);
+        setEmailChecking(false);
         setShowDetailModal(false);
         setShowMemberModal(false);
         setShowFamilyModal(false);
@@ -1106,7 +1154,10 @@ export default function Inscriptions({
                     setData(buildFormDataFromMember(enrichedMember, item));
                 }
             } catch (e) {
-                console.error("Erreur récupération sacrements utilisateur:", e);
+                console.error(
+                    "Erreur récupération sacrements utilisateur:",
+                    e,
+                );
             }
         }
 
@@ -1155,13 +1206,19 @@ export default function Inscriptions({
                         formData.append("profile_photo_url", value);
                     }
                 } else if (key !== "photoPreview") {
-                    const valueToSend =
-                        typeof value === "boolean"
-                            ? value
-                                ? "1"
-                                : "0"
-                            : (value ?? "");
-                    formData.append(key, valueToSend);
+                    if (Array.isArray(value)) {
+                        value.forEach((itemValue) => {
+                            formData.append(`${key}[]`, String(itemValue));
+                        });
+                    } else {
+                        const valueToSend =
+                            typeof value === "boolean"
+                                ? value
+                                    ? "1"
+                                    : "0"
+                                : (value ?? "");
+                        formData.append(key, valueToSend);
+                    }
                 }
             });
 
@@ -1205,6 +1262,49 @@ export default function Inscriptions({
         }
     };
 
+    // Réinitialiser la vérification email quand le modal se ferme
+    useEffect(() => {
+        if (!showModal) {
+            setEmailTaken(false);
+            setEmailChecking(false);
+            if (emailCheckTimerRef.current) clearTimeout(emailCheckTimerRef.current);
+        }
+    }, [showModal]);
+
+    // Vérification email en temps réel (debounce 500 ms)
+    useEffect(() => {
+        const email = data.email?.trim();
+
+        // Réinitialiser si champ vide
+        if (!email) {
+            setEmailTaken(false);
+            setEmailChecking(false);
+            if (emailCheckTimerRef.current) clearTimeout(emailCheckTimerRef.current);
+            return;
+        }
+
+        // En mode édition on exclut le membre actuel
+        const excludeId = modalMode === "edit" && selectedMember?.id ? selectedMember.id : 0;
+
+        setEmailChecking(true);
+        if (emailCheckTimerRef.current) clearTimeout(emailCheckTimerRef.current);
+        emailCheckTimerRef.current = setTimeout(() => {
+            axios
+                .get(`/conducteur/check-email?email=${encodeURIComponent(email)}&exclude_id=${excludeId}`)
+                .then((res) => {
+                    setEmailTaken(!!res.data?.taken);
+                })
+                .catch(() => {
+                    setEmailTaken(false);
+                })
+                .finally(() => setEmailChecking(false));
+        }, 500);
+
+        return () => {
+            if (emailCheckTimerRef.current) clearTimeout(emailCheckTimerRef.current);
+        };
+    }, [data.email]);
+
     // Auto-save avec debounce en mode édition
     useEffect(() => {
         if (modalMode === "edit" && selectedMember) {
@@ -1229,6 +1329,13 @@ export default function Inscriptions({
 
     const handleSubmit = (e) => {
         e.preventDefault();
+
+        if (emailTaken) {
+            showError("Cette adresse email est déjà utilisée. Veuillez en saisir une autre.", 4000);
+            emailRef.current?.focus();
+            return;
+        }
+
         if (modalMode === "create") {
             // Créer un nouveau membre - code existant
             const conducteur = auth?.user;
@@ -1257,13 +1364,19 @@ export default function Inscriptions({
                         formData.append("profile_photo_url", value);
                     }
                 } else if (key !== "photoPreview") {
-                    const valueToSend =
-                        typeof value === "boolean"
-                            ? value
-                                ? "1"
-                                : "0"
-                            : (value ?? "");
-                    formData.append(key, valueToSend);
+                    if (Array.isArray(value)) {
+                        value.forEach((itemValue) => {
+                            formData.append(`${key}[]`, String(itemValue));
+                        });
+                    } else {
+                        const valueToSend =
+                            typeof value === "boolean"
+                                ? value
+                                    ? "1"
+                                    : "0"
+                                : (value ?? "");
+                        formData.append(key, valueToSend);
+                    }
                 }
             });
 
@@ -1285,8 +1398,11 @@ export default function Inscriptions({
                 })
                 .then((response) => {
                     console.log("Succès!", response.data);
+                    showSuccessToast("Le membre a bien ete ajoute.", 2500);
                     setShowModal(false);
-                    router.reload();
+                    setTimeout(() => {
+                        router.reload();
+                    }, 600);
                 })
                 .catch((err) => {
                     console.error("Erreur complète:", err);
@@ -1304,7 +1420,10 @@ export default function Inscriptions({
                                     `${field}: ${Array.isArray(messages) ? messages.join(", ") : messages}`,
                             )
                             .join("\n");
-                        showError(`Erreurs de validation:\n${errorMessages}`, 6000);
+                        showError(
+                            `Erreurs de validation:\n${errorMessages}`,
+                            6000,
+                        );
                     } else if (message) {
                         showError(message, 5000);
                     } else {
@@ -1631,7 +1750,9 @@ export default function Inscriptions({
                                                     status: e.target.value,
                                                 })
                                             }
-                                            options={MEMBER_STATUS_FILTER_OPTIONS}
+                                            options={
+                                                MEMBER_STATUS_FILTER_OPTIONS
+                                            }
                                             placeholder="Tous les statuts"
                                             allowClearOption={false}
                                         />
@@ -1889,7 +2010,9 @@ export default function Inscriptions({
                                                                                     member.last_name ||
                                                                                     member.lastName}
                                                                             </div>
-                                                                            {renderTransferBadge(member)}
+                                                                            {renderTransferBadge(
+                                                                                member,
+                                                                            )}
                                                                         </div>
                                                                     </div>
                                                                 </td>
@@ -1932,7 +2055,9 @@ export default function Inscriptions({
                                                                                                 1
                                                                                               ? "Nouvelle: "
                                                                                               : ""}
-                                                                                        {code}
+                                                                                        {
+                                                                                            code
+                                                                                        }
                                                                                     </span>
                                                                                 ),
                                                                             )}
@@ -2028,10 +2153,14 @@ export default function Inscriptions({
                                                                         <button
                                                                             type="button"
                                                                             title="Modifier"
-                                                                            disabled={member.transfer_locked}
+                                                                            disabled={
+                                                                                member.transfer_locked
+                                                                            }
                                                                             className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition transform hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
                                                                             onClick={() => {
-                                                                                if (member.transfer_locked)
+                                                                                if (
+                                                                                    member.transfer_locked
+                                                                                )
                                                                                     return;
                                                                                 openEditModal(
                                                                                     member,
@@ -2245,7 +2374,9 @@ export default function Inscriptions({
                                                                                     member.nom
                                                                                 }
                                                                             </div>
-                                                                            {renderTransferBadge(member)}
+                                                                            {renderTransferBadge(
+                                                                                member,
+                                                                            )}
                                                                         </div>
                                                                     </div>
                                                                 </td>
@@ -2258,20 +2389,19 @@ export default function Inscriptions({
                                                                 </td>
                                                                 <td className="p-5 text-slate-600">
                                                                     <div className="flex flex-col gap-1">
-                                                                        {(
-                                                                            getFamilyCodeHistory(
-                                                                                member,
-                                                                            )
-                                                                                .length >
-                                                                            0
-                                                                                ? getFamilyCodeHistory(
-                                                                                      member,
-                                                                                  )
-                                                                                : memberFamily?.code_famille
-                                                                                  ? [
-                                                                                        memberFamily.code_famille,
-                                                                                    ]
-                                                                                  : []
+                                                                        {(getFamilyCodeHistory(
+                                                                            member,
+                                                                        )
+                                                                            .length >
+                                                                        0
+                                                                            ? getFamilyCodeHistory(
+                                                                                  member,
+                                                                              )
+                                                                            : memberFamily?.code_famille
+                                                                              ? [
+                                                                                    memberFamily.code_famille,
+                                                                                ]
+                                                                              : []
                                                                         )
                                                                             .slice(
                                                                                 0,
@@ -2298,7 +2428,9 @@ export default function Inscriptions({
                                                                                                 1
                                                                                               ? "Nouvelle: "
                                                                                               : ""}
-                                                                                        {code}
+                                                                                        {
+                                                                                            code
+                                                                                        }
                                                                                     </span>
                                                                                 ),
                                                                             )}
@@ -2414,9 +2546,13 @@ export default function Inscriptions({
                                                                                     "rgba(37, 99, 235, 0.1)",
                                                                                 border: "2px solid rgba(37, 99, 235, 0.2)",
                                                                             }}
-                                                                            disabled={member.transfer_locked}
+                                                                            disabled={
+                                                                                member.transfer_locked
+                                                                            }
                                                                             onClick={() => {
-                                                                                if (member.transfer_locked)
+                                                                                if (
+                                                                                    member.transfer_locked
+                                                                                )
                                                                                     return;
                                                                                 console.log(
                                                                                     "Modifier clicked for member:",
@@ -2450,9 +2586,13 @@ export default function Inscriptions({
                                                                                         ? "2px solid rgba(22, 163, 74, 0.2)"
                                                                                         : "2px solid rgba(220, 38, 38, 0.2)",
                                                                             }}
-                                                                            disabled={member.transfer_locked}
+                                                                            disabled={
+                                                                                member.transfer_locked
+                                                                            }
                                                                             onClick={() => {
-                                                                                if (member.transfer_locked)
+                                                                                if (
+                                                                                    member.transfer_locked
+                                                                                )
                                                                                     return;
                                                                                 if (
                                                                                     member.status ===
@@ -2481,9 +2621,13 @@ export default function Inscriptions({
                                                                                     "rgba(220, 38, 38, 0.1)",
                                                                                 border: "2px solid rgba(220, 38, 38, 0.2)",
                                                                             }}
-                                                                            disabled={member.transfer_locked}
+                                                                            disabled={
+                                                                                member.transfer_locked
+                                                                            }
                                                                             onClick={() => {
-                                                                                if (member.transfer_locked)
+                                                                                if (
+                                                                                    member.transfer_locked
+                                                                                )
                                                                                     return;
 
                                                                                 handleDelete(
@@ -3199,32 +3343,46 @@ export default function Inscriptions({
                                                             label="Email"
                                                             icon={Mail}
                                                         >
-                                                            <input
-                                                                ref={emailRef}
-                                                                type="email"
-                                                                className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
-                                                                    fieldErrors.email
-                                                                        ? "border-red-500 focus:border-red-500"
-                                                                        : "border-gray-300 focus:border-blue-500"
-                                                                }`}
-                                                                value={
-                                                                    data.email
-                                                                }
-                                                                onChange={(e) =>
-                                                                    setData({
-                                                                        ...data,
-                                                                        email: e
-                                                                            .target
-                                                                            .value,
-                                                                    })
-                                                                }
-                                                                placeholder="ex: jean.dupont@gmail.com"
-                                                            />
-                                                            {(fieldErrors.email ||
-                                                                errors.email) && (
+                                                            <div className="relative">
+                                                                <input
+                                                                    ref={emailRef}
+                                                                    type="email"
+                                                                    className={`w-full h-12 border rounded-lg px-4 pr-10 outline-none focus:shadow-md transition-all duration-300 ${
+                                                                        emailTaken
+                                                                            ? "border-red-500 focus:border-red-500 bg-red-50"
+                                                                            : fieldErrors.email
+                                                                            ? "border-red-500 focus:border-red-500"
+                                                                            : "border-gray-300 focus:border-blue-500 focus:shadow-blue-200"
+                                                                    }`}
+                                                                    value={data.email}
+                                                                    onChange={(e) =>
+                                                                        setData({
+                                                                            ...data,
+                                                                            email: e.target.value,
+                                                                        })
+                                                                    }
+                                                                    placeholder="ex: jean.dupont@gmail.com"
+                                                                />
+                                                                {emailChecking && (
+                                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs animate-pulse">
+                                                                        ⏳
+                                                                    </span>
+                                                                )}
+                                                                {!emailChecking && data.email?.trim() && !emailTaken && (
+                                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 text-sm">✓</span>
+                                                                )}
+                                                                {!emailChecking && emailTaken && (
+                                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500 text-sm font-bold">✗</span>
+                                                                )}
+                                                            </div>
+                                                            {emailTaken && (
+                                                                <p className="text-red-600 text-xs mt-1 font-medium">
+                                                                    ⚠ Cette adresse email est déjà utilisée. Veuillez en saisir une autre.
+                                                                </p>
+                                                            )}
+                                                            {!emailTaken && (fieldErrors.email || errors.email) && (
                                                                 <p className="text-red-500 text-xs mt-1">
-                                                                    {fieldErrors.email ||
-                                                                        errors.email}
+                                                                    {fieldErrors.email || errors.email}
                                                                 </p>
                                                             )}
                                                         </FormField>
@@ -3276,22 +3434,78 @@ export default function Inscriptions({
                                                     </h3>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                         <FormField
+                                                            label="Statut d'emploi"
+                                                            icon={Briefcase}
+                                                        >
+                                                            <select
+                                                                className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300 bg-white"
+                                                                value={
+                                                                    data.employment_status ||
+                                                                    ""
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setData({
+                                                                        ...data,
+                                                                        employment_status:
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                    })
+                                                                }
+                                                            >
+                                                                <option value="">
+                                                                    Non
+                                                                    renseigné
+                                                                </option>
+                                                                {EMPLOYMENT_STATUS_OPTIONS.map(
+                                                                    (
+                                                                        option,
+                                                                    ) => (
+                                                                        <option
+                                                                            key={
+                                                                                option.value
+                                                                            }
+                                                                            value={
+                                                                                option.value
+                                                                            }
+                                                                        >
+                                                                            {
+                                                                                option.label
+                                                                            }
+                                                                        </option>
+                                                                    ),
+                                                                )}
+                                                            </select>
+                                                            {(fieldErrors.employment_status ||
+                                                                errors.employment_status) && (
+                                                                <p className="text-red-500 text-xs mt-1">
+                                                                    {fieldErrors.employment_status ||
+                                                                        errors.employment_status}
+                                                                </p>
+                                                            )}
+                                                        </FormField>
+                                                        <FormField
                                                             label="Profession"
                                                             icon={Briefcase}
                                                             required
                                                         >
                                                             <input
                                                                 className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
+                                                                    fieldErrors.profession_detail ||
                                                                     fieldErrors.profession
                                                                         ? "border-red-500 focus:border-red-500"
                                                                         : "border-gray-300 focus:border-blue-500"
                                                                 }`}
                                                                 value={
-                                                                    data.profession
+                                                                    data.profession_detail
                                                                 }
                                                                 onChange={(e) =>
                                                                     setData({
                                                                         ...data,
+                                                                        profession_detail:
+                                                                            e
+                                                                                .target
+                                                                                .value,
                                                                         profession:
                                                                             e
                                                                                 .target
@@ -3300,56 +3514,89 @@ export default function Inscriptions({
                                                                 }
                                                                 placeholder="ex: Enseignant, Commerçant"
                                                             />
-                                                            {(fieldErrors.profession ||
+                                                            {(fieldErrors.profession_detail ||
+                                                                errors.profession_detail ||
+                                                                fieldErrors.profession ||
                                                                 errors.profession) && (
                                                                 <p className="text-red-500 text-xs mt-1">
-                                                                    {fieldErrors.profession ||
+                                                                    {fieldErrors.profession_detail ||
+                                                                        errors.profession_detail ||
+                                                                        fieldErrors.profession ||
                                                                         errors.profession}
                                                                 </p>
                                                             )}
                                                         </FormField>
                                                         <FormField
-                                                            label="Fonction dans l'église"
+                                                            label="Fonctions dans l'eglise (max 2)"
                                                             icon={Users}
                                                             required
                                                         >
                                                             <Select2Fonction
                                                                 value={
-                                                                    data.fonction_id
-                                                                        ? [
-                                                                              data.fonction_id,
-                                                                          ]
-                                                                        : []
+                                                                    Array.isArray(
+                                                                        data.fonction_ids,
+                                                                    ) &&
+                                                                    data
+                                                                        .fonction_ids
+                                                                        .length >
+                                                                        0
+                                                                        ? data.fonction_ids
+                                                                        : data.fonction_id
+                                                                          ? [
+                                                                                data.fonction_id,
+                                                                            ]
+                                                                          : []
                                                                 }
-                                                                onChange={(e) =>
+                                                                onChange={(
+                                                                    e,
+                                                                ) => {
+                                                                    const values =
+                                                                        Array.isArray(
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                        )
+                                                                            ? e
+                                                                                  .target
+                                                                                  .value
+                                                                            : [];
                                                                     setData({
                                                                         ...data,
+                                                                        fonction_ids:
+                                                                            values.map(
+                                                                                (
+                                                                                    value,
+                                                                                ) =>
+                                                                                    String(
+                                                                                        value,
+                                                                                    ),
+                                                                            ),
                                                                         fonction_id:
-                                                                            e
-                                                                                .target
-                                                                                .value &&
-                                                                            e
-                                                                                .target
-                                                                                .value
-                                                                                .length >
-                                                                                0
+                                                                            values.length >
+                                                                            0
                                                                                 ? String(
-                                                                                      e
-                                                                                          .target
-                                                                                          .value[0],
+                                                                                      values[0],
                                                                                   )
                                                                                 : "",
-                                                                    })
+                                                                    });
+                                                                }}
+                                                                maxSelections={
+                                                                    10
                                                                 }
+                                                                name="fonction_ids"
                                                                 options={
                                                                     fonctions
                                                                 }
-                                                                placeholder="Non renseigné"
+                                                                placeholder="Selectionner 1 ou 2 fonctions"
                                                             />
-                                                            {(fieldErrors.fonction_id ||
+                                                            {(fieldErrors.fonction_ids ||
+                                                                errors.fonction_ids ||
+                                                                fieldErrors.fonction_id ||
                                                                 errors.fonction_id) && (
                                                                 <p className="text-red-500 text-xs mt-1">
-                                                                    {fieldErrors.fonction_id ||
+                                                                    {fieldErrors.fonction_ids ||
+                                                                        errors.fonction_ids ||
+                                                                        fieldErrors.fonction_id ||
                                                                         errors.fonction_id}
                                                                 </p>
                                                             )}
@@ -3369,7 +3616,7 @@ export default function Inscriptions({
                                                                         relation:
                                                                             e
                                                                                 .target
-                                                                            .value,
+                                                                                .value,
                                                                     })
                                                                 }
                                                                 options={
@@ -3413,7 +3660,7 @@ export default function Inscriptions({
                                                                         statut_marital:
                                                                             e
                                                                                 .target
-                                                                            .value,
+                                                                                .value,
                                                                     })
                                                                 }
                                                                 options={
@@ -3739,11 +3986,14 @@ export default function Inscriptions({
                                             </button>
                                             <button
                                                 type="submit"
-                                                disabled={processing}
+                                                disabled={processing || emailTaken || emailChecking}
+                                                title={emailTaken ? "Corrigez l'adresse email avant de continuer" : undefined}
                                                 className="px-8 py-2.5 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-blue-500/30 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform disabled:hover:scale-100 flex items-center gap-2"
                                             >
                                                 {processing ? (
                                                     <>Enregistrement...</>
+                                                ) : emailChecking ? (
+                                                    <>Vérification email...</>
                                                 ) : (
                                                     <>
                                                         <Check className="w-4 h-4" />{" "}

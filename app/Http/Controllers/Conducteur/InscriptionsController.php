@@ -337,7 +337,7 @@ class InscriptionsController extends Controller
             // Charger les membres en incluant les sacrements pour exposer statut_marital etc.
             $members = User::whereIn('classe_id', $classIds)
                 ->where('role', '!=', 'admin')
-                ->with(['sacrements', 'family:id,nom,code_famille', 'transferOriginFamily:id,nom,code_famille'])
+                ->with(['sacrements', 'fonctions:id', 'family:id,nom,code_famille', 'transferOriginFamily:id,nom,code_famille'])
                 ->get()
                 ->reject(fn (User $member) => $this->isSupersededTransferredUser($member))
                 ->values()
@@ -382,9 +382,12 @@ class InscriptionsController extends Controller
                         'code_famille_historique' => $familyCodeHistory,
                         'profile_photo_url' => $member->profile_photo_url ?: PhotoHelper::getPhotoUrl($member->photo_path, $member->prenom, $member->nom),
                         'date_naissance' => $member->date_naissance,
+                        'employment_status' => $member->employment_status ?? null,
+                        'profession_detail' => $member->profession_detail ?? null,
                         'profession' => $member->profession,
                         'fonction_professionnelle' => $member->profession,
                         'fonction_id' => $member->fonction_id ?? null,
+                        'fonction_ids' => $member->fonctions->pluck('id')->values()->all(),
                         'relation' => $member->relation ?? null,
                         'statut_marital' => $statutMarital,
                         'sacrements' => $member->sacrements ? $member->sacrements->toArray() : null,
@@ -409,7 +412,9 @@ class InscriptionsController extends Controller
                 $families = \App\Models\Family::whereIn('classe_id', $classIds)
                     ->with([
                         'responsable.transferOriginFamily',
+                        'responsable.fonctions:id',
                         'users.transferOriginFamily',
+                        'users.fonctions:id',
                     ])
                     ->get()
                     ->reject(fn ($family) => $this->isSupersededTransferredFamily($family))
@@ -472,9 +477,12 @@ class InscriptionsController extends Controller
                                     'transfer_locked' => $this->isTransferLocked($user),
                                     'genre' => $user->genre ?? '',
                                     'date_naissance' => $user->date_naissance ?? '',
+                                    'employment_status' => $user->employment_status ?? null,
+                                    'profession_detail' => $user->profession_detail ?? null,
                                     'relation' => $user->relation ?? null,
                                     'profession' => $user->profession ?? null,
                                     'fonction_id' => $user->fonction_id ?? null,
+                                    'fonction_ids' => $user->fonctions->pluck('id')->values()->all(),
                                     'family_id' => $user->family_id,
                                     'code_famille' => $family->code_famille,
                                     'ancienne_famille_code' => $user->transferOriginFamily?->code_famille,
@@ -782,7 +790,8 @@ class InscriptionsController extends Controller
                 'classe_id' => 'required|integer',
                 'fonction_id' => 'nullable|integer|exists:fonctions,id',
                 'employment_status' => 'required|in:TRAVAILLEUR,RETRAITE,ETUDIANT,SANS_EMPLOI',
-                'profession_detail' => 'required|string|max:255',
+                'profession_detail' => 'nullable|string|max:255',
+                'niveau_etude'      => 'nullable|string|max:255',
                 'statut_marital' => 'required|string|max:255',
 
                 // Champs religieux optionnels mais si cochés, date/lieu requis
@@ -934,7 +943,11 @@ class InscriptionsController extends Controller
             'role' => 'nullable|string|max:50',
             'relation' => 'nullable|string|max:255',
             'profession' => 'nullable|string|max:255',
+            'employment_status' => 'nullable|in:TRAVAILLEUR,RETRAITE,ETUDIANT,SANS_EMPLOI',
+            'profession_detail' => 'nullable|string|max:255',
             'fonction_id' => 'nullable|integer',
+            'fonction_ids' => 'nullable|array|max:2',
+            'fonction_ids.*' => 'integer|exists:fonctions,id',
             'statut' => 'nullable|in:actif,inactif,decede',
             'status' => 'nullable|in:actif,inactif,decede',
             'statut_marital' => 'nullable|string|max:255',
@@ -960,6 +973,23 @@ class InscriptionsController extends Controller
             $prenom = $validated['prenom'] ?? $validated['first_name'] ?? $member->prenom;
             $telephone = $validated['telephone'] ?? $validated['phone'] ?? $member->telephone;
             $statut = $validated['statut'] ?? $validated['status'] ?? $member->statut;
+            $resolvedFonctionIds = [];
+            if (array_key_exists('fonction_ids', $validated) && is_array($validated['fonction_ids'])) {
+                $resolvedFonctionIds = $validated['fonction_ids'];
+            } elseif (!empty($validated['fonction_id'])) {
+                $resolvedFonctionIds = [$validated['fonction_id']];
+            }
+            $resolvedFonctionIds = collect($resolvedFonctionIds)
+                ->filter(fn ($id) => !is_null($id) && $id !== '')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->take(2)
+                ->values()
+                ->all();
+            $professionDetail = $validated['profession_detail']
+                ?? $validated['profession']
+                ?? $member->profession_detail
+                ?? $member->profession;
 
             $member->update([
                 'nom' => $nom,
@@ -970,8 +1000,10 @@ class InscriptionsController extends Controller
                 'genre' => $validated['genre'] ?? $member->genre,
                 'role' => $validated['role'] ?? $member->role,
                 'relation' => $validated['relation'] ?? $member->relation,
-                'profession' => $validated['profession'] ?? $member->profession,
-                'fonction_id' => $validated['fonction_id'] ?? $member->fonction_id,
+                'employment_status' => $validated['employment_status'] ?? $member->employment_status,
+                'profession_detail' => $professionDetail,
+                'profession' => $professionDetail,
+                'fonction_id' => $resolvedFonctionIds[0] ?? $member->fonction_id,
                 'statut' => $statut,
                 'statut_marital' => $validated['statut_marital'] ?? $member->statut_marital,
                 'date_mariage' => $validated['date_mariage'] ?? $member->date_mariage,
@@ -990,7 +1022,10 @@ class InscriptionsController extends Controller
                 'contact_urgence' => $validated['contact_urgence'] ?? $member->contact_urgence,
                 'contact_urgence_tel' => $validated['contact_urgence_tel'] ?? $member->contact_urgence_tel,
             ]);
-            return response()->json(['success' => true, 'message' => 'Membre mis à jour avec succès']);
+            if ($request->has('fonction_ids') || $request->has('fonction_id')) {
+                $member->fonctions()->sync($resolvedFonctionIds);
+            }
+            return response()->json(['success' => true, 'message' => 'Membre mis a jour avec succes']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Erreur lors de la mise à jour: ' . $e->getMessage()], 500);
         }
@@ -1258,7 +1293,7 @@ class InscriptionsController extends Controller
                 'responsable.tel' => 'required|regex:/^[0-9]{10}$/',
                 'responsable.dateNaissance' => 'required|date|before:today',
                 'responsable.genre' => 'required|in:M,F',
-                'responsable.profession' => 'required|string|max:255',
+                'responsable.profession' => 'nullable|string|max:255',
                 'responsable.baptise' => 'nullable|boolean',
                 'responsable.dateBapteme' => 'nullable|date|before:today',
                 'responsable.lieuBapteme' => 'nullable|string|max:255',
@@ -1285,7 +1320,7 @@ class InscriptionsController extends Controller
                 'membres.*.telephone' => 'nullable|regex:/^[0-9]{10}$/',
                 'membres.*.dateNaissance' => 'required|date|before:today',
                 'membres.*.genre' => 'required|in:M,F',
-                'membres.*.profession' => 'required|string|max:255',
+                'membres.*.profession' => 'nullable|string|max:255',
                 'membres.*.baptise' => 'nullable|boolean',
                 'membres.*.dateBapteme' => 'nullable|date|before:today',
                 'membres.*.lieuBapteme' => 'nullable|string|max:255',
@@ -1342,7 +1377,9 @@ class InscriptionsController extends Controller
                 'telephone' => $validated['responsable']['tel'],
                 'date_naissance' => $validated['responsable']['dateNaissance'],
                 'genre' => $validated['responsable']['genre'],
-                'profession' => $validated['responsable']['profession'],
+                'employment_status' => $validated['responsable']['employment_status'] ?? null,
+                'profession' => $validated['responsable']['profession'] ?? null,
+                'niveau_etude' => $validated['responsable']['niveau_etude'] ?? null,
                 'family_id' => $family->id,
                 'role' => 'responsable_famille',
                 'is_family_responsible' => true,
@@ -1375,7 +1412,9 @@ class InscriptionsController extends Controller
                     'telephone' => $membreData['telephone'] ?? null,
                     'date_naissance' => $membreData['dateNaissance'],
                     'genre' => $membreData['genre'],
-                    'profession' => $membreData['profession'],
+                    'employment_status' => $membreData['employment_status'] ?? null,
+                    'profession' => $membreData['profession'] ?? null,
+                    'niveau_etude' => $membreData['niveau_etude'] ?? null,
                     'family_id' => $family->id,
                     'role' => 'membre_famille',
                     'photo_path' => $membrePhotoPath,
@@ -1413,7 +1452,7 @@ class InscriptionsController extends Controller
                 'responsable_tel' => $validated['responsable']['tel'],
                 'responsable_genre' => $validated['responsable']['genre'],
                 'responsable_date_naissance' => $validated['responsable']['dateNaissance'],
-                'responsable_profession' => $validated['responsable']['profession'],
+                'responsable_profession' => $validated['responsable']['profession'] ?? null,
                 'responsable_statut_marital' => $validated['responsable']['statutMarital'],
             ]);
 
@@ -1528,3 +1567,4 @@ class InscriptionsController extends Controller
             && (int) $family->transferred_to_family_id !== (int) $family->id;
     }
 }
+

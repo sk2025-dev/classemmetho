@@ -68,6 +68,7 @@ class Inscription extends Model
         'responsable_lien_parente',
         'responsable_profession',
         'responsable_fonction',
+        'niveau_etude',
 
         // === STATUT MATRIMONIAL ET SACREMENTS DU RESPONSABLE ===
         'responsable_statut_marital',

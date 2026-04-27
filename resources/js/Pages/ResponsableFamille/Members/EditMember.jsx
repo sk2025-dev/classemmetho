@@ -151,8 +151,9 @@ export default function EditMember({ member, family }) {
         statut_marital: member.statut_marital || "",
         date_mariage: formatDateForInput(member.date_mariage),
         lieu_mariage: member.lieu_mariage || "",
-        profession: member.profession || "",
         employment_status: member.employment_status || "",
+        profession: member.profession || "",
+        niveau_etude: member.niveau_etude || "",
         fonction_id: member.fonction_id || "",
         fonction_ids: Array.isArray(member.fonction_ids)
             ? member.fonction_ids
@@ -193,8 +194,9 @@ export default function EditMember({ member, family }) {
             statut_marital: member.statut_marital || "",
             date_mariage: formatDateForInput(member.date_mariage),
             lieu_mariage: member.lieu_mariage || "",
-            profession: member.profession || "",
             employment_status: member.employment_status || "",
+            profession: member.profession || "",
+            niveau_etude: member.niveau_etude || "",
             fonction_id: member.fonction_id || "",
             fonction_ids: Array.isArray(member.fonction_ids)
                 ? member.fonction_ids
@@ -644,21 +646,7 @@ export default function EditMember({ member, family }) {
                                 Informations Professionnelles
                             </h2>
 
-                            <FormField label="Profession" icon={Briefcase}>
-                                <input
-                                    type="text"
-                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
-                                    value={data.profession}
-                                    onChange={(e) =>
-                                        setData({
-                                            ...data,
-                                            profession: e.target.value,
-                                        })
-                                    }
-                                />
-                            </FormField>
-
-                            <FormField label="Statut d'emploi" icon={Briefcase}>
+                            <FormField label="Statut d'emploi" icon={Briefcase} required>
                                 <Select2Single
                                     name="employment_status"
                                     value={data.employment_status}
@@ -666,6 +654,8 @@ export default function EditMember({ member, family }) {
                                         setData({
                                             ...data,
                                             employment_status: e.target.value,
+                                            profession: "",
+                                            niveau_etude: "",
                                         })
                                     }
                                     options={[
@@ -679,13 +669,55 @@ export default function EditMember({ member, family }) {
                                 />
                             </FormField>
 
+                            {data.employment_status === "TRAVAILLEUR" && (
+                            <FormField label="Profession" icon={Briefcase} required>
+                                <input
+                                    type="text"
+                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
+                                    value={data.profession}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            profession: e.target.value,
+                                        })
+                                    }
+                                    placeholder="ex: Enseignant, Commerçant"
+                                />
+                            </FormField>
+                            )}
+
+                            {data.employment_status === "ETUDIANT" && (
+                            <FormField label="Niveau d'étude" icon={Briefcase} required>
+                                <Select2Single
+                                    name="niveau_etude"
+                                    value={data.niveau_etude || ""}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            niveau_etude: e.target.value,
+                                        })
+                                    }
+                                    options={[
+                                        { value: "Primaire", label: "Primaire" },
+                                        { value: "Secondaire", label: "Secondaire" },
+                                        { value: "Lycée", label: "Lycée" },
+                                        { value: "BTS/DUT", label: "BTS / DUT" },
+                                        { value: "Licence", label: "Licence" },
+                                        { value: "Master", label: "Master" },
+                                        { value: "Doctorat", label: "Doctorat" },
+                                    ]}
+                                    placeholder="Sélectionner..."
+                                />
+                            </FormField>
+                            )}
+
                             <FormField
                                 label="Fonction dans l'Église"
                                 icon={Award}
                             >
                                 <Select2Fonction
                                     value={data.fonction_ids || []}
-                                    maxSelections={2}
+                                    maxSelections={10}
                                     onChange={(e) => {
                                         const values = Array.isArray(
                                             e.target.value,

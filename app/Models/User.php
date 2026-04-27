@@ -45,6 +45,7 @@ class User extends Authenticatable
         'profession',
         'employment_status',
         'profession_detail',
+        'niveau_etude',
         'relation',
 
         // === RELATIONS ET SYSTÈME ===

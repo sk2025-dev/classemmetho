@@ -40,8 +40,12 @@ class QuickMemberController extends Controller
                 'statut_marital' => 'nullable|string|max:100',
                 'date_mariage' => 'nullable|date',
                 'lieu_mariage' => 'nullable|string|max:255',
+                'employment_status' => 'nullable|in:TRAVAILLEUR,RETRAITE,ETUDIANT,SANS_EMPLOI',
+                'profession_detail' => 'nullable|string|max:255',
                 'profession' => 'nullable|string|max:255',
                 'fonction_id' => 'nullable|exists:fonctions,id',
+                'fonction_ids' => 'nullable|array|max:10',
+                'fonction_ids.*' => 'integer|exists:fonctions,id',
                 'relation' => 'nullable|string|max:100',
                 'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
                 'profile_photo_url' => 'nullable|string|max:1000',
@@ -120,6 +124,21 @@ class QuickMemberController extends Controller
             );
             $password = '11111'; // Mot de passe fixe
 
+            $resolvedFonctionIds = [];
+            if (array_key_exists('fonction_ids', $validated) && is_array($validated['fonction_ids'])) {
+                $resolvedFonctionIds = $validated['fonction_ids'];
+            } elseif (!empty($validated['fonction_id'])) {
+                $resolvedFonctionIds = [$validated['fonction_id']];
+            }
+            $resolvedFonctionIds = collect($resolvedFonctionIds)
+                ->filter(fn ($id) => !is_null($id) && $id !== '')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->take(10)
+                ->values()
+                ->all();
+            $professionDetail = $validated['profession_detail'] ?? $validated['profession'] ?? null;
+
             // Créer le nouvel utilisateur (membre)
             $newMember = User::create([
                 'name' => trim($validated['prenom'] . ' ' . $validated['nom']),
@@ -135,14 +154,18 @@ class QuickMemberController extends Controller
                 'profile_photo_url' => $profilePhotoUrl,
                 'genre' => $validated['genre'],
                 'date_naissance' => $validated['date_naissance'] ?? null,
-                'profession' => $validated['profession'] ?? null,
+                'employment_status' => $validated['employment_status'] ?? null,
+                'profession_detail' => $professionDetail,
+                'profession' => $professionDetail,
                 'classe_id' => $classeId,
                 'family_id' => $familyId,
-                'fonction_id' => $validated['fonction_id'] ?? null,
+                'fonction_id' => $resolvedFonctionIds[0] ?? null,
                 'statut' => 'actif',
                 'must_change_password' => !empty($validated['email']),
                 'email_verified_at' => !empty($validated['email']) ? now() : null,
             ]);
+
+            $newMember->fonctions()->sync($resolvedFonctionIds);
 
             // Créer les données de sacrement si fournies
             UserSacrement::create([
@@ -208,6 +231,28 @@ class QuickMemberController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Vérifier si un email est déjà utilisé
+     * GET /conducteur/check-email?email=...
+     */
+    public function checkEmail(Request $request)
+    {
+        $email = trim((string) $request->query('email', ''));
+
+        if (empty($email)) {
+            return response()->json(['taken' => false]);
+        }
+
+        $excludeId = (int) $request->query('exclude_id', 0);
+
+        $query = User::where('email', $email);
+        if ($excludeId > 0) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        return response()->json(['taken' => $query->exists()]);
     }
 
     /**

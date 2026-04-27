@@ -53,15 +53,17 @@ class AnnonceController extends Controller
     {
         // Support both frontend format and standard format
         $validated = $request->validate([
-            'type_acte' => 'nullable|in:annonce,annonce_liturgique,priere,grace,deces,generale',
-            'type_annonce' => 'nullable|string', // Frontend format
-            'membre_id' => 'required|exists:users,id', // Frontend format - member selector
-            'details.titre' => 'nullable|string|max:255',
-            'details.contenu' => 'nullable|string',
-            'message' => 'nullable|string', // Frontend format
+            'type_acte'        => 'nullable|in:annonce,annonce_liturgique,priere,grace,deces,generale',
+            'type_annonce'     => 'nullable|string',
+            'motif'              => 'nullable|string|max:100',
+            'temoignage_public'  => 'nullable|boolean',
+            'membre_id'        => 'required|exists:users,id',
+            'details.titre'    => 'nullable|string|max:255',
+            'details.contenu'  => 'nullable|string',
+            'message'          => 'nullable|string',
             'date_publication' => 'nullable|date',
-            'date_annonce' => 'nullable|date', // Frontend format
-            'date_expiration' => 'nullable|date|after:date_publication',
+            'date_annonce'     => 'nullable|date',
+            'date_expiration'  => 'nullable|date|after:date_publication',
         ]);
 
         $user = Auth::user();
@@ -84,8 +86,10 @@ class AnnonceController extends Controller
 
         // Map other frontend fields to details
         $details = [
-            'titre' => $titre,
-            'contenu' => $contenu,
+            'titre'             => $titre,
+            'contenu'           => $contenu,
+            'motif'             => $validated['motif'] ?? null,
+            'temoignage_public' => $validated['temoignage_public'] ?? false,
         ];
 
         // Use date_annonce if date_publication is not set

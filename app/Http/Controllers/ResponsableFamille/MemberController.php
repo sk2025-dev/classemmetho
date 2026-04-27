@@ -87,10 +87,11 @@ class MemberController extends Controller
                 'statut_marital' => 'nullable|string|max:50|in:Célibataire,Marié(e),Divorcé(e),Veuf(ve),Dote',
                 'date_mariage' => 'nullable|date',
                 'lieu_mariage' => 'nullable|string|max:255',
-                'profession' => 'nullable|string|max:255',
                 'employment_status' => 'nullable|string|in:TRAVAILLEUR,RETRAITE,ETUDIANT,SANS_EMPLOI',
+                'profession' => 'nullable|string|max:255',
+                'niveau_etude' => 'nullable|string|max:255',
                 'fonction_id' => 'nullable|exists:fonctions,id',
-                'fonction_ids' => 'nullable|array|max:2',
+                'fonction_ids' => 'nullable|array|max:10',
                 'fonction_ids.*' => 'integer|exists:fonctions,id',
                 'relation' => 'nullable|string|max:255',
                 'photo' => 'nullable',
@@ -167,8 +168,9 @@ class MemberController extends Controller
             'telephone2' => $validated['telephone2'] ?? null,
             'genre' => $validated['genre'],
             'date_naissance' => $validated['date_naissance'] ?? null,
-            'profession' => $validated['profession'] ?? null,
             'employment_status' => $validated['employment_status'] ?? null,
+            'profession' => $validated['profession'] ?? null,
+            'niveau_etude' => $validated['niveau_etude'] ?? null,
             'relation' => $validated['relation'] ?? null,
             'password' => bcrypt('11111'),
             'role' => 'membre_famille',
@@ -285,10 +287,11 @@ class MemberController extends Controller
                 'statut_marital' => 'nullable|string|max:50|in:Célibataire,Marié(e),Divorcé(e),Veuf(ve),Dote',
                 'date_mariage' => 'nullable|date',
                 'lieu_mariage' => 'nullable|string|max:255',
-                'profession' => 'nullable|string|max:255',
                 'employment_status' => 'nullable|string|in:TRAVAILLEUR,RETRAITE,ETUDIANT,SANS_EMPLOI',
+                'profession' => 'nullable|string|max:255',
+                'niveau_etude' => 'nullable|string|max:255',
                 'fonction_id' => 'nullable|exists:fonctions,id',
-                'fonction_ids' => 'nullable|array|max:2',
+                'fonction_ids' => 'nullable|array|max:10',
                 'fonction_ids.*' => 'integer|exists:fonctions,id',
                 'relation' => 'nullable|string|max:255',
                 'photo' => 'nullable',
@@ -338,8 +341,9 @@ class MemberController extends Controller
             'telephone2' => $validated['telephone2'] ?? $member->telephone2,
             'genre' => $validated['genre'],
             'date_naissance' => $validated['date_naissance'] ?? $member->date_naissance,
-            'profession' => $validated['profession'] ?? $member->profession,
             'employment_status' => $validated['employment_status'] ?? $member->employment_status,
+            'profession' => $validated['profession'] ?? $member->profession,
+            'niveau_etude' => $validated['niveau_etude'] ?? $member->niveau_etude,
             'fonction_id' => $resolvedFonctionIds[0] ?? $member->fonction_id,
             'relation' => $validated['relation'] ?? $member->relation,
             'photo_path' => $validated['photo_path'] ?? $member->photo_path,
@@ -473,7 +477,7 @@ class MemberController extends Controller
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values()
-            ->take(2)
+            ->take(10)
             ->all();
     }
 }

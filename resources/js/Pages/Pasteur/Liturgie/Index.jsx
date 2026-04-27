@@ -23,22 +23,16 @@ function Pagination({ paginator }) {
 /* ── ANNONCE TYPES (shared) ── */
 const ANNONCE_TYPES = [
     {
-        value: "priere",
-        label: "Demande de prière",
-        emoji: "🙏",
-        color: "violet",
-    },
-    {
         value: "grace",
-        label: "Action de grâce / Remerciement",
+        label: "Prière d'action de grâce / remerciement",
         emoji: "🙌",
         color: "amber",
     },
     {
-        value: "deces",
-        label: "Avis de décès / Assistance deuil",
-        emoji: "⚰️",
-        color: "slate",
+        value: "priere",
+        label: "Prière d'intercession",
+        emoji: "🙏",
+        color: "violet",
     },
     {
         value: "generale",
@@ -46,6 +40,19 @@ const ANNONCE_TYPES = [
         emoji: "📢",
         color: "sage",
     },
+];
+
+const MOTIFS_GRACE = [
+    { value: "guerison", label: "Guérison" },
+    { value: "deuil", label: "Deuil" },
+    { value: "mariage", label: "Bénédiction de Mariage" },
+    { value: "autres_bienfaits", label: "Autre(s) bienfait(s)" },
+];
+
+const MOTIFS_INTERCESSION = [
+    { value: "soutien_assistance", label: "Soutien et assistance" },
+    { value: "maladie", label: "Maladie" },
+    { value: "autre_probleme", label: "Autre(s) problème(s)" },
 ];
 
 function getPlaceholder(type) {
@@ -172,6 +179,8 @@ export default function Index({
     /* ── NOUVELLE ANNONCE (pasteur) ── */
     const [annonceForm, setAnnonceForm] = useState({
         type_annonce: "",
+        motif: "",
+        temoignage_public: false,
         membre_id: familyMembers[0]?.id || "",
         message: "",
         date_annonce: "",
@@ -183,6 +192,11 @@ export default function Index({
     const selectedType = ANNONCE_TYPES.find(
         (t) => t.value === annonceForm.type_annonce,
     );
+    const selectedMotifLabel = annonceForm.type_annonce === "grace"
+        ? MOTIFS_GRACE.find((m) => m.value === annonceForm.motif)?.label
+        : annonceForm.type_annonce === "priere"
+        ? MOTIFS_INTERCESSION.find((m) => m.value === annonceForm.motif)?.label
+        : null;
 
     useEffect(() => {
         setHistoriqueList(historique || []);
@@ -1528,6 +1542,8 @@ export default function Index({
         if (name === "create") {
             setAnnonceForm({
                 type_annonce: "",
+                motif: "",
+                temoignage_public: false,
                 membre_id: familyMembers[0]?.id || "",
                 message: "",
                 date_annonce: "",
@@ -1664,6 +1680,13 @@ export default function Index({
     const submitAnnonce = async () => {
         if (!annonceForm.type_annonce || !annonceForm.message.trim()) {
             notify("Veuillez remplir tous les champs obligatoires.");
+            return;
+        }
+        if (
+            (annonceForm.type_annonce === "grace" || annonceForm.type_annonce === "priere") &&
+            !annonceForm.motif
+        ) {
+            notify("Veuillez sélectionner un motif.");
             return;
         }
         if (!annonceForm.membre_id) {
@@ -5946,6 +5969,7 @@ export default function Index({
                                                     setAnnonceForm((f) => ({
                                                         ...f,
                                                         type_annonce: t.value,
+                                                        motif: "",
                                                     }))
                                                 }
                                             >
@@ -5970,6 +5994,60 @@ export default function Index({
                             {/* ÉTAPE 2 — Contenu */}
                             {annonceStep === 2 && (
                                 <div className="ann-form">
+                                    {(annonceForm.type_annonce === "grace" || annonceForm.type_annonce === "priere") && (
+                                        <Field label="Motif" required>
+                                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+                                                {(annonceForm.type_annonce === "grace" ? MOTIFS_GRACE : MOTIFS_INTERCESSION).map((m) => (
+                                                    <button
+                                                        key={m.value}
+                                                        type="button"
+                                                        onClick={() => setAnnonceForm((f) => ({ ...f, motif: m.value }))}
+                                                        style={{
+                                                            padding: "6px 14px",
+                                                            borderRadius: 20,
+                                                            border: annonceForm.motif === m.value ? "2px solid #d97706" : "1.5px solid #d1d5db",
+                                                            background: annonceForm.motif === m.value ? "#fffbeb" : "#fff",
+                                                            color: annonceForm.motif === m.value ? "#b45309" : "#374151",
+                                                            fontWeight: annonceForm.motif === m.value ? 700 : 400,
+                                                            fontSize: 12,
+                                                            cursor: "pointer",
+                                                            transition: "all .15s",
+                                                        }}
+                                                    >
+                                                        {annonceForm.motif === m.value && "✓ "}{m.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </Field>
+                                    )}
+                                    {(annonceForm.type_annonce === "grace" || annonceForm.type_annonce === "priere") && (
+                                        <Field label="Voulez-vous rendre publiquement témoignage ?">
+                                            <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                                                {[{ val: true, label: "OUI" }, { val: false, label: "NON" }].map(({ val, label }) => (
+                                                    <button
+                                                        key={label}
+                                                        type="button"
+                                                        onClick={() => setAnnonceForm((f) => ({ ...f, temoignage_public: val }))}
+                                                        style={{
+                                                            padding: "6px 20px",
+                                                            borderRadius: 20,
+                                                            border: annonceForm.temoignage_public === val ? "2px solid #d97706" : "1.5px solid #d1d5db",
+                                                            background: annonceForm.temoignage_public === val ? "#fffbeb" : "#fff",
+                                                            color: annonceForm.temoignage_public === val ? "#b45309" : "#374151",
+                                                            fontWeight: annonceForm.temoignage_public === val ? 700 : 400,
+                                                            fontSize: 12,
+                                                            cursor: "pointer",
+                                                        }}
+                                                    >
+                                                        {label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
+                                                Pour cas exceptionnel
+                                            </div>
+                                        </Field>
+                                    )}
                                     <Field label="Membre concerné" required>
                                         <select
                                             className="ann-input"
@@ -6090,6 +6168,11 @@ export default function Index({
                                             <div className="art-label">
                                                 {selectedType?.label}
                                             </div>
+                                            {selectedMotifLabel && (
+                                                <div className="art-sub" style={{ fontWeight: 600 }}>
+                                                    Motif : {selectedMotifLabel}
+                                                </div>
+                                            )}
                                             <div className="art-sub">
                                                 Annonce pastorale
                                             </div>
@@ -6192,6 +6275,14 @@ export default function Index({
                                         !annonceForm.type_annonce
                                     }
                                     onClick={() => {
+                                        if (
+                                            annonceStep === 2 &&
+                                            (annonceForm.type_annonce === "grace" || annonceForm.type_annonce === "priere") &&
+                                            !annonceForm.motif
+                                        ) {
+                                            notify("Veuillez sélectionner un motif.");
+                                            return;
+                                        }
                                         if (
                                             annonceStep === 2 &&
                                             !annonceForm.membre_id

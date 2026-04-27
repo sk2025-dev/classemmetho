@@ -95,14 +95,16 @@ class AnnonceController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'type_annonce' => 'required|string',
-            'membre_id' => 'nullable|exists:users,id',
-            'details.titre' => 'nullable|string|max:255',
-            'details.contenu' => 'nullable|string',
-            'message' => 'nullable|string',
+            'type_annonce'     => 'required|string',
+            'motif'               => 'nullable|string|max:100',
+            'temoignage_public'   => 'nullable|boolean',
+            'membre_id'        => 'nullable|exists:users,id',
+            'details.titre'    => 'nullable|string|max:255',
+            'details.contenu'  => 'nullable|string',
+            'message'          => 'nullable|string',
             'date_publication' => 'nullable|date',
-            'date_annonce' => 'nullable|date',
-            'date_expiration' => 'nullable|date|after:date_publication',
+            'date_annonce'     => 'nullable|date',
+            'date_expiration'  => 'nullable|date|after:date_publication',
         ]);
 
         $user = Auth::user();
@@ -111,10 +113,15 @@ class AnnonceController extends Controller
             $membre = User::findOrFail($validated['membre_id']);
         }
 
-        $type = $validated['type_annonce'] ?? 'generale';
-        $titre = $validated['details']['titre'] ?? $validated['message'] ?? '';
+        $type    = $validated['type_annonce'] ?? 'generale';
+        $titre   = $validated['details']['titre'] ?? $validated['message'] ?? '';
         $contenu = $validated['details']['contenu'] ?? $validated['message'] ?? '';
-        $details = ['titre' => $titre, 'contenu' => $contenu];
+        $details = [
+            'titre'              => $titre,
+            'contenu'            => $contenu,
+            'motif'              => $validated['motif'] ?? null,
+            'temoignage_public'  => $validated['temoignage_public'] ?? false,
+        ];
         $datePublication = $validated['date_publication'] ?? now();
         $reference = 'ANN-' . strtoupper(uniqid());
 

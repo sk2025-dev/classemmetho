@@ -438,46 +438,48 @@ export default function Inscriptions() {
                     </select>
                 </div>
 
-                {/* ── Barre d'actions groupées ── */}
-                {selectedIds.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-3 mb-3 px-4 py-3 bg-white rounded-xl shadow border border-gray-200">
-                        <span className="text-sm font-bold text-gray-700">
-                            {selectedIds.length} inscription(s) sélectionnée(s)
-                        </span>
-                        <div className="flex gap-2 ml-auto flex-wrap">
-                            <button
-                                onClick={handleBulkApprove}
-                                disabled={bulkProcessing}
-                                className="flex items-center gap-1.5 px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg transition disabled:opacity-50"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
-                                Approuver
-                            </button>
-                            <button
-                                onClick={handleBulkReject}
-                                disabled={bulkProcessing}
-                                className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition disabled:opacity-50"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
-                                Refuser
-                            </button>
-                            <button
-                                onClick={() => setBulkConfirmDelete(true)}
-                                disabled={bulkProcessing}
-                                className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition disabled:opacity-50"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                Supprimer
-                            </button>
+                {/* ── Barre d'actions groupées (toujours visible) ── */}
+                <div className="flex flex-wrap items-center gap-3 mb-3 px-4 py-3 bg-white rounded-xl shadow border border-gray-200">
+                    <span className="text-sm font-semibold text-gray-500">
+                        {selectedIds.length > 0
+                            ? `${selectedIds.length} sélectionné(s)`
+                            : "Actions groupées"}
+                    </span>
+                    <div className="flex gap-2 ml-auto flex-wrap">
+                        <button
+                            onClick={handleBulkApprove}
+                            disabled={!selectedIds.length || bulkProcessing}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
+                            Approuver
+                        </button>
+                        <button
+                            onClick={handleBulkReject}
+                            disabled={!selectedIds.length || bulkProcessing}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                            Refuser
+                        </button>
+                        <button
+                            onClick={() => setBulkConfirmDelete(true)}
+                            disabled={!selectedIds.length || bulkProcessing}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            Supprimer
+                        </button>
+                        {selectedIds.length > 0 && (
                             <button
                                 onClick={clearSelection}
                                 className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-semibold rounded-lg transition"
                             >
-                                Annuler
+                                Tout désélectionner
                             </button>
-                        </div>
+                        )}
                     </div>
-                )}
+                </div>
 
                 {/* ── Modale confirmation suppression groupée ── */}
                 {bulkConfirmDelete && (
@@ -570,8 +572,16 @@ export default function Inscriptions() {
                                         return (
                                             <tr
                                                 key={inscription.id}
-                                                className="hover:bg-[#EDD31D]/20 transition-colors"
+                                                className={`hover:bg-[#EDD31D]/20 transition-colors ${isSelected(inscription.id) ? "bg-yellow-50" : ""}`}
                                             >
+                                                <td className="px-4 py-3 text-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="w-4 h-4 rounded accent-[#B6C01A] cursor-pointer"
+                                                        checked={isSelected(inscription.id)}
+                                                        onChange={() => toggleSelect(inscription.id)}
+                                                    />
+                                                </td>
                                                 <td className="px-4 py-3 font-mono text-xs text-gray-400">
                                                     {startIndex + idx + 1}
                                                 </td>

@@ -307,6 +307,7 @@ export default function MainLayout({ children, auth }) {
     const { toasts, removeToast, success, error } = useToast();
     const lastSuccessRef = useRef(null);
     const lastErrorRef = useRef(null);
+    const infoMenuRef = useRef(null);
 
     useEffect(() => {
         if (flash?.success && flash.success !== lastSuccessRef.current) {
@@ -321,6 +322,17 @@ export default function MainLayout({ children, auth }) {
             error(flash.error);
         }
     }, [flash?.error, error]);
+
+    useEffect(() => {
+        if (!showInfoMenu) return;
+        const handleClickOutside = (e) => {
+            if (infoMenuRef.current && !infoMenuRef.current.contains(e.target)) {
+                setShowInfoMenu(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [showInfoMenu]);
 
     const announcements = Array.isArray(flashAnnouncements)
         ? flashAnnouncements
@@ -366,7 +378,10 @@ export default function MainLayout({ children, auth }) {
 
     const buildFlashSentence = (annonce) => {
         const familyName = annonce?.family?.nom?.trim();
-        const source = familyName
+        const isAdminInfo = !annonce?.family && !annonce?.family_id;
+        const source = isAdminInfo
+            ? "L'Église du Jubilé"
+            : familyName
             ? `Famille ${familyName.toUpperCase()}`
             : "Une famille de la paroisse";
         const type = String(annonce?.type_acte || "").toLowerCase();
@@ -425,6 +440,13 @@ export default function MainLayout({ children, auth }) {
             return `${source} annonce une naissance dans sa famille.`;
         }
 
+        if (isAdminInfo) {
+            if (normalizedTitle && normalizedContent) {
+                return `${normalizedTitle} — ${normalizedContent}`;
+            }
+            return normalizedTitle || normalizedContent || "Information de l'Église du Jubilé.";
+        }
+
         if (motif) {
             return `${source} annonce: ${motif}`;
         }
@@ -476,25 +498,38 @@ export default function MainLayout({ children, auth }) {
 
     const mergedTickerMessages = [...churchInfoMessages, ...tickerMessages];
 
+    const isAdminAnnonce = (a) => !a?.family && !a?.family_id;
+
     const categorizedInfo = {
-        annonces: announcements.filter((a) =>
-            ["annonce", "annonce_liturgique", "grace", "generale"].includes(
-                String(a?.type_acte || "").toLowerCase(),
-            ),
+        infosEglise: announcements.filter(isAdminAnnonce),
+        annonces: announcements.filter(
+            (a) =>
+                !isAdminAnnonce(a) &&
+                ["annonce", "annonce_liturgique", "grace", "generale"].includes(
+                    String(a?.type_acte || "").toLowerCase(),
+                ),
         ),
         mariage: announcements.filter(
-            (a) => String(a?.type_acte || "").toLowerCase() === "mariage",
+            (a) => !isAdminAnnonce(a) && String(a?.type_acte || "").toLowerCase() === "mariage",
         ),
         deces: announcements.filter(
-            (a) => String(a?.type_acte || "").toLowerCase() === "deces",
+            (a) => !isAdminAnnonce(a) && String(a?.type_acte || "").toLowerCase() === "deces",
         ),
         prieres: announcements.filter(
-            (a) => String(a?.type_acte || "").toLowerCase() === "priere",
+            (a) => !isAdminAnnonce(a) && String(a?.type_acte || "").toLowerCase() === "priere",
         ),
         infos: churchInfoMessages,
     };
 
+    const totalAnnouncementsCount =
+        categorizedInfo.infosEglise.length +
+        categorizedInfo.annonces.length +
+        categorizedInfo.mariage.length +
+        categorizedInfo.deces.length +
+        categorizedInfo.prieres.length;
+
     const hasExtraInfo =
+        categorizedInfo.infosEglise.length > 0 ||
         categorizedInfo.annonces.length > 0 ||
         categorizedInfo.mariage.length > 0 ||
         categorizedInfo.deces.length > 0 ||
@@ -538,63 +573,84 @@ export default function MainLayout({ children, auth }) {
                     />
 
                     {hasExtraInfo && (
-                        <div className="absolute right-3 top-1.5">
+                        <div className="absolute right-3 top-1.5" ref={infoMenuRef}>
                             <button
                                 type="button"
                                 onClick={() => setShowInfoMenu((v) => !v)}
-                                className="h-7 px-3 rounded-md bg-white/95 text-slate-800 text-xs font-semibold shadow border border-slate-200 hover:bg-white"
+                                className="relative flex items-center gap-1.5 h-7 px-3 rounded-md bg-white/95 text-slate-800 text-xs font-semibold shadow border border-slate-200 hover:bg-white transition-colors"
                             >
-                                Plus d'info
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-blue-600">
+                                    <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+                                </svg>
+                                Voir plus d'info
+                                {totalAnnouncementsCount > 0 && (
+                                    <span className="ml-0.5 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                                        {totalAnnouncementsCount > 9 ? "9+" : totalAnnouncementsCount}
+                                    </span>
+                                )}
                             </button>
 
                             {showInfoMenu && (
-                                <div className="mt-2 w-[340px] max-w-[92vw] bg-white rounded-lg border border-slate-200 shadow-xl p-3 text-sm text-slate-700">
-                                    <div className="font-semibold text-slate-900 mb-2">
-                                        Informations paroissiales
+                                <div className="absolute right-0 mt-2 w-[360px] max-w-[94vw] bg-white rounded-xl border border-slate-200 shadow-2xl overflow-hidden z-50">
+                                    {/* Header */}
+                                    <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700">
+                                        <div className="flex items-center gap-2 text-white">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                                                <path d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 01-1.44-4.282m3.102.069a18.03 18.03 0 01-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 018.835 2.535M10.34 6.66a23.847 23.847 0 008.835-2.535m0 0A23.74 23.74 0 0018.795 3m.38 1.125a23.91 23.91 0 011.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 001.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 010 3.46"/>
+                                            </svg>
+                                            <span className="text-sm font-bold">Informations paroissiales</span>
+                                        </div>
+                                        <button
+                                            onClick={() => setShowInfoMenu(false)}
+                                            className="text-white/70 hover:text-white transition-colors"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                                                <path d="M18 6L6 18M6 6l12 12"/>
+                                            </svg>
+                                        </button>
                                     </div>
 
-                                    <div className="space-y-2 max-h-80 overflow-y-auto">
+                                    {/* Content */}
+                                    <div className="p-3 space-y-2 max-h-80 overflow-y-auto">
                                         <InfoCategory
-                                            title="Annonce"
-                                            items={categorizedInfo.annonces.map(
-                                                (a) =>
-                                                    truncateText(
-                                                        buildFlashSentence(a),
-                                                    ),
+                                            title="🏛️ Infos de l'Église"
+                                            items={categorizedInfo.infosEglise.map((a) =>
+                                                truncateText(buildFlashSentence(a))
                                             )}
+                                            accent="blue"
                                         />
                                         <InfoCategory
-                                            title="Mariage programmé"
-                                            items={categorizedInfo.mariage.map(
-                                                (a) =>
-                                                    truncateText(
-                                                        buildFlashSentence(a),
-                                                    ),
+                                            title="📢 Annonces"
+                                            items={categorizedInfo.annonces.map((a) =>
+                                                truncateText(buildFlashSentence(a))
                                             )}
+                                            accent="purple"
                                         />
                                         <InfoCategory
-                                            title="Avis de deces"
-                                            items={categorizedInfo.deces.map(
-                                                (a) =>
-                                                    truncateText(
-                                                        buildFlashSentence(a),
-                                                    ),
+                                            title="💍 Mariages programmés"
+                                            items={categorizedInfo.mariage.map((a) =>
+                                                truncateText(buildFlashSentence(a))
                                             )}
+                                            accent="pink"
                                         />
                                         <InfoCategory
-                                            title="Horaires de prieres"
-                                            items={categorizedInfo.prieres.map(
-                                                (a) =>
-                                                    truncateText(
-                                                        buildFlashSentence(a),
-                                                    ),
+                                            title="🕯️ Avis de décès"
+                                            items={categorizedInfo.deces.map((a) =>
+                                                truncateText(buildFlashSentence(a))
                                             )}
+                                            accent="gray"
                                         />
                                         <InfoCategory
-                                            title="Info"
-                                            items={categorizedInfo.infos.map(
-                                                (i) => i.text,
+                                            title="🙏 Sujets de prière"
+                                            items={categorizedInfo.prieres.map((a) =>
+                                                truncateText(buildFlashSentence(a))
                                             )}
+                                            accent="indigo"
+                                        />
+                                        <InfoCategory
+                                            title="⏰ Horaires des cultes"
+                                            items={categorizedInfo.infos.map((i) => i.text)}
+                                            accent="green"
                                         />
                                     </div>
                                 </div>
@@ -621,19 +677,51 @@ export default function MainLayout({ children, auth }) {
     );
 }
 
-function InfoCategory({ title, items = [] }) {
+function InfoCategory({ title, items = [], accent = "blue" }) {
     if (!Array.isArray(items) || items.length === 0) {
         return null;
     }
 
+    const borderColors = {
+        blue: "border-blue-200 bg-blue-50",
+        purple: "border-purple-200 bg-purple-50",
+        pink: "border-pink-200 bg-pink-50",
+        gray: "border-gray-200 bg-gray-50",
+        indigo: "border-indigo-200 bg-indigo-50",
+        green: "border-green-200 bg-green-50",
+    };
+    const textColors = {
+        blue: "text-blue-700",
+        purple: "text-purple-700",
+        pink: "text-pink-700",
+        gray: "text-gray-700",
+        indigo: "text-indigo-700",
+        green: "text-green-700",
+    };
+    const dotColors = {
+        blue: "bg-blue-400",
+        purple: "bg-purple-400",
+        pink: "bg-pink-400",
+        gray: "bg-gray-400",
+        indigo: "bg-indigo-400",
+        green: "bg-green-400",
+    };
+
+    const borderClass = borderColors[accent] || borderColors.blue;
+    const textClass = textColors[accent] || textColors.blue;
+    const dotClass = dotColors[accent] || dotColors.blue;
+
     return (
-        <div className="rounded-md border border-slate-200 bg-slate-50 p-2">
-            <div className="text-xs uppercase tracking-wide font-bold text-slate-600 mb-1">
+        <div className={`rounded-lg border ${borderClass} p-2.5`}>
+            <div className={`text-[11px] font-bold mb-1.5 ${textClass}`}>
                 {title}
             </div>
-            <ul className="space-y-1 list-disc pl-4 text-xs text-slate-700">
+            <ul className="space-y-1.5">
                 {items.slice(0, 5).map((item, idx) => (
-                    <li key={`${title}-${idx}`}>{item}</li>
+                    <li key={`${title}-${idx}`} className="flex items-start gap-2">
+                        <span className={`mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotClass}`} />
+                        <span className="text-[11px] text-slate-700 leading-snug">{item}</span>
+                    </li>
                 ))}
             </ul>
         </div>

@@ -97,16 +97,23 @@ $bodyParagraphs = match ($typeKey) {
 };
 
 
+$motifKey = $details['motif'] ?? null;
+$temoignagePublic = (bool) ($details['temoignage_public'] ?? false);
+$temoignageLabel  = $temoignagePublic ? 'OUI' : 'NON';
+
+$isGrace       = in_array($typeKey, ['grace', 'remerciement', 'felicitations']);
+$isIntercession = in_array($typeKey, ['priere']);
+
 $checkboxesActionGrace = [
-    'guerison'   => ['label' => 'Guérison',              'checked' => in_array($typeKey, ['grace', 'remerciement'])],
-    'deuil'      => ['label' => 'Deuil',                  'checked' => in_array($typeKey, ['deces', 'funerailles'])],
-    'mariage'    => ['label' => 'Bénédiction de Mariage', 'checked' => $typeKey === 'mariage'],
-    'autres'     => ['label' => 'Autre(s) bienfaits(s) :', 'checked' => !in_array($typeKey, ['grace','remerciement','deces','funerailles','mariage'])],
+    'guerison' => ['label' => 'Guérison',               'checked' => $motifKey === 'guerison' || ($isGrace && !$motifKey && in_array($typeKey, ['grace','remerciement']))],
+    'deuil'    => ['label' => 'Deuil',                   'checked' => $motifKey === 'deuil'],
+    'mariage'  => ['label' => 'Bénédiction de Mariage',  'checked' => $motifKey === 'mariage'],
+    'autres'   => ['label' => 'Autre(s) bienfaits(s) :', 'checked' => $motifKey === 'autres_bienfaits'],
 ];
 $checkboxesIntercession = [
-    'maladie'  => ['label' => 'Maladie : (Préciser)……………………………………………………',  'checked' => false],
-    'probleme' => ['label' => 'Autre(s) problème(s) :',                                  'checked' => false],
-    'soutien'  => ['label' => 'Soutien et assistance à : (nom de la personne)……………', 'checked' => false],
+    'maladie'  => ['label' => 'Maladie : (Préciser)……………………………………………………',  'checked' => $motifKey === 'maladie'],
+    'probleme' => ['label' => 'Autre(s) problème(s) :',                                  'checked' => $motifKey === 'autre_probleme'],
+    'soutien'  => ['label' => 'Soutien et assistance à : (nom de la personne)……………', 'checked' => $motifKey === 'soutien_assistance'],
 ];
 @endphp
 <!DOCTYPE html>
@@ -453,7 +460,7 @@ $checkboxesIntercession = [
         <tr>
             <td class="checkbox-cell">
                 <div class="checkbox-box {{ $item['checked'] ? 'checked' : '' }}">
-                    {!! $item['checked'] ? '&#10007;' : '&nbsp;' !!}
+                    {!! $item['checked'] ? 'X' : '&nbsp;' !!}
                 </div>
             </td>
             <td class="checkbox-label">{{ $item['label'] }}</td>
@@ -463,7 +470,7 @@ $checkboxesIntercession = [
 
     <div class="oui-non">
         Voulez-vous pour cela rendre publiquement témoignage ?&nbsp;
-        <span class="non-badge">NON</span>
+        <span class="non-badge">{{ $temoignageLabel }}</span>
         &nbsp;(Pour cas exceptionnel)
     </div>
 
@@ -473,8 +480,8 @@ $checkboxesIntercession = [
         @foreach($checkboxesIntercession as $key => $item)
         <tr>
             <td class="checkbox-cell">
-                <div class="checkbox-box">
-                    &nbsp;
+                <div class="checkbox-box {{ $item['checked'] ? 'checked' : '' }}">
+                    {!! $item['checked'] ? 'X' : '&nbsp;' !!}
                 </div>
             </td>
             <td class="checkbox-label">{{ $item['label'] }}</td>
@@ -498,17 +505,17 @@ $checkboxesIntercession = [
             @endforeach
         </div>
     @endif -->
-    <div class="motif-line">Sujet de l'annonce :</div>
-    <div style="margin-top: 10px;">
-    <div class="paragraph">
-        La famille <b><i>{{ mb_strtoupper((string) $famille, 'UTF-8') }}</i></b> sollicite une action de grâce devant l'assemblée pour
+    {{-- ══ SECTION MOTIF DU MESSAGE ══ --}}
+    <div class="motif-line" style="margin-top: 14px;">Motif / Message :</div>
+    <div style="margin-top: 6px; padding: 10px 14px; border: 1px solid #ccc; border-radius: 4px; min-height: 40px; font-size: 11.5px; line-height: 1.7;">
         @if(!empty($messageContent))
-        <b><i>{{ $messageContent }}</i></b>,
+            {!! nl2br(e($messageContent)) !!}
         @else
-        <b><i>________________</i></b>,
+            &nbsp;
         @endif
-        afin de rendre gloire à Dieu pour ses nombreux bienfaits et pour sa fidélité dans leur vie. Elle souhaite également exprimer sa reconnaissance pour le soutien spirituel, les prières et l'encouragement de la communauté.
-      </div>
+    </div>
+
+    <div style="margin-top: 10px;">
 
     <!-- {{-- ══ SIGNATURES ══ --}} -->
     <table class="sig-table">

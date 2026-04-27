@@ -5,8 +5,9 @@ namespace App\Http\Controllers\ResponsableFamille;
 use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use App\Models\Family;
-use App\Models\Classe; // AJOUT : Import du modèle Classe
+use App\Models\Classe;
 use App\Helpers\PhotoHelper;
 
 class InscriptionsController extends Controller
@@ -16,8 +17,30 @@ class InscriptionsController extends Controller
         $user = Auth::user();
 
         // Récupérer la famille du responsable
-        $family = Family::where('responsable_id', $user->id)
+        $family = Family::with('ville', 'classe')
+            ->where('responsable_id', $user->id)
             ->first();
+
+        // Correction automatique : si ville_id est null, chercher dans l'inscription liée
+        if ($family && !$family->ville_id) {
+            $inscription = \App\Models\Inscription::where('responsable_email', $family->email)
+                ->whereIn('status', ['approuve', 'approved'])
+                ->orderByDesc('updated_at')
+                ->first();
+
+            $inscVilleId = $inscription?->data['famille']['ville']
+                ?? $inscription?->data['famille']['ville_id']
+                ?? $inscription?->ville_id
+                ?? null;
+
+            if ($inscVilleId) {
+                $family->ville_id = (int) $inscVilleId;
+                $family->save();
+                $family->load('ville');
+                // Corriger aussi tous les membres sans ville_id
+                $family->users()->whereNull('ville_id')->update(['ville_id' => $family->ville_id]);
+            }
+        }
 
         // AJOUT : Récupérer toutes les classes pour le modal de transfert
         // On sélectionne seulement l'ID et le nom pour alléger la requête
@@ -86,7 +109,7 @@ class InscriptionsController extends Controller
                     'created_at' => optional($m->created_at)->format('d/m/Y H:i'),
                     'updated_at' => optional($m->updated_at ?? $m->created_at)->format('d/m/Y H:i'),
                     'genre' => $m->genre,
-                    'ville_name' => $m->ville?->nom ?? 'N/A',
+                    'ville_name' => $m->ville?->nom ?? $family->ville?->nom ?? 'N/A',
                     'fonction_name' => $m->fonction?->nom ?? 'N/A',
                     'profession' => $m->profession ?? 'N/A',
                     'relation' => $m->relation ?? 'N/A',

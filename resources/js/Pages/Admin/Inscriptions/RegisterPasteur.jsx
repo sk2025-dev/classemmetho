@@ -297,6 +297,7 @@ export default function RegisterFamille({
             relation: "",
             employment_status: "",
             profession: "",
+            niveau_etude: "",
             fonction: "",
             statutMarital: "",
             dateMariage: "",
@@ -363,6 +364,7 @@ export default function RegisterFamille({
             fonction_id: null,
             employment_status: "",
             profession: "",
+            niveau_etude: "",
             photo: null,
             photoPreview: null,
         },
@@ -756,8 +758,10 @@ export default function RegisterFamille({
         if (!membreTemp.genre) newErrors["membre.genre"] = "Genre requis";
         if (!membreTemp.employment_status)
             newErrors["membre.employment_status"] = "Statut d'emploi requis";
-        if (!membreTemp.profession)
+        if (membreTemp.employment_status === "TRAVAILLEUR" && !membreTemp.profession)
             newErrors["membre.profession"] = "Profession requise";
+        if (membreTemp.employment_status === "ETUDIANT" && !membreTemp.niveau_etude)
+            newErrors["membre.niveau_etude"] = "Niveau d'étude requis";
         if (!membreTemp.relation)
             newErrors["membre.relation"] = "Lien de parenté requis";
         if (!membreTemp.statutMarital)
@@ -789,7 +793,7 @@ export default function RegisterFamille({
             )
         )
             newErrors["membre.statutMarital"] = "Statut marital invalide";
-        if (membreTemp.profession && membreTemp.profession.trim().length < 2)
+        if (membreTemp.employment_status === "TRAVAILLEUR" && membreTemp.profession && membreTemp.profession.trim().length < 2)
             newErrors["membre.profession"] = "Profession trop courte";
 
         // Vérifier conditions statut marital
@@ -893,6 +897,7 @@ export default function RegisterFamille({
                 fonction_id: null,
                 employment_status: "",
                 profession: "",
+                niveau_etude: "",
                 photo: null,
                 photoPreview: null,
             });
@@ -970,8 +975,10 @@ export default function RegisterFamille({
             if (!responsable.employment_status)
                 newErrors["responsable.employment_status"] =
                     "Statut d'emploi requis";
-            if (!responsable.profession)
+            if (responsable.employment_status === "TRAVAILLEUR" && !responsable.profession)
                 newErrors["responsable.profession"] = "Requis";
+            if (responsable.employment_status === "ETUDIANT" && !responsable.niveau_etude)
+                newErrors["responsable.niveau_etude"] = "Niveau d'étude requis";
             if (!responsable.statutMarital)
                 newErrors["responsable.statutMarital"] = "Requis";
 
@@ -1055,6 +1062,10 @@ export default function RegisterFamille({
         if (!responsable.employment_status)
             validationErrors["responsable.employment_status"] =
                 "Statut d'emploi du responsable requis";
+        if (responsable.employment_status === "TRAVAILLEUR" && !responsable.profession)
+            validationErrors["responsable.profession"] = "Profession du responsable requise";
+        if (responsable.employment_status === "ETUDIANT" && !responsable.niveau_etude)
+            validationErrors["responsable.niveau_etude"] = "Niveau d'étude du responsable requis";
 
         // Valider les membres s'ils sont requis
         if (hasMembersToAdd === true) {
@@ -1106,9 +1117,15 @@ export default function RegisterFamille({
                         );
                         memberHasErrors = true;
                     }
-                    if (!m.profession) {
+                    if (m.employment_status === "TRAVAILLEUR" && !m.profession) {
                         memberErrors.push(
                             `Membre ${idx + 1}: Profession requise`,
+                        );
+                        memberHasErrors = true;
+                    }
+                    if (m.employment_status === "ETUDIANT" && !m.niveau_etude) {
+                        memberErrors.push(
+                            `Membre ${idx + 1}: Niveau d'étude requis`,
                         );
                         memberHasErrors = true;
                     }
@@ -1243,9 +1260,13 @@ export default function RegisterFamille({
                     membreValidationErrors[`membres[${i}].employment_status`] =
                         "Statut d'emploi vide";
                 }
-                if (!m.profession || m.profession.toString().trim() === "") {
+                if (m.employment_status === "TRAVAILLEUR" && (!m.profession || m.profession.toString().trim() === "")) {
                     membreValidationErrors[`membres[${i}].profession`] =
                         "Profession vide";
+                }
+                if (m.employment_status === "ETUDIANT" && !m.niveau_etude) {
+                    membreValidationErrors[`membres[${i}].niveau_etude`] =
+                        "Niveau d'étude vide";
                 }
                 if (!m.relation || m.relation.toString().trim() === "") {
                     membreValidationErrors[`membres[${i}].relation`] =
@@ -1384,6 +1405,7 @@ export default function RegisterFamille({
                 lienParente: "",
                 employment_status: "",
                 profession: "",
+                niveau_etude: "",
                 fonction: "",
                 statutMarital: "",
                 dateMariage: "",
@@ -1436,6 +1458,7 @@ export default function RegisterFamille({
                 fonction_id: null,
                 employment_status: "",
                 profession: "",
+                niveau_etude: "",
                 photo: null,
                 photoPreview: null,
             });
@@ -2132,6 +2155,8 @@ export default function RegisterFamille({
                                         setResponsable({
                                             ...responsable,
                                             employment_status: e.target.value,
+                                            profession: "",
+                                            niveau_etude: "",
                                         })
                                     }
                                     placeholder="Sélectionner un statut"
@@ -2173,6 +2198,7 @@ export default function RegisterFamille({
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {responsable.employment_status === "TRAVAILLEUR" && (
                             <FormField
                                 label="Profession"
                                 icon={Briefcase}
@@ -2191,7 +2217,46 @@ export default function RegisterFamille({
                                     }
                                     placeholder="ex: Enseignant, Commerçant"
                                 />
+                                {getFieldError("responsable.profession") && (
+                                    <p className="text-red-500 text-xs mt-1">
+                                        {getFieldError("responsable.profession")}
+                                    </p>
+                                )}
                             </FormField>
+                            )}
+                            {responsable.employment_status === "ETUDIANT" && (
+                            <FormField
+                                label="Niveau d'étude"
+                                icon={Briefcase}
+                                required
+                            >
+                                <Select2Single
+                                    name="responsable_niveau_etude"
+                                    value={responsable.niveau_etude || ""}
+                                    onChange={(e) =>
+                                        setResponsable({
+                                            ...responsable,
+                                            niveau_etude: e.target.value,
+                                        })
+                                    }
+                                    options={[
+                                        { value: "Primaire", label: "Primaire" },
+                                        { value: "Secondaire", label: "Secondaire" },
+                                        { value: "Lycée", label: "Lycée" },
+                                        { value: "BTS/DUT", label: "BTS / DUT" },
+                                        { value: "Licence", label: "Licence" },
+                                        { value: "Master", label: "Master" },
+                                        { value: "Doctorat", label: "Doctorat" },
+                                    ]}
+                                    placeholder="Sélectionner..."
+                                />
+                                {getFieldError("responsable.niveau_etude") && (
+                                    <p className="text-red-500 text-xs mt-1">
+                                        {getFieldError("responsable.niveau_etude")}
+                                    </p>
+                                )}
+                            </FormField>
+                            )}
                             <FormField
                                 label="Statut Marital"
                                 icon={Heart}
@@ -2836,8 +2901,9 @@ export default function RegisterFamille({
                                             onChange={(e) =>
                                                 setMembreTemp({
                                                     ...membreTemp,
-                                                    employment_status:
-                                                        e.target.value,
+                                                    employment_status: e.target.value,
+                                                    profession: "",
+                                                    niveau_etude: "",
                                                 })
                                             }
                                             placeholder="Sélectionner un statut"
@@ -2860,6 +2926,7 @@ export default function RegisterFamille({
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {membreTemp.employment_status === "TRAVAILLEUR" && (
                                     <FormField
                                         label="Profession"
                                         icon={Briefcase}
@@ -2885,6 +2952,40 @@ export default function RegisterFamille({
                                             </p>
                                         )}
                                     </FormField>
+                                    )}
+                                    {membreTemp.employment_status === "ETUDIANT" && (
+                                    <FormField
+                                        label="Niveau d'étude"
+                                        icon={Briefcase}
+                                        required
+                                    >
+                                        <Select2Single
+                                            name="membre_niveau_etude"
+                                            value={membreTemp.niveau_etude || ""}
+                                            onChange={(e) =>
+                                                setMembreTemp({
+                                                    ...membreTemp,
+                                                    niveau_etude: e.target.value,
+                                                })
+                                            }
+                                            options={[
+                                                { value: "Primaire", label: "Primaire" },
+                                                { value: "Secondaire", label: "Secondaire" },
+                                                { value: "Lycée", label: "Lycée" },
+                                                { value: "BTS/DUT", label: "BTS / DUT" },
+                                                { value: "Licence", label: "Licence" },
+                                                { value: "Master", label: "Master" },
+                                                { value: "Doctorat", label: "Doctorat" },
+                                            ]}
+                                            placeholder="Sélectionner..."
+                                        />
+                                        {getFieldError("membre.niveau_etude") && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {getFieldError("membre.niveau_etude")}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                    )}
                                     <FormField
                                         label="Lien de parenté"
                                         icon={Users}

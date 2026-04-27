@@ -152,8 +152,9 @@ class InscriptionApprovalController extends Controller
         $familyData = $inscription->data['famille'] ?? [];
 
         // Extraire classe_id et ville_id depuis le JSON data
+        // Le champ peut être stocké sous 'ville_id' ou 'ville' selon le formulaire d'inscription
         $classeId = $familyData['classe_id'] ?? null;
-        $villeId = $familyData['ville_id'] ?? $inscription->ville_id;
+        $villeId = $familyData['ville_id'] ?? $familyData['ville'] ?? $inscription->ville_id;
 
         $family = Family::create([
             'nom' => $familyData['nom'] ?? $inscription->responsable_nom,
@@ -215,6 +216,11 @@ class InscriptionApprovalController extends Controller
             $inscription->data['responsable'] ?? [],
             $inscription->responsable_profession ?? null
         );
+        $responsableNiveauEtude = trim((string) (
+            $inscription->data['responsable']['niveau_etude'] ??
+            $inscription->niveau_etude ??
+            ''
+        )) ?: null;
         $responsablePhotoPath = $this->resolvePhotoPathFromValues([
             $inscription->photo_path,
             $inscription->profile_photo_url,
@@ -239,6 +245,9 @@ class InscriptionApprovalController extends Controller
             if (!empty($responsableProfessionDetail)) {
                 $updatePayload['profession_detail'] = $responsableProfessionDetail;
                 $updatePayload['profession'] = $responsableProfessionDetail;
+            }
+            if (!empty($responsableNiveauEtude)) {
+                $updatePayload['niveau_etude'] = $responsableNiveauEtude;
             }
             if (!empty($responsableRelation)) {
                 $updatePayload['relation'] = $responsableRelation;
@@ -275,6 +284,7 @@ class InscriptionApprovalController extends Controller
             'profession' => $responsableProfessionDetail,
             'employment_status' => $responsableEmploymentStatus,
             'profession_detail' => $responsableProfessionDetail,
+            'niveau_etude' => $responsableNiveauEtude,
             'photo_path' => $responsablePhotoPath,
             'family_id' => $family->id,
             'classe_id' => $family->classe_id,
@@ -366,6 +376,8 @@ class InscriptionApprovalController extends Controller
                 ? $providedEmail
                 : $this->generateFallbackMemberEmail($membre, (int) $family->id);
 
+            $memberNiveauEtude = trim((string) ($membre['niveau_etude'] ?? '')) ?: null;
+
             $memberUser = User::create([
                 'nom' => $membre['nom'] ?? '',
                 'prenom' => $membre['prenom'] ?? '',
@@ -379,6 +391,7 @@ class InscriptionApprovalController extends Controller
                 'profession' => $this->resolveProfessionDetail($membre),
                 'employment_status' => $this->resolveEmploymentStatus($membre),
                 'profession_detail' => $this->resolveProfessionDetail($membre),
+                'niveau_etude' => $memberNiveauEtude,
                 'photo_path' => $memberPhotoPath,
                 'family_id' => $family->id,
                 'classe_id' => $family->classe_id,
@@ -654,6 +667,35 @@ class InscriptionApprovalController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Supprimer plusieurs inscriptions en masse
+     * POST /admin/inscriptions/bulk-delete
+     */
+    public function bulkDelete(Request $request)
+    {
+        $validated = $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'integer|exists:inscriptions,id',
+        ]);
+
+        if (!Auth::user() || Auth::user()->role !== 'admin') {
+            return response()->json(['message' => 'Non autorisé.'], 403);
+        }
+
+        $count = Inscription::whereIn('id', $validated['ids'])->delete();
+
+        Log::info('Inscriptions supprimées en masse', [
+            'admin_id' => Auth::id(),
+            'ids'      => $validated['ids'],
+            'count'    => $count,
+        ]);
+
+        return response()->json([
+            'message' => "{$count} inscription(s) supprimée(s).",
+            'count'   => $count,
+        ]);
     }
 
     /**

@@ -571,8 +571,9 @@ export default function RegisterConducteur({
             newErrors["membre.statutMarital"] = "Statut marital requis";
         if (!membreTemp.employment_status)
             newErrors["membre.employment_status"] = "Statut d'emploi requis";
-        if (!membreTemp.profession)
+        if (membreTemp.employment_status === "TRAVAILLEUR" && !membreTemp.profession)
             newErrors["membre.profession"] = "Profession requise";
+        // niveau_etude optionnel
 
         // Vérifier conditions statut marital
         if (membreTemp.statutMarital === "marie") {
@@ -775,8 +776,9 @@ export default function RegisterConducteur({
             if (!responsable.employment_status)
                 newErrors["responsable.employment_status"] =
                     "Statut d'emploi requis";
-            if (!responsable.profession)
+            if (responsable.employment_status === "TRAVAILLEUR" && !responsable.profession)
                 newErrors["responsable.profession"] = "Requis";
+            // niveau_etude optionnel
             if (!responsable.statutMarital)
                 newErrors["responsable.statutMarital"] = "Requis";
 
@@ -912,7 +914,7 @@ export default function RegisterConducteur({
                         );
                         memberHasErrors = true;
                     }
-                    if (!m.profession) {
+                    if (m.employment_status === "TRAVAILLEUR" && !m.profession) {
                         memberErrors.push(
                             `Membre ${idx + 1}: Profession requise`,
                         );

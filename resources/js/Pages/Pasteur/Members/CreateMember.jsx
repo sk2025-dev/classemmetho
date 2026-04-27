@@ -117,7 +117,9 @@ export default function CreateMember({ family, errors }) {
             statut_marital: "",
             date_mariage: "",
             lieu_mariage: "",
+            employment_status: "",
             profession: "",
+            niveau_etude: "",
             fonction_id: "",
             relation: "",
             // Photo
@@ -211,7 +213,12 @@ export default function CreateMember({ family, errors }) {
                 if (!value) error = "Le statut marital est obligatoire";
                 break;
             case "profession":
-                if (!value) error = "La profession est obligatoire";
+                if (!value && data.employment_status === "TRAVAILLEUR")
+                    error = "La profession est obligatoire";
+                break;
+            case "niveau_etude":
+                if (!value && data.employment_status === "ETUDIANT")
+                    error = "Le niveau d'étude est obligatoire";
                 break;
             case "fonction_id":
                 if (!value) error = "La fonction est obligatoire";
@@ -276,8 +283,10 @@ export default function CreateMember({ family, errors }) {
             newErrors.date_naissance = "La date de naissance est obligatoire";
         if (!data.statut_marital)
             newErrors.statut_marital = "Le statut marital est obligatoire";
-        if (!data.profession)
+        if (data.employment_status === "TRAVAILLEUR" && !data.profession)
             newErrors.profession = "La profession est obligatoire";
+        if (data.employment_status === "ETUDIANT" && !data.niveau_etude)
+            newErrors.niveau_etude = "Le niveau d'étude est obligatoire";
         if (!data.fonction_id)
             newErrors.fonction_id = "La fonction est obligatoire";
 
@@ -376,7 +385,9 @@ export default function CreateMember({ family, errors }) {
                     statut_marital: "",
                     date_mariage: "",
                     lieu_mariage: "",
+                    employment_status: "",
                     profession: "",
+                    niveau_etude: "",
                     fonction_id: "",
                     relation: "",
                     photo: null,
@@ -711,6 +722,33 @@ export default function CreateMember({ family, errors }) {
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField
+                                        label="Statut d'emploi"
+                                        icon={Briefcase}
+                                        required
+                                    >
+                                        <Select2Single
+                                            name="employment_status"
+                                            value={data.employment_status || ""}
+                                            onChange={(e) => {
+                                                setData((prev) => ({
+                                                    ...prev,
+                                                    employment_status: e.target.value,
+                                                    profession: "",
+                                                    niveau_etude: "",
+                                                }));
+                                            }}
+                                            options={[
+                                                { value: "TRAVAILLEUR", label: "Travailleur" },
+                                                { value: "RETRAITE", label: "Retraité" },
+                                                { value: "ETUDIANT", label: "Étudiant" },
+                                                { value: "SANS_EMPLOI", label: "Sans emploi" },
+                                            ]}
+                                            placeholder="Sélectionner..."
+                                            isClearable={true}
+                                        />
+                                    </FormField>
+                                    {data.employment_status === "TRAVAILLEUR" && (
+                                    <FormField
                                         label="Profession"
                                         icon={Briefcase}
                                         required
@@ -741,6 +779,40 @@ export default function CreateMember({ family, errors }) {
                                             </p>
                                         )}
                                     </FormField>
+                                    )}
+                                    {data.employment_status === "ETUDIANT" && (
+                                    <FormField
+                                        label="Niveau d'étude"
+                                        icon={Briefcase}
+                                        required
+                                    >
+                                        <Select2Single
+                                            name="niveau_etude"
+                                            value={data.niveau_etude || ""}
+                                            onChange={(e) =>
+                                                handleFieldChange(
+                                                    "niveau_etude",
+                                                    e.target.value,
+                                                )
+                                            }
+                                            options={[
+                                                { value: "Primaire", label: "Primaire" },
+                                                { value: "Secondaire", label: "Secondaire" },
+                                                { value: "Lycée", label: "Lycée" },
+                                                { value: "BTS/DUT", label: "BTS / DUT" },
+                                                { value: "Licence", label: "Licence" },
+                                                { value: "Master", label: "Master" },
+                                                { value: "Doctorat", label: "Doctorat" },
+                                            ]}
+                                            placeholder="Sélectionner..."
+                                        />
+                                        {(fieldErrors.niveau_etude || errors.niveau_etude) && (
+                                            <p className="text-red-500 text-xs mt-1">
+                                                {fieldErrors.niveau_etude || errors.niveau_etude}
+                                            </p>
+                                        )}
+                                    </FormField>
+                                    )}
                                     <FormField
                                         label="Fonction dans l'église"
                                         icon={Users}

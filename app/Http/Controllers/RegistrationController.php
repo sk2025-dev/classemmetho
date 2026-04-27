@@ -435,10 +435,19 @@ class RegistrationController extends Controller
             $errors['responsable.employment_status'] = ['Le statut d\'emploi sélectionné n\'est pas valide.'];
         }
 
-        if (empty($responsable['profession_detail'])) {
-            $errors['responsable.profession_detail'] = ['La profession du responsable est obligatoire.'];
-        } elseif (strlen($responsable['profession_detail']) > 255) {
-            $errors['responsable.profession_detail'] = ['La profession ne peut pas dépasser 255 caractères.'];
+        $responsableStatus = $responsable['employment_status'] ?? '';
+        if ($responsableStatus === 'TRAVAILLEUR') {
+            if (empty($responsable['profession_detail'])) {
+                $errors['responsable.profession_detail'] = ['La profession du responsable est obligatoire.'];
+            } elseif (strlen($responsable['profession_detail']) > 255) {
+                $errors['responsable.profession_detail'] = ['La profession ne peut pas dépasser 255 caractères.'];
+            }
+        } elseif ($responsableStatus === 'ETUDIANT') {
+            if (empty($responsable['niveau_etude'])) {
+                $errors['responsable.niveau_etude'] = ['Le niveau d\'étude du responsable est obligatoire.'];
+            } elseif (strlen($responsable['niveau_etude']) > 255) {
+                $errors['responsable.niveau_etude'] = ['Le niveau d\'étude ne peut pas dépasser 255 caractères.'];
+            }
         }
 
         if (empty($responsable['statutMarital'])) {
@@ -497,10 +506,19 @@ class RegistrationController extends Controller
                     $errors["membres.{$i}.employment_status"] = ['Le statut d\'emploi sélectionné n\'est pas valide.'];
                 }
 
-                if (empty($membre['profession_detail'])) {
-                    $errors["membres.{$i}.profession_detail"] = ['La profession du membre est obligatoire.'];
-                } elseif (strlen($membre['profession_detail']) > 255) {
-                    $errors["membres.{$i}.profession_detail"] = ['La profession ne peut pas dépasser 255 caractères.'];
+                $membreStatus = $membre['employment_status'] ?? '';
+                if ($membreStatus === 'TRAVAILLEUR') {
+                    if (empty($membre['profession_detail'])) {
+                        $errors["membres.{$i}.profession_detail"] = ['La profession du membre est obligatoire.'];
+                    } elseif (strlen($membre['profession_detail']) > 255) {
+                        $errors["membres.{$i}.profession_detail"] = ['La profession ne peut pas dépasser 255 caractères.'];
+                    }
+                } elseif ($membreStatus === 'ETUDIANT') {
+                    if (empty($membre['niveau_etude'])) {
+                        $errors["membres.{$i}.niveau_etude"] = ['Le niveau d\'étude du membre est obligatoire.'];
+                    } elseif (strlen($membre['niveau_etude']) > 255) {
+                        $errors["membres.{$i}.niveau_etude"] = ['Le niveau d\'étude ne peut pas dépasser 255 caractères.'];
+                    }
                 }
 
                 if (!empty($membre['photo']) && is_object($membre['photo']) && method_exists($membre['photo'], 'isValid')) {
@@ -635,11 +653,14 @@ class RegistrationController extends Controller
                 'ville_id'     => 'nullable|integer|exists:villes,id',
                 'fonction'     => 'nullable|string|max:255',
                 'employment_status' => 'required|in:TRAVAILLEUR,RETRAITE,ETUDIANT,SANS_EMPLOI',
-                'profession_detail' => 'required|string|max:255',
+                'profession_detail' => 'nullable|string|max:255',
+                'niveau_etude'      => 'nullable|string|max:255',
                 'responsable.employment_status' => 'required|in:TRAVAILLEUR,RETRAITE,ETUDIANT,SANS_EMPLOI',
-                'responsable.profession_detail' => 'required|string|max:255',
+                'responsable.profession_detail' => 'nullable|string|max:255',
+                'responsable.niveau_etude'      => 'nullable|string|max:255',
                 'membres.*.employment_status' => 'required|in:TRAVAILLEUR,RETRAITE,ETUDIANT,SANS_EMPLOI',
-                'membres.*.profession_detail' => 'required|string|max:255',
+                'membres.*.profession_detail' => 'nullable|string|max:255',
+                'membres.*.niveau_etude'      => 'nullable|string|max:255',
                 'statutMarital' => 'nullable|string',
                 'dateMariageniv' => 'nullable|date_format:Y-m-d',
                 'lieuMariagePerso' => 'nullable|string|max:255',

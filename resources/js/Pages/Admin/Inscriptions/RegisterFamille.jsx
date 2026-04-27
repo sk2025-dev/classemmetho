@@ -558,8 +558,9 @@ export default function RegisterFamille({
             newErrors["membre.statutMarital"] = "Statut marital requis";
         if (!membreTemp.employment_status)
             newErrors["membre.employment_status"] = "Statut d'emploi requis";
-        if (!membreTemp.profession)
+        if (membreTemp.employment_status === "TRAVAILLEUR" && !membreTemp.profession)
             newErrors["membre.profession"] = "Profession requise";
+        // niveau_etude optionnel
 
         // Vérifier conditions statut marital
         if (membreTemp.statutMarital === "marie") {
@@ -780,8 +781,9 @@ export default function RegisterFamille({
             if (!responsable.employment_status)
                 newErrors["responsable.employment_status"] =
                     "Statut d'emploi requis";
-            if (!responsable.profession)
+            if (responsable.employment_status === "TRAVAILLEUR" && !responsable.profession)
                 newErrors["responsable.profession"] = "Requis";
+            // niveau_etude optionnel
             if (!responsable.statutMarital)
                 newErrors["responsable.statutMarital"] = "Requis";
             if (!responsable.lienParente)
@@ -1796,6 +1798,8 @@ export default function RegisterFamille({
                                         setResponsable({
                                             ...responsable,
                                             employment_status: e.target.value,
+                                            profession: "",
+                                            niveau_etude: "",
                                         })
                                     }
                                     placeholder="Sélectionner un statut"
@@ -1840,33 +1844,36 @@ export default function RegisterFamille({
                             </FormField>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                                label="Profession"
-                                icon={Briefcase}
-                                required
-                                hint="ex: Infirmier, Comptable"
-                            >
-                                <input
-                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none"
-                                    value={responsable.profession}
-                                    onChange={(e) =>
-                                        setResponsable({
-                                            ...responsable,
-                                            profession: e.target.value,
-                                        })
-                                    }
-                                    placeholder="ex: Enseignant, Commerçant"
-                                />
-                                {getFieldError("responsable.profession") && (
-                                    <p className="text-red-500 text-xs mt-1">
-                                        {getFieldError(
-                                            "responsable.profession",
-                                        )}
-                                    </p>
-                                )}
-                            </FormField>
-                        </div>
+                        {responsable.employment_status === "TRAVAILLEUR" && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField label="Profession" icon={Briefcase} required hint="ex: Infirmier, Comptable">
+                                    <input
+                                        className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none"
+                                        value={responsable.profession}
+                                        onChange={(e) => setResponsable({ ...responsable, profession: e.target.value })}
+                                        placeholder="ex: Enseignant, Commerçant"
+                                    />
+                                    {getFieldError("responsable.profession") && (
+                                        <p className="text-red-500 text-xs mt-1">{getFieldError("responsable.profession")}</p>
+                                    )}
+                                </FormField>
+                            </div>
+                        )}
+                        {responsable.employment_status === "ETUDIANT" && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField label="Niveau d'étude" icon={Briefcase} required>
+                                    <input
+                                        className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none"
+                                        value={responsable.niveau_etude || ""}
+                                        onChange={(e) => setResponsable({ ...responsable, niveau_etude: e.target.value })}
+                                        placeholder="ex: Licence, Master, BTS..."
+                                    />
+                                    {getFieldError("responsable.niveau_etude") && (
+                                        <p className="text-red-500 text-xs mt-1">{getFieldError("responsable.niveau_etude")}</p>
+                                    )}
+                                </FormField>
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                             <FormField
@@ -2458,8 +2465,9 @@ export default function RegisterFamille({
                                             onChange={(e) =>
                                                 setMembreTemp({
                                                     ...membreTemp,
-                                                    employment_status:
-                                                        e.target.value,
+                                                    employment_status: e.target.value,
+                                                    profession: "",
+                                                    niveau_etude: "",
                                                 })
                                             }
                                             placeholder="Sélectionner un statut"
@@ -2516,32 +2524,30 @@ export default function RegisterFamille({
                                     </FormField>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                        label="Profession"
-                                        icon={Briefcase}
-                                        required
-                                    >
-                                        <input
-                                            className={STYLES.input}
-                                            value={membreTemp.profession}
-                                            onChange={(e) =>
-                                                setMembreTemp({
-                                                    ...membreTemp,
-                                                    profession: e.target.value,
-                                                })
-                                            }
-                                            placeholder="Ex: Enseignant..."
-                                        />
-                                        {getFieldError("membre.profession") && (
-                                            <p className="text-red-500 text-xs mt-1">
-                                                {getFieldError(
-                                                    "membre.profession",
-                                                )}
-                                            </p>
-                                        )}
-                                    </FormField>
-                                </div>
+                                {membreTemp.employment_status === "TRAVAILLEUR" && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField label="Profession" icon={Briefcase} required>
+                                            <input className={STYLES.input} value={membreTemp.profession}
+                                                onChange={(e) => setMembreTemp({ ...membreTemp, profession: e.target.value })}
+                                                placeholder="Ex: Enseignant..." />
+                                            {getFieldError("membre.profession") && (
+                                                <p className="text-red-500 text-xs mt-1">{getFieldError("membre.profession")}</p>
+                                            )}
+                                        </FormField>
+                                    </div>
+                                )}
+                                {membreTemp.employment_status === "ETUDIANT" && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField label="Niveau d'étude" icon={Briefcase} required>
+                                            <input className={STYLES.input} value={membreTemp.niveau_etude || ""}
+                                                onChange={(e) => setMembreTemp({ ...membreTemp, niveau_etude: e.target.value })}
+                                                placeholder="ex: Licence, Master, BTS..." />
+                                            {getFieldError("membre.niveau_etude") && (
+                                                <p className="text-red-500 text-xs mt-1">{getFieldError("membre.niveau_etude")}</p>
+                                            )}
+                                        </FormField>
+                                    </div>
+                                )}
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField

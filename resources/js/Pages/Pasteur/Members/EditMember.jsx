@@ -142,7 +142,9 @@ export default function EditMember({ member, family }) {
         statut_marital: member.statut_marital || "",
         date_mariage: formatDateForInput(member.date_mariage),
         lieu_mariage: member.lieu_mariage || "",
+        employment_status: member.employment_status || "",
         profession: member.profession || "",
+        niveau_etude: member.niveau_etude || "",
         fonction_id: member.fonction_id || "",
         relation: member.relation || "",
         photo: null,
@@ -178,7 +180,9 @@ export default function EditMember({ member, family }) {
             statut_marital: member.statut_marital || "",
             date_mariage: formatDateForInput(member.date_mariage),
             lieu_mariage: member.lieu_mariage || "",
+            employment_status: member.employment_status || "",
             profession: member.profession || "",
+            niveau_etude: member.niveau_etude || "",
             fonction_id: member.fonction_id || "",
             relation: member.relation || "",
             photo: null,
@@ -608,7 +612,31 @@ export default function EditMember({ member, family }) {
                                 Informations Professionnelles
                             </h2>
 
-                            <FormField label="Profession" icon={Briefcase}>
+                            <FormField label="Statut d'emploi" icon={Briefcase} required>
+                                <Select2Single
+                                    name="employment_status"
+                                    value={data.employment_status || ""}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            employment_status: e.target.value,
+                                            profession: "",
+                                            niveau_etude: "",
+                                        })
+                                    }
+                                    options={[
+                                        { value: "TRAVAILLEUR", label: "Travailleur" },
+                                        { value: "RETRAITE", label: "Retraité" },
+                                        { value: "ETUDIANT", label: "Étudiant" },
+                                        { value: "SANS_EMPLOI", label: "Sans emploi" },
+                                    ]}
+                                    placeholder="Sélectionner..."
+                                    isClearable={true}
+                                />
+                            </FormField>
+
+                            {data.employment_status === "TRAVAILLEUR" && (
+                            <FormField label="Profession" icon={Briefcase} required>
                                 <input
                                     type="text"
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
@@ -619,8 +647,35 @@ export default function EditMember({ member, family }) {
                                             profession: e.target.value,
                                         })
                                     }
+                                    placeholder="ex: Enseignant, Commerçant"
                                 />
                             </FormField>
+                            )}
+
+                            {data.employment_status === "ETUDIANT" && (
+                            <FormField label="Niveau d'étude" icon={Briefcase} required>
+                                <Select2Single
+                                    name="niveau_etude"
+                                    value={data.niveau_etude || ""}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            niveau_etude: e.target.value,
+                                        })
+                                    }
+                                    options={[
+                                        { value: "Primaire", label: "Primaire" },
+                                        { value: "Secondaire", label: "Secondaire" },
+                                        { value: "Lycée", label: "Lycée" },
+                                        { value: "BTS/DUT", label: "BTS / DUT" },
+                                        { value: "Licence", label: "Licence" },
+                                        { value: "Master", label: "Master" },
+                                        { value: "Doctorat", label: "Doctorat" },
+                                    ]}
+                                    placeholder="Sélectionner..."
+                                />
+                            </FormField>
+                            )}
 
                             <FormField
                                 label="Fonction dans l'Église"
