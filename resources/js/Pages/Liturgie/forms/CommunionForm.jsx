@@ -134,7 +134,7 @@ export default function CommunionForm({
             const res = await axios.post(submitUrl, payload, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
-            setSuccessMsg(res.data?.message || "Demande de premiere communion soumise.");
+            setSuccessMsg(res.data?.message || "Demande de première communion soumise.");
             setSuccess(true);
         } catch (error) {
             const serverErrors = error?.response?.data?.errors || {};
@@ -198,9 +198,9 @@ export default function CommunionForm({
                         Acte liturgique
                     </p>
                     <h1 className="text-4xl font-light text-white mt-4">
-                        Premiere <em className="font-medium">Communion</em>
+                        Première <em className="font-medium">Communion</em>
                     </h1>
-                    <p className="text-white/90 text-sm mt-2">Eglise Methodiste du Jubile de Cocody</p>
+                    <p className="text-white/90 text-sm mt-2">Église Méthodiste du Jubilé de Cocody</p>
                 </div>
 
                 <div className="bg-white border border-slate-200 rounded-md overflow-hidden shadow-2xl">
@@ -259,7 +259,7 @@ export default function CommunionForm({
                         {!success && step === 2 && (
                             <section>
                                 <h2 className="text-2xl font-semibold text-slate-800 mb-1">Informations du candidat</h2>
-                                <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">Personne souhaitant communier pour la premiere fois.</p>
+                                <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">Personne souhaitant communier pour la première fois.</p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <Field label="Membre concerne">
                                         <select
@@ -290,13 +290,13 @@ export default function CommunionForm({
                                 </div>
                                 <Field label="Adresse"><input value={form.details.can_adr} onChange={(e) => setDetail("can_adr", e.target.value)} /></Field>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                    <Field label="A ete baptise(e) ? *">
+                                    <Field label="A été baptisé(e) ? *">
                                         <select value={form.details.can_baptise} onChange={(e) => setDetail("can_baptise", e.target.value)}>
                                             <option value="">Choisir</option><option value="Oui cette eglise">Oui - dans cette eglise</option><option value="Oui autre eglise">Oui - autre eglise</option><option value="Non">Non</option>
                                         </select>
                                         {errors["details.can_baptise"] && <Err>{errors["details.can_baptise"]}</Err>}
                                     </Field>
-                                    <Field label="Date du bapteme"><input type="date" value={form.details.can_date_bap} onChange={(e) => setDetail("can_date_bap", e.target.value)} /></Field>
+                                    <Field label="Date du baptême"><input type="date" value={form.details.can_date_bap} onChange={(e) => setDetail("can_date_bap", e.target.value)} /></Field>
                                 </div>
                                 <Field label="Anciennete dans l'eglise">
                                     <select value={form.details.can_anciennete} onChange={(e) => setDetail("can_anciennete", e.target.value)}>
@@ -359,7 +359,7 @@ export default function CommunionForm({
                             <section>
                                 <h2 className="text-2xl font-semibold text-slate-800 mb-1">Recapitulatif de la demande</h2>
                                 <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">Verifiez avant de soumettre.</p>
-                                <RecapCard title="Premiere Communion">
+                                <RecapCard title="Première Communion">
                                     <RecapRow k="Demandeur" v={recap.demandeur} />
                                     <RecapRow k="Classe" v={recap.classe} />
                                     <RecapRow k="Lien" v={recap.lien} />
@@ -367,7 +367,7 @@ export default function CommunionForm({
                                 <RecapCard title="Candidat">
                                     <RecapRow k="Identite" v={recap.candidat} />
                                     <RecapRow k="Date de naissance" v={recap.ddn} />
-                                    <RecapRow k="Baptise(e)" v={recap.baptise} />
+                                    <RecapRow k="Baptisé(e)" v={recap.baptise} />
                                 </RecapCard>
                                 <RecapCard title="Ceremonie">
                                     <RecapRow k="Date souhaitee" v={recap.date} />
@@ -389,7 +389,7 @@ export default function CommunionForm({
                                     <CheckCircle2 size={32} />
                                 </div>
                                 <h2 className="text-3xl font-semibold text-slate-800 mb-2">Demande soumise avec succes</h2>
-                                <p className="text-slate-600 max-w-md mx-auto">Votre demande de premiere communion a ete transmise a votre conducteur.</p>
+                                <p className="text-slate-600 max-w-md mx-auto">Votre demande de première communion a été transmise à votre conducteur.</p>
                                 {successMsg && <p className="text-sm text-amber-700 mt-3">{successMsg}</p>}
                                 <div className="mt-6"><button type="button" onClick={reset} className="btn-main">Nouvelle demande</button></div>
                             </section>

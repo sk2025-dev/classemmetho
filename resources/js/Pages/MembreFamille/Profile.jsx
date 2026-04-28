@@ -48,7 +48,7 @@ const formatDateForInput = (dateString) => {
 };
 
 // --- Form Field Component ---
-// Sous-composant pour les sections de Sacrements (AccordÃ©on)
+// Sous-composant pour les sections de Sacrements (Accordéon)
 const SacrementSection = ({
     title,
     icon: Icon,
@@ -126,10 +126,10 @@ export default function Profile({ member, family, fonctions }) {
     const currentDataRef = useRef(null);
     const initialPhotoUrl = resolveMemberPhotoUrl(member) || null;
 
-    // PrÃ©parer les sacrements existants
+    // Préparer les sacrements existants
     const sacrements = member.sacrements || {};
 
-    // DonnÃ©es du formulaire
+    // Données du formulaire
     const [data, setData] = useState({
         nom: member.nom || "",
         prenom: member.prenom || "",
@@ -189,7 +189,7 @@ export default function Profile({ member, family, fonctions }) {
             return;
         }
         if (!data.prenom || !data.prenom.trim()) {
-            alert("Le prÃ©nom est obligatoire");
+            alert("Le prénom est obligatoire");
             setLoading(false);
             return;
         }
@@ -199,7 +199,7 @@ export default function Profile({ member, family, fonctions }) {
             return;
         }
 
-        // PrÃ©parer les donnÃ©es pour Inertia
+        // Préparer les données pour Inertia
         const submitData = {};
 
         Object.entries(data).forEach(([k, v]) => {
@@ -224,7 +224,7 @@ export default function Profile({ member, family, fonctions }) {
             submitData,
             {
                 onSuccess: () => {
-                    alert("Modifications sauvegardÃ©es avec succÃ¨s !");
+                    alert("Modifications sauvegardées avec succès !");
                 },
                 onError: (errors) => {
                     console.error("Erreurs de validation:", errors);
@@ -264,7 +264,7 @@ export default function Profile({ member, family, fonctions }) {
                             Modifier Mon Profil
                         </h1>
                         <p className="text-white/80 text-sm">
-                            Mettez Ã  jour vos informations personnelles
+                            Mettez à jour vos informations personnelles
                         </p>
                     </div>
                 </div>
@@ -288,7 +288,7 @@ export default function Profile({ member, family, fonctions }) {
                                     {data.photoPreview ? (
                                         <img
                                             src={data.photoPreview}
-                                            alt="AperÃ§u photo"
+                                            alt="Aperçu photo"
                                             className="w-full h-full object-cover"
                                         />
                                     ) : (
@@ -330,7 +330,7 @@ export default function Profile({ member, family, fonctions }) {
                                     </label>
                                 </div>
                                 <p className="text-xs text-gray-500 italic">
-                                    Formats acceptÃ©s: JPEG, PNG, GIF (max 5MB)
+                                    Formats acceptés: JPEG, PNG, GIF (max 5MB)
                                 </p>
                             </div>
                         </div>
@@ -357,7 +357,7 @@ export default function Profile({ member, family, fonctions }) {
                                 />
                             </FormField>
 
-                            <FormField label="PrÃ©nom" icon={User} required>
+                            <FormField label="Prénom" icon={User} required>
                                 <input
                                     type="text"
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
@@ -387,7 +387,7 @@ export default function Profile({ member, family, fonctions }) {
                                 />
                             </FormField>
 
-                            <FormField label="TÃ©lÃ©phone" icon={Phone}>
+                            <FormField label="Téléphone" icon={Phone}>
                                 <input
                                     type="tel"
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
@@ -401,7 +401,7 @@ export default function Profile({ member, family, fonctions }) {
                                 />
                             </FormField>
 
-                            <FormField label="TÃ©lÃ©phone (autre)" icon={Phone}>
+                            <FormField label="Téléphone (autre)" icon={Phone}>
                                 <input
                                     type="tel"
                                     className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
@@ -423,7 +423,7 @@ export default function Profile({ member, family, fonctions }) {
                                     setData({ ...data, genre: e.target.value })
                                 }
                                 options={GENDER_OPTIONS}
-                                placeholder="SÃ©lectionner..."
+                                placeholder="Sélectionner..."
                             />
                             </FormField>
 
@@ -466,7 +466,7 @@ export default function Profile({ member, family, fonctions }) {
                             </FormField>
 
                             <FormField
-                                label="Fonction dans l'Ã‰glise"
+                                label="Fonction dans l'Église"
                                 icon={Award}
                             >
                                 <Select2Fonction
@@ -499,7 +499,7 @@ export default function Profile({ member, family, fonctions }) {
                                     setData({ ...data, relation: e.target.value })
                                 }
                                 options={RELATION_OPTIONS}
-                                placeholder="SÃ©lectionner une relation..."
+                                placeholder="Sélectionner une relation..."
                             />
                             </FormField>
 
@@ -511,13 +511,13 @@ export default function Profile({ member, family, fonctions }) {
                                     setData({ ...data, statut_marital: e.target.value })
                                 }
                                 options={MEMBER_MARITAL_STATUS_OPTIONS}
-                                placeholder="SÃ©lectionner..."
+                                placeholder="Sélectionner..."
                             />
                             </FormField>
 
-                            {/* Afficher Date et Lieu de Mariage SEULEMENT si statut marital !== CÃ©libataire */}
+                            {/* Afficher Date et Lieu de Mariage SEULEMENT si statut marital !== Célibataire */}
                             {data.statut_marital &&
-                                data.statut_marital !== "CÃ©libataire" && (
+                                data.statut_marital !== "Célibataire" && (
                                     <>
                                         <FormField
                                             label="Date de Mariage"
@@ -566,7 +566,7 @@ export default function Profile({ member, family, fonctions }) {
                         </h2>
 
                         <SacrementSection
-                            title="BaptÃªme"
+                            title="Baptême"
                             icon={Gift}
                             color="blue"
                             checked={data.baptise}
@@ -574,7 +574,7 @@ export default function Profile({ member, family, fonctions }) {
                                 setData({ ...data, baptise: checked })
                             }
                         >
-                            <FormField label="Date du BaptÃªme" icon={Calendar}>
+                            <FormField label="Date du Baptême" icon={Calendar}>
                                 <input
                                     type="date"
                                     className="w-full h-10 border border-gray-300 rounded px-2 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
@@ -587,7 +587,7 @@ export default function Profile({ member, family, fonctions }) {
                                     }
                                 />
                             </FormField>
-                            <FormField label="Lieu du BaptÃªme" icon={MapPin}>
+                            <FormField label="Lieu du Baptême" icon={MapPin}>
                                 <input
                                     type="text"
                                     className="w-full h-10 border border-gray-300 rounded px-2 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
@@ -603,7 +603,7 @@ export default function Profile({ member, family, fonctions }) {
                         </SacrementSection>
 
                         <SacrementSection
-                            title="PremiÃ¨re Communion"
+                            title="Première Communion"
                             icon={Gift}
                             color="emerald"
                             checked={data.premiere_communion}
@@ -615,7 +615,7 @@ export default function Profile({ member, family, fonctions }) {
                             }
                         >
                             <FormField
-                                label="Date de la PremiÃ¨re Communion"
+                                label="Date de la Première Communion"
                                 icon={Calendar}
                             >
                                 <input

@@ -205,7 +205,7 @@ export default function DecesForm({
             const res = await axios.post(submitUrl, payload, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
-            const msg = res.data?.message || "Declaration de deces soumise.";
+            const msg = res.data?.message || "Déclaration de décès soumise.";
             setSuccessMsg(msg);
             setSuccess(true);
             setStep(3);
@@ -279,10 +279,10 @@ export default function DecesForm({
                         Acte liturgique
                     </p>
                     <h1 className="text-4xl font-light text-white mt-4">
-                        Declaration de <em className="font-medium">Deces</em>
+                        Déclaration de <em className="font-medium">Décès</em>
                     </h1>
                     <p className="text-white/90 text-sm mt-2">
-                        Eglise Methodiste du Jubile de Cocody
+                        Église Méthodiste du Jubilé de Cocody
                     </p>
                 </div>
 
@@ -539,7 +539,7 @@ export default function DecesForm({
                                     </Field>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                    <Field label="Date de deces *">
+                                    <Field label="Date du décès *">
                                         <input
                                             type="date"
                                             max={today}
@@ -557,7 +557,7 @@ export default function DecesForm({
                                             </Err>
                                         )}
                                     </Field>
-                                    <Field label="Lieu du deces">
+                                    <Field label="Lieu du décès">
                                         <input
                                             value={form.details.lieu_deces}
                                             onChange={(e) =>

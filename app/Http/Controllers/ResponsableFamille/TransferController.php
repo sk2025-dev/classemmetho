@@ -19,6 +19,7 @@ class TransferController extends Controller
     public function index()
     {
         $user = Auth::user();
+        $transferService = app(TransferWorkflowService::class);
 
         $transfers = ClassTransferRequest::with([
             'family',
@@ -69,12 +70,13 @@ class TransferController extends Controller
         $members = User::where('family_id', $user->family_id)
             ->where('id', '!=', $user->id)
             ->where('is_family_responsible', false)
-            ->select('id', 'nom', 'prenom', 'email', 'classe_id', 'transfer_status', 'transfer_label', 'transferred_to_user_id')
-            ->get()
-            ->reject(fn (User $member) => $member->transfer_status === 'completed' && !empty($member->transferred_to_user_id))
-            ->values();
+            ->get(['id', 'nom', 'prenom', 'email', 'classe_id', 'family_id', 'is_family_responsible']);
 
-        $family = Family::findOrFail($user->family_id);
+        $members = $transferService->hydrateUsersTransferState($members)->values();
+
+        $family = $transferService
+            ->hydrateFamiliesTransferState([Family::findOrFail($user->family_id)])
+            ->first();
 
         $classes = Classe::where('id', '!=', $family->classe_id)->get(['id', 'nom']);
 
@@ -187,8 +189,8 @@ class TransferController extends Controller
             DB::commit();
 
             $message = $isExternal
-                ? "Demande de sortie externe creee avec succes (Ref: {$transfer->reference})"
-                : "Demande de transfert creee avec succes (Ref: {$transfer->reference})";
+                ? "Demande de sortie externe creee avec succes (Ref: {$transfer->reference}). En attente de confirmation du conducteur de la classe."
+                : "Demande de transfert creee avec succes (Ref: {$transfer->reference}). En attente de validation du conducteur source.";
 
             return redirect()
                 ->route('responsable_famille.transferts.index')

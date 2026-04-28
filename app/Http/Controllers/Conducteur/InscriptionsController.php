@@ -11,6 +11,7 @@ use App\Models\UserSacrement;
 use App\Mail\SendCredentials;
 use App\Mail\InscriptionRejected;
 use App\Services\InscriptionApprovalService;
+use App\Services\TransferWorkflowService;
 use App\Helpers\PhotoHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -73,11 +74,7 @@ class InscriptionsController extends Controller
 
     private function isTransferLocked(?User $member): bool
     {
-        if (!$member) {
-            return false;
-        }
-
-        return in_array((string) $member->transfer_status, ['pending', 'completed'], true);
+        return app(TransferWorkflowService::class)->isTransferLocked($member);
     }
 
     /**
@@ -94,6 +91,7 @@ class InscriptionsController extends Controller
 
         try {
             // Récupérer les classes gérées par le conducteur
+            $transferService = app(TransferWorkflowService::class);
             $conductorClasses = $user->getManagedClasses();
 
             if ($conductorClasses->isEmpty()) {
@@ -337,15 +335,18 @@ class InscriptionsController extends Controller
             // Charger les membres en incluant les sacrements pour exposer statut_marital etc.
             $members = User::whereIn('classe_id', $classIds)
                 ->where('role', '!=', 'admin')
-                ->with(['sacrements', 'fonctions:id', 'family:id,nom,code_famille', 'transferOriginFamily:id,nom,code_famille'])
-                ->get()
-                ->reject(fn (User $member) => $this->isSupersededTransferredUser($member))
+                ->with(['sacrements', 'fonctions:id', 'family:id,nom,code_famille'])
+                ->get();
+
+            $members = $transferService
+                ->hydrateUsersTransferState($members)
                 ->values()
                 ->map(function ($member) {
                     // Déduire un statut_marital simple à partir de UserSacrement s'il existe
                     $statutMarital = null;
+                    $originFamilyCode = $this->getOriginFamilyCode($member);
                     $familyCodeHistory = collect([
-                        $member->transferOriginFamily?->code_famille,
+                        $originFamilyCode,
                         $member->family?->code_famille,
                     ])->filter()->unique()->values()->all();
                     if ($member->sacrements) {
@@ -373,11 +374,11 @@ class InscriptionsController extends Controller
                         'transfer_status' => $member->transfer_status,
                         'transfer_label' => $member->transfer_label,
                         'transfer_history_label' => count($familyCodeHistory) > 1 ? 'Nouveau membre' : null,
-                        'transfer_locked' => $this->isTransferLocked($member),
+                        'transfer_locked' => (bool) $member->transfer_locked,
                         'famille_id' => $member->family_id,
                         'famille_nom' => $member->family?->nom,
                         'code_famille' => $member->family?->code_famille,
-                        'ancienne_famille_code' => $member->transferOriginFamily?->code_famille,
+                        'ancienne_famille_code' => $originFamilyCode,
                         'nouvelle_famille_code' => count($familyCodeHistory) > 1 ? $member->family?->code_famille : null,
                         'code_famille_historique' => $familyCodeHistory,
                         'profile_photo_url' => $member->profile_photo_url ?: PhotoHelper::getPhotoUrl($member->photo_path, $member->prenom, $member->nom),
@@ -411,14 +412,47 @@ class InscriptionsController extends Controller
             try {
                 $families = \App\Models\Family::whereIn('classe_id', $classIds)
                     ->with([
-                        'responsable.transferOriginFamily',
                         'responsable.fonctions:id',
-                        'users.transferOriginFamily',
                         'users.fonctions:id',
                     ])
                     ->get()
-                    ->reject(fn ($family) => $this->isSupersededTransferredFamily($family))
-                    ->values()
+                    ->values();
+
+                $families = $transferService->hydrateFamiliesTransferState($families);
+
+                $directoryUsers = $families
+                    ->flatMap(function ($family) {
+                        $users = collect();
+
+                        if ($family->responsable) {
+                            $users->push($family->responsable);
+                        }
+
+                        return $users->concat($family->users);
+                    })
+                    ->unique('id')
+                    ->values();
+
+                $hydratedDirectoryUsers = $transferService
+                    ->hydrateUsersTransferState($directoryUsers)
+                    ->keyBy('id');
+
+                $families = $families
+                    ->map(function ($family) use ($hydratedDirectoryUsers) {
+                        if ($family->responsable) {
+                            $family->setRelation(
+                                'responsable',
+                                $hydratedDirectoryUsers->get($family->responsable->id, $family->responsable)
+                            );
+                        }
+
+                        $family->setRelation(
+                            'users',
+                            $family->users->map(fn ($user) => $hydratedDirectoryUsers->get($user->id, $user))
+                        );
+
+                        return $family;
+                    })
                     ->map(function ($family) {
                         // Vérifier que le responsable existe
                         if (!$family->responsable) {
@@ -439,7 +473,7 @@ class InscriptionsController extends Controller
                                 'code_membre' => $family->responsable->code_membre ?? null,
                                 'transfer_status' => $family->responsable->transfer_status,
                                 'transfer_label' => $family->responsable->transfer_label,
-                                'transfer_locked' => $this->isTransferLocked($family->responsable),
+                                'transfer_locked' => (bool) $family->responsable->transfer_locked,
                                 'profile_photo_url' => $family->responsable->profile_photo_url
                                     ?: PhotoHelper::getPhotoUrl(
                                         $family->responsable->photo_path ?? null,
@@ -448,11 +482,11 @@ class InscriptionsController extends Controller
                                     ),
                             ],
                             'members' => $family->users
-                                ->reject(fn ($user) => $this->isSupersededTransferredUser($user))
                                 ->values()
                                 ->map(function ($user) use ($family) {
+                                $originFamilyCode = $this->getOriginFamilyCode($user);
                                 $familyCodeHistory = collect([
-                                    $user->transferOriginFamily?->code_famille,
+                                    $originFamilyCode,
                                     $family->code_famille,
                                 ])->filter()->unique()->values()->all();
 
@@ -474,7 +508,7 @@ class InscriptionsController extends Controller
                                     'transfer_status' => $user->transfer_status,
                                     'transfer_label' => $user->transfer_label,
                                     'transfer_history_label' => count($familyCodeHistory) > 1 ? 'Nouveau membre' : null,
-                                    'transfer_locked' => $this->isTransferLocked($user),
+                                    'transfer_locked' => (bool) $user->transfer_locked,
                                     'genre' => $user->genre ?? '',
                                     'date_naissance' => $user->date_naissance ?? '',
                                     'employment_status' => $user->employment_status ?? null,
@@ -485,7 +519,7 @@ class InscriptionsController extends Controller
                                     'fonction_ids' => $user->fonctions->pluck('id')->values()->all(),
                                     'family_id' => $user->family_id,
                                     'code_famille' => $family->code_famille,
-                                    'ancienne_famille_code' => $user->transferOriginFamily?->code_famille,
+                                    'ancienne_famille_code' => $originFamilyCode,
                                     'nouvelle_famille_code' => count($familyCodeHistory) > 1 ? $family->code_famille : null,
                                     'code_famille_historique' => $familyCodeHistory,
                                     'is_family_responsible' => $family->responsable_id == $user->id,
@@ -493,12 +527,10 @@ class InscriptionsController extends Controller
                                     'updated_at' => $user->updated_at,
                                 ];
                             })->toArray(),
-                            'member_count' => $family->users
-                                ->reject(fn ($user) => $this->isSupersededTransferredUser($user))
-                                ->count(),
+                            'member_count' => $family->users->count(),
                             'transfer_status' => $family->transfer_status,
                             'transfer_label' => $family->transfer_label,
-                            'transfer_locked' => in_array((string) $family->transfer_status, ['pending', 'completed'], true),
+                            'transfer_locked' => (bool) $family->transfer_locked,
                         ];
                     })
                     ->filter(function ($item) {
@@ -848,7 +880,7 @@ class InscriptionsController extends Controller
             if ($familyId) {
                 $family = Family::find($familyId);
 
-                if ($family && in_array((string) $family->transfer_status, ['pending', 'completed'], true)) {
+                if ($family && app(TransferWorkflowService::class)->isTransferLocked($family)) {
                     return back()->with('error', 'Impossible d\'ajouter un membre dans une famille en transfert ou archivee.');
                 }
             }
@@ -1554,17 +1586,9 @@ class InscriptionsController extends Controller
         if (is_string($value)) return strtolower($value) === 'true' || $value === '1';
         return (bool) $value;
     }
-    private function isSupersededTransferredUser(User $user): bool
-    {
-        return $user->transfer_status === 'completed'
-            && !empty($user->transferred_to_user_id);
-    }
 
-    private function isSupersededTransferredFamily(Family $family): bool
+    private function getOriginFamilyCode(User $user): ?string
     {
-        return $family->transfer_status === 'completed'
-            && !empty($family->transferred_to_family_id)
-            && (int) $family->transferred_to_family_id !== (int) $family->id;
+        return $user->getRelation('computedOriginFamilyTransferRequest')?->family?->code_famille;
     }
 }
-

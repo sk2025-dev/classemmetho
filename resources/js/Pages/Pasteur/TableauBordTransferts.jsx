@@ -1,6 +1,7 @@
-import React, { useState, useMemo, useEffect } from "react";
+﻿import React, { useState, useMemo, useEffect } from "react";
 import { usePage, router } from "@inertiajs/react";
 import {
+    ArrowLeft,
     CheckCircle,
     Clock,
     XCircle,
@@ -15,6 +16,7 @@ import {
     MapPin,
     Layers,
 } from "lucide-react";
+import Select2Single from "../../Components/Select2Single";
 import { withBasePath } from "../../Utils/urlHelper";
 
 const fontStyle = `
@@ -1099,11 +1101,49 @@ export default function Index({
         }
     };
 
+    const statusOptions = [
+        { value: "SOUMISE", label: "Soumise" },
+        { value: "VALIDEE_SOURCE", label: "Validee Source" },
+        { value: "TERMINEE", label: "Terminee" },
+        { value: "REFUSEE", label: "Refusee" },
+    ];
+
+    const classOptions = classes.map((classe) => ({
+        value: classe.id,
+        label: classe.nom,
+    }));
+
     const memberOptions = members.map((member) => ({
         value: member.id,
         label: getMemberOptionLabel(member),
         disabled: Boolean(member.transfer_status),
     }));
+    const matchesSelectedValue = (left, right) =>
+        String(left ?? "") === String(right ?? "");
+    const getMemberDisplayName = (member) =>
+        [member?.nom, member?.prenom].filter(Boolean).join(" ").trim();
+    const selectedMember = isMemberTransferType
+        ? members.find((member) =>
+              matchesSelectedValue(member.id, formData.member_id),
+          )
+        : null;
+    const selectedClass = !isExternalTransferType
+        ? classes.find((classe) =>
+              matchesSelectedValue(classe.id, formData.target_class_id),
+          )
+        : null;
+    const selectedMemberLabel =
+        getMemberDisplayName(selectedMember) ||
+        memberOptions.find((option) =>
+            matchesSelectedValue(option.value, formData.member_id),
+        )?.label ||
+        "—";
+    const selectedClassLabel =
+        selectedClass?.nom ||
+        classOptions.find((option) =>
+            matchesSelectedValue(option.value, formData.target_class_id),
+        )?.label ||
+        "—";
 
     const stats = useMemo(
         () => ({
@@ -1234,9 +1274,13 @@ export default function Index({
 
                 <div
                     style={{
-                        maxWidth: 1200,
+                        flex: "1 1 0%",
+                        maxWidth: "100%",
+                        width: "100%",
                         margin: "0 auto",
                         padding: "40px 24px",
+                        display: "flex",
+                        flexDirection: "column",
                     }}
                 >
                     {/* Header */}
@@ -1248,7 +1292,39 @@ export default function Index({
                             marginBottom: 36,
                         }}
                     >
-                        <div className="card-enter">
+                        <div
+                            className="card-enter"
+                            style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "flex-start",
+                                gap: 14,
+                            }}
+                        >
+                            <button
+                                onClick={() =>
+                                    router.visit(
+                                        withBasePath("", "/pasteur/dashboard"),
+                                    )
+                                }
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    padding: "9px 14px",
+                                    borderRadius: 999,
+                                    border: "1px solid rgba(255,255,255,0.22)",
+                                    background: "rgba(255,255,255,0.1)",
+                                    color: "#fff",
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    backdropFilter: "blur(10px)",
+                                }}
+                            >
+                                <ArrowLeft size={15} />
+                                Retour
+                            </button>
                             <p
                                 style={{
                                     fontSize: 12,
@@ -1393,29 +1469,19 @@ export default function Index({
                                         }}
                                     />
                                 </div>
-                                <select
-                                    className="input-field"
-                                    value={statusFilter}
-                                    onChange={(e) =>
-                                        setStatusFilter(e.target.value)
-                                    }
-                                    style={{
-                                        padding: "10px 14px",
-                                        fontSize: 13.5,
-                                        color: "#333",
-                                        cursor: "pointer",
-                                        fontWeight: 500,
-                                        minWidth: 160,
-                                    }}
-                                >
-                                    <option value="">Tous les statuts</option>
-                                    <option value="SOUMISE">Soumise</option>
-                                    <option value="VALIDEE_SOURCE">
-                                        Validée Source
-                                    </option>
-                                    <option value="TERMINEE">Terminée</option>
-                                    <option value="REFUSEE">Refusée</option>
-                                </select>
+                                <div style={{ minWidth: 160 }}>
+                                    <Select2Single
+                                        name="status_filter"
+                                        value={statusFilter}
+                                        onChange={(e) =>
+                                            setStatusFilter(e.target.value)
+                                        }
+                                        options={statusOptions}
+                                        placeholder="Tous les statuts"
+                                        variant="orange"
+                                        allowClearOption={true}
+                                    />
+                                </div>
                             </div>
                         </div>
                     )}
@@ -1594,13 +1660,13 @@ export default function Index({
                                                 value: "member_external",
                                                 label: "Sortie externe d'un membre",
                                                 icon: MapPin,
-                                                desc: "Archive un membre comme ancien membre vers une autre eglise",
+                                                desc: "Archive un membre comme ancien membre vers une autre eglise apres approbation du conducteur de la classe",
                                             },
                                             {
                                                 value: "family_external",
                                                 label: "Sortie externe d'une famille",
                                                 icon: MapPin,
-                                                desc: "Archive toute la famille hors communaute vers une autre eglise",
+                                                desc: "Archive toute la famille hors communaute vers une autre eglise apres approbation du conducteur de la classe",
                                             },
                                         ].map((opt) => (
                                             <div
@@ -1613,14 +1679,14 @@ export default function Index({
                                                     padding: "14px 16px",
                                                 }}
                                                 onClick={() =>
-                                                    setFormData({
-                                                        ...formData,
+                                                    setFormData((prev) => ({
+                                                        ...prev,
                                                         type: opt.value,
                                                         member_id: "",
                                                         target_class_id: "",
                                                         destination_city: "",
                                                         destination_church: "",
-                                                    })
+                                                    }))
                                                 }
                                             >
                                                 <div
@@ -1706,6 +1772,43 @@ export default function Index({
                                             </p>
                                         </div>
                                     )}
+                                    {formData.type === "member_external" && (
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "flex-start",
+                                                gap: 10,
+                                                background: "#fff7ed",
+                                                border: "1px solid #fed7aa",
+                                                borderRadius: 10,
+                                                padding: "12px 14px",
+                                                marginTop: 16,
+                                            }}
+                                        >
+                                            <Info
+                                                style={{
+                                                    width: 15,
+                                                    height: 15,
+                                                    color: "#f97316",
+                                                    flexShrink: 0,
+                                                    marginTop: 1,
+                                                }}
+                                            />
+                                            <p
+                                                style={{
+                                                    fontSize: 12,
+                                                    color: "#9a3412",
+                                                    margin: 0,
+                                                    lineHeight: 1.5,
+                                                }}
+                                            >
+                                                Apres approbation du conducteur
+                                                de la classe, ce membre sera
+                                                archive comme ancien membre vers
+                                                l'eglise de destination.
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -1730,38 +1833,21 @@ export default function Index({
                                                     marginBottom: 8,
                                                 }}
                                             >
-                                                Membre
+                                                Membre concerne
                                             </label>
-                                            <select
+                                            <Select2Single
+                                                name="member_id"
                                                 value={formData.member_id}
                                                 onChange={(e) =>
-                                                    setFormData({
-                                                        ...formData,
-                                                        member_id:
-                                                            e.target.value,
-                                                    })
+                                                    setFormData((prev) => ({
+                                                        ...prev,
+                                                        member_id: e.target.value,
+                                                    }))
                                                 }
-                                                className="input-field"
-                                                style={{
-                                                    width: "100%",
-                                                    padding: "10px 14px",
-                                                    fontSize: 13,
-                                                    color: "#111",
-                                                }}
-                                            >
-                                                <option value="">
-                                                    Sélectionner un membre…
-                                                </option>
-                                                {memberOptions.map((m) => (
-                                                    <option
-                                                        key={m.id}
-                                                        value={m.id}
-                                                        disabled={m.disabled}
-                                                    >
-                                                        {m.label}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                                options={memberOptions}
+                                                placeholder="Selectionner un membre"
+                                                allowClearOption={true}
+                                            />
                                             <div
                                                 style={{
                                                     marginTop: 8,
@@ -1789,32 +1875,20 @@ export default function Index({
                                             >
                                                 Classe cible
                                             </label>
-                                            <select
+                                            <Select2Single
+                                                name="target_class_id"
                                                 value={formData.target_class_id}
                                                 onChange={(e) =>
-                                                    setFormData({
-                                                        ...formData,
+                                                    setFormData((prev) => ({
+                                                        ...prev,
                                                         target_class_id:
                                                             e.target.value,
-                                                    })
+                                                    }))
                                                 }
-                                                className="input-field"
-                                                style={{
-                                                    width: "100%",
-                                                    padding: "10px 14px",
-                                                    fontSize: 13,
-                                                    color: "#111",
-                                                }}
-                                            >
-                                                <option value="">
-                                                    Selectionner une classe...
-                                                </option>
-                                                {classes.map((c) => (
-                                                    <option key={c.id} value={c.id}>
-                                                        {c.nom}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                                options={classOptions}
+                                                placeholder="Selectionner une classe..."
+                                                allowClearOption={true}
+                                            />
                                         </div>
                                     ) : (
                                         <>
@@ -1836,11 +1910,11 @@ export default function Index({
                                                     type="text"
                                                     value={formData.destination_city}
                                                     onChange={(e) =>
-                                                        setFormData({
-                                                            ...formData,
+                                                        setFormData((prev) => ({
+                                                            ...prev,
                                                             destination_city:
                                                                 e.target.value,
-                                                        })
+                                                        }))
                                                     }
                                                     className="input-field"
                                                     placeholder="Ex: Abidjan"
@@ -1865,20 +1939,20 @@ export default function Index({
                                                         marginBottom: 8,
                                                     }}
                                                 >
-                                                    Eglise de destination
+                                                    Nom d'eglise de destination
                                                 </label>
                                                 <input
                                                     type="text"
                                                     value={formData.destination_church}
                                                     onChange={(e) =>
-                                                        setFormData({
-                                                            ...formData,
+                                                        setFormData((prev) => ({
+                                                            ...prev,
                                                             destination_church:
                                                                 e.target.value,
-                                                        })
+                                                        }))
                                                     }
                                                     className="input-field"
-                                                    placeholder="Ex: Eglise Genese"
+                                                    placeholder="Ex: Eglise genese"
                                                     style={{
                                                         width: "100%",
                                                         padding: "10px 14px",
@@ -1916,10 +1990,10 @@ export default function Index({
                                         <textarea
                                             value={formData.reason}
                                             onChange={(e) =>
-                                                setFormData({
-                                                    ...formData,
+                                                setFormData((prev) => ({
+                                                    ...prev,
                                                     reason: e.target.value,
-                                                })
+                                                }))
                                             }
                                             rows={3}
                                             className="input-field"
@@ -1970,19 +2044,7 @@ export default function Index({
                                                 ? [
                                                       {
                                                           key: "Membre",
-                                                          val: (() => {
-                                                              const m =
-                                                                  members.find(
-                                                                      (m) =>
-                                                                          String(
-                                                                              m.id,
-                                                                          ) ===
-                                                                          formData.member_id,
-                                                                  );
-                                                              return m
-                                                                  ? `${m.nom} ${m.prenom}`
-                                                                  : "—";
-                                                          })(),
+                                                          val: selectedMemberLabel,
                                                       },
                                                   ]
                                                 : []),
@@ -1990,22 +2052,21 @@ export default function Index({
                                                 ? [
                                                       {
                                                           key: "Ville de destination",
-                                                          val: formData.destination_city || "â€”",
+                                                          val:
+                                                              formData.destination_city ||
+                                                              "—",
                                                       },
                                                       {
-                                                          key: "Eglise de destination",
-                                                          val: formData.destination_church || "â€”",
+                                                          key: "Nom d'eglise de destination",
+                                                          val:
+                                                              formData.destination_church ||
+                                                              "—",
                                                       },
                                                   ]
                                                 : [
                                                       {
                                                           key: "Classe cible",
-                                                          val:
-                                                              classes.find(
-                                                                  (c) =>
-                                                                      String(c.id) ===
-                                                                      formData.target_class_id,
-                                                              )?.nom || "â€”",
+                                                          val: selectedClassLabel,
                                                       },
                                                   ]),
                                             ...(formData.reason
@@ -2061,9 +2122,9 @@ export default function Index({
                                             lineHeight: 1.6,
                                         }}
                                     >
-                                        Votre demande sera validée par le
-                                        conducteur source, puis par le
-                                        conducteur d'accueil.
+                                        {isExternalTransferType
+                                            ? "Cette sortie externe sera soumise au conducteur de la classe pour confirmation avant archivage."
+                                            : "Votre demande sera validée par le conducteur source, puis par le conducteur d'accueil."}
                                     </p>
                                 </div>
                             )}

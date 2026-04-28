@@ -147,7 +147,7 @@ export default function ConfirmationForm({
                     <h1 className="text-4xl font-light text-white mt-4">
                         Demande de <em className="font-medium">Confirmation</em>
                     </h1>
-                    <p className="text-white/90 text-sm mt-2">Eglise Methodiste du Jubile de Cocody</p>
+                    <p className="text-white/90 text-sm mt-2">Église Méthodiste du Jubilé de Cocody</p>
                 </div>
 
                 <div className="bg-white border border-slate-200 rounded-md overflow-hidden shadow-2xl">
@@ -178,10 +178,10 @@ export default function ConfirmationForm({
                                 <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">Personne soumettant la demande de confirmation.</p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <Field label="Nom *"><input value={form.details.dec_nom} onChange={(e) => setDetail("dec_nom", e.target.value)} />{errors.dec_nom && <Err>{errors.dec_nom}</Err>}</Field>
-                                    <Field label="Prenoms *"><input value={form.details.dec_prenom} onChange={(e) => setDetail("dec_prenom", sanitizeUppercasePrenom(e.target.value))} />{errors.dec_prenom && <Err>{errors.dec_prenom}</Err>}</Field>
+                                    <Field label="Prénoms *"><input value={form.details.dec_prenom} onChange={(e) => setDetail("dec_prenom", sanitizeUppercasePrenom(e.target.value))} />{errors.dec_prenom && <Err>{errors.dec_prenom}</Err>}</Field>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                    <Field label="Telephone"><input value={form.details.dec_tel} onChange={(e) => setDetail("dec_tel", e.target.value)} /></Field>
+                                    <Field label="Téléphone"><input value={form.details.dec_tel} onChange={(e) => setDetail("dec_tel", e.target.value)} /></Field>
                                     <Field label="Classe">
                                         <select value={form.classe_id || ""} onChange={(e) => setForm((prev) => ({ ...prev, classe_id: e.target.value }))}>
                                             <option value="">Selectionner</option>
@@ -219,42 +219,42 @@ export default function ConfirmationForm({
                         {!success && step === 2 && (
                             <section>
                                 <h2 className="text-2xl font-semibold text-slate-800 mb-1">Informations du confirmand</h2>
-                                <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">Renseignez les informations de la personne a confirmer.</p>
+                                <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">Renseignez les informations de la personne à confirmer.</p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <Field label="Nom complet *"><input value={form.details.confirmand} onChange={(e) => setDetail("confirmand", e.target.value)} />{errors["details.confirmand"] && <Err>{errors["details.confirmand"]}</Err>}</Field>
                                     <Field label="Date de naissance"><input type="date" value={form.details.date_naissance} onChange={(e) => setDetail("date_naissance", e.target.value)} /></Field>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <Field label="Lieu de naissance"><input value={form.details.lieu_naissance} onChange={(e) => setDetail("lieu_naissance", e.target.value)} /></Field>
-                                    <Field label="Baptise ?">
+                                    <Field label="Baptisé(e) ?">
                                         <select value={form.details.baptise} onChange={(e) => setDetail("baptise", e.target.value)}>
                                             <option value="">Choisir</option><option value="Oui">Oui</option><option value="Non">Non</option>
                                         </select>
                                     </Field>
                                 </div>
-                                <Field label="Date du bapteme"><input type="date" value={form.details.date_bapteme} onChange={(e) => setDetail("date_bapteme", e.target.value)} /></Field>
+                                <Field label="Date du baptême"><input type="date" value={form.details.date_bapteme} onChange={(e) => setDetail("date_bapteme", e.target.value)} /></Field>
                                 <FooterButtons onPrev={prev} onNext={next} />
                             </section>
                         )}
 
                         {!success && step === 3 && (
                             <section>
-                                <h2 className="text-2xl font-semibold text-slate-800 mb-1">Preparation catechetique</h2>
-                                <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">Informations de preparation et details de la celebration.</p>
+                                <h2 className="text-2xl font-semibold text-slate-800 mb-1">Préparation catéchétique</h2>
+                                <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">Informations de préparation et détails de la célébration.</p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                    <Field label="Niveau de catechese">
+                                    <Field label="Niveau de catéchèse">
                                         <select value={form.details.niveau_catechese} onChange={(e) => setDetail("niveau_catechese", e.target.value)}>
                                             <option value="">Choisir</option><option value="terminee">Terminee</option><option value="en_cours">En cours</option><option value="debut">Debut</option>
                                         </select>
                                     </Field>
-                                    <Field label="Responsable catechese"><input value={form.details.responsable_catechese} onChange={(e) => setDetail("responsable_catechese", e.target.value)} /></Field>
+                                    <Field label="Responsable catéchèse"><input value={form.details.responsable_catechese} onChange={(e) => setDetail("responsable_catechese", e.target.value)} /></Field>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <Field label="Date de confirmation *"><input type="date" value={form.details.date} onChange={(e) => setDetail("date", e.target.value)} />{errors["details.date"] && <Err>{errors["details.date"]}</Err>}</Field>
                                     <Field label="Lieu de la celebration *"><input value={form.details.lieu} onChange={(e) => setDetail("lieu", e.target.value)} />{errors["details.lieu"] && <Err>{errors["details.lieu"]}</Err>}</Field>
                                 </div>
                                 <Field label="Observations"><textarea value={form.details.observations} onChange={(e) => setDetail("observations", e.target.value)} /></Field>
-                                <Field label="Pieces jointes">
+                                <Field label="Pièces jointes">
                                     <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setForm((prev) => ({ ...prev, pieces_jointes: Array.from(e.target.files || []) }))} />
                                 </Field>
                                 <FooterButtons onPrev={prev} onNext={next} />
