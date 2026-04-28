@@ -2114,10 +2114,6 @@ export default function Index({
                     {tab === "historique" && (
                         <HistoriqueTab
                             historique={historique}
-                            pagedHistorique={pagedHistorique}
-                            historiquePage={historiquePage}
-                            historiqueTotalPages={historiqueTotalPages}
-                            setHistoriquePage={setHistoriquePage}
                             openModal={openModal}
                             prettyType={prettyType}
                             prettyStatut={prettyStatut}

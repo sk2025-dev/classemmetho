@@ -121,7 +121,7 @@ class MemberController extends Controller
                 'lieu_mariage.string' => 'Le lieu de mariage doit être un texte valide',
                 'profession.max' => 'La profession ne doit pas dépasser 255 caractères',
                 'fonction_id.exists' => 'La fonction sélectionnée n\'existe pas',
-                'fonction_ids.max' => 'Vous pouvez sélectionner au maximum 2 fonctions',
+                'fonction_ids.max' => 'Vous pouvez sélectionner au maximum 10 fonctions',
                 'fonction_ids.*.exists' => 'Une des fonctions sélectionnées n\'existe pas',
                 'photo.image' => 'Le fichier doit être une image valide',
                 'photo.mimes' => 'L\'image doit être au format JPEG, PNG ou GIF',

@@ -463,6 +463,10 @@ Route::middleware(['auth'])->group(function () {
             ->name('responsable_famille.tresorerie.paiements.initiate');
         Route::post('/responsable-famille/tresorerie/dons', [ResponsableFamilleTresorerieController::class, 'storeDon'])
             ->name('responsable_famille.tresorerie.dons.store');
+        Route::post('/responsable-famille/tresorerie/dons/initiate', [ResponsableFamilleTresorerieController::class, 'initiateDonLibre'])
+            ->name('responsable_famille.tresorerie.dons.initiate');
+        Route::get('/responsable-famille/tresorerie/dons/verify', [ResponsableFamilleTresorerieController::class, 'verifyDonLibre'])
+            ->name('responsable_famille.tresorerie.dons.verify');
         Route::get('/responsable-famille/tresorerie/paiement/{paiement}/verify', [ResponsableFamilleTresorerieController::class, 'verifyPaiement'])
             ->name('responsable_famille.tresorerie.paiement.verify');
 

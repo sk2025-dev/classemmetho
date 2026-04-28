@@ -35,21 +35,30 @@ const FALLBACK_MEMBRES = [
         id: 1,
         nom: "MARYSE N'GORAN",
         role: "Chef",
-        cotisationDue: 50000,
+        profil: "femme",
+        profil_label: "Femme",
+        montant_cible: 50000,
+        cotisationDue: 0,
         paiements: 65000,
     },
     {
         id: 2,
         nom: "KONAN N'GORAN",
-        role: "Conjoint",
-        cotisationDue: 75000,
+        role: "Membre",
+        profil: "homme",
+        profil_label: "Homme",
+        montant_cible: 75000,
+        cotisationDue: 60000,
         paiements: 15000,
     },
     {
         id: 3,
         nom: "ANGE N'GORAN",
-        role: "Enfant",
-        cotisationDue: 50000,
+        role: "Membre",
+        profil: "enfant",
+        profil_label: "Enfant",
+        montant_cible: 25000,
+        cotisationDue: 25000,
         paiements: 0,
     },
 ];
@@ -656,123 +665,383 @@ function TabConsultation({ cotisations, membres, totalDues }) {
 /* ─────────────────────────────────────────
    TAB — MEMBRES
 ───────────────────────────────────────── */
-function TabMembres({ membres }) {
+const PROFIL_STYLES = {
+    homme:   { bg: "#e6f1fb", color: "#185fa5", label: "👨 Homme" },
+    femme:   { bg: "#f5effe", color: "#7c3aed", label: "👩 Femme" },
+    enfant:  { bg: "#faeeda", color: "#854f0b", label: "🧒 Enfant" },
+    inconnu: { bg: "#f1efe8", color: "#5f5e5a", label: "—" },
+};
+
+function ProfilBadge({ profil }) {
+    const s = PROFIL_STYLES[profil] ?? PROFIL_STYLES.inconnu;
+    return (
+        <span
+            style={{
+                display: "inline-block",
+                padding: "3px 10px",
+                borderRadius: 20,
+                fontSize: 11,
+                fontWeight: 600,
+                background: s.bg,
+                color: s.color,
+                whiteSpace: "nowrap",
+            }}
+        >
+            {s.label}
+        </span>
+    );
+}
+
+function TabMembres({ membres, cotisations }) {
+    const [selectedCotisationId, setSelectedCotisationId] = useState("");
+
+    const selectedCotisation = cotisations.find(
+        (c) => String(c.id) === String(selectedCotisationId),
+    ) ?? null;
+
     return (
         <div>
             <h3 style={sectionTitle}>
                 Situation de vos {membres.length} membres
             </h3>
-            <div style={{ overflowX: "auto" }}>
-                <table
+
+            {/* Sélecteur de cotisation */}
+            <div
+                style={{
+                    marginBottom: 18,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    flexWrap: "wrap",
+                }}
+            >
+                <label
                     style={{
-                        width: "100%",
-                        borderCollapse: "collapse",
                         fontSize: 13,
+                        fontWeight: 600,
+                        color: "#3b2a8a",
+                        whiteSpace: "nowrap",
                     }}
                 >
-                    <thead>
-                        <tr style={{ background: "#f8f8fc" }}>
-                            {[
-                                "Membre",
-                                "Rôle",
-                                "À payer",
-                                "Payé",
-                                "Statut",
-                                "Actions",
-                            ].map((h) => (
-                                <th
-                                    key={h}
-                                    style={{
-                                        padding: "9px 12px",
-                                        textAlign: "left",
-                                        color: "#888",
-                                        fontWeight: 500,
-                                        fontSize: 11,
-                                        borderBottom: "1px solid #eee",
-                                    }}
-                                >
-                                    {h}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {membres.map((m) => (
-                            <tr
-                                key={m.id}
-                                style={{ borderBottom: "0.5px solid #f0f0f0" }}
-                            >
-                                <td
-                                    style={{
-                                        padding: "11px 12px",
-                                        fontWeight: 600,
-                                        color: "#1a1a2e",
-                                    }}
-                                >
-                                    {m.nom}
-                                </td>
-                                <td style={{ padding: "11px 12px" }}>
-                                    <Badge color="purple">{m.role}</Badge>
-                                </td>
-                                <td
-                                    style={{
-                                        padding: "11px 12px",
-                                        fontWeight: 700,
-                                        color: "#e24b4a",
-                                    }}
-                                >
-                                    {fmtCurrency(m.cotisationDue)}
-                                </td>
-                                <td
-                                    style={{
-                                        padding: "11px 12px",
-                                        fontWeight: 700,
-                                        color: "#1d9e75",
-                                    }}
-                                >
-                                    {fmtCurrency(m.paiements)}
-                                </td>
-                                <td style={{ padding: "11px 12px" }}>
-                                    <Badge
-                                        color={
-                                            m.cotisationDue === 0
-                                                ? "green"
-                                                : "red"
-                                        }
-                                    >
-                                        {m.cotisationDue === 0
-                                            ? "À jour ✓"
-                                            : "En retard"}
-                                    </Badge>
-                                </td>
-                                <td style={{ padding: "11px 12px" }}>
-                                    <button
+                    Cotisation :
+                </label>
+                <select
+                    value={selectedCotisationId}
+                    onChange={(e) => setSelectedCotisationId(e.target.value)}
+                    style={{
+                        flex: 1,
+                        minWidth: 200,
+                        maxWidth: 380,
+                        height: 38,
+                        border: "1.5px solid #d1d5db",
+                        borderRadius: 8,
+                        padding: "0 12px",
+                        fontSize: 13,
+                        color: "#1a1a2e",
+                        background: "#fff",
+                        outline: "none",
+                        cursor: "pointer",
+                    }}
+                >
+                    <option value="">— Sélectionner une cotisation —</option>
+                    {cotisations.map((c) => (
+                        <option key={c.id} value={c.id}>
+                            {c.nom} ({c.periodicite})
+                        </option>
+                    ))}
+                </select>
+
+                {selectedCotisation && (
+                    <span
+                        style={{
+                            fontSize: 12,
+                            color: "#3b2a8a",
+                            background: "#eeedfe",
+                            borderRadius: 20,
+                            padding: "4px 12px",
+                            fontWeight: 600,
+                            whiteSpace: "nowrap",
+                        }}
+                    >
+                        Base : {fmtCurrency(selectedCotisation.montant)} · {selectedCotisation.periodicite}
+                    </span>
+                )}
+            </div>
+
+            {!selectedCotisation ? (
+                <div
+                    style={{
+                        textAlign: "center",
+                        padding: "40px 20px",
+                        color: "#aaa",
+                        fontSize: 13,
+                        border: "1.5px dashed #e0e0e0",
+                        borderRadius: 10,
+                    }}
+                >
+                    Sélectionnez une cotisation pour voir le montant à payer par membre.
+                </div>
+            ) : (
+                <div style={{ overflowX: "auto" }}>
+                    <table
+                        style={{
+                            width: "100%",
+                            borderCollapse: "collapse",
+                            fontSize: 13,
+                        }}
+                    >
+                        <thead>
+                            <tr style={{ background: "#f8f8fc" }}>
+                                {["Membre", "Rôle", "Profil", "Montant à payer"].map((h) => (
+                                    <th
+                                        key={h}
                                         style={{
-                                            color: "#3b2a8a",
-                                            background: "none",
-                                            border: "none",
-                                            cursor: "pointer",
-                                            fontSize: 12,
+                                            padding: "9px 12px",
+                                            textAlign: "left",
+                                            color: "#888",
                                             fontWeight: 500,
+                                            fontSize: 11,
+                                            borderBottom: "1px solid #eee",
+                                            whiteSpace: "nowrap",
                                         }}
                                     >
-                                        Détails
-                                    </button>
-                                </td>
+                                        {h}
+                                    </th>
+                                ))}
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {membres.map((m) => {
+                                const amountRaw =
+                                    selectedCotisation.amounts_par_membre?.[m.id];
+                                const isCible = amountRaw !== null && amountRaw !== undefined;
+                                const amount = isCible ? amountRaw : 0;
+
+                                return (
+                                    <tr
+                                        key={m.id}
+                                        style={{
+                                            borderBottom: "0.5px solid #f0f0f0",
+                                            opacity: isCible ? 1 : 0.5,
+                                        }}
+                                    >
+                                        <td
+                                            style={{
+                                                padding: "11px 12px",
+                                                fontWeight: 600,
+                                                color: "#1a1a2e",
+                                                whiteSpace: "nowrap",
+                                            }}
+                                        >
+                                            {m.nom}
+                                        </td>
+                                        <td style={{ padding: "11px 12px" }}>
+                                            <Badge color="purple">{m.role}</Badge>
+                                        </td>
+                                        <td style={{ padding: "11px 12px" }}>
+                                            <ProfilBadge profil={m.profil ?? "inconnu"} />
+                                        </td>
+                                        <td
+                                            style={{
+                                                padding: "11px 12px",
+                                                fontWeight: 700,
+                                            }}
+                                        >
+                                            {isCible ? (
+                                                <span style={{ color: amount === 0 ? "#1d9e75" : "#e24b4a" }}>
+                                                    {fmtCurrency(amount)}
+                                                </span>
+                                            ) : (
+                                                <span
+                                                    style={{
+                                                        fontSize: 11,
+                                                        color: "#bbb",
+                                                        fontStyle: "italic",
+                                                    }}
+                                                >
+                                                    Non ciblé
+                                                </span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function ModalVoirCotisation({ cotisation, paiements, onClose }) {
+    if (!cotisation) return null;
+    const lignes = paiements.filter(
+        (p) => p.cotisation_id === cotisation.id,
+    );
+    const totalPaye = lignes.reduce((s, p) => s + p.montant, 0);
+
+    return (
+        <div
+            style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0,0,0,0.45)",
+                zIndex: 300,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 16,
+            }}
+            onClick={onClose}
+        >
+            <div
+                style={{
+                    background: "#fff",
+                    borderRadius: 14,
+                    width: "100%",
+                    maxWidth: 560,
+                    maxHeight: "85vh",
+                    display: "flex",
+                    flexDirection: "column",
+                    boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+                    overflow: "hidden",
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* En-tête */}
+                <div
+                    style={{
+                        padding: "18px 22px 14px",
+                        borderBottom: "1px solid #f0f0f0",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        gap: 12,
+                    }}
+                >
+                    <div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: "#1a1a2e" }}>
+                            {cotisation.nom}
+                        </div>
+                        <div style={{ fontSize: 12, color: "#888", marginTop: 3 }}>
+                            {cotisation.periodicite} · Base : {fmtCurrency(cotisation.montant)}
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", padding: 4 }}
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+
+                {/* Récap chiffres */}
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr 1fr",
+                        gap: 10,
+                        padding: "14px 22px",
+                        background: "#f8f8fc",
+                        borderBottom: "1px solid #eee",
+                    }}
+                >
+                    {[
+                        { label: "À payer",       val: cotisation.montant_attendu, color: "#3b2a8a" },
+                        { label: "Déjà payé",     val: cotisation.montant_paye,    color: "#1d9e75" },
+                        { label: "Reste à payer", val: cotisation.montant_restant, color: cotisation.montant_restant > 0 ? "#e24b4a" : "#1d9e75" },
+                    ].map(({ label, val, color }) => (
+                        <div key={label} style={{ textAlign: "center" }}>
+                            <div style={{ fontSize: 10, color: "#999", marginBottom: 2 }}>{label}</div>
+                            <div style={{ fontSize: 16, fontWeight: 700, color }}>{fmtCurrency(Number(val) || 0)}</div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Liste des paiements */}
+                <div style={{ flex: 1, overflowY: "auto", padding: "14px 22px" }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "#3b2a8a", marginBottom: 10 }}>
+                        Historique des paiements ({lignes.length})
+                    </div>
+                    {lignes.length === 0 ? (
+                        <div style={{ color: "#aaa", fontSize: 13, textAlign: "center", padding: "20px 0" }}>
+                            Aucun paiement enregistré pour cette cotisation.
+                        </div>
+                    ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            {lignes.map((p) => (
+                                <div
+                                    key={p.id}
+                                    style={{
+                                        border: "0.5px solid #eee",
+                                        borderRadius: 10,
+                                        padding: "10px 14px",
+                                        display: "grid",
+                                        gridTemplateColumns: "1fr auto",
+                                        gap: 8,
+                                        alignItems: "center",
+                                        background: "#fafafa",
+                                    }}
+                                >
+                                    <div>
+                                        <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a2e" }}>
+                                            {fmtCurrency(p.montant)}
+                                            <span style={{ fontWeight: 400, color: "#888", marginLeft: 8, fontSize: 11 }}>
+                                                · {p.mode}
+                                            </span>
+                                        </div>
+                                        <div style={{ fontSize: 11, color: "#888", marginTop: 3, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                                            <span>📅 {p.date}</span>
+                                            {p.membre && p.membre !== "Famille" && (
+                                                <span>👤 Enregistré pour : <strong style={{ color: "#3b2a8a" }}>{p.membre}</strong></span>
+                                            )}
+                                            {p.recu && (
+                                                <span style={{ color: "#1d9e75" }}>🧾 {p.recu}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <Badge
+                                        color={
+                                            p.payment_status === "PAYE" ? "green"
+                                            : p.payment_status === "EN_ATTENTE" ? "amber"
+                                            : "gray"
+                                        }
+                                    >
+                                        {p.payment_status === "PAYE" ? "Confirmé"
+                                         : p.payment_status === "EN_ATTENTE" ? "En attente"
+                                         : p.payment_status ?? "—"}
+                                    </Badge>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Pied */}
+                {lignes.length > 0 && (
+                    <div
+                        style={{
+                            padding: "12px 22px",
+                            borderTop: "1px solid #f0f0f0",
+                            fontSize: 12,
+                            color: "#888",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                        }}
+                    >
+                        <span>Total enregistré</span>
+                        <strong style={{ color: "#1d9e75", fontSize: 14 }}>{fmtCurrency(totalPaye)}</strong>
+                    </div>
+                )}
             </div>
         </div>
     );
 }
 
-function TabCotisations({ title, cotisations, onPayCotisation }) {
-    const totalReste = cotisations.reduce(
-        (sum, c) => sum + Number(c.montant_restant || 0),
-        0,
-    );
+function TabCotisations({ title, cotisations, historiquePaiements, familyInfo }) {
+    const [voirCotisation, setVoirCotisation] = useState(null);
 
     return (
         <div>
@@ -791,168 +1060,110 @@ function TabCotisations({ title, cotisations, onPayCotisation }) {
                     Aucune cotisation disponible.
                 </div>
             ) : (
-                <>
-                    <div
+                <div style={{ overflowX: "auto" }}>
+                    <table
                         style={{
-                            overflowX: "auto",
+                            width: "100%",
+                            borderCollapse: "collapse",
+                            fontSize: 13,
                         }}
                     >
-                        <table
-                            style={{
-                                width: "100%",
-                                borderCollapse: "collapse",
-                                fontSize: 13,
-                            }}
-                        >
-                            <thead>
-                                <tr style={{ background: "#f8f8fc" }}>
-                                    {[
-                                        "Cotisation",
-                                        "Périodicité",
-                                        "Attendu",
-                                        "Payé",
-                                        "Reste",
-                                        "Action",
-                                    ].map((h) => (
-                                        <th
-                                            key={h}
-                                            style={{
-                                                padding: "8px 10px",
-                                                textAlign: "left",
-                                                color: "#888",
-                                                fontWeight: 500,
-                                                fontSize: 11,
-                                                borderBottom: "1px solid #eee",
-                                            }}
-                                        >
-                                            {h}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {cotisations.map((cot) => (
-                                    <tr
-                                        key={cot.id}
+                        <thead>
+                            <tr style={{ background: "#f8f8fc" }}>
+                                {[
+                                    "Cotisation",
+                                    "À payer",
+                                    "Déjà payé",
+                                    "Reste à payer",
+                                ].map((h) => (
+                                    <th
+                                        key={h}
                                         style={{
-                                            borderBottom: "0.5px solid #f5f5f5",
+                                            padding: "9px 12px",
+                                            textAlign: "left",
+                                            color: "#888",
+                                            fontWeight: 500,
+                                            fontSize: 11,
+                                            borderBottom: "1px solid #eee",
+                                            whiteSpace: "nowrap",
                                         }}
                                     >
-                                        <td
-                                            style={{
-                                                padding: "9px 10px",
-                                                fontWeight: 600,
-                                                color: "#1a1a2e",
-                                            }}
-                                        >
-                                            {cot.nom}
+                                        {h}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {cotisations.map((cot) => {
+                                // Montant ciblé uniquement pour le responsable de famille
+                                const respId = String(familyInfo?.responsable_id ?? "");
+                                const amountMap = cot.amounts_par_membre || {};
+                                const amountRaw = respId && respId in amountMap
+                                    ? amountMap[respId]
+                                    : null;
+                                const aPayer = amountRaw != null ? Number(amountRaw) : 0;
+                                const estCible = amountRaw != null;
+                                const dejaPaye = Number(cot.montant_paye || 0);
+                                const reste = Math.max(0, aPayer - dejaPaye);
+                                // Objet enrichi pour le modal
+                                const cotEnrichi = { ...cot, montant_attendu: aPayer, montant_restant: reste };
+
+                                return (
+                                    <tr
+                                        key={cot.id}
+                                        style={{ borderBottom: "0.5px solid #f5f5f5" }}
+                                    >
+                                        {/* Cotisation */}
+                                        <td style={{ padding: "11px 12px" }}>
+                                            <div style={{ fontWeight: 600, color: "#1a1a2e" }}>
+                                                {cot.nom}
+                                            </div>
+                                            <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>
+                                                {cot.periodicite}
+                                            </div>
                                         </td>
-                                        <td
-                                            style={{
-                                                padding: "9px 10px",
-                                                color: "#666",
-                                            }}
-                                        >
-                                            {cot.periodicite}
+
+                                        {/* À payer */}
+                                        <td style={{ padding: "11px 12px", fontWeight: 700, color: "#3b2a8a", whiteSpace: "nowrap" }}>
+                                            {estCible
+                                                ? fmtCurrency(aPayer)
+                                                : <span style={{ color: "#bbb", fontWeight: 400, fontSize: 12, fontStyle: "italic" }}>Non ciblé</span>
+                                            }
                                         </td>
-                                        <td
-                                            style={{
-                                                padding: "9px 10px",
-                                                color: "#3b2a8a",
-                                                fontWeight: 600,
-                                            }}
-                                        >
-                                            {fmt(
-                                                Number(
-                                                    cot.montant_attendu || 0,
-                                                ),
-                                            )}{" "}
-                                            F
+
+                                        {/* Déjà payé */}
+                                        <td style={{ padding: "11px 12px", fontWeight: 700, color: "#1d9e75", whiteSpace: "nowrap" }}>
+                                            {dejaPaye > 0
+                                                ? fmtCurrency(dejaPaye)
+                                                : <span style={{ color: "#ccc", fontWeight: 400, fontSize: 12 }}>Aucun</span>
+                                            }
                                         </td>
-                                        <td
-                                            style={{
-                                                padding: "9px 10px",
-                                                color: "#1d9e75",
-                                                fontWeight: 600,
-                                            }}
-                                        >
-                                            {fmt(Number(cot.montant_paye || 0))}{" "}
-                                            F
-                                        </td>
-                                        <td
-                                            style={{
-                                                padding: "9px 10px",
-                                                color:
-                                                    Number(
-                                                        cot.montant_restant ||
-                                                            0,
-                                                    ) > 0
-                                                        ? "#e24b4a"
-                                                        : "#1d9e75",
-                                                fontWeight: 700,
-                                            }}
-                                        >
-                                            {fmt(
-                                                Number(
-                                                    cot.montant_restant || 0,
-                                                ),
-                                            )}{" "}
-                                            F
-                                        </td>
-                                        <td style={{ padding: "9px 10px" }}>
-                                            {Number(cot.montant_restant || 0) >
-                                            0 ? (
-                                                <button
-                                                    onClick={() =>
-                                                        onPayCotisation(
-                                                            cot.id,
-                                                            Number(
-                                                                cot.montant_restant ||
-                                                                    cot.montant ||
-                                                                    0,
-                                                            ),
-                                                        )
-                                                    }
-                                                    style={{
-                                                        border: "none",
-                                                        background: "#3b2a8a",
-                                                        color: "white",
-                                                        borderRadius: 8,
-                                                        padding: "6px 10px",
-                                                        fontSize: 11,
-                                                        fontWeight: 600,
-                                                        cursor: "pointer",
-                                                    }}
-                                                >
-                                                    Payer
-                                                </button>
+
+                                        {/* Reste à payer */}
+                                        <td style={{ padding: "11px 12px", fontWeight: 700, whiteSpace: "nowrap" }}>
+                                            {!estCible ? (
+                                                <span style={{ color: "#bbb", fontSize: 12 }}>—</span>
+                                            ) : reste > 0 ? (
+                                                <span style={{ color: "#e24b4a" }}>{fmtCurrency(reste)}</span>
                                             ) : (
-                                                <Badge color="green">
-                                                    À jour
-                                                </Badge>
+                                                <Badge color="green">À jour ✓</Badge>
                                             )}
                                         </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
 
-                    <div
-                        style={{
-                            marginTop: 14,
-                            padding: "10px 12px",
-                            background: "#fff8f0",
-                            borderLeft: "4px solid #ef9f27",
-                            borderRadius: 8,
-                            fontSize: 12,
-                            color: "#7a4a00",
-                        }}
-                    >
-                        Reste total à régulariser:{" "}
-                        <strong>{fmt(totalReste)} F CFA</strong>
-                    </div>
-                </>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {voirCotisation && (
+                <ModalVoirCotisation
+                    cotisation={voirCotisation}
+                    paiements={historiquePaiements}
+                    onClose={() => setVoirCotisation(null)}
+                />
             )}
         </div>
     );
@@ -1962,6 +2173,30 @@ function TabDons({ membres, donsFamille, campagnesActives, familyInfo }) {
     const [donLibreMembre, setDonLibreMembre] = useState(membres[0]?.id ?? "");
     const [donLibreMode, setDonLibreMode] = useState("MOBILE_MONEY");
     const [submittingDonLibre, setSubmittingDonLibre] = useState(false);
+    const [toast, setToast] = useState(null);
+
+    const showToast = (message, type = "error") => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 4000);
+    };
+
+    // Lire le résultat PayDunya au retour de la page (?don=success/cancelled/failed/error)
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const donStatus = params.get("don");
+        if (!donStatus) return;
+        if (donStatus === "success")
+            showToast("✅ Paiement confirmé. Merci pour votre don !", "success");
+        else if (donStatus === "cancelled")
+            showToast("Paiement annulé.", "error");
+        else if (donStatus === "failed")
+            showToast("Le paiement a échoué. Veuillez réessayer.", "error");
+        else
+            showToast("Erreur lors du traitement du don.", "error");
+        // Nettoyer le paramètre de l'URL sans recharger
+        const clean = window.location.pathname;
+        window.history.replaceState({}, "", clean);
+    }, []);
 
     const PRESETS = [5000, 10000, 25000, 50000];
 
@@ -2027,48 +2262,75 @@ function TabDons({ membres, donsFamille, campagnesActives, familyInfo }) {
 
     const handleSubmitDonLibre = async () => {
         const amount = Number(donLibreMontant || 0);
-        if (amount < 100 || submittingDonLibre) {
-            alert("Veuillez saisir un montant valide (minimum 100 F CFA).");
+        if (submittingDonLibre) return;
+        if (amount < 100) {
+            showToast("Veuillez saisir un montant valide (minimum 100 F CFA).");
             return;
         }
 
         setSubmittingDonLibre(true);
         try {
-            const response = await fetch(
-                "/responsable-famille/tresorerie/dons",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRF-TOKEN": getCsrfToken(),
-                        Accept: "application/json",
+            const isMobileMoney = donLibreMode === "MOBILE_MONEY";
+
+            if (isMobileMoney) {
+                // Flux PayDunya : initier le paiement en ligne
+                const res = await fetch(
+                    "/responsable-famille/tresorerie/dons/initiate",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRF-TOKEN": getCsrfToken(),
+                            Accept: "application/json",
+                        },
+                        credentials: "same-origin",
+                        body: JSON.stringify({
+                            montant: amount,
+                            note: "Don libre depuis l'espace responsable famille",
+                        }),
                     },
-                    credentials: "same-origin",
-                    body: JSON.stringify({
-                        family_id: familyInfo?.id,
-                        user_id: donLibreMembre,
-                        campagne_id: null,
-                        montant: amount,
-                        type: "LIBRE",
-                        mode_paiement: donLibreMode,
-                        date_don: new Date().toISOString().slice(0, 10),
-                        note: "Don libre depuis l'espace responsable famille",
-                    }),
-                },
-            );
-
-            if (!response.ok) {
-                throw new Error("Don libre impossible");
+                );
+                const payload = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    throw new Error(payload?.message || "Erreur d'initialisation PayDunya.");
+                }
+                if (payload?.redirect_url) {
+                    window.location.href = payload.redirect_url;
+                    return; // la page se recharge après paiement
+                }
+                throw new Error("URL de paiement non reçue.");
+            } else {
+                // Paiement en espèces ou virement : enregistrement direct
+                const res = await fetch(
+                    "/responsable-famille/tresorerie/dons",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRF-TOKEN": getCsrfToken(),
+                            Accept: "application/json",
+                        },
+                        credentials: "same-origin",
+                        body: JSON.stringify({
+                            family_id: familyInfo?.id,
+                            user_id: donLibreMembre,
+                            campagne_id: null,
+                            montant: amount,
+                            type: "LIBRE",
+                            mode_paiement: donLibreMode,
+                            date_don: new Date().toISOString().slice(0, 10),
+                            note: "Don libre depuis l'espace responsable famille",
+                        }),
+                    },
+                );
+                if (!res.ok) throw new Error("Don libre impossible.");
+                setIsDonLibreModalOpen(false);
+                setDonLibreMontant("");
+                showToast("✅ Don enregistré avec succès.", "success");
+                setTimeout(() => window.location.reload(), 1500);
             }
-
-            setDonSuccess(true);
-            setDonLibreMontant("");
-            setDonLibreMode("MOBILE_MONEY");
-            setIsDonLibreModalOpen(false);
-            setTimeout(() => setDonSuccess(false), 4000);
-            window.location.reload();
-        } catch {
-            alert("Erreur lors de l'enregistrement du don libre.");
+        } catch (err) {
+            showToast(err?.message || "Erreur lors de l'enregistrement du don.", "error");
         } finally {
             setSubmittingDonLibre(false);
         }
@@ -2076,6 +2338,35 @@ function TabDons({ membres, donsFamille, campagnesActives, familyInfo }) {
 
     return (
         <div>
+            {/* Toast local */}
+            {toast && (
+                <div
+                    style={{
+                        position: "fixed",
+                        bottom: 24,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        zIndex: 9999,
+                        background: toast.type === "error" ? "#e24b4a" : "#1d9e75",
+                        color: "#fff",
+                        borderRadius: 10,
+                        padding: "12px 22px",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        boxShadow: "0 8px 30px rgba(0,0,0,0.2)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        minWidth: 260,
+                        maxWidth: 420,
+                        textAlign: "center",
+                    }}
+                >
+                    <span>{toast.type === "error" ? "⚠️" : "✅"}</span>
+                    {toast.message}
+                </div>
+            )}
+
             <div
                 style={{
                     display: "flex",
@@ -2153,7 +2444,6 @@ function TabDons({ membres, donsFamille, campagnesActives, familyInfo }) {
                                 "Objectif",
                                 "Collecté",
                                 "Période",
-                                "Action",
                             ].map((h) => (
                                 <th
                                     key={h}
@@ -2189,29 +2479,6 @@ function TabDons({ membres, donsFamille, campagnesActives, familyInfo }) {
                             </td>
                             <td style={{ padding: "9px 10px", color: "#888" }}>
                                 -
-                            </td>
-                            <td style={{ padding: "9px 10px" }}>
-                                <button
-                                    onClick={() => setSelectedCampagne("LIBRE")}
-                                    style={{
-                                        border: "none",
-                                        background:
-                                            selectedCampagne === "LIBRE"
-                                                ? "#3b2a8a"
-                                                : "#eceaf9",
-                                        color:
-                                            selectedCampagne === "LIBRE"
-                                                ? "white"
-                                                : "#3b2a8a",
-                                        borderRadius: 8,
-                                        padding: "6px 10px",
-                                        fontSize: 11,
-                                        fontWeight: 600,
-                                        cursor: "pointer",
-                                    }}
-                                >
-                                    Sélectionner
-                                </button>
                             </td>
                         </tr>
 
@@ -2264,33 +2531,6 @@ function TabDons({ membres, donsFamille, campagnesActives, familyInfo }) {
                                     }}
                                 >
                                     {c.date_debut || "-"} - {c.date_fin || "-"}
-                                </td>
-                                <td style={{ padding: "9px 10px" }}>
-                                    <button
-                                        onClick={() =>
-                                            setSelectedCampagne(c.id)
-                                        }
-                                        style={{
-                                            border: "none",
-                                            background:
-                                                String(selectedCampagne) ===
-                                                String(c.id)
-                                                    ? "#3b2a8a"
-                                                    : "#eceaf9",
-                                            color:
-                                                String(selectedCampagne) ===
-                                                String(c.id)
-                                                    ? "white"
-                                                    : "#3b2a8a",
-                                            borderRadius: 8,
-                                            padding: "6px 10px",
-                                            fontSize: 11,
-                                            fontWeight: 600,
-                                            cursor: "pointer",
-                                        }}
-                                    >
-                                        Sélectionner
-                                    </button>
                                 </td>
                             </tr>
                         ))}
@@ -2435,125 +2675,6 @@ function TabDons({ membres, donsFamille, campagnesActives, familyInfo }) {
                 </div>
             )}
 
-            {/* Historique dons */}
-            <h3 style={{ ...sectionTitle, marginTop: 24, marginBottom: 10 }}>
-                Historique des dons familiaux
-            </h3>
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 10,
-                }}
-            >
-                <span style={{ fontSize: 12, color: "#888" }}>
-                    Total :{" "}
-                    <strong style={{ color: "#7f77dd" }}>
-                        {fmt(totalDons)} F CFA
-                    </strong>
-                </span>
-            </div>
-            <div style={{ overflowX: "auto" }}>
-                <table
-                    style={{
-                        width: "100%",
-                        borderCollapse: "collapse",
-                        fontSize: 13,
-                    }}
-                >
-                    <thead>
-                        <tr style={{ background: "#f8f8fc" }}>
-                            {[
-                                "Contributeur",
-                                "Campagne",
-                                "Affectation",
-                                "Montant",
-                                "Date",
-                                "Reçu",
-                            ].map((h) => (
-                                <th
-                                    key={h}
-                                    style={{
-                                        padding: "7px 10px",
-                                        textAlign: "left",
-                                        color: "#888",
-                                        fontWeight: 500,
-                                        fontSize: 11,
-                                        borderBottom: "1px solid #eee",
-                                    }}
-                                >
-                                    {h}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {donsFamille.map((d) => (
-                            <tr
-                                key={d.id}
-                                style={{ borderBottom: "0.5px solid #f5f5f5" }}
-                            >
-                                <td
-                                    style={{
-                                        padding: "9px 10px",
-                                        fontWeight: 500,
-                                    }}
-                                >
-                                    {d.contributeur}
-                                </td>
-                                <td
-                                    style={{
-                                        padding: "9px 10px",
-                                        color: "#555",
-                                    }}
-                                >
-                                    {d.campagne}
-                                </td>
-                                <td style={{ padding: "9px 10px" }}>
-                                    <Badge
-                                        color={
-                                            d.affectation === "Global"
-                                                ? "blue"
-                                                : d.affectation === "Classe"
-                                                  ? "green"
-                                                  : "amber"
-                                        }
-                                    >
-                                        {d.affectation}
-                                    </Badge>
-                                </td>
-                                <td
-                                    style={{
-                                        padding: "9px 10px",
-                                        fontWeight: 700,
-                                        color: "#7f77dd",
-                                    }}
-                                >
-                                    {fmt(d.montant)} F
-                                </td>
-                                <td
-                                    style={{
-                                        padding: "9px 10px",
-                                        color: "#888",
-                                    }}
-                                >
-                                    {d.date}
-                                </td>
-                                <td
-                                    style={{
-                                        padding: "9px 10px",
-                                        color: "#3b2a8a",
-                                        fontSize: 11,
-                                    }}
-                                >
-                                    {d.recu}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
 
             {isDonLibreModalOpen && (
                 <div
@@ -2788,6 +2909,26 @@ function TabHistorique({ historique, membres, cotisations, onOpenReceipt }) {
         <div>
             <h3 style={sectionTitle}>Historique des paiements (Famille)</h3>
 
+            {/* Récap */}
+            <div style={{ marginBottom: 14 }}>
+                <div
+                    style={{
+                        display: "inline-block",
+                        background: "#f8f8fc",
+                        borderRadius: 10,
+                        padding: "12px 24px",
+                        borderLeft: "3px solid #3b2a8a",
+                    }}
+                >
+                    <div style={{ fontSize: 11, color: "#999", marginBottom: 4 }}>
+                        Nombre de paiements
+                    </div>
+                    <div style={{ fontSize: 32, fontWeight: 800, color: "#3b2a8a", lineHeight: 1 }}>
+                        {filtered.length}
+                    </div>
+                </div>
+            </div>
+
             {/* Filtres */}
             <div
                 style={{
@@ -2823,34 +2964,11 @@ function TabHistorique({ historique, membres, cotisations, onOpenReceipt }) {
                     onChange={(e) => setFilterStatus(e.target.value)}
                 >
                     <option value="">Tous les statuts</option>
-                    <option value="PAYE">Payé</option>
-                    <option value="EN_ATTENTE">En attente</option>
+                    <option value="PAYE">Effectué</option>
                     <option value="ECHEC">Échoué</option>
-                    <option value="ANNULE">Annulé</option>
-                    <option value="INITIE">Initié</option>
-                    <option value="EXPIRE">Expiré</option>
                 </select>
             </div>
 
-            {/* Export */}
-            <button
-                style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
-                    background: "#3b2a8a",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 8,
-                    padding: "8px 16px",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    marginBottom: 16,
-                }}
-            >
-                <Download size={14} /> Exporter PDF
-            </button>
 
             <div style={{ overflowX: "auto" }}>
                 <table
@@ -2871,7 +2989,6 @@ function TabHistorique({ historique, membres, cotisations, onOpenReceipt }) {
                                 "Date",
                                 "Statut",
                                 "Reçu",
-                                "Actions",
                             ].map((h) => (
                                 <th
                                     key={h}
@@ -2984,31 +3101,13 @@ function TabHistorique({ historique, membres, cotisations, onOpenReceipt }) {
                                             {p.recu}
                                         </button>
                                     </td>
-                                    <td style={{ padding: "9px 10px" }}>
-                                        <button
-                                            onClick={() => onOpenReceipt(p)}
-                                            style={{
-                                                display: "inline-flex",
-                                                alignItems: "center",
-                                                gap: 4,
-                                                color: "#3b2a8a",
-                                                background: "none",
-                                                border: "none",
-                                                cursor: "pointer",
-                                                fontSize: 11,
-                                                fontWeight: 500,
-                                            }}
-                                        >
-                                            <Download size={13} /> PDF
-                                        </button>
-                                    </td>
                                 </tr>
                             );
                         })}
                         {filtered.length === 0 && (
                             <tr>
                                 <td
-                                    colSpan={9}
+                                    colSpan={8}
                                     style={{
                                         padding: "20px",
                                         textAlign: "center",
@@ -3176,10 +3275,6 @@ export default function ResponsableFamilleFinances({
 }) {
     const [activeTab, setActiveTab] = useState("fimeco");
     const [openReceipt, setOpenReceipt] = useState(null);
-    const [paymentPrefill, setPaymentPrefill] = useState({
-        cotisationId: null,
-        amount: null,
-    });
 
     const familyInfo = familyInfoProp || FALLBACK_FAMILY;
     const membres =
@@ -3239,19 +3334,10 @@ export default function ResponsableFamilleFinances({
     const totalDons = donsFamille.reduce((s, d) => s + d.montant, 0);
     const unreadNotifs = notifs.filter((n) => !n.lu).length;
 
-    const handlePayCotisation = (cotisationId, amount) => {
-        setPaymentPrefill({
-            cotisationId,
-            amount,
-        });
-        setActiveTab("paiement");
-    };
-
     const TABS = [
         { id: "fimeco", label: "🏦 FIMECO" },
         { id: "mes_cotisations", label: "📋 Mes cotisations" },
         { id: "membres", label: "👥 Membres" },
-        { id: "paiement", label: "💳 Paiement" },
         { id: "dons", label: "🎁 Dons" },
         { id: "historique", label: "📜 Historique" },
         { id: "notifications", label: "🔔 Notifs", badge: unreadNotifs },
@@ -3374,11 +3460,11 @@ export default function ResponsableFamilleFinances({
                             ),
                         },
                         {
-                            label: "Dons collectés",
-                            value: `${fmtCurrency(totalDons)}`,
+                            label: "Dons effectués",
+                            value: donsFamille.length,
                             color: "#7f77dd",
                             border: "#7f77dd",
-                            sub: "Solidarité familiale",
+                            sub: donsFamille.length > 0 ? `Total : ${fmtCurrency(totalDons)}` : "Aucun don",
                             icon: <Heart size={28} color="#7f77dd" />,
                         },
                     ].map((c) => (
@@ -3412,10 +3498,11 @@ export default function ResponsableFamilleFinances({
                                     </p>
                                     <p
                                         style={{
-                                            fontSize: 28,
-                                            fontWeight: 700,
+                                            fontSize: typeof c.value === "number" ? 40 : 28,
+                                            fontWeight: 800,
                                             color: c.color,
                                             margin: 0,
+                                            lineHeight: 1,
                                         }}
                                     >
                                         {c.value}
@@ -3510,29 +3597,20 @@ export default function ResponsableFamilleFinances({
                             <TabCotisations
                                 title="Cotisations FIMECO"
                                 cotisations={fimecoCotisations}
-                                onPayCotisation={handlePayCotisation}
+                                historiquePaiements={historique}
+                                familyInfo={familyInfo}
                             />
                         )}
                         {activeTab === "mes_cotisations" && (
                             <TabCotisations
                                 title="Mes cotisations"
                                 cotisations={autresCotisations}
-                                onPayCotisation={handlePayCotisation}
+                                historiquePaiements={historique}
+                                familyInfo={familyInfo}
                             />
                         )}
                         {activeTab === "membres" && (
-                            <TabMembres membres={membres} />
-                        )}
-                        {activeTab === "paiement" && (
-                            <TabPaiement
-                                membres={membres}
-                                cotisations={cotisationsNorm}
-                                familyInfo={familyInfo}
-                                preselectedCotisationId={
-                                    paymentPrefill.cotisationId
-                                }
-                                preselectedAmount={paymentPrefill.amount}
-                            />
+                            <TabMembres membres={membres} cotisations={cotisationsNorm} />
                         )}
                         {activeTab === "dons" && (
                             <TabDons

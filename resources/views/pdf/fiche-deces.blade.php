@@ -128,7 +128,7 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
 
 <head>
     <meta charset="UTF-8">
-    <title>Avis de Deces - {{ $reference }}</title>
+    <title>Annonce de Deces - {{ $reference }}</title>
     <style>
         @page {
             size: A4 portrait;
@@ -419,7 +419,7 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
 
         <!-- Main title band -->
         <div class="title-band">
-            <div class="title-label">Avis de Deces</div>
+            <div class="title-label">Annonce de Deces</div>
         </div>
 
         <!-- Compact metadata keeps the first reading level clean -->
@@ -428,17 +428,12 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
                 <td class="meta-label">Classe Methodiste</td>
                 <td class="meta-value">{{ $classe }}</td>
             </tr>
-            <tr>
-                <td class="meta-label">Pour le culte du</td>
-                <td class="meta-value">{{ $culteDisplay }}</td>
-            </tr>
         </table>
 
         <!-- Opening verse -->
         <div class="verse-card">
             <div class="verse-text">
-                &laquo; Bien-aim&eacute;s du Seigneur, nous vous faisons part du rappel &agrave; Dieu de notre fr&egrave;re / soeur.<br>
-                Que son &acirc;me repose en paix dans la lumi&egrave;re &eacute;ternelle de Dieu. &raquo;
+                &laquo; J&eacute;sus lui dit : Je suis la r&eacute;surrection et la vie. Celui qui croit en moi vivra, quand m&ecirc;me il serait mort. &raquo;
             </div>
             <div class="verse-ref">Jean 11 : 25</div>
         </div>
@@ -446,26 +441,18 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
         <!-- Main notice body -->
         <div class="notice-block">
             <p class="notice-paragraph">
-                C'est avec une profonde tristesse que la famille
-                <span class="family-name">{{ mb_strtoupper($famille, 'UTF-8') }}</span>
-                annonce &agrave; l'ensemble de la communaut&eacute; chr&eacute;tienne le rappel &agrave; Dieu de leur bien-aim&eacute;
+                La famille <span class="family-name">{{ mb_strtoupper($famille, 'UTF-8') }}</span>
+                annonce, avec une profonde tristesse, &agrave; l'ensemble de la communaut&eacute; chr&eacute;tienne,
+                le rappel &agrave; Dieu de leur bien-aim&eacute;(e),
                 <span class="deceased-name">{{ $nomDefunt }}</span>,
-                d&eacute;c&eacute;d&eacute;(e) le <strong>{{ $dateDeces }}</strong> &agrave; <strong>{{ $lieuDeces }}</strong>.
+                survenu le <strong>{{ $dateDeces }}</strong> &agrave; <strong>{{ $lieuDeces }}</strong>.
             </p>
             <p class="notice-paragraph">
-                La famille, dans cette douloureuse &eacute;preuve, sollicite vos pri&egrave;res et votre soutien spirituel.
+                En cette douloureuse &eacute;preuve, la famille sollicite vos pri&egrave;res et votre soutien spirituel.
             </p>
             <p class="notice-paragraph">
-                Les informations relatives aux c&eacute;r&eacute;monies fun&egrave;bres vous seront communiqu&eacute;es ult&eacute;rieurement.
+                Les informations relatives aux obs&egrave;ques vous seront communiqu&eacute;es ult&eacute;rieurement.
             </p>
-        </div>
-
-        <!-- Supporting faith statement -->
-        <div class="support-block">
-            <div class="support-line">
-                En cette circonstance douloureuse, la famille demeure dans l'esp&eacute;rance chr&eacute;tienne et confie le d&eacute;funt &agrave; la mis&eacute;ricorde du Seigneur.
-            </div>
-            <!-- <div class="support-ref">Cf. 1 Thessaloniciens 4 : 13-14</div> -->
         </div>
 
         <!-- Signature area -->

@@ -390,6 +390,7 @@ export default function Inscriptions({
     const [emailTaken, setEmailTaken] = useState(false);
     const [emailChecking, setEmailChecking] = useState(false);
     const emailCheckTimerRef = useRef(null);
+    const emailCheckAbortRef = useRef(null);
 
     // --- FORMULAIRE (Add / Edit) ---
     const { data, setData, post, put, processing, reset, errors } = useForm({
@@ -406,6 +407,7 @@ export default function Inscriptions({
         employment_status: "",
         profession_detail: "",
         profession: "",
+        niveau_etude: "",
         fonction_ids: [],
         fonction_id: "",
         relation: "",
@@ -996,6 +998,7 @@ export default function Inscriptions({
                 member.profession ||
                 member.fonction_professionnelle ||
                 "",
+            niveau_etude: member.niveau_etude || member.raw?.niveau_etude || "",
             fonction_ids: Array.isArray(member.fonction_ids)
                 ? member.fonction_ids.map((id) => String(id))
                 : Array.isArray(member.raw?.fonction_ids)
@@ -1268,42 +1271,72 @@ export default function Inscriptions({
             setEmailTaken(false);
             setEmailChecking(false);
             if (emailCheckTimerRef.current) clearTimeout(emailCheckTimerRef.current);
+            if (emailCheckAbortRef.current) {
+                emailCheckAbortRef.current.abort();
+                emailCheckAbortRef.current = null;
+            }
         }
     }, [showModal]);
 
-    // Vérification email en temps réel (debounce 500 ms)
+    // Vérification email en temps réel (debounce 600 ms + AbortController anti race-condition)
     useEffect(() => {
         const email = data.email?.trim();
 
-        // Réinitialiser si champ vide
+        // Annuler toute requête en vol avant de continuer
+        if (emailCheckAbortRef.current) {
+            emailCheckAbortRef.current.abort();
+            emailCheckAbortRef.current = null;
+        }
+        if (emailCheckTimerRef.current) clearTimeout(emailCheckTimerRef.current);
+
+        // Champ vide → pas de vérification
         if (!email) {
             setEmailTaken(false);
             setEmailChecking(false);
-            if (emailCheckTimerRef.current) clearTimeout(emailCheckTimerRef.current);
             return;
         }
 
-        // En mode édition on exclut le membre actuel
-        const excludeId = modalMode === "edit" && selectedMember?.id ? selectedMember.id : 0;
+        // Lire les valeurs courantes ici pour ne pas capturer de closure périmée
+        const currentModalMode = modalMode;
+        const currentMemberId = selectedMember?.id ?? 0;
+        const excludeId = currentModalMode === "edit" && currentMemberId ? currentMemberId : 0;
 
         setEmailChecking(true);
-        if (emailCheckTimerRef.current) clearTimeout(emailCheckTimerRef.current);
         emailCheckTimerRef.current = setTimeout(() => {
+            const controller = new AbortController();
+            emailCheckAbortRef.current = controller;
+
             axios
-                .get(`/conducteur/check-email?email=${encodeURIComponent(email)}&exclude_id=${excludeId}`)
+                .get(
+                    `/conducteur/check-email?email=${encodeURIComponent(email)}&exclude_id=${excludeId}`,
+                    { signal: controller.signal },
+                )
                 .then((res) => {
-                    setEmailTaken(!!res.data?.taken);
+                    if (!controller.signal.aborted) {
+                        setEmailTaken(!!res.data?.taken);
+                    }
                 })
-                .catch(() => {
-                    setEmailTaken(false);
+                .catch((err) => {
+                    // Ignorer les erreurs d'annulation (AbortError)
+                    if (!axios.isCancel(err) && err?.name !== "AbortError" && !controller.signal.aborted) {
+                        setEmailTaken(false);
+                    }
                 })
-                .finally(() => setEmailChecking(false));
-        }, 500);
+                .finally(() => {
+                    if (!controller.signal.aborted) {
+                        setEmailChecking(false);
+                    }
+                });
+        }, 600);
 
         return () => {
             if (emailCheckTimerRef.current) clearTimeout(emailCheckTimerRef.current);
+            if (emailCheckAbortRef.current) {
+                emailCheckAbortRef.current.abort();
+                emailCheckAbortRef.current = null;
+            }
         };
-    }, [data.email]);
+    }, [data.email, modalMode, selectedMember?.id]);
 
     // Auto-save avec debounce en mode édition
     useEffect(() => {
@@ -3433,99 +3466,99 @@ export default function Inscriptions({
                                                         Statut Professionnel
                                                     </h3>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        {/* Statut d'emploi */}
                                                         <FormField
                                                             label="Statut d'emploi"
                                                             icon={Briefcase}
                                                         >
                                                             <select
                                                                 className="w-full h-12 border border-gray-300 rounded-lg px-4 outline-none focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300 bg-white"
-                                                                value={
-                                                                    data.employment_status ||
-                                                                    ""
-                                                                }
+                                                                value={data.employment_status || ""}
                                                                 onChange={(e) =>
                                                                     setData({
                                                                         ...data,
-                                                                        employment_status:
-                                                                            e
-                                                                                .target
-                                                                                .value,
+                                                                        employment_status: e.target.value,
+                                                                        // Vider les champs conditionnels au changement
+                                                                        profession_detail: "",
+                                                                        profession: "",
+                                                                        niveau_etude: "",
                                                                     })
                                                                 }
                                                             >
-                                                                <option value="">
-                                                                    Non
-                                                                    renseigné
-                                                                </option>
-                                                                {EMPLOYMENT_STATUS_OPTIONS.map(
-                                                                    (
-                                                                        option,
-                                                                    ) => (
-                                                                        <option
-                                                                            key={
-                                                                                option.value
-                                                                            }
-                                                                            value={
-                                                                                option.value
-                                                                            }
-                                                                        >
-                                                                            {
-                                                                                option.label
-                                                                            }
-                                                                        </option>
-                                                                    ),
-                                                                )}
+                                                                <option value="">Non renseigné</option>
+                                                                {EMPLOYMENT_STATUS_OPTIONS.map((option) => (
+                                                                    <option key={option.value} value={option.value}>
+                                                                        {option.label}
+                                                                    </option>
+                                                                ))}
                                                             </select>
-                                                            {(fieldErrors.employment_status ||
-                                                                errors.employment_status) && (
+                                                            {(fieldErrors.employment_status || errors.employment_status) && (
                                                                 <p className="text-red-500 text-xs mt-1">
-                                                                    {fieldErrors.employment_status ||
-                                                                        errors.employment_status}
+                                                                    {fieldErrors.employment_status || errors.employment_status}
                                                                 </p>
                                                             )}
                                                         </FormField>
-                                                        <FormField
-                                                            label="Profession"
-                                                            icon={Briefcase}
-                                                            required
-                                                        >
-                                                            <input
-                                                                className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
-                                                                    fieldErrors.profession_detail ||
-                                                                    fieldErrors.profession
-                                                                        ? "border-red-500 focus:border-red-500"
-                                                                        : "border-gray-300 focus:border-blue-500"
-                                                                }`}
-                                                                value={
-                                                                    data.profession_detail
-                                                                }
-                                                                onChange={(e) =>
-                                                                    setData({
-                                                                        ...data,
-                                                                        profession_detail:
-                                                                            e
-                                                                                .target
-                                                                                .value,
-                                                                        profession:
-                                                                            e
-                                                                                .target
-                                                                                .value,
-                                                                    })
-                                                                }
-                                                                placeholder="ex: Enseignant, Commerçant"
-                                                            />
-                                                            {(fieldErrors.profession_detail ||
-                                                                errors.profession_detail ||
-                                                                fieldErrors.profession ||
-                                                                errors.profession) && (
-                                                                <p className="text-red-500 text-xs mt-1">
-                                                                    {fieldErrors.profession_detail ||
-                                                                        errors.profession_detail ||
-                                                                        fieldErrors.profession ||
-                                                                        errors.profession}
-                                                                </p>
-                                                            )}
-                                                        </FormField>
+
+                                                        {/* Profession — uniquement si TRAVAILLEUR */}
+                                                        {data.employment_status === "TRAVAILLEUR" && (
+                                                            <FormField
+                                                                label="Profession"
+                                                                icon={Briefcase}
+                                                            >
+                                                                <input
+                                                                    className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
+                                                                        fieldErrors.profession_detail || fieldErrors.profession
+                                                                            ? "border-red-500 focus:border-red-500"
+                                                                            : "border-gray-300 focus:border-blue-500"
+                                                                    }`}
+                                                                    value={data.profession_detail}
+                                                                    onChange={(e) =>
+                                                                        setData({
+                                                                            ...data,
+                                                                            profession_detail: e.target.value,
+                                                                            profession: e.target.value,
+                                                                        })
+                                                                    }
+                                                                    placeholder="ex: Enseignant, Commerçant"
+                                                                />
+                                                                {(fieldErrors.profession_detail || errors.profession_detail ||
+                                                                  fieldErrors.profession || errors.profession) && (
+                                                                    <p className="text-red-500 text-xs mt-1">
+                                                                        {fieldErrors.profession_detail || errors.profession_detail ||
+                                                                         fieldErrors.profession || errors.profession}
+                                                                    </p>
+                                                                )}
+                                                            </FormField>
+                                                        )}
+
+                                                        {/* Niveau d'étude — uniquement si ETUDIANT */}
+                                                        {data.employment_status === "ETUDIANT" && (
+                                                            <FormField
+                                                                label="Niveau d'étude"
+                                                                icon={Briefcase}
+                                                            >
+                                                                <input
+                                                                    className={`w-full h-12 border rounded-lg px-4 outline-none focus:shadow-md focus:shadow-blue-200 transition-all duration-300 ${
+                                                                        fieldErrors.niveau_etude || errors.niveau_etude
+                                                                            ? "border-red-500 focus:border-red-500"
+                                                                            : "border-gray-300 focus:border-blue-500"
+                                                                    }`}
+                                                                    value={data.niveau_etude || ""}
+                                                                    onChange={(e) =>
+                                                                        setData({
+                                                                            ...data,
+                                                                            niveau_etude: e.target.value,
+                                                                        })
+                                                                    }
+                                                                    placeholder="ex: Licence, Master, BTS…"
+                                                                />
+                                                                {(fieldErrors.niveau_etude || errors.niveau_etude) && (
+                                                                    <p className="text-red-500 text-xs mt-1">
+                                                                        {fieldErrors.niveau_etude || errors.niveau_etude}
+                                                                    </p>
+                                                                )}
+                                                            </FormField>
+                                                        )}
                                                         <FormField
                                                             label="Fonctions dans l'eglise (max 2)"
                                                             icon={Users}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 
 export default function DatesTab({
     ceremonyActs,
@@ -15,11 +15,50 @@ export default function DatesTab({
     formatDateTime,
     ceremonyStatusLabel,
 }) {
-    // Pagination pour l'historique
     const ROWS_PER_PAGE = 10;
-    const [page, setPage] = useState(1);
-    const totalPages = Math.max(1, Math.ceil(ceremonyHistoryRows.length / ROWS_PER_PAGE));
-    const pagedRows = ceremonyHistoryRows.slice((page - 1) * ROWS_PER_PAGE, page * ROWS_PER_PAGE);
+    const [page, setPage]               = useState(1);
+    const [search, setSearch]           = useState("");
+    const [filterClasse, setFilterClasse] = useState("");
+    const [filterStatut, setFilterStatut] = useState("");
+
+    // Valeurs uniques pour les filtres
+    const uniqueClasses = useMemo(() => (
+        [...new Set(ceremonyHistoryRows.map((r) => r.classeName).filter(Boolean))].sort()
+    ), [ceremonyHistoryRows]);
+
+    const uniqueStatuts = useMemo(() => (
+        [...new Set(ceremonyHistoryRows.map((r) => r.ceremonyStatut).filter(Boolean))].sort()
+    ), [ceremonyHistoryRows]);
+
+    // Filtrage
+    const filteredRows = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        return ceremonyHistoryRows.filter((row) => {
+            const bySearch = !q || [
+                row.memberName, row.reference, row.fianceName, row.witnesses,
+            ].some((v) => String(v ?? "").toLowerCase().includes(q));
+            const byClasse = !filterClasse || row.classeName === filterClasse;
+            const byStatut = !filterStatut || row.ceremonyStatut === filterStatut;
+            return bySearch && byClasse && byStatut;
+        });
+    }, [ceremonyHistoryRows, search, filterClasse, filterStatut]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredRows.length / ROWS_PER_PAGE));
+    const safePage   = Math.min(page, totalPages);
+    const pagedRows  = filteredRows.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
+
+    const resetPage = () => setPage(1);
+
+    const inputStyle = {
+        height: 34,
+        border: "1px solid #e0e0ec",
+        borderRadius: 7,
+        padding: "0 10px",
+        fontSize: 12,
+        outline: "none",
+        background: "#fafafa",
+        color: "#1a1a2e",
+    };
 
     return (
         <div className="date-tab-root">
@@ -289,10 +328,87 @@ export default function DatesTab({
                         </div>
                     </div>
 
+                    {/* Recherche + Filtres */}
+                    {ceremonyHistoryRows.length > 0 && (
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "12px 0 10px" }}>
+                            {/* Recherche */}
+                            <div style={{ position: "relative", flex: "1 1 180px", minWidth: 160 }}>
+                                <svg
+                                    width="13" height="13" fill="none" viewBox="0 0 24 24"
+                                    stroke="#aaa" strokeWidth="2"
+                                    style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)" }}
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z" />
+                                </svg>
+                                <input
+                                    type="text"
+                                    placeholder="Rechercher (nom, référence, fiancé…)"
+                                    value={search}
+                                    onChange={(e) => { setSearch(e.target.value); resetPage(); }}
+                                    style={{ ...inputStyle, paddingLeft: 26, width: "100%", boxSizing: "border-box" }}
+                                />
+                            </div>
+
+                            {/* Filtre classe */}
+                            <select
+                                value={filterClasse}
+                                onChange={(e) => { setFilterClasse(e.target.value); resetPage(); }}
+                                style={{ ...inputStyle, flex: "0 1 150px", cursor: "pointer" }}
+                            >
+                                <option value="">Toutes les classes</option>
+                                {uniqueClasses.map((c) => (
+                                    <option key={c} value={c}>{c}</option>
+                                ))}
+                            </select>
+
+                            {/* Filtre statut */}
+                            <select
+                                value={filterStatut}
+                                onChange={(e) => { setFilterStatut(e.target.value); resetPage(); }}
+                                style={{ ...inputStyle, flex: "0 1 150px", cursor: "pointer" }}
+                            >
+                                <option value="">Tous les statuts</option>
+                                {uniqueStatuts.map((s) => (
+                                    <option key={s} value={s}>{ceremonyStatusLabel(s)}</option>
+                                ))}
+                            </select>
+
+                            {/* Réinitialiser */}
+                            {(search || filterClasse || filterStatut) && (
+                                <button
+                                    type="button"
+                                    onClick={() => { setSearch(""); setFilterClasse(""); setFilterStatut(""); resetPage(); }}
+                                    style={{
+                                        height: 34,
+                                        border: "1px solid #e0e0ec",
+                                        borderRadius: 7,
+                                        padding: "0 10px",
+                                        fontSize: 11,
+                                        background: "#fff",
+                                        color: "#e24b4a",
+                                        cursor: "pointer",
+                                        fontWeight: 600,
+                                        whiteSpace: "nowrap",
+                                    }}
+                                >
+                                    ✕ Réinitialiser
+                                </button>
+                            )}
+
+                            <span style={{ fontSize: 11, color: "#aaa", alignSelf: "center", whiteSpace: "nowrap" }}>
+                                {filteredRows.length} résultat{filteredRows.length !== 1 ? "s" : ""}
+                            </span>
+                        </div>
+                    )}
+
                     {ceremonyHistoryRows.length === 0 ? (
                         <div className="empty empty-history">
                             Aucune date validée par le
                             conducteur.
+                        </div>
+                    ) : filteredRows.length === 0 ? (
+                        <div className="empty empty-history">
+                            Aucun résultat pour cette recherche.
                         </div>
                     ) : (
                         <>
@@ -314,7 +430,7 @@ export default function DatesTab({
                                     <tbody>
                                         {pagedRows.map((row, idx) => (
                                             <tr key={row.rowKey}>
-                                                <td>{(page - 1) * ROWS_PER_PAGE + idx + 1}</td>
+                                                <td>{(safePage - 1) * ROWS_PER_PAGE + idx + 1}</td>
                                                 <td>{row.reference}</td>
                                                 <td>{row.memberName}</td>
                                                 <td>{row.classeName}</td>
@@ -335,18 +451,18 @@ export default function DatesTab({
                                         type="button"
                                         className="pager-btn"
                                         onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                        disabled={page === 1}
+                                        disabled={safePage === 1}
                                     >
                                         Précédent
                                     </button>
                                     <span style={{ fontWeight: 500 }}>
-                                        Page {page} / {totalPages}
+                                        Page {safePage} / {totalPages}
                                     </span>
                                     <button
                                         type="button"
                                         className="pager-btn"
                                         onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                        disabled={page === totalPages}
+                                        disabled={safePage === totalPages}
                                     >
                                         Suivant
                                     </button>

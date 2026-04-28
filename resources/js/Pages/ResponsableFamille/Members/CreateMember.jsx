@@ -231,8 +231,8 @@ export default function CreateMember({ family, errors }) {
             case "fonction_ids":
                 if (!Array.isArray(value) || value.length === 0) {
                     error = "Au moins une fonction est obligatoire";
-                } else if (value.length > 2) {
-                    error = "Maximum 2 fonctions";
+                } else if (value.length > 10) {
+                    error = "Maximum 10 fonctions";
                 }
                 break;
             case "date_mariage":
@@ -834,7 +834,7 @@ export default function CreateMember({ family, errors }) {
                                             maxSelections={10}
                                             onChange={(e) => {
                                                 const values = Array.isArray(e.target.value)
-                                                    ? e.target.value.slice(0, 2).map((v) => Number(v))
+                                                    ? e.target.value.map((v) => Number(v))
                                                     : [];
                                                 setData((prev) => ({
                                                     ...prev,
@@ -849,7 +849,7 @@ export default function CreateMember({ family, errors }) {
                                                 }));
                                             }}
                                             options={fonctions}
-                                            placeholder="Sélectionner jusqu'à 2 fonctions..."
+                                            placeholder="Sélectionner les fonctions dans l'église..."
                                         />
                                         {(fieldErrors.fonction_ids || errors.fonction_ids) && (
                                             <p className="text-red-500 text-xs mt-1">

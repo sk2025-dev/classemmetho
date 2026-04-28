@@ -145,11 +145,11 @@ $signaturePasteurDataUri = $toSignatureDataUri($pasteur->signature_path ?? null)
 
         body {
             margin: 0;
-            color: #111;
-            background: #fff;
-            font-family: "Times New Roman", Times, serif;
-            font-size: 20px;
-            line-height: 1.45;
+            color: #1a1a1a;
+            background: #ffffff;
+            font-family: DejaVu Serif, "Times New Roman", serif;
+            font-size: 11.2px;
+            line-height: 1.68;
         }
 
         .sheet {
@@ -210,16 +210,18 @@ $signaturePasteurDataUri = $toSignatureDataUri($pasteur->signature_path ?? null)
 
         .church .temple {
             font-weight: 700;
-            font-size: 18px;
+            font-size: 18.5px;
         }
 
         .title {
             margin: 18px 0 20px;
             text-align: center;
             color: #1857d6;
-            font-size: 20px;
+            font-family: DejaVu Sans, Arial, sans-serif;
+            font-size: 25px;
             font-weight: 800;
-            letter-spacing: 0.5px;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
         }
 
         .field {
@@ -351,15 +353,20 @@ $signaturePasteurDataUri = $toSignatureDataUri($pasteur->signature_path ?? null)
 
         .sig-label {
             text-decoration: underline;
+            font-family: DejaVu Sans, Arial, sans-serif;
             font-weight: 700;
-            font-size: 12px;
+            font-size: 9.6px;
+            text-transform: uppercase;
+            letter-spacing: .8px;
             margin-bottom: 6px;
         }
 
         .sig-name {
-            margin-top: 0;
-            font-size: 11px;
-            font-weight: 700;
+            margin-top: 12px;
+            font-family: DejaVu Sans, Arial, sans-serif;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
             min-height: 14px;
         }
     </style>
