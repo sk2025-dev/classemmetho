@@ -23,8 +23,12 @@ class ProfileController extends Controller
             ->orderBy('nom')
             ->get();
 
+        $user->load('family', 'classe', 'fonction', 'fonctions', 'ville', 'sacrements');
+        $currentFonctionIds = $user->fonctions->pluck('id')->toArray();
+
         return Inertia::render('MembreFamille/Profile', [
-            'member' => $user->load('family', 'classe', 'fonction', 'ville', 'sacrements'),
+            'member' => $user,
+            'currentFonctionIds' => $currentFonctionIds,
             'family' => $user->family,
             'fonctions' => $fonctions,
         ]);
@@ -44,8 +48,12 @@ class ProfileController extends Controller
                 'telephone2' => 'nullable|string|max:20',
                 'genre' => 'required|in:M,F',
                 'date_naissance' => 'nullable|date',
+                'statut_marital' => 'nullable|string|max:50',
+                'employment_status' => 'nullable|in:TRAVAILLEUR,ETUDIANT,RETRAITE,SANS_EMPLOI',
                 'profession' => 'nullable|string|max:255',
-                'fonction_id' => 'nullable|exists:fonctions,id',
+                'niveau_etude' => 'nullable|string|max:255',
+                'fonction_ids' => 'nullable|array',
+                'fonction_ids.*' => 'exists:fonctions,id',
                 'relation' => 'nullable|string|max:255',
                 'date_mariage' => 'nullable|date',
                 'lieu_mariage' => 'nullable|string|max:255',
@@ -104,12 +112,17 @@ class ProfileController extends Controller
             'telephone2' => $validated['telephone2'] ?? $user->telephone2,
             'genre' => $validated['genre'],
             'date_naissance' => $validated['date_naissance'] ?? $user->date_naissance,
-            'profession' => $validated['profession'] ?? $user->profession,
-            'fonction_id' => $validated['fonction_id'] ?? $user->fonction_id,
+            'employment_status' => $validated['employment_status'] ?? $user->employment_status,
+            'profession' => ($validated['employment_status'] ?? '') === 'TRAVAILLEUR' ? ($validated['profession'] ?? null) : null,
+            'niveau_etude' => ($validated['employment_status'] ?? '') === 'ETUDIANT' ? ($validated['niveau_etude'] ?? null) : null,
+            'fonction_id' => !empty($validated['fonction_ids']) ? $validated['fonction_ids'][0] : null,
             'relation' => $validated['relation'] ?? $user->relation,
             'photo_path' => $validated['photo_path'] ?? $user->photo_path,
             'profile_photo_url' => $validated['profile_photo_url'] ?? $user->profile_photo_url,
         ]);
+
+        // Sync des fonctions (pivot)
+        $user->fonctions()->sync($validated['fonction_ids'] ?? []);
 
         // Mettre à jour les sacrements (relation hasOne)
         if ($user->sacrements) {
@@ -125,12 +138,12 @@ class ProfileController extends Controller
                 'mariage_religieux_date' => !empty($validated['date_mariage_religieux']) ? $validated['date_mariage_religieux'] : null,
                 'mariage_religieux_lieu' => !empty($validated['lieu_mariage_religieux']) ? $validated['lieu_mariage_religieux'] : null,
                 // Statut matrimonial civil (mappé depuis les champs du formulaire)
-                'est_marie' => $validated['statut_marital'] === 'Marié(e)',
+                'est_marie' => ($validated['statut_marital'] ?? '') === 'Marié(e)',
                 'mariage_civil_date' => !empty($validated['date_mariage']) ? $validated['date_mariage'] : null,
                 'mariage_civil_lieu' => !empty($validated['lieu_mariage']) ? $validated['lieu_mariage'] : null,
-                'est_divorce' => $validated['statut_marital'] === 'Divorcé(e)',
-                'est_veuf' => $validated['statut_marital'] === 'Veuf(ve)',
-                'dot_effectue' => $validated['statut_marital'] === 'Dote',
+                'est_divorce' => ($validated['statut_marital'] ?? '') === 'Divorcé(e)',
+                'est_veuf' => ($validated['statut_marital'] ?? '') === 'Veuf(ve)',
+                'dot_effectue' => ($validated['statut_marital'] ?? '') === 'Dote',
             ]);
         } else {
             // Créer le record de sacrements s'il n'existe pas
@@ -147,12 +160,12 @@ class ProfileController extends Controller
                 'mariage_religieux_date' => !empty($validated['date_mariage_religieux']) ? $validated['date_mariage_religieux'] : null,
                 'mariage_religieux_lieu' => !empty($validated['lieu_mariage_religieux']) ? $validated['lieu_mariage_religieux'] : null,
                 // Statut matrimonial civil (mappé depuis les champs du formulaire)
-                'est_marie' => $validated['statut_marital'] === 'Marié(e)',
+                'est_marie' => ($validated['statut_marital'] ?? '') === 'Marié(e)',
                 'mariage_civil_date' => !empty($validated['date_mariage']) ? $validated['date_mariage'] : null,
                 'mariage_civil_lieu' => !empty($validated['lieu_mariage']) ? $validated['lieu_mariage'] : null,
-                'est_divorce' => $validated['statut_marital'] === 'Divorcé(e)',
-                'est_veuf' => $validated['statut_marital'] === 'Veuf(ve)',
-                'dot_effectue' => $validated['statut_marital'] === 'Dote',
+                'est_divorce' => ($validated['statut_marital'] ?? '') === 'Divorcé(e)',
+                'est_veuf' => ($validated['statut_marital'] ?? '') === 'Veuf(ve)',
+                'dot_effectue' => ($validated['statut_marital'] ?? '') === 'Dote',
             ]);
         }
 

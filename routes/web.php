@@ -67,6 +67,12 @@ Route::get('/sondages/public/{token}/repondre', [\App\Http\Controllers\Public\So
 Route::post('/sondages/public/{token}/reponses', [\App\Http\Controllers\Public\SondageController::class, 'storeResponse'])
     ->name('sondages.public.responses.store');
 
+// Routes publiques — dons anonymes
+Route::post('/dons/anonyme', [\App\Http\Controllers\Public\DonationController::class, 'storeAnonymous'])
+    ->name('public.dons.anonyme.store');
+Route::get('/dons/anonyme/verify', [\App\Http\Controllers\Public\DonationController::class, 'verifyAnonymous'])
+    ->name('public.dons.anonyme.verify');
+
 // Pages d'authentification (Inertia)
 Route::get('/login', function () {
     return Inertia::render('login');
@@ -192,6 +198,8 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/admin/liturgie/{id}', [AdminLiturgieController::class, 'update'])->name('admin.liturgie.update');
         Route::post('/admin/liturgie/{id}/transition', [AdminLiturgieController::class, 'transition'])->name('admin.liturgie.transition');
         Route::delete('/admin/liturgie/{id}', [AdminLiturgieController::class, 'destroy'])->name('admin.liturgie.destroy');
+        Route::get('/admin/liturgie/{id}/certificat', [\App\Http\Controllers\Pasteur\LiturgieController::class, 'certificat'])->name('admin.liturgie.certificat');
+        Route::get('/admin/liturgie/{id}/fiche', [\App\Http\Controllers\Pasteur\LiturgieController::class, 'fiche'])->name('admin.liturgie.fiche');
 
         // Routes module Trésorerie (Admin)
         Route::get('/admin/tresorerie', [AdminTresorerieController::class, 'index'])
@@ -383,6 +391,10 @@ Route::middleware(['auth'])->group(function () {
             ->name('conducteur.tresorerie.collectes.store');
         Route::post('/conducteur/tresorerie/paiements', [ConducteurTresorerieController::class, 'storePaiement'])
             ->name('conducteur.tresorerie.paiements.store');
+        Route::post('/conducteur/tresorerie/dons', [ConducteurTresorerieController::class, 'storeDon'])
+            ->name('conducteur.tresorerie.dons.store');
+        Route::post('/conducteur/tresorerie/rappels', [ConducteurTresorerieController::class, 'storeRappelTresorier'])
+            ->name('conducteur.tresorerie.rappels.store');
         Route::post('/conducteur/tresorerie/assign-tresorier', [ConducteurTresorerieController::class, 'assignTresorier'])
             ->name('conducteur.tresorerie.assign-tresorier');
 
@@ -412,6 +424,18 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/conducteur/galerie/update/{id}', [ProgrammesClasseController::class, 'updateMedia'])->name('galerie.update');
         Route::put('/conducteur/galerie/set-featured/{id}', [ProgrammesClasseController::class, 'setFeaturedMedia']);
         Route::get('/conducteur/galerie/filter', [ProgrammesClasseController::class, 'getGalleryMediaFiltered'])->name('conducteur.galerie.filter');
+    });
+
+    // Routes module Trésorerie (Trésorier de Classe)
+    Route::group([], function () {
+        Route::get('/tresorier/tresorerie', [ConducteurTresorerieController::class, 'indexTresorier'])
+            ->name('tresorier.tresorerie.index');
+        Route::post('/tresorier/tresorerie/paiements', [ConducteurTresorerieController::class, 'storePaiement'])
+            ->name('tresorier.tresorerie.paiements.store');
+        Route::post('/tresorier/tresorerie/dons', [ConducteurTresorerieController::class, 'storeDon'])
+            ->name('tresorier.tresorerie.dons.store');
+        Route::post('/tresorier/tresorerie/rappels', [ConducteurTresorerieController::class, 'storeRappelTresorier'])
+            ->name('tresorier.tresorerie.rappels.store');
     });
 
     // Tableau de bord Responsable de Famille

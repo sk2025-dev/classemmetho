@@ -134,7 +134,8 @@ class AdminInscriptionsController extends Controller
                 'responsable.relation' => 'nullable|string|max:100',
                 'responsable.lienParente' => 'nullable|string|max:255',
                 'responsable.fonction_id' => 'nullable|integer|exists:fonctions,id',
-                'responsable.fonction' => 'nullable|string|max:255',
+                'responsable.fonction_ids' => 'nullable|array|max:10',
+                'responsable.fonction_ids.*' => 'integer|exists:fonctions,id',
                 'responsable.photo' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
 
                 // RESPONSABLE - Statut marital civil
@@ -170,6 +171,8 @@ class AdminInscriptionsController extends Controller
                 'membres.*.profession' => 'nullable|string|max:255',
                 'membres.*.relation' => 'required|string|max:100',
                 'membres.*.fonction_id' => 'nullable|integer|exists:fonctions,id',
+                'membres.*.fonction_ids' => 'nullable|array|max:10',
+                'membres.*.fonction_ids.*' => 'integer|exists:fonctions,id',
                 'membres.*.photo' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
 
                 // MEMBRES - Statut marital civil
@@ -231,7 +234,7 @@ class AdminInscriptionsController extends Controller
                 'niveau_etude' => $validated['responsable']['niveau_etude'] ?? null,
                 'employment_status' => $validated['responsable']['employment_status'] ?? null,
                 'relation' => $validated['responsable']['relation'] ?? null,
-                'fonction_id' => $validated['responsable']['fonction_id'] ?? $validated['responsable']['fonction'] ?? null,
+                'fonction_id' => ($validated['responsable']['fonction_ids'][0] ?? null) ?: ($validated['responsable']['fonction_id'] ?? null),
                 'family_id' => $family->id,
                 'role' => 'responsable_famille',
                 'is_family_responsible' => true,
@@ -241,6 +244,10 @@ class AdminInscriptionsController extends Controller
             ]);
 
             $family->update(['responsable_id' => $responsable->id]);
+
+            if (!empty($validated['responsable']['fonction_ids'])) {
+                $responsable->fonctions()->sync($validated['responsable']['fonction_ids']);
+            }
 
             // 3. Créer les sacrements du responsable
             $this->createUserSacrements($responsable, $validated['responsable']);
@@ -271,13 +278,17 @@ class AdminInscriptionsController extends Controller
                         'profession' => $membreData['profession'] ?? null,
                         'niveau_etude' => $membreData['niveau_etude'] ?? null,
                         'relation' => $membreData['relation'] ?? null,
-                        'fonction_id' => $membreData['fonction_id'] ?? $membreData['fonction'] ?? null,
+                        'fonction_id' => ($membreData['fonction_ids'][0] ?? null) ?: ($membreData['fonction_id'] ?? null),
                         'family_id' => $family->id,
                         'role' => 'membre_famille',
                         'photo_path' => $membrePhotoPath,
                         'classe_id' => $validated['famille']['classe_id'],
                         'ville_id' => $validated['famille']['ville'],
                     ]);
+
+                    if (!empty($membreData['fonction_ids'])) {
+                        $membre->fonctions()->sync($membreData['fonction_ids']);
+                    }
 
                     // Créer les sacrements du membre
                     $this->createUserSacrements($membre, $membreData);
@@ -381,7 +392,8 @@ class AdminInscriptionsController extends Controller
                 'responsable.relation' => 'nullable|string|max:100',
                 'responsable.lienParente' => 'nullable|string|max:255',
                 'responsable.fonction_id' => 'nullable|integer|exists:fonctions,id',
-                'responsable.fonction' => 'nullable|string|max:255',
+                'responsable.fonction_ids' => 'nullable|array|max:10',
+                'responsable.fonction_ids.*' => 'integer|exists:fonctions,id',
                 'responsable.photo' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
 
                 // RESPONSABLE - Statut marital civil
@@ -418,6 +430,8 @@ class AdminInscriptionsController extends Controller
                 'membres.*.relation' => 'required|string|max:100',
                 'membres.*.lienParente' => 'nullable|string|max:255',
                 'membres.*.fonction_id' => 'nullable|integer|exists:fonctions,id',
+                'membres.*.fonction_ids' => 'nullable|array|max:10',
+                'membres.*.fonction_ids.*' => 'integer|exists:fonctions,id',
                 'membres.*.photo' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
 
                 // MEMBRES - Statut marital civil
@@ -479,16 +493,20 @@ class AdminInscriptionsController extends Controller
                 'profession' => $validated['responsable']['profession'] ?? null,
                 'niveau_etude' => $validated['responsable']['niveau_etude'] ?? null,
                 'relation' => $validated['responsable']['relation'] ?? null,
-                'fonction_id' => $validated['responsable']['fonction_id'] ?? $validated['responsable']['fonction'] ?? null,
+                'fonction_id' => ($validated['responsable']['fonction_ids'][0] ?? null) ?: ($validated['responsable']['fonction_id'] ?? null),
                 'family_id' => $family->id,
-                'role' => 'conducteur', // IMPORTANT: role conducteur
-                'is_family_responsible' => false, // Conducteur n'est pas responsable de famille
+                'role' => 'conducteur',
+                'is_family_responsible' => false,
                 'photo_path' => $photoPath,
                 'classe_id' => $validated['famille']['classe_id'],
                 'ville_id' => $validated['famille']['ville'],
             ]);
 
             $family->update(['responsable_id' => $conductor->id]);
+
+            if (!empty($validated['responsable']['fonction_ids'])) {
+                $conductor->fonctions()->sync($validated['responsable']['fonction_ids']);
+            }
 
             // 3. Créer les sacrements du conducteur
             $this->createUserSacrements($conductor, $validated['responsable']);
@@ -519,13 +537,17 @@ class AdminInscriptionsController extends Controller
                         'profession' => $membreData['profession'] ?? null,
                         'niveau_etude' => $membreData['niveau_etude'] ?? null,
                         'relation' => $membreData['relation'] ?? null,
-                        'fonction_id' => $membreData['fonction_id'] ?? $membreData['fonction'] ?? null,
+                        'fonction_id' => ($membreData['fonction_ids'][0] ?? null) ?: ($membreData['fonction_id'] ?? null),
                         'family_id' => $family->id,
                         'role' => 'membre_famille',
                         'photo_path' => $membrePhotoPath,
                         'classe_id' => $validated['famille']['classe_id'],
                         'ville_id' => $validated['famille']['ville'],
                     ]);
+
+                    if (!empty($membreData['fonction_ids'])) {
+                        $membre->fonctions()->sync($membreData['fonction_ids']);
+                    }
 
                     // Créer les sacrements du membre
                     $this->createUserSacrements($membre, $membreData);
@@ -667,7 +689,8 @@ class AdminInscriptionsController extends Controller
                 'membres.*.relation' => 'required|string|max:100',
                 'membres.*.lienParente' => 'nullable|string|max:255',
                 'membres.*.fonction_id' => 'nullable|integer|exists:fonctions,id',
-                'membres.*.fonction' => 'nullable|string|max:255',
+                'membres.*.fonction_ids' => 'nullable|array|max:10',
+                'membres.*.fonction_ids.*' => 'integer|exists:fonctions,id',
                 'membres.*.photo' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
 
                 // MEMBRES - Statut marital civil
@@ -729,9 +752,9 @@ class AdminInscriptionsController extends Controller
                 'profession' => $validated['responsable']['profession'] ?? null,
                 'niveau_etude' => $validated['responsable']['niveau_etude'] ?? null,
                 'relation' => $validated['responsable']['relation'] ?? null,
-                'fonction_id' => $validated['responsable']['fonction_id'] ?? $validated['responsable']['fonction'] ?? null,
+                'fonction_id' => ($validated['responsable']['fonction_ids'][0] ?? null) ?: ($validated['responsable']['fonction_id'] ?? null),
                 'family_id' => $family->id,
-                'role' => 'pasteur',  // ✅ RÔLE PASTEUR (au lieu de responsable_famille)
+                'role' => 'pasteur',
                 'photo_path' => $photoPath,
                 'classe_id' => $validated['famille']['classe_id'],
                 'ville_id' => $validated['famille']['ville'],
@@ -739,6 +762,11 @@ class AdminInscriptionsController extends Controller
             ]);
 
             $family->update(['responsable_id' => $pastor->id]);
+
+            // Sync fonctions (pivot)
+            if (!empty($validated['responsable']['fonction_ids'])) {
+                $pastor->fonctions()->sync($validated['responsable']['fonction_ids']);
+            }
 
             // 3. Créer les sacrements du pasteur
             $this->createUserSacrements($pastor, $validated['responsable']);
@@ -768,7 +796,7 @@ class AdminInscriptionsController extends Controller
                     'profession' => $membreData['profession'] ?? null,
                     'niveau_etude' => $membreData['niveau_etude'] ?? null,
                     'relation' => $membreData['relation'] ?? null,
-                    'fonction_id' => $membreData['fonction_id'] ?? $membreData['fonction'] ?? null,
+                    'fonction_id' => ($membreData['fonction_ids'][0] ?? null) ?: ($membreData['fonction_id'] ?? null),
                     'family_id' => $family->id,
                     'role' => 'membre_famille',
                     'photo_path' => $membrePhotoPath,
@@ -776,6 +804,11 @@ class AdminInscriptionsController extends Controller
                     'ville_id' => $family->ville_id,
                     'must_change_password' => true,
                 ]);
+
+                // Sync fonctions (pivot)
+                if (!empty($membreData['fonction_ids'])) {
+                    $membre->fonctions()->sync($membreData['fonction_ids']);
+                }
 
                 // Créer les sacrements du membre
                 $this->createUserSacrements($membre, $membreData);

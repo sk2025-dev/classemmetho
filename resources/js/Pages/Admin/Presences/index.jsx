@@ -133,6 +133,7 @@ const TABS = [
     { id: "periode", label: "Par période", icon: "📆" },
     { id: "participants", label: "Participants", icon: "👥" },
     { id: "alertes", label: "Alertes", icon: "⚠️" },
+    { id: "tendances", label: "Tendances classe", icon: "📈" },
 ];
 
 function BarRow({ name, pct, present, total, color }) {
@@ -338,6 +339,7 @@ export default function AdminPresenceDashboard({
     alertesData = [],
     tendancesData = [],
     classInsights = {},
+    topActivitesMois = [],
 }) {
     const [activeTab, setActiveTab] = useState("classe");
     const [activePeriod, setActivePeriod] = useState("avril");
@@ -353,6 +355,9 @@ export default function AdminPresenceDashboard({
     const [alertesSearch, setAlertesSearch] = useState("");
     const [alertesLevelFilter, setAlertesLevelFilter] = useState("all");
     const [alertesSortBy, setAlertesSortBy] = useState("absences_desc");
+    const [modalAbsencesParticipant, setModalAbsencesParticipant] = useState(null);
+    const [participantsPage, setParticipantsPage] = useState(1);
+    const PARTICIPANTS_PER_PAGE = 15;
 
     const handleBack = () => {
         if (window.history.length > 1) {
@@ -821,17 +826,6 @@ export default function AdminPresenceDashboard({
                         </div>
                     </div>
                 </div>
-                <button
-                    style={styles.exportBtn}
-                    onClick={() => {
-                        window.location.href =
-                            typeof window.route === "function"
-                                ? window.route("admin.presences.export")
-                                : withBasePath("", "/admin/presences/export");
-                    }}
-                >
-                    Exporter
-                </button>
             </div>
 
             {/* KPI Cards */}
@@ -854,11 +848,11 @@ export default function AdminPresenceDashboard({
                 />
                 <KpiCard
                     icon="✔️"
-                    value={String(stats.presents_dernier ?? 247)}
-                    label="Présents dernière activité"
-                    badge="Récent"
-                    badgeBg="#fff3e0"
-                    badgeColor="#c45c00"
+                    value={`${stats.presents_dernier ?? 0}%`}
+                    label="Taux de participation global"
+                    badge="Toutes classes"
+                    badgeBg="#e6f4ea"
+                    badgeColor="#1a7740"
                 />
                 <KpiCard
                     icon="⚠️"
@@ -869,6 +863,97 @@ export default function AdminPresenceDashboard({
                     badgeColor="#c0392b"
                 />
             </div>
+
+            {/* Stats mois + Top 3 activités — supprimé */}
+            {false && (() => {
+                const now = new Date();
+                const moisCourant = now.toLocaleDateString("fr-FR", { month: "long" }).toLowerCase();
+                const moisLabel = now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+
+                const statsMois = periodesData.find(
+                    (p) => (p.mois ?? "").toLowerCase() === moisCourant,
+                );
+                const nbPresentsMois = statsMois?.present ?? 0;
+                const nbTotalMois = statsMois?.total ?? 0;
+                const nbAbsentsMois = nbTotalMois - nbPresentsMois;
+                const tauxMois = statsMois?.pct ?? 0;
+
+                const top3 = topActivitesMois.slice(0, 3);
+                const medals = ["🥇", "🥈", "🥉"];
+                const maxPresents = Math.max(top3[0]?.presents ?? 1, 1);
+                const barColors = ["#f59e0b", "#9ca3af", "#b45309"];
+
+                return (
+                    <div style={{ padding: "16px 24px 0", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                        {/* Stats du mois */}
+                        <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: 14, padding: "16px 20px", border: "1px solid rgba(255,255,255,0.12)" }}>
+                            <p style={{ margin: "0 0 14px", fontWeight: 700, fontSize: 13, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: 1 }}>
+                                📅 {moisLabel}
+                            </p>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                                <div style={{ background: "rgba(67,160,71,0.15)", borderRadius: 10, padding: "12px 14px", border: "1px solid rgba(67,160,71,0.3)" }}>
+                                    <div style={{ fontSize: 26, fontWeight: 800, color: "#81c784" }}>
+                                        {nbPresentsMois}
+                                        <span style={{ fontSize: 13, fontWeight: 500, marginLeft: 6, color: "#a5d6a7" }}>· {tauxMois}%</span>
+                                    </div>
+                                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 3 }}>Présences ce mois</div>
+                                    <div style={{ height: 4, background: "rgba(255,255,255,0.1)", borderRadius: 10, marginTop: 8, overflow: "hidden" }}>
+                                        <div style={{ height: "100%", width: `${tauxMois}%`, background: "#43a047", borderRadius: 10, transition: "width 0.4s" }} />
+                                    </div>
+                                </div>
+                                <div style={{ background: "rgba(229,57,53,0.15)", borderRadius: 10, padding: "12px 14px", border: "1px solid rgba(229,57,53,0.3)" }}>
+                                    <div style={{ fontSize: 26, fontWeight: 800, color: "#ef9a9a" }}>
+                                        {nbAbsentsMois}
+                                        <span style={{ fontSize: 13, fontWeight: 500, marginLeft: 6, color: "#ffcdd2" }}>· {nbTotalMois > 0 ? Math.round((nbAbsentsMois / nbTotalMois) * 100) : 0}%</span>
+                                    </div>
+                                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 3 }}>Absences ce mois</div>
+                                    <div style={{ height: 4, background: "rgba(255,255,255,0.1)", borderRadius: 10, marginTop: 8, overflow: "hidden" }}>
+                                        <div style={{ height: "100%", width: `${nbTotalMois > 0 ? Math.round((nbAbsentsMois / nbTotalMois) * 100) : 0}%`, background: "#e53935", borderRadius: 10, transition: "width 0.4s" }} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Top 3 activités */}
+                        <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: 14, padding: "16px 20px", border: "1px solid rgba(255,255,255,0.12)" }}>
+                            <p style={{ margin: "0 0 14px", fontWeight: 700, fontSize: 13, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: 1 }}>
+                                🏆 Top activités
+                            </p>
+                            {top3.length === 0 ? (
+                                <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 13 }}>Aucune donnée disponible.</p>
+                            ) : (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                    {top3.map((a, i) => (
+                                        <div key={i}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                                                    <span style={{ fontSize: 16, flexShrink: 0 }}>{medals[i]}</span>
+                                                    <div style={{ minWidth: 0 }}>
+                                                        <div style={{ fontSize: 13, fontWeight: 600, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.titre}</div>
+                                                        {a.classe && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)" }}>{a.classe}</div>}
+                                                    </div>
+                                                </div>
+                                                <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.5)", whiteSpace: "nowrap", marginLeft: 8 }}>{a.pct}%</span>
+                                            </div>
+                                            <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                                                <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 8, background: "rgba(67,160,71,0.25)", color: "#a5d6a7", fontWeight: 600 }}>
+                                                    ✔ {a.presents} présents
+                                                </span>
+                                                <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 8, background: "rgba(229,57,53,0.25)", color: "#ef9a9a", fontWeight: 600 }}>
+                                                    ✗ {a.absents} absents
+                                                </span>
+                                            </div>
+                                            <div style={{ height: 5, background: "rgba(255,255,255,0.1)", borderRadius: 10, overflow: "hidden" }}>
+                                                <div style={{ height: "100%", width: `${Math.round((a.presents / maxPresents) * 100)}%`, background: barColors[i], borderRadius: 10, transition: "width 0.4s" }} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Tabs */}
             <div style={styles.tabsWrap}>
@@ -884,8 +969,6 @@ export default function AdminPresenceDashboard({
                         Classes (cartes cliquables)
                         <div style={styles.periodBtns}>
                             {periodBtn("avril", "Avril 2026")}
-                            {periodBtn("trimestre", "Ce trimestre")}
-                            {periodBtn("annuel", "Annuel")}
                         </div>
                     </div>
                     <div
@@ -942,7 +1025,7 @@ export default function AdminPresenceDashboard({
                             return (
                                 <button
                                     key={c.id ?? c.name}
-                                    onClick={() => setSelectedClasseId(c.id)}
+                                    onClick={() => { setSelectedClasseId(c.id); setActiveTab("tendances"); }}
                                     style={{
                                         border: isActive
                                             ? "2px solid #2d2f8f"
@@ -1009,6 +1092,126 @@ export default function AdminPresenceDashboard({
                             ? `Classe sélectionnée: ${selectedClass.name}`
                             : "Sélectionnez une classe pour filtrer les autres onglets."}
                     </div>
+                </div>
+            )}
+
+            {/* Panel: Tendances classe */}
+            {activeTab === "tendances" && (
+                <div style={styles.panel}>
+                    {!selectedClass ? (
+                        <div style={{ textAlign: "center", padding: "48px 0", color: "#888" }}>
+                            <div style={{ fontSize: 40, marginBottom: 12 }}>📊</div>
+                            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Aucune classe sélectionnée</div>
+                            <div style={{ fontSize: 13 }}>Cliquez sur une carte dans l'onglet <strong>Par classe</strong> pour afficher ses tendances.</div>
+                        </div>
+                    ) : (() => {
+                        const activitesSorted = [...activitesRowsFiltres].sort((a, b) => (b.pct ?? 0) - (a.pct ?? 0));
+                        const barColor = (pct) => pct >= 75 ? "#16a34a" : pct >= 50 ? "#f59e0b" : "#ef4444";
+                        const totalPresents = activitesSorted.reduce((s, a) => s + (a.present ?? 0), 0);
+                        const totalTotal = activitesSorted.reduce((s, a) => s + (a.total ?? 0), 0);
+                        const tauxGlobal = totalTotal > 0 ? Math.min(100, Math.round((totalPresents / totalTotal) * 100)) : selectedClass.pct ?? 0;
+
+                        return (
+                            <div>
+                                {/* Header classe */}
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+                                    <div>
+                                        <div style={{ fontSize: 20, fontWeight: 800, color: "#1e2070" }}>
+                                            📈 {selectedClass.name}
+                                        </div>
+                                        <div style={{ fontSize: 13, color: "#666", marginTop: 2 }}>
+                                            Classement des activités par taux de participation
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => { setSelectedClasseId(null); setActiveTab("classe"); }}
+                                        style={{ border: "1px solid #e0e0e0", borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", background: "#f5f5f5", color: "#555" }}
+                                    >
+                                        ← Retour aux classes
+                                    </button>
+                                </div>
+
+                                {/* KPI — Activité avec le plus de participations */}
+                                {activitesSorted.length > 0 && (() => {
+                                    const top = activitesSorted[0];
+                                    const color = barColor(top.pct ?? 0);
+                                    return (
+                                        <div style={{ background: "linear-gradient(135deg, #1e2070, #2d2f8f)", borderRadius: 16, padding: "20px 24px", marginBottom: 24, color: "white", display: "flex", alignItems: "center", gap: 24 }}>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>
+                                                    🏆 Activité avec le plus de participations
+                                                </div>
+                                                <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                                    {top.name ?? top.titre ?? "—"}
+                                                </div>
+                                                <div style={{ fontSize: 42, fontWeight: 900, lineHeight: 1, color: "#fff" }}>
+                                                    {top.pct ?? 0}<span style={{ fontSize: 20 }}>%</span>
+                                                </div>
+                                                <div style={{ marginTop: 12, height: 8, background: "rgba(255,255,255,0.15)", borderRadius: 20, overflow: "hidden" }}>
+                                                    <div style={{ height: "100%", width: `${top.pct ?? 0}%`, background: color, borderRadius: 20, transition: "width 0.5s" }} />
+                                                </div>
+                                            </div>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 140 }}>
+                                                <div style={{ background: "rgba(67,160,71,0.2)", borderRadius: 10, padding: "10px 14px", border: "1px solid rgba(67,160,71,0.3)" }}>
+                                                    <div style={{ fontSize: 22, fontWeight: 800, color: "#81c784" }}>{top.present ?? 0}</div>
+                                                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>Présents</div>
+                                                </div>
+                                                <div style={{ background: "rgba(229,57,53,0.2)", borderRadius: 10, padding: "10px 14px", border: "1px solid rgba(229,57,53,0.3)" }}>
+                                                    <div style={{ fontSize: 22, fontWeight: 800, color: "#ef9a9a" }}>{top.absent ?? (top.total ?? 0) - (top.present ?? 0)}</div>
+                                                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>Absents</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* Classement activités */}
+                                {activitesSorted.length === 0 ? (
+                                    <div style={{ textAlign: "center", color: "#aaa", padding: "32px 0", fontSize: 14 }}>
+                                        Aucune activité enregistrée pour cette classe.
+                                    </div>
+                                ) : (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                                        {activitesSorted.map((a, i) => {
+                                            const pct = a.pct ?? 0;
+                                            const color = barColor(pct);
+                                            const barWidth = pct;
+                                            const medals = ["🥇", "🥈", "🥉"];
+                                            const rank = medals[i] ?? `#${i + 1}`;
+                                            return (
+                                                <div key={i} style={{ background: "#fff", border: "1px solid #e8e8f0", borderRadius: 12, padding: "14px 18px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                                                        <span style={{ fontSize: i < 3 ? 20 : 14, fontWeight: 700, color: "#1e2070", minWidth: 28 }}>{rank}</span>
+                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                            <div style={{ fontWeight: 700, fontSize: 14, color: "#1e2070", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                                                {a.name ?? a.titre ?? "—"}
+                                                            </div>
+                                                            {a.type && <div style={{ fontSize: 11, color: "#999", marginTop: 1 }}>{a.type}</div>}
+                                                        </div>
+                                                        <span style={{ fontSize: 15, fontWeight: 800, color: color, minWidth: 42, textAlign: "right" }}>{pct}%</span>
+                                                    </div>
+                                                    <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                                                        <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, background: "rgba(67,160,71,0.1)", color: "#2e7d32", fontWeight: 600, border: "1px solid rgba(67,160,71,0.2)" }}>
+                                                            ✔ {a.present ?? 0} présents
+                                                        </span>
+                                                        <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, background: "rgba(229,57,53,0.1)", color: "#c62828", fontWeight: 600, border: "1px solid rgba(229,57,53,0.2)" }}>
+                                                            ✗ {a.absent ?? (a.total ?? 0) - (a.present ?? 0)} absents
+                                                        </span>
+                                                        <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, background: "#f5f5f5", color: "#666", fontWeight: 500, border: "1px solid #e0e0e0", marginLeft: "auto" }}>
+                                                            {a.total ?? 0} membres
+                                                        </span>
+                                                    </div>
+                                                    <div style={{ height: 8, background: "#f0f0f8", borderRadius: 20, overflow: "hidden" }}>
+                                                        <div style={{ height: "100%", width: `${barWidth}%`, background: color, borderRadius: 20, transition: "width 0.4s ease" }} />
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
                 </div>
             )}
 
@@ -1406,6 +1609,7 @@ export default function AdminPresenceDashboard({
                                                         <th style={thStyle}>
                                                             Date
                                                         </th>
+                                                        <th style={thStyle}></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -1467,14 +1671,26 @@ export default function AdminPresenceDashboard({
                                                                                 : "Absent"}
                                                                         </span>
                                                                     </td>
-                                                                    <td
-                                                                        style={
-                                                                            tdStyle
-                                                                        }
-                                                                    >
-                                                                        {formatParticipantDate(
-                                                                            row?.date,
-                                                                        )}
+                                                                    <td style={tdStyle}>
+                                                                        {formatParticipantDate(row?.date)}
+                                                                    </td>
+                                                                    <td style={tdStyle}>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                const absences = participantsRows.filter(
+                                                                                    (r) => r.participant === row.participant &&
+                                                                                        String(r.statut ?? "").toLowerCase() === "absent"
+                                                                                );
+                                                                                setModalAbsencesParticipant({
+                                                                                    nom: row.participant,
+                                                                                    classe: row.classe,
+                                                                                    absences,
+                                                                                });
+                                                                            }}
+                                                                            style={{ padding: "3px 10px", borderRadius: 6, border: "1px solid #2d2f8f", background: "#fff", color: "#2d2f8f", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+                                                                        >
+                                                                            Voir
+                                                                        </button>
                                                                     </td>
                                                                 </tr>
                                                             );
@@ -1831,9 +2047,10 @@ export default function AdminPresenceDashboard({
                         <input
                             type="text"
                             value={participantsSearch}
-                            onChange={(e) =>
-                                setParticipantsSearch(e.target.value)
-                            }
+                            onChange={(e) => {
+                                setParticipantsSearch(e.target.value);
+                                setParticipantsPage(1);
+                            }}
                             placeholder="Rechercher un participant, une activité ou une classe..."
                             style={{
                                 flex: 1,
@@ -1847,9 +2064,10 @@ export default function AdminPresenceDashboard({
 
                         <select
                             value={participantsStatusFilter}
-                            onChange={(e) =>
-                                setParticipantsStatusFilter(e.target.value)
-                            }
+                            onChange={(e) => {
+                                setParticipantsStatusFilter(e.target.value);
+                                setParticipantsPage(1);
+                            }}
                             style={{
                                 border: "1px solid #d9dcf2",
                                 borderRadius: 10,
@@ -1868,78 +2086,87 @@ export default function AdminPresenceDashboard({
                         <div style={{ fontSize: 13, color: "#888" }}>
                             Aucun participant trouvé pour ce filtre.
                         </div>
-                    ) : (
-                        <div style={{ overflowX: "auto" }}>
-                            <table
-                                style={{
-                                    width: "100%",
-                                    borderCollapse: "collapse",
-                                    fontSize: 13,
-                                }}
-                            >
-                                <thead>
-                                    <tr>
-                                        <th style={thStyle}>Participant</th>
-                                        <th style={thStyle}>Activité</th>
-                                        <th style={thStyle}>Statut</th>
-                                        <th style={thStyle}>Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {participantsRowsFiltres.map(
-                                        (row, index) => {
-                                            const isPresent =
-                                                String(
-                                                    row?.statut ?? "",
-                                                ).toLowerCase() === "present";
+                    ) : (() => {
+                        const totalPages = Math.max(1, Math.ceil(participantsRowsFiltres.length / PARTICIPANTS_PER_PAGE));
+                        const pageSafe = Math.min(Math.max(participantsPage, 1), totalPages);
+                        const paginated = participantsRowsFiltres.slice(
+                            (pageSafe - 1) * PARTICIPANTS_PER_PAGE,
+                            pageSafe * PARTICIPANTS_PER_PAGE,
+                        );
+                        return (
+                            <>
+                                <div style={{ fontSize: 12, color: "#888", marginBottom: 8 }}>
+                                    {participantsRowsFiltres.length} résultat{participantsRowsFiltres.length > 1 ? "s" : ""}
+                                </div>
+                                <div style={{ overflowX: "auto" }}>
+                                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                                        <thead>
+                                            <tr>
+                                                <th style={thStyle}>Participant</th>
+                                                <th style={thStyle}>Activité</th>
+                                                <th style={thStyle}>Statut</th>
+                                                <th style={thStyle}>Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {paginated.map((row, index) => {
+                                                const isPresent = String(row?.statut ?? "").toLowerCase() === "present";
+                                                return (
+                                                    <tr key={`${row.participant}-${row.activite}-${index}`}>
+                                                        <td style={tdStyle}>{row.participant}</td>
+                                                        <td style={tdStyle}>{row.activite}</td>
+                                                        <td style={tdStyle}>
+                                                            <span style={{ display: "inline-block", borderRadius: 999, padding: "3px 10px", fontSize: 11, fontWeight: 700, color: isPresent ? "#166534" : "#991b1b", background: isPresent ? "#dcfce7" : "#fee2e2" }}>
+                                                                {isPresent ? "Présent" : "Absent"}
+                                                            </span>
+                                                        </td>
+                                                        <td style={tdStyle}>{formatParticipantDate(row?.date)}</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
 
-                                            return (
-                                                <tr
-                                                    key={`${row.participant}-${row.activite}-${index}`}
-                                                >
-                                                    <td style={tdStyle}>
-                                                        {row.participant}
-                                                    </td>
-                                                    <td style={tdStyle}>
-                                                        {row.activite}
-                                                    </td>
-                                                    <td style={tdStyle}>
-                                                        <span
-                                                            style={{
-                                                                display:
-                                                                    "inline-block",
-                                                                borderRadius: 999,
-                                                                padding:
-                                                                    "3px 10px",
-                                                                fontSize: 11,
-                                                                fontWeight: 700,
-                                                                color: isPresent
-                                                                    ? "#166534"
-                                                                    : "#991b1b",
-                                                                background:
-                                                                    isPresent
-                                                                        ? "#dcfce7"
-                                                                        : "#fee2e2",
-                                                            }}
-                                                        >
-                                                            {isPresent
-                                                                ? "Présent"
-                                                                : "Absent"}
-                                                        </span>
-                                                    </td>
-                                                    <td style={tdStyle}>
-                                                        {formatParticipantDate(
-                                                            row?.date,
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        },
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+                                {totalPages > 1 && (
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, paddingTop: 12, borderTop: "1px solid #e5e7eb" }}>
+                                        <span style={{ fontSize: 12, color: "#888" }}>
+                                            Page {pageSafe}/{totalPages}
+                                        </span>
+                                        <div style={{ display: "flex", gap: 6 }}>
+                                            <button
+                                                onClick={() => setParticipantsPage((p) => Math.max(1, p - 1))}
+                                                disabled={pageSafe === 1}
+                                                style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #d9dcf2", background: "#fff", color: "#1e2070", fontSize: 12, fontWeight: 600, cursor: pageSafe === 1 ? "not-allowed" : "pointer", opacity: pageSafe === 1 ? 0.4 : 1 }}
+                                            >
+                                                Précédent
+                                            </button>
+                                            {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                                                const page = totalPages <= 7 ? i + 1 : Math.max(1, pageSafe - 3) + i;
+                                                if (page > totalPages) return null;
+                                                return (
+                                                    <button
+                                                        key={page}
+                                                        onClick={() => setParticipantsPage(page)}
+                                                        style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid #d9dcf2", background: page === pageSafe ? "#1e2070" : "#fff", color: page === pageSafe ? "#fff" : "#1e2070", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                                                    >
+                                                        {page}
+                                                    </button>
+                                                );
+                                            })}
+                                            <button
+                                                onClick={() => setParticipantsPage((p) => Math.min(totalPages, p + 1))}
+                                                disabled={pageSafe === totalPages}
+                                                style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #d9dcf2", background: "#fff", color: "#1e2070", fontSize: 12, fontWeight: 600, cursor: pageSafe === totalPages ? "not-allowed" : "pointer", opacity: pageSafe === totalPages ? 0.4 : 1 }}
+                                            >
+                                                Suivant
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
                 </div>
             )}
 
@@ -2101,6 +2328,64 @@ export default function AdminPresenceDashboard({
             )}
 
             <div style={{ height: 40 }} />
+
+            {/* ── MODAL : Absences d'un participant ── */}
+            {modalAbsencesParticipant && (
+                <div
+                    onClick={() => setModalAbsencesParticipant(null)}
+                    style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3000, padding: 16 }}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ width: "100%", maxWidth: 520, background: "#fff", borderRadius: 14, padding: "20px 24px", boxShadow: "0 10px 30px rgba(0,0,0,0.2)", maxHeight: "80vh", display: "flex", flexDirection: "column" }}
+                    >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#1e2070" }}>
+                                    {modalAbsencesParticipant.nom}
+                                </h3>
+                                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#888" }}>
+                                    {modalAbsencesParticipant.classe} · {modalAbsencesParticipant.absences.length} absence{modalAbsencesParticipant.absences.length > 1 ? "s" : ""} enregistrée{modalAbsencesParticipant.absences.length > 1 ? "s" : ""}
+                                </p>
+                            </div>
+                            <button onClick={() => setModalAbsencesParticipant(null)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#999", lineHeight: 1 }}>✕</button>
+                        </div>
+
+                        <div style={{ overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+                            {modalAbsencesParticipant.absences.length === 0 ? (
+                                <p style={{ color: "#888", textAlign: "center", padding: "20px 0", fontSize: 13 }}>
+                                    Aucune absence enregistrée.
+                                </p>
+                            ) : (
+                                modalAbsencesParticipant.absences.map((a, i) => (
+                                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: "#fff5f5", borderRadius: 10, border: "1px solid #fecaca" }}>
+                                        <div style={{ flex: 1 }}>
+                                            <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#222" }}>
+                                                {a.activite || "—"}
+                                            </p>
+                                            <p style={{ margin: 0, fontSize: 11, color: "#888" }}>
+                                                {formatParticipantDate(a.date)}
+                                            </p>
+                                        </div>
+                                        <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 8, background: "#fee2e2", color: "#991b1b", fontWeight: 700 }}>
+                                            Absent
+                                        </span>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+                            <button
+                                onClick={() => setModalAbsencesParticipant(null)}
+                                style={{ padding: "8px 20px", borderRadius: 8, background: "#1e2070", color: "#fff", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                            >
+                                Fermer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

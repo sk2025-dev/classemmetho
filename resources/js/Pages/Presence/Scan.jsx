@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Head, usePage } from "@inertiajs/react";
 import axios from "axios";
+import { withBasePath } from "../../Utils/urlHelper";
 
 export default function PresenceScan() {
     const {
@@ -32,7 +33,7 @@ export default function PresenceScan() {
         setMessage(null);
 
         try {
-            const response = await axios.post("/api/presence", {
+            const response = await axios.post(withBasePath("", "/api/presence"), {
                 token,
                 code_membre: codeMembre.trim(),
             });

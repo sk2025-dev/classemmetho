@@ -479,7 +479,7 @@ export default function TresorierClasse({
 
         setLoading(true);
         try {
-            const res = await postJson("/tresorier/tresorerie/paiements", {
+            const res = await postJson(withBasePath("", "/tresorier/tresorerie/paiements"), {
                 ...paiementForm,
                 user_id: Number(paiementForm.user_id),
                 cotisation_id: paiementForm.cotisation_id
@@ -545,7 +545,7 @@ export default function TresorierClasse({
 
         setLoading(true);
         try {
-            const res = await postJson("/tresorier/tresorerie/dons", {
+            const res = await postJson(withBasePath("", "/tresorier/tresorerie/dons"), {
                 user_id: Number(donForm.user_id),
                 montant,
                 type: donForm.type,
@@ -604,7 +604,7 @@ export default function TresorierClasse({
 
         setLoading(true);
         try {
-            await postJson("/tresorier/tresorerie/rappels", {
+            await postJson(withBasePath("", "/tresorier/tresorerie/rappels"), {
                 user_id: Number(rappelForm.user_id),
                 cotisation: rappelForm.cotisation,
                 message: rappelForm.message,

@@ -402,8 +402,8 @@ export default function Welcome() {
                             </span>
                         </button>
 
-                        <Link
-                            href={withBase("/paiement")}
+                        <button
+                            onClick={() => setIsDonModalOpen(true)}
                             className="group px-8 py-4 border-2 border-amber-400 text-amber-300 rounded-full font-bold text-lg transition-all hover:scale-105 hover:bg-amber-400/10"
                         >
                             <span className="flex items-center gap-2">
@@ -413,7 +413,7 @@ export default function Welcome() {
                                     className="group-hover:translate-x-1 transition-transform"
                                 />
                             </span>
-                        </Link>
+                        </button>
                     </div>
                 </div>
 

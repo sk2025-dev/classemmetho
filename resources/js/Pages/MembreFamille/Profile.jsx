@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect, useRef } from "react";
 import { Link, usePage, router } from "@inertiajs/react";
+import { withBasePath } from "../../Utils/urlHelper";
 import {
     usePersistentState,
     clearFormPersistedData,
@@ -121,8 +122,14 @@ const SacrementSection = ({
     );
 };
 
-export default function Profile({ member, family, fonctions }) {
+export default function Profile({ member, family, fonctions, currentFonctionIds = [] }) {
     const [loading, setLoading] = useState(false);
+    const [toast, setToast] = useState(null);
+
+    const showToast = (message, type = "success") => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3500);
+    };
     const currentDataRef = useRef(null);
     const initialPhotoUrl = resolveMemberPhotoUrl(member) || null;
 
@@ -141,8 +148,10 @@ export default function Profile({ member, family, fonctions }) {
         statut_marital: member.statut_marital || "",
         date_mariage: formatDateForInput(member.date_mariage),
         lieu_mariage: member.lieu_mariage || "",
+        employment_status: member.employment_status || "",
         profession: member.profession || "",
-        fonction_id: member.fonction_id || "",
+        niveau_etude: member.niveau_etude || "",
+        fonction_ids: currentFonctionIds,
         relation: member.relation || "",
         photo: null,
         photoPreview: initialPhotoUrl,
@@ -224,16 +233,11 @@ export default function Profile({ member, family, fonctions }) {
             submitData,
             {
                 onSuccess: () => {
-                    alert("Modifications sauvegardées avec succès !");
+                    showToast("Profil mis à jour avec succès !");
                 },
                 onError: (errors) => {
-                    console.error("Erreurs de validation:", errors);
-                    const errorMessages = Object.entries(errors).map(
-                        ([field, message]) => {
-                            return `${field}: ${message}`;
-                        },
-                    );
-                    alert(`Erreur de validation:\n${errorMessages.join("\n")}`);
+                    const first = Object.values(errors)[0];
+                    showToast(first || "Une erreur est survenue.", "error");
                 },
                 onFinish: () => {
                     setLoading(false);
@@ -251,6 +255,14 @@ export default function Profile({ member, family, fonctions }) {
             }}
         >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                {/* Toast */}
+                {toast && (
+                    <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl text-white text-sm font-semibold transition-all ${toast.type === "error" ? "bg-red-500" : "bg-green-500"}`}>
+                        {toast.type === "error" ? <X className="w-4 h-4 shrink-0" /> : <Check className="w-4 h-4 shrink-0" />}
+                        {toast.message}
+                    </div>
+                )}
+
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-6">
                     <Link
@@ -451,43 +463,72 @@ export default function Profile({ member, family, fonctions }) {
                                 Informations Professionnelles
                             </h2>
 
-                            <FormField label="Profession" icon={Briefcase}>
-                                <input
-                                    type="text"
-                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
-                                    value={data.profession}
+                            <FormField label="Statut d'emploi" icon={Briefcase}>
+                                <select
+                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300 bg-white"
+                                    value={data.employment_status}
                                     onChange={(e) =>
                                         setData({
                                             ...data,
-                                            profession: e.target.value,
+                                            employment_status: e.target.value,
+                                            profession: "",
+                                            niveau_etude: "",
                                         })
                                     }
-                                />
+                                >
+                                    <option value="">— Sélectionner —</option>
+                                    <option value="TRAVAILLEUR">Travailleur</option>
+                                    <option value="ETUDIANT">Étudiant</option>
+                                    <option value="RETRAITE">Retraité</option>
+                                    <option value="SANS_EMPLOI">Sans emploi</option>
+                                </select>
                             </FormField>
 
+                            {data.employment_status === "TRAVAILLEUR" && (
+                                <FormField label="Profession" icon={Briefcase}>
+                                    <input
+                                        type="text"
+                                        className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
+                                        placeholder="Ex : Ingénieur, Médecin..."
+                                        value={data.profession}
+                                        onChange={(e) =>
+                                            setData({ ...data, profession: e.target.value })
+                                        }
+                                    />
+                                </FormField>
+                            )}
+
+                            {data.employment_status === "ETUDIANT" && (
+                                <FormField label="Niveau d'étude" icon={Briefcase}>
+                                    <select
+                                        className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300 bg-white"
+                                        value={data.niveau_etude}
+                                        onChange={(e) =>
+                                            setData({ ...data, niveau_etude: e.target.value })
+                                        }
+                                    >
+                                        <option value="">— Sélectionner —</option>
+                                        <option value="PRIMAIRE">Primaire</option>
+                                        <option value="SECONDAIRE">Secondaire</option>
+                                        <option value="LYCEE">Lycée</option>
+                                        <option value="LICENCE">Licence</option>
+                                        <option value="MASTER">Master</option>
+                                        <option value="DOCTORAT">Doctorat</option>
+                                    </select>
+                                </FormField>
+                            )}
+
                             <FormField
-                                label="Fonction dans l'Église"
+                                label="Fonction(s) dans l'Église"
                                 icon={Award}
                             >
                                 <Select2Fonction
-                                    value={
-                                        data.fonction_id
-                                            ? [data.fonction_id]
-                                            : []
+                                    value={data.fonction_ids}
+                                    onChange={(e) =>
+                                        setData({ ...data, fonction_ids: e.target.value })
                                     }
-                                    onChange={(e) => {
-                                        const value =
-                                            e.target.value &&
-                                            e.target.value.length > 0
-                                                ? e.target.value[0]
-                                                : "";
-                                        setData({
-                                            ...data,
-                                            fonction_id: value,
-                                        });
-                                    }}
                                     options={fonctions}
-                                    placeholder="S\u00e9lectionner une fonction..."
+                                    placeholder="S\u00e9lectionner une ou plusieurs fonctions..."
                                 />
                             </FormField>
 

@@ -324,6 +324,7 @@ class PresenceConducteurController extends Controller
 
         $membres = $classe->users()
             ->with('family:id,nom')
+            ->whereIn('role', ['responsable_famille', 'membre_famille'])
             ->get()
             ->map(fn(User $m) => [
                 'id' => $m->id,

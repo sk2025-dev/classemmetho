@@ -386,23 +386,7 @@ export default function CreateMember({ family, errors }) {
             // Succès - Afficher toast avec bouton Modifier
             const addedMemberData = res.data?.data || data; // Récupérer les données du membre depuis la réponse API
 
-            showSuccess(
-                "✅ Membre ajouté avec succès !",
-                0, // durée infinie (0) jusqu'à ce que l'utilisateur clique sur Modifier ou ferme
-                {
-                    label: "Modifier",
-                    onClick: () => {
-                        // Remplir le formulaire avec les données du membre pour modification
-                        setData((prev) => ({
-                            ...prev,
-                            ...addedMemberData,
-                            photoPreview: prev.photoPreview, // Garder la preview photo
-                        }));
-                        // Focus sur le premier champ
-                        setTimeout(() => nomRef.current?.focus(), 100);
-                    },
-                },
-            );
+            showSuccess("✅ Membre ajouté avec succès !", 3000);
 
             // Reset du formulaire après 2 secondes
             setTimeout(() => {
@@ -439,7 +423,7 @@ export default function CreateMember({ family, errors }) {
                 clearFormPersistedData("createMember_");
             }, 2000);
 
-            // Revenir automatiquement à la page des inscriptions après courte pause
+            // Revenir automatiquement à la page des inscriptions après que le toast soit visible
             setTimeout(() => {
                 Inertia.get(
                     withBasePath(
@@ -447,7 +431,7 @@ export default function CreateMember({ family, errors }) {
                         `/responsable-famille/inscriptions?family_id=${family.id}`,
                     ),
                 );
-            }, 1500);
+            }, 3500);
         } catch (err) {
             console.error("Erreur:", err);
             const apiErrors = err?.response?.data?.errors;

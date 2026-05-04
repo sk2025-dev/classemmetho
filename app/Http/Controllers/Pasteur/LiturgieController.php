@@ -345,17 +345,15 @@ class LiturgieController extends Controller
         $details = (array) ($acte->details ?? []);
         $dateValidatedMarriage = $typeActe === 'mariage'
             && ($details['ceremonie_statut'] ?? null) === 'CEREMONIE_VALIDEE_PAR_PASTEUR';
+        $validatedByPastorStatuses = ['VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'];
+        $isValidatedByPastor = in_array($acte->statut, $validatedByPastorStatuses, true) && !empty($acte->pasteur_id);
 
         if (in_array($typeActe, $typesFiche, true)) {
-            $validFicheStatuses = $typeActe === 'naissance'
-                ? ['SOUMISE', 'EN_ATTENTE_CONDUCTEUR', 'TRANSMISE_AU_PASTEUR', 'VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE']
-                : ['VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'];
-
-            if (!in_array($acte->statut, $validFicheStatuses, true)) {
-                abort(422, "La fiche est disponible uniquement apres validation de la demande.");
+            if (!$isValidatedByPastor) {
+                abort(422, "La fiche est disponible uniquement apres validation par le pasteur.");
             }
-        } elseif (!in_array($acte->statut, ['CELEBRE', 'TERMINE'], true) && ! $dateValidatedMarriage) {
-            abort(422, "Le certificat est disponible uniquement apres l'acte effectue ou apres validation de la date de cérémonie.");
+        } elseif (!$isValidatedByPastor && !$dateValidatedMarriage) {
+            abort(422, "Le certificat est disponible uniquement apres validation par le pasteur.");
         }
 
         if (in_array($typeActe, $typesFiche, true)) {
@@ -412,6 +410,13 @@ class LiturgieController extends Controller
         $pasteurSignature = $acte->pasteur?->signature_path && Storage::disk('public')->exists($acte->pasteur->signature_path)
             ? Storage::disk('public')->path($acte->pasteur->signature_path)
             : null;
+        $conducteurSignatureDataUri = null;
+        if ($acte->conducteur?->signature_path && Storage::disk('public')->exists($acte->conducteur->signature_path)) {
+            $conducteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->conducteur->signature_path));
+        }
+        $pasteurSignatureDataUri = $pasteurSignature
+            ? $this->buildImageDataUri($pasteurSignature)
+            : null;
         $signaturePath = $pasteurSignature;
         $signatureName = trim(($acte->pasteur->prenom ?? '') . ' ' . ($acte->pasteur->nom ?? '')) ?: null;
         $signatureRole = 'Pasteur';
@@ -439,6 +444,9 @@ class LiturgieController extends Controller
                 'signaturePath' => $signaturePath,
                 'signatureName' => $signatureName,
                 'signatureRole' => $signatureRole,
+                'signaturePasteurDataUri' => $pasteurSignatureDataUri,
+                'signatureConducteurDataUri' => $conducteurSignatureDataUri,
+                'conducteurName' => trim(($acte->conducteur->prenom ?? '') . ' ' . ($acte->conducteur->nom ?? '')) ?: null,
                 'qrDataUri' => $qrDataUri,
                 'logoDataUri' => $logoDataUri,
                 'scanDataUri' => $scanDataUri,
@@ -683,18 +691,12 @@ class LiturgieController extends Controller
         }
 
         $acte = ActeLiturgique::with(['createur', 'family', 'conducteur', 'pasteur', 'membre', 'classe'])
-            ->where(function ($q) {
-                $q->where('est_annonce', false)
-                    ->orWhereNull('est_annonce');
-            })
-            ->whereNotIn('type_acte', ActeLiturgique::ANNOUNCE_TYPES)
             ->findOrFail($id);
 
         $typeActe = strtolower((string) $acte->type_acte);
-        $validFicheStatuses = ['TRANSMISE_AU_PASTEUR', 'VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'];
-
-        if (!in_array($acte->statut, $validFicheStatuses, true)) {
-            abort(403, 'La fiche du pasteur est disponible apres transmission de la demande.');
+        $validFicheStatuses = ['VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'];
+        if (!in_array($acte->statut, $validFicheStatuses, true) || empty($acte->pasteur_id)) {
+            abort(403, 'La fiche du pasteur est disponible apres validation par le pasteur.');
         }
 
         $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
@@ -1052,3 +1054,4 @@ class LiturgieController extends Controller
         return 'data:image/' . $type . ';base64,' . base64_encode($data);
     }
 }
+

@@ -538,8 +538,8 @@ const FonctionFormModal = ({ isOpen, onClose, fonctionData, onSuccess }) => {
         e.preventDefault();
         const action = isEditing ? put : post;
         const url = isEditing
-            ? `/admin/fonctions/${fonctionData.id}`
-            : "/admin/fonctions";
+            ? withBasePath("", `/admin/fonctions/${fonctionData.id}`)
+            : withBasePath("", "/admin/fonctions");
         action(url, {
             onSuccess: () => {
                 onClose();

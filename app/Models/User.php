@@ -17,6 +17,11 @@ class User extends Authenticatable
     use HasFactory, Notifiable, GeneratesIdentifier, SoftDeletes;
     // DISABLED TrackModifications - causes issues with is_modified column
 
+    // Attributs calculés en mémoire par TransferWorkflowService (non persistés en base)
+    public ?string $transfer_status = null;
+    public ?string $transfer_label  = null;
+    public bool    $transfer_locked = false;
+
 
     /**
      * The attributes that are mass assignable.

@@ -526,7 +526,7 @@ export default function Index({
         try {
             setAnnonceProcessing(true);
             const res = await axios.post(
-                "/responsable-famille/annonces",
+                withBasePath("", "/responsable-famille/annonces"),
                 annonceForm,
             );
             const newA = res.data?.annonce || {
@@ -591,7 +591,7 @@ export default function Index({
         try {
             setCeremonyProcessing(true);
             const res = await axios.put(
-                `/responsable-famille/liturgie/${ceremonyActe.id}/ceremonie`,
+                withBasePath("", `/responsable-famille/liturgie/${ceremonyActe.id}/ceremonie`),
                 {
                     date_souhaitee: ceremonyForm.date_souhaitee,
                     ceremonie_creneau: ceremonyForm.ceremonie_creneau,
@@ -1658,7 +1658,7 @@ export default function Index({
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             window.open(
-                                                                `/responsable-famille/annonces/${ann.id}/fiche`,
+                                                                withBasePath("", `/responsable-famille/annonces/${ann.id}/fiche`),
                                                                 "_blank",
                                                             );
                                                         }}
@@ -2828,7 +2828,7 @@ export default function Index({
                                     }}
                                     onClick={() =>
                                         window.open(
-                                            `/responsable-famille/annonces/${selectedAnnonce.id}/fiche`,
+                                            withBasePath("", `/responsable-famille/annonces/${selectedAnnonce.id}/fiche`),
                                             "_blank",
                                         )
                                     }

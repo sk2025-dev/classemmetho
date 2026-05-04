@@ -118,7 +118,7 @@ export default function Inscriptions() {
         setApproving(id);
 
         router.post(
-            `/admin/inscriptions/${id}/approve`,
+            withBasePath("", `/admin/inscriptions/${id}/approve`),
             {},
             {
                 preserveScroll: true,
@@ -159,7 +159,7 @@ export default function Inscriptions() {
         setRejectingId(id);
 
         router.post(
-            `/admin/inscriptions/${id}/reject`,
+            withBasePath("", `/admin/inscriptions/${id}/reject`),
             {},
             {
                 preserveScroll: true,
@@ -230,7 +230,7 @@ export default function Inscriptions() {
         try {
             await Promise.all(
                 selectedIds.map((id) =>
-                    axios.post(`/admin/inscriptions/${id}/approve`),
+                    axios.post(withBasePath("", `/admin/inscriptions/${id}/approve`)),
                 ),
             );
             setInscriptions((prev) =>
@@ -258,7 +258,7 @@ export default function Inscriptions() {
         try {
             await Promise.all(
                 selectedIds.map((id) =>
-                    axios.post(`/admin/inscriptions/${id}/reject`),
+                    axios.post(withBasePath("", `/admin/inscriptions/${id}/reject`)),
                 ),
             );
             setInscriptions((prev) =>
@@ -286,7 +286,7 @@ export default function Inscriptions() {
         setBulkProcessing(true);
         setBulkConfirmDelete(false);
         try {
-            await axios.post("/admin/inscriptions/bulk-delete", {
+            await axios.post(withBasePath("", "/admin/inscriptions/bulk-delete"), {
                 ids: selectedIds,
             });
             setInscriptions((prev) =>

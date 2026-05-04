@@ -373,9 +373,9 @@ class TransferWorkflowService
 
     private function applyUserTransferState(User $user, array $state): User
     {
-        $user->setAttribute('transfer_status', $state['status']);
-        $user->setAttribute('transfer_label', $state['label']);
-        $user->setAttribute('transfer_locked', $state['locked']);
+        $user->transfer_status = $state['status'];
+        $user->transfer_label  = $state['label'];
+        $user->transfer_locked = $state['locked'];
         $user->setRelation('computedPendingTransferRequest', $state['pending_request']);
         $user->setRelation('computedCompletedExternalTransferRequest', $state['completed_external_request']);
         $user->setRelation('computedLatestCompletedMemberTransferRequest', $state['latest_completed_member_request']);
@@ -387,9 +387,9 @@ class TransferWorkflowService
 
     private function applyFamilyTransferState(Family $family, array $state): Family
     {
-        $family->setAttribute('transfer_status', $state['status']);
-        $family->setAttribute('transfer_label', $state['label']);
-        $family->setAttribute('transfer_locked', $state['locked']);
+        $family->transfer_status = $state['status'];
+        $family->transfer_label  = $state['label'];
+        $family->transfer_locked = $state['locked'];
         $family->setRelation('computedPendingTransferRequest', $state['pending_request']);
         $family->setRelation('computedCompletedExternalTransferRequest', $state['completed_external_request']);
         $family->setRelation('computedLatestCompletedFamilyTransferRequest', $state['latest_completed_family_request']);

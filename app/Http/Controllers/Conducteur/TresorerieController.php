@@ -413,7 +413,7 @@ class TresorerieController extends Controller
             'stats' => [
                 'cotisationsAttendues' => $cotisationsAttendues,
                 'payeesConfirmees' => $payeesConfirmees,
-                'tauxPaiement' => $cotisationsAttendues > 0 ? round(($payeesConfirmees / $cotisationsAttendues) * 100, 2) : 0,
+                'tauxPaiement' => $cotisationsAttendues > 0 ? min(100, round(($payeesConfirmees / $cotisationsAttendues) * 100, 2)) : 0,
                 'donsMois' => 0,
             ],
             'famillesSuivi' => $famillesSuivi,

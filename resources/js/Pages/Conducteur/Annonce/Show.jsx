@@ -42,7 +42,7 @@ export default function Show({ annonce }) {
                         className="btn-pdf"
                         onClick={() =>
                             window.open(
-                                `/conducteur/annonces/${annonce.id}/fiche`,
+                                withBasePath("", `/conducteur/annonces/${annonce.id}/fiche`),
                                 "_blank",
                             )
                         }

@@ -1042,7 +1042,6 @@ export default function RegisterFamille({
             "profession",
             "statutMarital",
             "lienParente",
-            "fonction",
             "photo",
             "baptise",
             "dateBapteme",
@@ -1093,6 +1092,11 @@ export default function RegisterFamille({
             }
         });
 
+        // Fonctions du responsable comme tableau
+        selectedRolesResponsable.forEach((id) => {
+            formData.append("responsable[fonction_ids][]", id);
+        });
+
         // === 3. MEMBRES ===
         if (membres.length > 0) {
             console.log(
@@ -1111,7 +1115,6 @@ export default function RegisterFamille({
                 "employment_status",
                 "profession",
                 "lienParente",
-                "fonction",
                 "photo",
                 "dateMariage",
                 "lieuMariage",
@@ -1133,6 +1136,13 @@ export default function RegisterFamille({
             ];
 
             membres.forEach((m, i) => {
+                // Envoyer fonction_ids comme tableau
+                if (Array.isArray(m.fonction_ids) && m.fonction_ids.length > 0) {
+                    m.fonction_ids.forEach((id) => {
+                        formData.append(`membres[${i}][fonction_ids][]`, id);
+                    });
+                }
+
                 membreFields.forEach((k) => {
                     const v = m[k];
 
@@ -1833,10 +1843,6 @@ export default function RegisterFamille({
                                         setSelectedRolesResponsable(
                                             e.target.value,
                                         );
-                                        setResponsable({
-                                            ...responsable,
-                                            fonction: e.target.value.join(","),
-                                        });
                                     }}
                                     options={churchRoles}
                                     placeholder="Sélectionner des fonctions..."
@@ -2324,26 +2330,37 @@ export default function RegisterFamille({
                                 )}
 
                                 {/* Photo Upload */}
-                                {/* Photo Upload */}
-<div className="w-full p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200">
-    <div className="flex flex-col items-center gap-3">
-        <h5 className="text-sm font-bold text-gray-800">
-            Photo du membre
-        </h5>
-        <PhotoUploadInput
-            size="md"
-            enableCamera={true}
-            initialPhotoUrl={membreTemp.photoPreview}
-            onPhotoSelected={(photoUrl) => {
-                setMembreTemp((prev) => ({
-                    ...prev,
-                    photo: photoUrl,
-                    photoPreview: photoUrl,
-                }));
-            }}
-        />
-    </div>
-</div>
+                                <div className="w-full p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-md">
+                                    <div className="flex flex-col items-center gap-3">
+                                        <h5 className="text-sm font-bold text-gray-800">
+                                            Photo du membre
+                                        </h5>
+                                        <div className="relative">
+                                            <div className="w-20 h-20 rounded-full bg-white overflow-hidden border-3 border-blue-400 shadow-lg ring-3 ring-blue-100">
+                                                {membreTemp.photoPreview ? (
+                                                    <img
+                                                        src={membreTemp.photoPreview}
+                                                        alt="profil"
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                                                        <User className="w-10 h-10 text-gray-400" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => handlePhotoChange(e, "membre")}
+                                            className="file:py-1 file:px-3 file:rounded file:bg-blue-600 file:text-white file:cursor-pointer file:font-semibold file:border-0 file:hover:bg-blue-700 file:transition-colors file:text-xs"
+                                        />
+                                        <p className="text-xs text-gray-600 text-center">
+                                            JPG, PNG (max 5MB)
+                                        </p>
+                                    </div>
+                                </div>
 
                                 {/* Champs du membre */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2492,30 +2509,12 @@ export default function RegisterFamille({
                                         icon={Users}
                                     >
                                         <Select2Fonction
-                                            value={
-                                                Array.isArray(
-                                                    membreTemp.fonction,
-                                                )
-                                                    ? membreTemp.fonction
-                                                    : membreTemp.fonction
-                                                      ? [membreTemp.fonction]
-                                                      : []
-                                            }
+                                            value={Array.isArray(membreTemp.fonction_ids) ? membreTemp.fonction_ids : []}
                                             onChange={(e) => {
                                                 if (!e.target.value) return;
-                                                const fonctionValue =
-                                                    Array.isArray(
-                                                        e.target.value,
-                                                    )
-                                                        ? e.target.value
-                                                        : [e.target.value];
                                                 setMembreTemp({
                                                     ...membreTemp,
-                                                    fonction:
-                                                        fonctionValue.length ===
-                                                        1
-                                                            ? fonctionValue[0]
-                                                            : fonctionValue,
+                                                    fonction_ids: e.target.value,
                                                 });
                                             }}
                                             options={churchRoles}

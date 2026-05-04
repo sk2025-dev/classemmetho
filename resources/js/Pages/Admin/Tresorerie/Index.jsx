@@ -10,6 +10,8 @@ import {
     Download,
     Plus,
     ArrowLeft,
+    ChevronLeft,
+    ChevronRight,
 } from "lucide-react";
 
 const fmt = (n) => new Intl.NumberFormat("fr-FR").format(n);
@@ -25,6 +27,10 @@ export default function AdminTresorerie({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [selectedCotisation, setSelectedCotisation] = useState(null);
+    const [cotisationsPage, setCotisationsPage] = useState(1);
+    const COTISATIONS_PER_PAGE = 10;
+    const [paiementsPage, setPaiementsPage] = useState(1);
+    const PAIEMENTS_PER_PAGE = 10;
 
     const fallbackStats = {
         cotisationsTotales: 2500000,
@@ -208,7 +214,7 @@ export default function AdminTresorerie({
 
         setIsSubmitting(true);
         try {
-            await postJson("/api/admin/tresorerie/cotisations", {
+            await postJson(withBasePath("", "/api/admin/tresorerie/cotisations"), {
                 nom,
                 montant,
                 periodicite: "MENSUEL",
@@ -242,7 +248,7 @@ export default function AdminTresorerie({
         setIsSubmitting(true);
         try {
             await postJson(
-                `/api/admin/tresorerie/cotisations/${cotisation.id}`,
+                withBasePath("", `/api/admin/tresorerie/cotisations/${cotisation.id}`),
                 { montant },
                 "PUT",
             );
@@ -331,8 +337,14 @@ export default function AdminTresorerie({
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                             <div
-                                className="bg-green-60 h-2 rounded-full"
-                                style={{ width: `${stats.tauxPaiement}%` }}
+                                className="h-2 rounded-full transition-all duration-500"
+                                style={{
+                                    width: `${stats.tauxPaiement}%`,
+                                    backgroundColor:
+                                        stats.tauxPaiement >= 75 ? "#16a34a"
+                                        : stats.tauxPaiement >= 50 ? "#f59e0b"
+                                        : "#ef4444",
+                                }}
                             ></div>
                         </div>
                     </div>
@@ -417,56 +429,59 @@ export default function AdminTresorerie({
                     </div>
 
                     <div className="p-6">
-                        {activeTab === "dashboard" && (
-                            <div className="space-y-6">
-                                {/* Paiements récents */}
-                                <div>
-                                    <h3 className="text-lg font-bold text-gray-900 mb-4">
-                                        Paiements récents
-                                    </h3>
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-sm">
-                                            <thead className="bg-gray-50 border-b-2 border-gray-200">
-                                                <tr>
-                                                    <th className="px-4 py-3 text-left font-semibold text-gray-900">
-                                                        Famille
-                                                    </th>
-                                                    <th className="px-4 py-3 text-left font-semibold text-gray-900">
-                                                        Type
-                                                    </th>
-                                                    <th className="px-4 py-3 text-left font-semibold text-gray-900">
-                                                        Montant
-                                                    </th>
-                                                    <th className="px-4 py-3 text-left font-semibold text-gray-900">
-                                                        Mode
-                                                    </th>
-                                                    <th className="px-4 py-3 text-left font-semibold text-gray-900">
-                                                        Date
-                                                    </th>
-                                                    <th className="px-4 py-3 text-left font-semibold text-gray-900">
-                                                        Statut
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-gray-200">
-                                                {paiementsRecents.map(
-                                                    (paiement) => (
-                                                        <tr
-                                                            key={paiement.id}
-                                                            className="hover:bg-gray-50"
-                                                        >
+                        {activeTab === "dashboard" && (() => {
+                            const totalPagesPaiements = Math.ceil(paiementsRecents.length / PAIEMENTS_PER_PAGE);
+                            const paginatedPaiements = paiementsRecents.slice(
+                                (paiementsPage - 1) * PAIEMENTS_PER_PAGE,
+                                paiementsPage * PAIEMENTS_PER_PAGE,
+                            );
+                            return (
+                                <div className="space-y-6">
+                                    {/* Paiements récents */}
+                                    <div>
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="text-lg font-bold text-gray-900">
+                                                Paiements récents
+                                                <span className="ml-2 text-sm font-normal text-gray-500">
+                                                    ({paiementsRecents.length})
+                                                </span>
+                                            </h3>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-sm">
+                                                <thead className="bg-gray-50 border-b-2 border-gray-200">
+                                                    <tr>
+                                                        <th className="px-4 py-3 text-left font-semibold text-gray-900">
+                                                            Famille
+                                                        </th>
+                                                        <th className="px-4 py-3 text-left font-semibold text-gray-900">
+                                                            Type
+                                                        </th>
+                                                        <th className="px-4 py-3 text-left font-semibold text-gray-900">
+                                                            Montant
+                                                        </th>
+                                                        <th className="px-4 py-3 text-left font-semibold text-gray-900">
+                                                            Mode
+                                                        </th>
+                                                        <th className="px-4 py-3 text-left font-semibold text-gray-900">
+                                                            Date
+                                                        </th>
+                                                        <th className="px-4 py-3 text-left font-semibold text-gray-900">
+                                                            Statut
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-200">
+                                                    {paginatedPaiements.map((paiement) => (
+                                                        <tr key={paiement.id} className="hover:bg-gray-50">
                                                             <td className="px-4 py-3 font-medium text-gray-900">
-                                                                {
-                                                                    paiement.famille
-                                                                }
+                                                                {paiement.famille}
                                                             </td>
                                                             <td className="px-4 py-3 text-gray-700">
                                                                 {paiement.type}
                                                             </td>
                                                             <td className="px-4 py-3 font-semibold text-gray-900">
-                                                                {fmtCurrency(
-                                                                    paiement.montant,
-                                                                )}
+                                                                {fmtCurrency(paiement.montant)}
                                                             </td>
                                                             <td className="px-4 py-3 text-gray-600">
                                                                 {paiement.mode}
@@ -476,20 +491,57 @@ export default function AdminTresorerie({
                                                             </td>
                                                             <td className="px-4 py-3">
                                                                 <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                                                                    {
-                                                                        paiement.statut
-                                                                    }
+                                                                    {paiement.statut}
                                                                 </span>
                                                             </td>
                                                         </tr>
-                                                    ),
-                                                )}
-                                            </tbody>
-                                        </table>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {totalPagesPaiements > 1 && (
+                                            <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+                                                <p className="text-sm text-gray-500">
+                                                    Page {paiementsPage} sur {totalPagesPaiements} — {paiementsRecents.length} paiement{paiementsRecents.length > 1 ? "s" : ""}
+                                                </p>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => setPaiementsPage((p) => Math.max(1, p - 1))}
+                                                        disabled={paiementsPage === 1}
+                                                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                                    >
+                                                        <ChevronLeft size={16} /> Précédent
+                                                    </button>
+                                                    <div className="flex items-center gap-1">
+                                                        {Array.from({ length: totalPagesPaiements }, (_, i) => i + 1).map((page) => (
+                                                            <button
+                                                                key={page}
+                                                                onClick={() => setPaiementsPage(page)}
+                                                                className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                                                                    page === paiementsPage
+                                                                        ? "bg-blue-600 text-white"
+                                                                        : "text-gray-700 hover:bg-gray-100"
+                                                                }`}
+                                                            >
+                                                                {page}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setPaiementsPage((p) => Math.min(totalPagesPaiements, p + 1))}
+                                                        disabled={paiementsPage === totalPagesPaiements}
+                                                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                                    >
+                                                        Suivant <ChevronRight size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            );
+                        })()}
 
                         {activeTab === "fimeco" && (
                             <div className="space-y-6">
@@ -672,55 +724,93 @@ export default function AdminTresorerie({
                             </div>
                         )}
 
-                        {activeTab === "cotisations" && (
-                            <div>
-                                <div className="flex justify-between items-center mb-6">
-                                    <h3 className="text-lg font-bold text-gray-900">
-                                        Types de cotisations
-                                    </h3>
-                                    <button
-                                        onClick={handleAddCotisation}
-                                        disabled={isSubmitting}
-                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 transition-colors"
-                                    >
-                                        <Plus size={18} /> Ajouter
-                                    </button>
-                                </div>
-                                <div className="space-y-3">
-                                    {cotisations.map((cot) => (
-                                        <div
-                                            key={cot.id}
-                                            className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-blue-400 transition-colors"
-                                        >
-                                            <div className="flex-1">
-                                                <h4 className="font-semibold text-gray-900">
-                                                    {cot.nom}
-                                                </h4>
-                                                <p className="text-sm text-gray-600 mt-1">
-                                                    {cot.montant.toLocaleString()}{" "}
-                                                    F CFA • {cot.periodicite}
-                                                </p>
+                        {activeTab === "cotisations" && (() => {
+                            const totalPages = Math.ceil(cotisations.length / COTISATIONS_PER_PAGE);
+                            const paginated = cotisations.slice(
+                                (cotisationsPage - 1) * COTISATIONS_PER_PAGE,
+                                cotisationsPage * COTISATIONS_PER_PAGE,
+                            );
+                            return (
+                                <div>
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h3 className="text-lg font-bold text-gray-900">
+                                            Types de cotisations
+                                            <span className="ml-2 text-sm font-normal text-gray-500">
+                                                ({cotisations.length})
+                                            </span>
+                                        </h3>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {paginated.map((cot) => (
+                                            <div
+                                                key={cot.id}
+                                                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-blue-400 transition-colors"
+                                            >
+                                                <div className="flex-1">
+                                                    <h4 className="font-semibold text-gray-900">
+                                                        {cot.nom}
+                                                    </h4>
+                                                    <p className="text-sm text-gray-600 mt-1">
+                                                        {cot.montant.toLocaleString()}{" "}
+                                                        F CFA • {cot.periodicite}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                                                        {cot.statut}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => handleViewCotisation(cot)}
+                                                        className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-semibold"
+                                                    >
+                                                        Voir
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-4">
-                                                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                                                    {cot.statut}
-                                                </span>
+                                        ))}
+                                    </div>
+
+                                    {totalPages > 1 && (
+                                        <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+                                            <p className="text-sm text-gray-500">
+                                                Page {cotisationsPage} sur {totalPages} — {cotisations.length} cotisation{cotisations.length > 1 ? "s" : ""}
+                                            </p>
+                                            <div className="flex items-center gap-2">
                                                 <button
-                                                    onClick={() =>
-                                                        handleViewCotisation(
-                                                            cot,
-                                                        )
-                                                    }
-                                                    className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-semibold"
+                                                    onClick={() => setCotisationsPage((p) => Math.max(1, p - 1))}
+                                                    disabled={cotisationsPage === 1}
+                                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                                 >
-                                                    Voir
+                                                    <ChevronLeft size={16} /> Précédent
+                                                </button>
+                                                <div className="flex items-center gap-1">
+                                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                                        <button
+                                                            key={page}
+                                                            onClick={() => setCotisationsPage(page)}
+                                                            className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                                                                page === cotisationsPage
+                                                                    ? "bg-blue-600 text-white"
+                                                                    : "text-gray-700 hover:bg-gray-100"
+                                                            }`}
+                                                        >
+                                                            {page}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <button
+                                                    onClick={() => setCotisationsPage((p) => Math.min(totalPages, p + 1))}
+                                                    disabled={cotisationsPage === totalPages}
+                                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                                >
+                                                    Suivant <ChevronRight size={16} />
                                                 </button>
                                             </div>
                                         </div>
-                                    ))}
+                                    )}
                                 </div>
-                            </div>
-                        )}
+                            );
+                        })()}
 
                         {activeTab === "rapport" && (
                             <div>

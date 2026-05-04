@@ -990,7 +990,7 @@ export default function RegisterConducteur({
 
         // --- 2. Responsable (avec nettoyage téléphone) ---
         Object.entries(responsable).forEach(([k, v]) => {
-            if (k === "photoPreview") {
+            if (k === "photoPreview" || k === "fonction") {
                 return;
             }
 
@@ -1023,6 +1023,11 @@ export default function RegisterConducteur({
             }
         });
 
+        // Envoyer les fonctions du responsable comme tableau
+        selectedRolesResponsable.forEach((id) => {
+            formData.append("responsable[fonction_ids][]", id);
+        });
+
         // --- 3. Membres ---
         if (membres.length > 0) {
             membres.forEach((m, i) => {
@@ -1043,7 +1048,11 @@ export default function RegisterConducteur({
                         ) {
                             formData.append(`membres[${i}][photo]`, photoValue);
                         }
-                    } else {
+                    } else if (k === "fonction_ids" && Array.isArray(v)) {
+                        v.forEach((id) => {
+                            formData.append(`membres[${i}][fonction_ids][]`, id);
+                        });
+                    } else if (k !== "photoPreview" && k !== "fonction") {
                         let valueToSend = v ?? "";
 
                         // Nettoyer le téléphone si présent
@@ -2145,7 +2154,7 @@ export default function RegisterConducteur({
                 return (
                     <div className="space-y-6 animate-fadeIn">
                         <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                            Ajouter les conducteurs
+                            Ajouter les membres
                         </h3>
 
                         {getFieldError("membres") && (
@@ -2357,8 +2366,7 @@ export default function RegisterConducteur({
                                             setSelectedMembresRoles(newSet);
                                             setMembreTemp({
                                                 ...membreTemp,
-                                                fonction:
-                                                    e.target.value.join(","),
+                                                fonction_ids: e.target.value,
                                             });
                                         }}
                                         options={churchRoles}

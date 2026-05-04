@@ -994,7 +994,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
             const loadMemberData = async () => {
                 try {
                     const response = await axios.get(
-                        `/admin/membres/${memberData.id}`,
+                        withBasePath("", `/admin/membres/${memberData.id}`),
                     );
                     const freshData = response.data;
                     setData({
@@ -1262,7 +1262,7 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
 
         try {
             const res = await axios.post(
-                `/admin/membres/${memberData.id}?_method=PUT`,
+                withBasePath("", `/admin/membres/${memberData.id}?_method=PUT`),
                 formData,
                 {
                     headers: { "Content-Type": "multipart/form-data" },
@@ -2561,7 +2561,7 @@ const TabUtilisateurs = ({
                         <button
                             onClick={() =>
                                 router.visit(
-                                    "/admin/inscriptions/type-selection",
+                                    withBasePath("", "/admin/inscriptions/type-selection"),
                                 )
                             }
                             className="ml-auto px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2 text-sm shadow-md"

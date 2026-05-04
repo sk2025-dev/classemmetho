@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
 import axios from 'axios';
+import { withBasePath } from '../../Utils/urlHelper';
 
 // Configuration d'axios avec le token CSRF
 axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -3743,7 +3744,7 @@ export default function Programmes() {
       params.page = historyCurrentPage;
       params.per_page = historyItemsPerPage;
       
-      const response = await axios.get('/conducteur/programmes/history/filter', { params });
+      const response = await axios.get(withBasePath("", '/conducteur/programmes/history/filter'), { params });
       
       if (response.data.success) {
         setHistoryData(response.data.data);
@@ -3780,7 +3781,7 @@ export default function Programmes() {
       params.page = galleryCurrentPage;
       params.per_page = galleryItemsPerPage;
       
-      const response = await axios.get('/conducteur/galerie/filter', { params });
+      const response = await axios.get(withBasePath("", '/conducteur/galerie/filter'), { params });
       
       if (response.data.success) {
         setGalleryData(response.data.data);
@@ -3906,7 +3907,7 @@ export default function Programmes() {
     setIsEditMediaLoading(true);
     setEditMediaErrors({});
     try {
-      const response = await axios.put(`/conducteur/galerie/update/${editingMedia.id}`, editMediaForm);
+      const response = await axios.put(withBasePath("", `/conducteur/galerie/update/${editingMedia.id}`), editMediaForm);
       if (response.data.success) {
         const updatedMedia = response.data.media;
         setGalleryData(prev => prev.map(m => m.id === editingMedia.id ? { ...m, ...updatedMedia } : m));
@@ -3927,7 +3928,7 @@ export default function Programmes() {
   const handleAddMedia = async (formData) => {
     setIsLoading(true);
     try {
-      const response = await axios.post('/conducteur/galerie/add', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const response = await axios.post(withBasePath("", '/conducteur/galerie/add'), formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (response.data.success) {
         const newMedia = response.data.media || [];
         setGalleryData(prev => [...newMedia, ...prev]);
@@ -3949,7 +3950,7 @@ export default function Programmes() {
     setConfirmDialog({ isOpen: true, mediaToDelete: media, isMultiple: false, count: 1, onConfirm: async () => {
       setIsLoading(true);
       try {
-        const response = await axios.delete(`/conducteur/galerie/${media.id}`);
+        const response = await axios.delete(withBasePath("", `/conducteur/galerie/${media.id}`));
         if (response.data.success) { 
           setGalleryData(prev => prev.filter(m => m.id !== media.id));
           setMediaData(prev => prev.filter(m => m.id !== media.id));
@@ -3970,7 +3971,7 @@ export default function Programmes() {
   const setAsFeaturedMedia = async (media) => {
     setIsLoading(true);
     try {
-      const response = await axios.put(`/conducteur/galerie/set-featured/${media.id}`);
+      const response = await axios.put(withBasePath("", `/conducteur/galerie/set-featured/${media.id}`));
       if (response.data.success) {
         // Mettre à jour galleryData
         setGalleryData(prev => prev.map(m => { 
@@ -4015,7 +4016,7 @@ export default function Programmes() {
       const deletedIds = [];
       for (const mediaId of selectedGalleryMediaIds) {
         try { 
-          const response = await axios.delete(`/conducteur/galerie/${mediaId}`); 
+          const response = await axios.delete(withBasePath("", `/conducteur/galerie/${mediaId}`));
           if (response.data.success) { 
             successCount++; 
             deletedIds.push(mediaId); 
@@ -4054,7 +4055,7 @@ export default function Programmes() {
     setIsLoading(true);
     if (eventId && activities.length === 1) {
       try {
-        const response = await axios.put(`/conducteur/programmes/event/${eventId}`, activities[0]);
+        const response = await axios.put(withBasePath("", `/conducteur/programmes/event/${eventId}`), activities[0]);
         if (response.data.success) {
           const updatedEvent = response.data.event;
           const eventDate = new Date(updatedEvent.start_date);
@@ -4066,7 +4067,7 @@ export default function Programmes() {
       } catch (error) { console.error('Erreur modification:', error); showToast(error.response?.data?.message || 'Erreur lors de la modification', 'error'); } finally { setIsLoading(false); }
     } else {
       try {
-        const response = await axios.post('/conducteur/programmes/events-multiple', { activities });
+        const response = await axios.post(withBasePath("", '/conducteur/programmes/events-multiple'), { activities });
         if (response.data.success) {
           const newEvents = response.data.events || [];
           const now = new Date();
@@ -4081,7 +4082,7 @@ export default function Programmes() {
     setIsLoading(true); setImportProgress(0);
     try {
       for (let i = 0; i <= 100; i += 20) { await new Promise(resolve => setTimeout(resolve, 300)); setImportProgress(i); }
-      const response = await axios.post('/conducteur/programmes/import-events', { events });
+      const response = await axios.post(withBasePath("", '/conducteur/programmes/import-events'), { events });
       if (response.data.success) {
         const importedEvents = response.data.events || [];
         const now = new Date();
@@ -4092,9 +4093,9 @@ export default function Programmes() {
   };
 
   const handleEditEvent = (event) => openEventModal(event);
-  const handleGoBack = () => router.visit('/conducteur/dashboard');
-  const handleViewAllProgrammes = () => router.visit('/conducteur/programmes/all');
-  const handleViewAllHistory = () => router.visit('/conducteur/programmes/history');
+  const handleGoBack = () => router.visit(withBasePath("", '/conducteur/dashboard'));
+  const handleViewAllProgrammes = () => router.visit(withBasePath("", '/conducteur/programmes/all'));
+  const handleViewAllHistory = () => router.visit(withBasePath("", '/conducteur/programmes/history'));
 
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [qrPayload, setQrPayload] = useState(null);
@@ -4127,7 +4128,7 @@ export default function Programmes() {
     setIsQrLoading(true);
     setQrPayload(null);
     try {
-      const res = await axios.get(`/conducteur/programmes/event/${event.id}/qr/data`);
+      const res = await axios.get(withBasePath("", `/conducteur/programmes/event/${event.id}/qr/data`));
       setQrPayload(res.data);
     } catch {
       setQrPayload({ error: true });
@@ -4153,7 +4154,7 @@ export default function Programmes() {
 
   const printQr = () => {
     if (!qrPayload?.event?.id) return;
-    window.open(`/conducteur/programmes/event/${qrPayload.event.id}/qr/fiche-pdf`, '_blank');
+    window.open(withBasePath("", `/conducteur/programmes/event/${qrPayload.event.id}/qr/fiche-pdf`), '_blank');
   };
 
   // Composant EmptyDialog

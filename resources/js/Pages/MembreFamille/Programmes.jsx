@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
 import axios from 'axios';
+import { withBasePath } from '../../Utils/urlHelper';
 
 // Configuration d'axios avec le token CSRF
 axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -2165,7 +2166,7 @@ export default function Programmes() {
       params.page = historyCurrentPage;
       params.per_page = historyItemsPerPage;
       
-      const response = await axios.get('/membre-famille/programmes/history/filter', { params });
+      const response = await axios.get(withBasePath("", '/membre-famille/programmes/history/filter'), { params });
       
       if (response.data.success) {
         setHistoryData(response.data.data);
@@ -2202,7 +2203,7 @@ export default function Programmes() {
       params.page = galleryCurrentPage;
       params.per_page = galleryItemsPerPage;
       
-      const response = await axios.get('/membre-famille/galerie/filter', { params });
+      const response = await axios.get(withBasePath("", '/membre-famille/galerie/filter'), { params });
       
       if (response.data.success) {
         setGalleryData(response.data.data);
@@ -2306,9 +2307,9 @@ export default function Programmes() {
   const handleNavigateMedia = (newIndex) => { if (currentMediaList[newIndex]) { setCurrentMediaIndex(newIndex); setSelectedMedia(currentMediaList[newIndex]); } };
   const closeMediaViewer = () => { setIsMediaViewerOpen(false); setSelectedMedia(null); setCurrentMediaList([]); setCurrentMediaIndex(0); };
 
-  const handleGoBack = () => router.visit('/membre-famille/dashboard');
-  const handleViewAllProgrammes = () => router.visit('/membre-famille/programmes/all');
-  const handleViewAllHistory = () => router.visit('/membre-famille/programmes/history');
+  const handleGoBack = () => router.visit(withBasePath("", '/membre-famille/dashboard'));
+  const handleViewAllProgrammes = () => router.visit(withBasePath("", '/membre-famille/programmes/all'));
+  const handleViewAllHistory = () => router.visit(withBasePath("", '/membre-famille/programmes/history'));
 
   // Fonctions de défilement horizontal pour chaque groupe
   const handleScrollLeft = (groupId) => {

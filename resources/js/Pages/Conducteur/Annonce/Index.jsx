@@ -143,7 +143,7 @@ export default function Index({
                                     className="btn-pdf"
                                     onClick={() =>
                                         window.open(
-                                            `/conducteur/annonces/${selected.id}/fiche`,
+                                            withBasePath("", `/conducteur/annonces/${selected.id}/fiche`),
                                             "_blank",
                                         )
                                     }

@@ -61,16 +61,18 @@ class TresorerieController extends Controller
             ->get();
 
         $cotisationsTotales = (int) $cotisations->sum('montant');
-        $cotisationsPayees = (int) Paiement::query()->sum('montant');
+        $cotisationsPayees = (int) Paiement::query()->where('statut', Paiement::STATUT_PAYE)->sum('montant');
         $donsTotaux = (int) Don::query()->sum('montant');
         $famillesActives = (int) Family::query()->count();
         $campagnesActives = (int) $campagnes->where('statut', Campagne::STATUT_ACTIVE)->count();
 
+        $montantAttendu = $cotisationsTotales * $famillesActives;
+
         $stats = [
-            'cotisationsTotales' => $cotisationsTotales,
+            'cotisationsTotales' => $montantAttendu,
             'cotisationsPayees' => $cotisationsPayees,
-            'cotisationsEnRetard' => max(0, $cotisationsTotales - $cotisationsPayees),
-            'tauxPaiement' => $cotisationsTotales > 0 ? round(($cotisationsPayees / $cotisationsTotales) * 100, 2) : 0,
+            'cotisationsEnRetard' => max(0, $montantAttendu - $cotisationsPayees),
+            'tauxPaiement' => $montantAttendu > 0 ? min(100, round(($cotisationsPayees / $montantAttendu) * 100, 2)) : 0,
             'donsTotaux' => $donsTotaux,
             'campagnesActives' => $campagnesActives,
             'famillesActives' => $famillesActives,

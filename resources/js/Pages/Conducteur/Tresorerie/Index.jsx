@@ -857,7 +857,7 @@ export default function ConducteurTresorerie({
 
         setLoading(true);
         try {
-            await postJson("/conducteur/tresorerie/cotisations", {
+            await postJson(withBasePath("", "/conducteur/tresorerie/cotisations"), {
                 nom: newCotisation.nom,
                 periodicite: newCotisation.periodicite,
                 target_scope: newCotisation.target_scope,
@@ -961,7 +961,7 @@ export default function ConducteurTresorerie({
         }
         setLoading(true);
         try {
-            await postJson("/conducteur/tresorerie/collectes", {
+            await postJson(withBasePath("", "/conducteur/tresorerie/collectes"), {
                 ...newCollecte,
                 objectif_montant: objectif,
             });
@@ -981,7 +981,7 @@ export default function ConducteurTresorerie({
         }
         setLoading(true);
         try {
-            await postJson("/conducteur/tresorerie/paiements", {
+            await postJson(withBasePath("", "/conducteur/tresorerie/paiements"), {
                 ...paymentForm,
                 user_id: Number(paymentForm.user_id),
                 cotisation_id: paymentForm.cotisation_id
@@ -1007,7 +1007,7 @@ export default function ConducteurTresorerie({
 
         setLoading(true);
         try {
-            await postJson("/conducteur/tresorerie/dons", {
+            await postJson(withBasePath("", "/conducteur/tresorerie/dons"), {
                 montant,
                 type: newDon.type,
                 mode_paiement: newDon.mode_paiement,
@@ -1185,7 +1185,7 @@ export default function ConducteurTresorerie({
             `Bonjour famille ${famille.nom}, votre cotisation est en retard. Merci de régulariser.`;
         setLoading(true);
         try {
-            await postJson("/conducteur/tresorerie/rappels", {
+            await postJson(withBasePath("", "/conducteur/tresorerie/rappels"), {
                 famille_id: famille.id,
                 message: msg,
             });
@@ -1535,42 +1535,6 @@ export default function ConducteurTresorerie({
                         </div>
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
-                        <button
-                            onClick={() => handleExport("excel")}
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 7,
-                                background: "rgba(255,255,255,0.15)",
-                                border: "1px solid rgba(255,255,255,0.25)",
-                                borderRadius: 10,
-                                padding: "8px 14px",
-                                color: "#fff",
-                                fontSize: 12,
-                                fontWeight: 600,
-                                cursor: "pointer",
-                            }}
-                        >
-                            <BarChart3 size={14} /> Excel
-                        </button>
-                        <button
-                            onClick={() => handleExport("pdf")}
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 7,
-                                background: "rgba(255,255,255,0.15)",
-                                border: "1px solid rgba(255,255,255,0.25)",
-                                borderRadius: 10,
-                                padding: "8px 14px",
-                                color: "#fff",
-                                fontSize: 12,
-                                fontWeight: 600,
-                                cursor: "pointer",
-                            }}
-                        >
-                            <FileText size={14} /> PDF
-                        </button>
                         <button
                             onClick={() => setModalTresorier(true)}
                             style={{

@@ -280,6 +280,8 @@ export default function Inscriptions({
         success: showSuccessToast,
         error: showError,
     } = useToast();
+    const [confirmApprove, setConfirmApprove] = useState(null); // stocke l'id à approuver
+    const [confirmReject, setConfirmReject] = useState(null);  // stocke l'id à rejeter
     const [showSuccessNotification, setShowSuccessNotification] =
         useState(false);
     const [successTitle, setSuccessTitle] = useState("Inscription validée !");
@@ -389,6 +391,7 @@ export default function Inscriptions({
     const [fieldErrors, setFieldErrors] = useState({});
     const [emailTaken, setEmailTaken] = useState(false);
     const [emailChecking, setEmailChecking] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const emailCheckTimerRef = useRef(null);
     const emailCheckAbortRef = useRef(null);
 
@@ -811,17 +814,16 @@ export default function Inscriptions({
         });
     };
 
-    const approveInscription = async (inscriptionId) => {
-        if (
-            !window.confirm(
-                "Êtes-vous sûr de vouloir approuver cette inscription ?",
-            )
-        )
-            return;
+    const approveInscription = (inscriptionId) => {
+        setConfirmApprove(inscriptionId);
+    };
+
+    const doApprove = async (inscriptionId) => {
+        setConfirmApprove(null);
         setApprovingId(inscriptionId);
         try {
             const response = await axios.post(
-                `/conducteur/inscriptions/${inscriptionId}/approve`,
+                withBasePath("", `/conducteur/inscriptions/${inscriptionId}/approve`),
                 { reason: "" },
                 {
                     headers: {
@@ -841,7 +843,7 @@ export default function Inscriptions({
                 });
             }
         } catch (error) {
-            alert(
+            showError(
                 "Erreur lors de l'approbation: " +
                     (error.response?.data?.error || error.message),
             );
@@ -850,14 +852,28 @@ export default function Inscriptions({
         }
     };
 
-    const rejectInscription = async (inscriptionId) => {
-        const reason = prompt("Veuillez indiquer le motif du rejet:");
-        if (!reason) return;
+    const rejectInscription = (inscriptionId) => {
+        setRejectReason("");
+        setConfirmReject(inscriptionId);
+    };
+
+    const doReject = async () => {
+        if (!rejectReason.trim()) return;
+        const inscriptionId = confirmReject;
+        setConfirmReject(null);
         setRejectingId(inscriptionId);
         try {
             const response = await axios.post(
-                `/conducteur/inscriptions/${inscriptionId}/reject`,
-                { reason },
+                withBasePath("", `/conducteur/inscriptions/${inscriptionId}/reject`),
+                { reason: rejectReason.trim() },
+                {
+                    headers: {
+                        "X-CSRF-TOKEN":
+                            document
+                                .querySelector('meta[name="csrf-token"]')
+                                ?.getAttribute("content") || "",
+                    },
+                },
             );
             if (response.data.success) {
                 router.reload({
@@ -872,7 +888,7 @@ export default function Inscriptions({
                 });
             }
         } catch (error) {
-            alert(
+            showError(
                 "Erreur lors du rejet: " +
                     (error.response?.data?.error || error.message),
             );
@@ -884,6 +900,12 @@ export default function Inscriptions({
     const openDetailModal = (item) => {
         setSelectedInscription({
             ...(item.raw || {}),
+            // Utiliser les valeurs mappées (pas les valeurs brutes FR) pour les contrôles UI
+            status: item.status,
+            admin_approved: item.admin_approved,
+            conducteur_approved: item.conducteur_approved,
+            admin_name: item.admin_name,
+            conducteur_name: item.conducteur_name,
             created_at: item.created_at || item.raw?.created_at || null,
             updated_at:
                 item.updated_at ||
@@ -1105,9 +1127,50 @@ export default function Inscriptions({
         };
     };
 
-    const openMemberModal = (item) => {
-        setSelectedMember(normalizeMemberForModal(item));
+    const openMemberModal = async (item) => {
+        const normalized = normalizeMemberForModal(item);
+        setSelectedMember(normalized);
         setShowMemberModal(true);
+
+        // Enrichir avec les sacrements si non déjà présents
+        const memberId = normalized.id ?? normalized.raw?.id;
+        if (memberId && !normalized.sacrements) {
+            try {
+                const res = await axios.get(
+                    withBasePath("", `/users/${memberId}/sacrements`),
+                );
+                if (res.data?.success) {
+                    const sac = res.data.sacrements || {};
+                    setSelectedMember((prev) => ({
+                        ...prev,
+                        sacrements: sac,
+                        raw: {
+                            ...(prev.raw || {}),
+                            // Champs booléens
+                            baptise:              toBool(prev.raw?.baptise) || toBool(sac.baptise),
+                            premiere_communion:   toBool(prev.raw?.premiere_communion) || toBool(sac.premiere_communion),
+                            marie_religieusement: toBool(prev.raw?.marie_religieusement) || toBool(sac.marie_religieusement),
+                            mariage_religieux:    toBool(prev.raw?.marie_religieusement) || toBool(sac.marie_religieusement),
+                            // Dates et lieux
+                            date_bapteme:             prev.raw?.date_bapteme ?? sac.bapteme_date ?? null,
+                            lieu_bapteme:             prev.raw?.lieu_bapteme ?? sac.bapteme_lieu ?? null,
+                            date_premiere_communion:  prev.raw?.date_premiere_communion ?? sac.premiere_communion_date ?? null,
+                            lieu_premiere_communion:  prev.raw?.lieu_premiere_communion ?? sac.premiere_communion_lieu ?? null,
+                            date_mariage_religieux:   prev.raw?.date_mariage_religieux ?? sac.mariage_religieux_date ?? null,
+                            lieu_mariage_religieux:   prev.raw?.lieu_mariage_religieux ?? sac.mariage_religieux_lieu ?? null,
+                            // Statut marital depuis sacrements si absent
+                            statut_marital:
+                                prev.raw?.statut_marital ||
+                                res.data.statut_marital ||
+                                (toBool(sac.est_marie) ? "Marié(e)" : null) ||
+                                null,
+                        },
+                    }));
+                }
+            } catch (e) {
+                // Silencieux — l'affichage reste avec les données disponibles
+            }
+        }
     };
 
     const openCreateModal = () => {
@@ -1115,6 +1178,7 @@ export default function Inscriptions({
         reset();
         setEmailTaken(false);
         setEmailChecking(false);
+        setIsSubmitting(false);
         setShowDetailModal(false);
         setShowMemberModal(false);
         setShowFamilyModal(false);
@@ -1246,22 +1310,16 @@ export default function Inscriptions({
                 },
             );
 
-            console.log("AUTO-SAVE - Réponse du serveur:", response.data);
-
-            // Afficher la notification de sauvegarde
-            setSaveNotification({
-                show: true,
-                message: "Sauvegarde effectuee",
-            });
-            setTimeout(
-                () => setSaveNotification({ show: false, message: "" }),
-                2000,
-            );
+            setSaveNotification({ show: true, message: "Sauvegarde automatique effectuée" });
+            setTimeout(() => setSaveNotification({ show: false, message: "" }), 2000);
         } catch (err) {
-            console.error(
-                "AUTO-SAVE - Erreur:",
-                err.response?.data || err.message,
-            );
+            const apiErrors = err?.response?.data?.errors;
+            if (apiErrors && Object.keys(apiErrors).length > 0) {
+                const msgs = Object.values(apiErrors).flat().join(" · ");
+                showError(`Erreur de sauvegarde : ${msgs}`, 5000);
+            } else {
+                showError(err?.response?.data?.message || "Erreur lors de la sauvegarde automatique.", 4000);
+            }
         }
     };
 
@@ -1360,7 +1418,7 @@ export default function Inscriptions({
         };
     }, [data, modalMode, selectedMember]);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (emailTaken) {
@@ -1425,6 +1483,7 @@ export default function Inscriptions({
                 Array.from(formData.entries()),
             );
 
+            setIsSubmitting(true);
             axios
                 .post("/conducteur/quick-member", formData, {
                     headers: { "Content-Type": "multipart/form-data" },
@@ -1462,11 +1521,51 @@ export default function Inscriptions({
                     } else {
                         showError("Vérifiez les données saisies.", 5000);
                     }
+                })
+                .finally(() => {
+                    setIsSubmitting(false);
                 });
         } else {
-            // Mode édition: fermer le modal simplement (auto-save gère la sauvegarde)
-            console.log("FERMETURE DU MODAL - Mode édition");
-            setShowModal(false);
+            // Mode édition : sauvegarde immédiate puis fermeture
+            if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
+            const memberId = selectedMember?.id;
+            if (!memberId) {
+                setShowModal(false);
+                return;
+            }
+            setIsSubmitting(true);
+            try {
+                const formData = new FormData();
+                Object.entries(data).forEach(([key, value]) => {
+                    if (key === "photo" && value) {
+                        if (value instanceof File || value instanceof Blob) {
+                            formData.append(key, value);
+                        } else if (typeof value === "string") {
+                            formData.append("profile_photo_url", value);
+                        }
+                    } else if (key !== "photoPreview") {
+                        if (Array.isArray(value)) {
+                            value.forEach((v) => formData.append(`${key}[]`, String(v)));
+                        } else {
+                            formData.append(key, typeof value === "boolean" ? (value ? "1" : "0") : (value ?? ""));
+                        }
+                    }
+                });
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
+                if (csrfToken) formData.append("_token", csrfToken);
+
+                await axios.put(withBasePath("", `/conducteur/members/${memberId}`), formData, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+                showSuccessToast("✅ Modifications enregistrées avec succès.", 3000);
+                setShowModal(false);
+                setTimeout(() => router.reload(), 600);
+            } catch (err) {
+                const msg = err?.response?.data?.message || "Erreur lors de la sauvegarde.";
+                showError(msg, 5000);
+            } finally {
+                setIsSubmitting(false);
+            }
         }
     };
 
@@ -1535,6 +1634,78 @@ export default function Inscriptions({
         <>
             <Head title={`Gestion Membres - ${className}`} />
             <ToastContainer toasts={toasts} removeToast={removeToast} />
+
+            {/* Toast de confirmation approbation */}
+            {confirmApprove && (
+                <div className="fixed inset-0 z-[100] flex items-start justify-end p-6 pointer-events-none">
+                    <div className="pointer-events-auto bg-white border border-gray-200 rounded-2xl shadow-2xl p-5 max-w-sm w-full animate-scale-in">
+                        <div className="flex items-start gap-3 mb-4">
+                            <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                                <span className="text-amber-600 text-lg">⚠️</span>
+                            </div>
+                            <div>
+                                <p className="font-bold text-gray-900 text-sm">Confirmer l'approbation</p>
+                                <p className="text-gray-500 text-xs mt-1">Voulez-vous vraiment approuver cette inscription ?</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                            <button
+                                onClick={() => setConfirmApprove(null)}
+                                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                onClick={() => doApprove(confirmApprove)}
+                                className="px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-xl transition-colors"
+                            >
+                                ✓ Approuver
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de confirmation rejet */}
+            {confirmReject && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center">
+                    <div className="fixed inset-0 bg-slate-900/60" onClick={() => setConfirmReject(null)} />
+                    <div className="relative z-10 bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4 animate-scale-in">
+                        <div className="flex items-start gap-3 mb-4">
+                            <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                                <X className="w-5 h-5 text-red-600" />
+                            </div>
+                            <div>
+                                <p className="font-bold text-gray-900 text-sm">Motif du rejet</p>
+                                <p className="text-gray-500 text-xs mt-1">Veuillez indiquer la raison du rejet de cette inscription.</p>
+                            </div>
+                        </div>
+                        <textarea
+                            className="w-full border border-gray-200 rounded-xl p-3 text-sm text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
+                            rows={3}
+                            placeholder="Ex : Documents incomplets, informations incorrectes..."
+                            value={rejectReason}
+                            onChange={(e) => setRejectReason(e.target.value)}
+                            autoFocus
+                        />
+                        <div className="flex gap-2 justify-end mt-4">
+                            <button
+                                onClick={() => setConfirmReject(null)}
+                                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                onClick={doReject}
+                                disabled={!rejectReason.trim()}
+                                className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                ✗ Confirmer le rejet
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Notification de succès */}
             <div
@@ -3025,8 +3196,11 @@ export default function Inscriptions({
                                                                     >
                                                                         Détails
                                                                     </button>
-                                                                    {activeTab ===
-                                                                        "pending" && (
+                                                                    {activeTab === "pending" &&
+                                                                        !item.admin_approved &&
+                                                                        !item.conducteur_approved &&
+                                                                        item.status !== "approved" &&
+                                                                        item.status !== "rejected" && (
                                                                         <div className="flex gap-1">
                                                                             <button
                                                                                 onClick={() =>
@@ -4028,12 +4202,18 @@ export default function Inscriptions({
                                             </button>
                                             <button
                                                 type="submit"
-                                                disabled={processing || emailTaken || emailChecking}
+                                                disabled={isSubmitting || processing || emailTaken || emailChecking}
                                                 title={emailTaken ? "Corrigez l'adresse email avant de continuer" : undefined}
                                                 className="px-8 py-2.5 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-blue-500/30 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform disabled:hover:scale-100 flex items-center gap-2"
                                             >
-                                                {processing ? (
-                                                    <>Enregistrement...</>
+                                                {isSubmitting ? (
+                                                    <span className="flex items-center gap-2">
+                                                        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+                                                        </svg>
+                                                        Envoi en cours…
+                                                    </span>
                                                 ) : emailChecking ? (
                                                     <>Vérification email...</>
                                                 ) : (
@@ -4578,36 +4758,40 @@ export default function Inscriptions({
                                 >
                                     Fermer
                                 </button>
-                                <button
-                                    onClick={() =>
-                                        rejectInscription(
-                                            selectedInscription.id,
-                                        )
+                                {(() => {
+                                    const isApproved =
+                                        selectedInscription.status === "approved" ||
+                                        selectedInscription.admin_approved ||
+                                        selectedInscription.conducteur_approved;
+                                    const isRejected =
+                                        selectedInscription.status === "rejected";
+                                    const dejaTraite = isApproved || isRejected;
+                                    if (dejaTraite) {
+                                        return (
+                                            <span className={`px-4 py-2 rounded-xl text-sm font-semibold border ${isApproved ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"}`}>
+                                                {isApproved ? "✓ Déjà approuvée" : "✗ Déjà rejetée"}
+                                            </span>
+                                        );
                                     }
-                                    disabled={
-                                        rejectingId === selectedInscription.id
-                                    }
-                                    className="px-6 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition shadow-md disabled:opacity-50"
-                                >
-                                    {rejectingId === selectedInscription.id
-                                        ? "Rejet..."
-                                        : "Rejeter"}
-                                </button>
-                                <button
-                                    onClick={() =>
-                                        approveInscription(
-                                            selectedInscription.id,
-                                        )
-                                    }
-                                    disabled={
-                                        approvingId === selectedInscription.id
-                                    }
-                                    className="px-6 py-2.5 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition shadow-md disabled:opacity-50"
-                                >
-                                    {approvingId === selectedInscription.id
-                                        ? "Approbation..."
-                                        : "Approuver"}
-                                </button>
+                                    return (
+                                        <>
+                                            <button
+                                                onClick={() => rejectInscription(selectedInscription.id)}
+                                                disabled={rejectingId === selectedInscription.id}
+                                                className="px-6 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition shadow-md disabled:opacity-50"
+                                            >
+                                                {rejectingId === selectedInscription.id ? "Rejet..." : "Rejeter"}
+                                            </button>
+                                            <button
+                                                onClick={() => approveInscription(selectedInscription.id)}
+                                                disabled={approvingId === selectedInscription.id}
+                                                className="px-6 py-2.5 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition shadow-md disabled:opacity-50"
+                                            >
+                                                {approvingId === selectedInscription.id ? "Approbation..." : "Approuver"}
+                                            </button>
+                                        </>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </div>
@@ -4877,8 +5061,9 @@ export default function Inscriptions({
                                                 Mariage Religieux
                                             </label>
                                             <p className="text-slate-800 font-medium">
-                                                {selectedMember.raw
-                                                    ?.mariage_religieux
+                                                {(selectedMember.raw?.mariage_religieux ||
+                                                    selectedMember.raw?.marie_religieusement ||
+                                                    selectedMember.sacrements?.marie_religieusement)
                                                     ? "Oui"
                                                     : "Non"}
                                             </p>

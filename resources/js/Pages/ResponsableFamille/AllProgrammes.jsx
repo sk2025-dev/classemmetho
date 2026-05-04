@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
 import html2pdf from 'html2pdf.js';
 import * as XLSX from 'xlsx';
+import { withBasePath } from '../../Utils/urlHelper';
 
 // Styles pour le tableau (conservés identiques)
 const tableStyles = `
@@ -684,7 +685,7 @@ export default function AllProgrammes() {
   };
 
   const handleGoBack = () => {
-    router.visit('/responsable-famille/programmes');
+    router.visit(withBasePath("", '/responsable-famille/programmes'));
   };
 
   // Génération du PDF avec ajout de la classe

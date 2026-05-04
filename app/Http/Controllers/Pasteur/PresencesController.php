@@ -137,39 +137,44 @@ class PresencesController extends Controller
             ->get()
             ->count();
 
+        $classIds = $classes->pluck('id')->values();
+
+        // Nombre de membres (responsable + membre famille) par classe
+        $membresParClasse = User::query()
+            ->whereNotNull('classe_id')
+            ->whereIn('role', ['responsable_famille', 'membre_famille'])
+            ->selectRaw('classe_id, COUNT(*) as total')
+            ->groupBy('classe_id')
+            ->pluck('total', 'classe_id');
+
         $classesData = $classes
             ->map(function (Classe $classe) {
-                $memberIds = $classe->users->pluck('id');
+                $memberIds          = $classe->users->pluck('id');
                 $totalMembresClasse = $memberIds->count();
-                $presentCount = 0;
-                $totalMarquages = 0;
+                $presentCount       = 0;
 
                 if ($totalMembresClasse > 0) {
-                    $totalMarquages = (int) Presence::query()
-                        ->whereIn('membre_famille_id', $memberIds)
-                        ->count();
-
                     $presentCount = (int) Presence::query()
                         ->whereIn('membre_famille_id', $memberIds)
                         ->where('statut', 'present')
                         ->count();
                 }
 
-                $pct = $totalMarquages > 0 ? (int) round(($presentCount / $totalMarquages) * 100) : 0;
+                $pct = $totalMembresClasse > 0
+                    ? min(100, (int) round(($presentCount / $totalMembresClasse) * 100))
+                    : 0;
 
                 return [
-                    'id' => $classe->id,
-                    'name' => $classe->nom,
-                    'pct' => $pct,
+                    'id'    => $classe->id,
+                    'name'  => $classe->nom,
+                    'pct'   => $pct,
                     'present' => $presentCount,
-                    'total' => $totalMarquages > 0 ? $totalMarquages : $totalMembresClasse,
-                    'color' => $pct >= 75 ? '#2d2f8f' : ($pct >= 60 ? '#4a4db8' : '#e53e3e'),
+                    'total'   => $totalMembresClasse,
+                    'color'   => $pct >= 75 ? '#2d2f8f' : ($pct >= 60 ? '#4a4db8' : '#e53e3e'),
                 ];
             })
             ->sortByDesc('pct')
             ->values();
-
-        $classIds = $classes->pluck('id')->values();
 
         $classActivitiesRows = Presence::query()
             ->from('presences as p')
@@ -181,24 +186,25 @@ class PresencesController extends Controller
                 COALESCE(se.title, pa.title, "Activite") as activity_name,
                 COALESCE(pa.type, "programme") as activity_type,
                 SUM(CASE WHEN p.statut = "present" THEN 1 ELSE 0 END) as presents,
-                COUNT(*) as total')
+                SUM(CASE WHEN p.statut = "absent"  THEN 1 ELSE 0 END) as absents')
             ->groupBy('u.classe_id', 'activity_name', 'activity_type')
             ->get()
             ->groupBy('classe_id')
-            ->map(function ($rows) {
+            ->map(function ($rows) use ($membresParClasse) {
                 return collect($rows)
-                    ->map(function ($row) {
-                        $present = (int) ($row->presents ?? 0);
-                        $total = (int) ($row->total ?? 0);
-                        $pct = $total > 0 ? (int) round(($present / $total) * 100) : 0;
+                    ->map(function ($row) use ($membresParClasse) {
+                        $present      = (int) ($row->presents ?? 0);
+                        $totalMembres = (int) ($membresParClasse[$row->classe_id] ?? 0);
+                        $pct          = $totalMembres > 0 ? min(100, (int) round(($present / $totalMembres) * 100)) : 0;
 
                         return [
-                            'name' => $row->activity_name,
-                            'type' => $row->activity_type,
-                            'pct' => $pct,
+                            'name'    => $row->activity_name,
+                            'type'    => $row->activity_type,
+                            'pct'     => $pct,
                             'present' => $present,
-                            'total' => max($total, 1),
-                            'color' => $pct >= 75 ? '#2d2f8f' : ($pct >= 60 ? '#4a4db8' : '#7c3aed'),
+                            'absent'  => (int) ($row->absents ?? 0),
+                            'total'   => $totalMembres,
+                            'color'   => $pct >= 75 ? '#2d2f8f' : ($pct >= 60 ? '#4a4db8' : '#7c3aed'),
                         ];
                     })
                     ->sortByDesc('pct')
@@ -482,27 +488,34 @@ class PresencesController extends Controller
         $activityMap = Presence::query()
             ->selectRaw('activite_id,
                 SUM(CASE WHEN statut = "present" THEN 1 ELSE 0 END) as presents,
-                COUNT(*) as total')
+                SUM(CASE WHEN statut = "absent"  THEN 1 ELSE 0 END) as absents')
             ->groupBy('activite_id')
             ->get()
             ->keyBy('activite_id');
 
+        $totalMembresReel = (int) User::query()
+            ->whereNotNull('classe_id')
+            ->whereIn('role', ['responsable_famille', 'membre_famille'])
+            ->count();
+
         $activitesData = PermanentActivity::query()
             ->where('is_parish', false)
             ->get(['id', 'title', 'type'])
-            ->map(function (PermanentActivity $activity) use ($activityMap) {
-                $stats = $activityMap->get($activity->id);
+            ->map(function (PermanentActivity $activity) use ($activityMap, $totalMembresReel) {
+                $stats   = $activityMap->get($activity->id);
                 $present = (int) ($stats->presents ?? 0);
-                $total = (int) ($stats->total ?? 0);
-                $pct = $total > 0 ? (int) round(($present / $total) * 100) : 0;
+                $pct     = $totalMembresReel > 0
+                    ? min(100, (int) round(($present / $totalMembresReel) * 100))
+                    : 0;
 
                 return [
-                    'name' => $activity->title,
-                    'type' => $activity->type,
-                    'pct' => $pct,
+                    'name'    => $activity->title,
+                    'type'    => $activity->type,
+                    'pct'     => $pct,
                     'present' => $present,
-                    'total' => max($total, 1),
-                    'color' => $pct >= 75 ? '#2d2f8f' : ($pct >= 60 ? '#4a4db8' : '#7c3aed'),
+                    'absent'  => max(0, $totalMembresReel - $present),
+                    'total'   => $totalMembresReel,
+                    'color'   => $pct >= 75 ? '#2d2f8f' : ($pct >= 60 ? '#4a4db8' : '#7c3aed'),
                 ];
             })
             ->sortByDesc('pct')
@@ -579,6 +592,47 @@ class PresencesController extends Controller
             ];
         })->values();
 
+        // Top activités du mois en cours
+        $debutMois = Carbon::now()->startOfMonth();
+        $finMois   = Carbon::now()->endOfMonth();
+
+        $topActivitesMois = Presence::query()
+            ->from('presences as p')
+            ->leftJoin('special_events as se', 'se.id', '=', 'p.special_event_id')
+            ->leftJoin('permanent_activities as pa', 'pa.id', '=', 'p.activite_id')
+            ->leftJoin('classes as c', 'c.id', '=', 'se.class_id')
+            ->leftJoin('users as u', 'u.id', '=', 'p.membre_famille_id')
+            ->where(function ($q) use ($debutMois, $finMois) {
+                $q->whereBetween('se.start_date', [$debutMois, $finMois])
+                  ->orWhereBetween('p.created_at', [$debutMois, $finMois]);
+            })
+            ->selectRaw("
+                COALESCE(se.title, pa.title, 'Activité') as titre,
+                c.nom as classe_nom,
+                se.class_id as classe_id,
+                SUM(CASE WHEN p.statut = 'present' THEN 1 ELSE 0 END) as presents,
+                SUM(CASE WHEN p.statut = 'absent'  THEN 1 ELSE 0 END) as absents
+            ")
+            ->groupByRaw("COALESCE(se.title, pa.title, 'Activité'), c.nom, se.class_id")
+            ->orderByDesc('presents')
+            ->limit(3)
+            ->get()
+            ->map(function ($r) use ($membresParClasse) {
+                $presents     = (int) ($r->presents ?? 0);
+                $totalMembres = (int) ($membresParClasse[$r->classe_id] ?? 0);
+                $pct          = $totalMembres > 0 ? min(100, (int) round(($presents / $totalMembres) * 100)) : 0;
+
+                return [
+                    'titre'    => (string) ($r->titre ?? 'Activité'),
+                    'classe'   => (string) ($r->classe_nom ?? ''),
+                    'presents' => $presents,
+                    'absents'  => max(0, $totalMembres - $presents),
+                    'total'    => $totalMembres,
+                    'pct'      => $pct,
+                ];
+            })
+            ->values();
+
         return [
             'stats' => [
                 'total_classes' => $totalClasses,
@@ -594,6 +648,7 @@ class PresencesController extends Controller
             'participantsData' => $participantsData,
             'activitesParMois2026' => $activitesParMois2026,
             'classInsights' => $classInsights,
+            'topActivitesMois' => $topActivitesMois,
         ];
     }
 

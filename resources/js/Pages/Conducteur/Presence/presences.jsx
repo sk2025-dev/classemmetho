@@ -36,6 +36,11 @@ export default function Presences({
     const [toast, setToast] = useState(null);
     const [summaryLoading, setSummaryLoading] = useState(false);
     const [marquagePage, setMarquagePage] = useState(1);
+    const [absencesPage, setAbsencesPage] = useState(1);
+    const ABSENCES_PER_PAGE = 10;
+    const [historiquePage, setHistoriquePage] = useState(1);
+    const HISTORIQUE_PER_PAGE = 10;
+    const [selectedAbsentMembre, setSelectedAbsentMembre] = useState(null);
     const [programmeSummary, setProgrammeSummary] = useState(null);
     const [programmeActivites, setProgrammeActivites] = useState([]);
     const [loadingProgrammeActivites, setLoadingProgrammeActivites] =
@@ -203,6 +208,23 @@ export default function Presences({
         membres.length > 0
             ? Math.round((nbPresents / membres.length) * 100)
             : 0;
+
+    // Stats globales du mois en cours
+    const nbActivitesMois = activitesMoisCourant.length;
+    const totalPossibleMois = membres.length * Math.max(nbActivitesMois, 1);
+    const nbPresentsMois = activitesMoisCourant.reduce(
+        (sum, a) => sum + Object.values(marquages[a.id] ?? {}).filter((v) => v === "present").length,
+        0,
+    );
+    const nbAbsentsMois = activitesMoisCourant.reduce(
+        (sum, a) => sum + Object.values(marquages[a.id] ?? {}).filter((v) => v === "absent").length,
+        0,
+    );
+    const tauxMois = totalPossibleMois > 0
+        ? Math.round((nbPresentsMois / totalPossibleMois) * 100)
+        : 0;
+    const now = new Date();
+    const moisLabel = now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
 
     function showToast(message, type = "success") {
         setToast({ message, type });
@@ -400,7 +422,7 @@ export default function Presences({
                     </div>
                 )}
 
-                {/* ── Stats ── */}
+                {/* ── Stats mois en cours ── */}
                 <div style={S.statsGrid}>
                     <StatCard
                         icon="👥"
@@ -413,36 +435,24 @@ export default function Presences({
                     />
                     <StatCard
                         icon="✔"
-                        value={nbPresents}
-                        label="Présents"
-                        badge={`${taux}%`}
+                        value={<span>{nbPresentsMois} <span style={{ fontSize: 14, fontWeight: 500, color: tauxMois >= 70 ? "#2e7d32" : "#e65100" }}>· {tauxMois}%</span></span>}
+                        label="Présences ce mois"
+                        badge={`${tauxMois}%`}
                         badgeStyle={
-                            taux >= 70
+                            tauxMois >= 70
                                 ? { background: "#e8f5e9", color: "#2e7d32" }
                                 : { background: "#fff3e0", color: "#e65100" }
                         }
-                        barValue={taux}
-                        barColor={taux >= 70 ? "#43a047" : "#ff9800"}
+                        barValue={tauxMois}
+                        barColor={tauxMois >= 70 ? "#43a047" : "#ff9800"}
                     />
                     <StatCard
                         icon="✗"
-                        value={nbAbsents + nbExcuses}
-                        label="Absents / Excusés"
-                        badge={
-                            nbNonMarques > 0
-                                ? `${nbNonMarques} non marqués`
-                                : "Complet"
-                        }
-                        badgeStyle={
-                            nbNonMarques > 0
-                                ? { background: "#fff3e0", color: "#e65100" }
-                                : { background: "#e8f5e9", color: "#2e7d32" }
-                        }
-                        barValue={Math.round(
-                            ((nbAbsents + nbExcuses) /
-                                Math.max(membres.length, 1)) *
-                                100,
-                        )}
+                        value={<span>{nbAbsentsMois} <span style={{ fontSize: 14, fontWeight: 500, color: "#c62828" }}>· {totalPossibleMois > 0 ? Math.round((nbAbsentsMois / totalPossibleMois) * 100) : 0}%</span></span>}
+                        label="Absences ce mois"
+                        badge={`${totalPossibleMois > 0 ? Math.round((nbAbsentsMois / totalPossibleMois) * 100) : 0}%`}
+                        badgeStyle={{ background: "#ffebee", color: "#c62828" }}
+                        barValue={totalPossibleMois > 0 ? Math.round((nbAbsentsMois / totalPossibleMois) * 100) : 0}
                         barColor="#e53935"
                     />
                     <StatCard
@@ -462,6 +472,56 @@ export default function Presences({
                         barColor="#e53935"
                     />
                 </div>
+
+                {/* ── Top 3 activités du mois ── */}
+                {activitesMoisCourant.length > 0 && (() => {
+                    const top3 = activitesMoisCourant
+                        .map((a) => ({
+                            ...a,
+                            nbPresents: Object.values(marquages[a.id] ?? {}).filter((v) => v === "present").length,
+                        }))
+                        .sort((a, b) => b.nbPresents - a.nbPresents)
+                        .slice(0, 3);
+
+                    const medals = ["🥇", "🥈", "🥉"];
+                    const maxPresents = Math.max(top3[0]?.nbPresents ?? 1, 1);
+
+                    return (
+                        <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e8eaf6", padding: "16px 20px", marginBottom: 16 }}>
+                            <p style={{ margin: "0 0 14px", fontWeight: 700, fontSize: 14, color: "#1a237e" }}>
+                                🏆 Top activités du mois
+                            </p>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                {top3.map((a, i) => {
+                                    const taux = membres.length > 0 ? Math.round((a.nbPresents / membres.length) * 100) : 0;
+                                    const barPct = Math.round((a.nbPresents / maxPresents) * 100);
+                                    const barColor = i === 0 ? "#f59e0b" : i === 1 ? "#9ca3af" : "#b45309";
+                                    return (
+                                        <div key={a.id}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                    <span style={{ fontSize: 18 }}>{medals[i]}</span>
+                                                    <span style={{ fontSize: 13, fontWeight: 600, color: "#222" }}>{a.titre}</span>
+                                                    {a.date_heure_debut && (
+                                                        <span style={{ fontSize: 11, color: "#9ca3af" }}>
+                                                            {new Date(a.date_heure_debut).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <span style={{ fontSize: 12, fontWeight: 700, color: "#1a237e", whiteSpace: "nowrap" }}>
+                                                    {a.nbPresents} présents · {taux}%
+                                                </span>
+                                            </div>
+                                            <div style={{ height: 7, background: "#f3f4f6", borderRadius: 10, overflow: "hidden" }}>
+                                                <div style={{ height: "100%", width: `${barPct}%`, background: barColor, borderRadius: 10, transition: "width 0.4s ease" }} />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                })()}
 
                 {/* ── Sélecteur activité ── */}
                 <div style={S.activiteSelector}>
@@ -1153,31 +1213,38 @@ export default function Presences({
                 )}
 
                 {/* ════════════════ ONGLET : ABSENCES ════════════════ */}
-                {activeTab === "absences" && (
-                    <div style={S.card}>
-                        <p style={S.cardTitle}>
-                            Membres avec absences répétées
-                        </p>
-                        <p style={S.cardSub}>
-                            Absents 3 fois ou plus au cours du mois
-                        </p>
-                        <div
-                            style={{
-                                marginTop: 16,
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: 10,
-                            }}
-                        >
-                            {membres
-                                .map((m) => ({
-                                    ...m,
-                                    nbAbs: Object.values(marquages).filter(
-                                        (act) => act[m.id] === "absent",
-                                    ).length,
-                                }))
-                                .filter((m) => m.nbAbs >= 3)
-                                .map((m) => (
+                {activeTab === "absences" && (() => {
+                    const absentsRepetes = membres
+                        .map((m) => ({
+                            ...m,
+                            nbAbs: Object.values(marquages).filter(
+                                (act) => act[m.id] === "absent",
+                            ).length,
+                        }))
+                        .filter((m) => m.nbAbs >= 3)
+                        .sort((a, b) => b.nbAbs - a.nbAbs);
+
+                    const totalPagesAbs = Math.max(1, Math.ceil(absentsRepetes.length / ABSENCES_PER_PAGE));
+                    const paginatedAbs = absentsRepetes.slice(
+                        (absencesPage - 1) * ABSENCES_PER_PAGE,
+                        absencesPage * ABSENCES_PER_PAGE,
+                    );
+
+                    return (
+                        <div style={S.card}>
+                            <p style={S.cardTitle}>
+                                Membres avec absences répétées
+                            </p>
+                            <p style={S.cardSub}>
+                                Absents 3 fois ou plus au cours du mois
+                                {absentsRepetes.length > 0 && (
+                                    <span style={{ marginLeft: 8, fontWeight: 600, color: "#c62828" }}>
+                                        ({absentsRepetes.length})
+                                    </span>
+                                )}
+                            </p>
+                            <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+                                {paginatedAbs.map((m) => (
                                     <div
                                         key={m.id}
                                         style={{
@@ -1190,207 +1257,247 @@ export default function Presences({
                                             border: "1px solid #ffcdd2",
                                         }}
                                     >
-                                        <div
-                                            style={{
-                                                ...S.avatar,
-                                                background:
-                                                    m.couleur ?? "#e53935",
-                                            }}
-                                        >
-                                            {m.avatar_initiales ??
-                                                `${m.prenom[0]}${m.nom[0]}`}
+                                        <div style={{ ...S.avatar, background: m.couleur ?? "#e53935" }}>
+                                            {m.avatar_initiales ?? `${m.prenom[0]}${m.nom[0]}`}
                                         </div>
                                         <div style={{ flex: 1 }}>
-                                            <p
-                                                style={{
-                                                    fontSize: 13,
-                                                    fontWeight: 500,
-                                                    color: "#222",
-                                                    margin: 0,
-                                                }}
-                                            >
+                                            <p style={{ fontSize: 13, fontWeight: 500, color: "#222", margin: 0 }}>
                                                 {m.prenom} {m.nom}
                                             </p>
-                                            <p
-                                                style={{
-                                                    fontSize: 12,
-                                                    color: "#888",
-                                                    margin: 0,
-                                                }}
-                                            >
+                                            <p style={{ fontSize: 12, color: "#888", margin: 0 }}>
                                                 {m.famille?.nom}
                                             </p>
                                         </div>
-                                        <span
-                                            style={{
-                                                background: "#ffebee",
-                                                color: "#c62828",
-                                                fontSize: 12,
-                                                padding: "4px 12px",
-                                                borderRadius: 12,
-                                                fontWeight: 500,
-                                            }}
-                                        >
+                                        <span style={{ background: "#ffebee", color: "#c62828", fontSize: 12, padding: "4px 12px", borderRadius: 12, fontWeight: 500 }}>
                                             {m.nbAbs} absences
                                         </span>
+                                        <button
+                                            onClick={() => setSelectedAbsentMembre(m)}
+                                            style={{ padding: "4px 12px", borderRadius: 8, border: "1px solid #1a237e", background: "#fff", color: "#1a237e", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                                        >
+                                            Voir
+                                        </button>
                                     </div>
                                 ))}
-                            {membres.filter(
-                                (m) =>
-                                    Object.values(marquages).filter(
-                                        (act) => act[m.id] === "absent",
-                                    ).length >= 3,
-                            ).length === 0 && (
-                                <p
-                                    style={{
-                                        color: "#888",
-                                        textAlign: "center",
-                                        padding: "24px 0",
-                                    }}
-                                >
-                                    Aucune absence répétée détectée 🎉
-                                </p>
-                            )}
+
+                                {absentsRepetes.length === 0 && (
+                                    <p style={{ color: "#888", textAlign: "center", padding: "24px 0" }}>
+                                        Aucune absence répétée détectée 🎉
+                                    </p>
+                                )}
+
+                                {totalPagesAbs > 1 && (
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, paddingTop: 12, borderTop: "1px solid #ffcdd2" }}>
+                                        <span style={{ fontSize: 12, color: "#888" }}>
+                                            Page {absencesPage}/{totalPagesAbs} — {absentsRepetes.length} membre{absentsRepetes.length > 1 ? "s" : ""}
+                                        </span>
+                                        <div style={{ display: "flex", gap: 8 }}>
+                                            <button
+                                                onClick={() => setAbsencesPage((p) => Math.max(1, p - 1))}
+                                                disabled={absencesPage === 1}
+                                                style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #ffcdd2", background: "#fff", cursor: absencesPage === 1 ? "not-allowed" : "pointer", fontSize: 12, opacity: absencesPage === 1 ? 0.4 : 1 }}
+                                            >
+                                                Précédent
+                                            </button>
+                                            {Array.from({ length: totalPagesAbs }, (_, i) => i + 1).map((page) => (
+                                                <button
+                                                    key={page}
+                                                    onClick={() => setAbsencesPage(page)}
+                                                    style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid #ffcdd2", background: page === absencesPage ? "#e53935" : "#fff", color: page === absencesPage ? "#fff" : "#333", cursor: "pointer", fontSize: 12, fontWeight: 600 }}
+                                                >
+                                                    {page}
+                                                </button>
+                                            ))}
+                                            <button
+                                                onClick={() => setAbsencesPage((p) => Math.min(totalPagesAbs, p + 1))}
+                                                disabled={absencesPage === totalPagesAbs}
+                                                style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #ffcdd2", background: "#fff", cursor: absencesPage === totalPagesAbs ? "not-allowed" : "pointer", fontSize: 12, opacity: absencesPage === totalPagesAbs ? 0.4 : 1 }}
+                                            >
+                                                Suivant
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
 
                 {/* ════════════════ ONGLET : HISTORIQUE ════════════════ */}
-                {activeTab === "historique" && (
-                    <div style={S.card}>
-                        <p style={S.cardTitle}>
-                            Historique complet des présences
-                        </p>
-                        <div
-                            style={{
-                                marginTop: 16,
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: 8,
-                            }}
-                        >
-                            {activites.map((a) => {
-                                const presencesAct = marquages[a.id] ?? {};
-                                const nbP = Object.values(presencesAct).filter(
-                                    (v) => v === "present",
-                                ).length;
-                                const nbAb = Object.values(presencesAct).filter(
-                                    (v) => v === "absent",
-                                ).length;
-                                const nbEx = Object.values(presencesAct).filter(
-                                    (v) => v === "excuse",
-                                ).length;
-                                return (
-                                    <div
-                                        key={a.id}
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: 14,
-                                            padding: "10px 0",
-                                            borderBottom: "1px solid #f5f5f5",
-                                        }}
-                                    >
+                {activeTab === "historique" && (() => {
+                    const totalPagesHist = Math.max(1, Math.ceil(activites.length / HISTORIQUE_PER_PAGE));
+                    const paginatedActivites = activites.slice(
+                        (historiquePage - 1) * HISTORIQUE_PER_PAGE,
+                        historiquePage * HISTORIQUE_PER_PAGE,
+                    );
+                    return (
+                        <div style={S.card}>
+                            <p style={S.cardTitle}>
+                                Historique complet des présences
+                                <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 400, color: "#888" }}>
+                                    ({activites.length})
+                                </span>
+                            </p>
+                            <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+                                {paginatedActivites.map((a) => {
+                                    const presencesAct = marquages[a.id] ?? {};
+                                    const nbP = Object.values(presencesAct).filter((v) => v === "present").length;
+                                    const nbAb = Object.values(presencesAct).filter((v) => v === "absent").length;
+                                    return (
                                         <div
+                                            key={a.id}
                                             style={{
-                                                ...S.activiteDateBox,
-                                                background: "#1a237e",
-                                                minWidth: 48,
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 14,
+                                                padding: "10px 0",
+                                                borderBottom: "1px solid #f5f5f5",
                                             }}
                                         >
-                                            <span
-                                                style={{
-                                                    fontSize: 18,
-                                                    fontWeight: 500,
-                                                    color: "white",
-                                                    lineHeight: 1,
-                                                }}
+                                            <div style={{ ...S.activiteDateBox, background: "#1a237e", minWidth: 48 }}>
+                                                <span style={{ fontSize: 18, fontWeight: 500, color: "white", lineHeight: 1 }}>
+                                                    {a.date_heure_debut ? new Date(a.date_heure_debut).getDate() : "—"}
+                                                </span>
+                                                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.8)" }}>
+                                                    {a.date_heure_debut
+                                                        ? new Date(a.date_heure_debut).toLocaleDateString("fr-FR", { month: "short" }).toUpperCase()
+                                                        : ""}
+                                                </span>
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <p style={{ fontSize: 14, fontWeight: 500, color: "#222", margin: 0 }}>
+                                                    {a.titre}
+                                                </p>
+                                            </div>
+                                            <div style={{ display: "flex", gap: 6 }}>
+                                                <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 10, background: "#e8f5e9", color: "#2e7d32", fontWeight: 500 }}>
+                                                    {nbP} Présents
+                                                </span>
+                                                <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 10, background: "#ffebee", color: "#c62828", fontWeight: 500 }}>
+                                                    {nbAb} Absents
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                                {activites.length === 0 && (
+                                    <p style={{ color: "#888", textAlign: "center", padding: "24px 0" }}>
+                                        Aucune activité enregistrée.
+                                    </p>
+                                )}
+
+                                {totalPagesHist > 1 && (
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, paddingTop: 12, borderTop: "1px solid #f0f0f0" }}>
+                                        <span style={{ fontSize: 12, color: "#888" }}>
+                                            Page {historiquePage}/{totalPagesHist} — {activites.length} activité{activites.length > 1 ? "s" : ""}
+                                        </span>
+                                        <div style={{ display: "flex", gap: 8 }}>
+                                            <button
+                                                onClick={() => setHistoriquePage((p) => Math.max(1, p - 1))}
+                                                disabled={historiquePage === 1}
+                                                style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #e0e0e0", background: "#fff", cursor: historiquePage === 1 ? "not-allowed" : "pointer", fontSize: 12, opacity: historiquePage === 1 ? 0.4 : 1 }}
                                             >
-                                                {a.date_heure_debut
-                                                    ? new Date(
-                                                          a.date_heure_debut,
-                                                      ).getDate()
-                                                    : "—"}
+                                                Précédent
+                                            </button>
+                                            {Array.from({ length: totalPagesHist }, (_, i) => i + 1).map((page) => (
+                                                <button
+                                                    key={page}
+                                                    onClick={() => setHistoriquePage(page)}
+                                                    style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid #e0e0e0", background: page === historiquePage ? "#1a237e" : "#fff", color: page === historiquePage ? "#fff" : "#333", cursor: "pointer", fontSize: 12, fontWeight: 600 }}
+                                                >
+                                                    {page}
+                                                </button>
+                                            ))}
+                                            <button
+                                                onClick={() => setHistoriquePage((p) => Math.min(totalPagesHist, p + 1))}
+                                                disabled={historiquePage === totalPagesHist}
+                                                style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #e0e0e0", background: "#fff", cursor: historiquePage === totalPagesHist ? "not-allowed" : "pointer", fontSize: 12, opacity: historiquePage === totalPagesHist ? 0.4 : 1 }}
+                                            >
+                                                Suivant
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })()}
+            </div>
+
+            {/* ── MODAL : Absences d'un membre ── */}
+            {selectedAbsentMembre && (() => {
+                const activitesAbsences = activites.filter(
+                    (a) => (marquages[a.id] ?? {})[selectedAbsentMembre.id] === "absent",
+                );
+                return (
+                    <div style={S.modalBackdrop} onClick={() => setSelectedAbsentMembre(null)}>
+                        <div style={{ ...S.modalCard, maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                <div>
+                                    <h3 style={S.modalTitle}>
+                                        {selectedAbsentMembre.prenom} {selectedAbsentMembre.nom}
+                                    </h3>
+                                    <p style={{ ...S.modalSubTitle, margin: "4px 0 0" }}>
+                                        {activitesAbsences.length} absence{activitesAbsences.length > 1 ? "s" : ""} enregistrée{activitesAbsences.length > 1 ? "s" : ""}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedAbsentMembre(null)}
+                                    style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#888", lineHeight: 1 }}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 380, overflowY: "auto" }}>
+                                {activitesAbsences.map((a) => (
+                                    <div
+                                        key={a.id}
+                                        style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: "#fff5f5", borderRadius: 10, border: "1px solid #ffcdd2" }}
+                                    >
+                                        <div style={{ ...S.activiteDateBox, background: "#c62828", minWidth: 44 }}>
+                                            <span style={{ fontSize: 16, fontWeight: 600, color: "white", lineHeight: 1 }}>
+                                                {a.date_heure_debut ? new Date(a.date_heure_debut).getDate() : "—"}
                                             </span>
-                                            <span
-                                                style={{
-                                                    fontSize: 10,
-                                                    color: "rgba(255,255,255,0.8)",
-                                                }}
-                                            >
+                                            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.85)" }}>
                                                 {a.date_heure_debut
-                                                    ? new Date(
-                                                          a.date_heure_debut,
-                                                      )
-                                                          .toLocaleDateString(
-                                                              "fr-FR",
-                                                              {
-                                                                  month: "short",
-                                                              },
-                                                          )
-                                                          .toUpperCase()
+                                                    ? new Date(a.date_heure_debut).toLocaleDateString("fr-FR", { month: "short" }).toUpperCase()
                                                     : ""}
                                             </span>
                                         </div>
                                         <div style={{ flex: 1 }}>
-                                            <p
-                                                style={{
-                                                    fontSize: 14,
-                                                    fontWeight: 500,
-                                                    color: "#222",
-                                                    margin: 0,
-                                                }}
-                                            >
+                                            <p style={{ fontSize: 13, fontWeight: 500, color: "#222", margin: 0 }}>
                                                 {a.titre}
                                             </p>
+                                            {a.date_heure_debut && (
+                                                <p style={{ fontSize: 11, color: "#888", margin: 0 }}>
+                                                    {new Date(a.date_heure_debut).toLocaleDateString("fr-FR", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+                                                </p>
+                                            )}
                                         </div>
-                                        <div
-                                            style={{ display: "flex", gap: 6 }}
-                                        >
-                                            <span
-                                                style={{
-                                                    fontSize: 11,
-                                                    padding: "3px 8px",
-                                                    borderRadius: 10,
-                                                    background: "#e8f5e9",
-                                                    color: "#2e7d32",
-                                                    fontWeight: 500,
-                                                }}
-                                            >
-                                                {nbP} P
-                                            </span>
-                                            <span
-                                                style={{
-                                                    fontSize: 11,
-                                                    padding: "3px 8px",
-                                                    borderRadius: 10,
-                                                    background: "#ffebee",
-                                                    color: "#c62828",
-                                                    fontWeight: 500,
-                                                }}
-                                            >
-                                                {nbAb} A
-                                            </span>
-                                            <span
-                                                style={{
-                                                    fontSize: 11,
-                                                    padding: "3px 8px",
-                                                    borderRadius: 10,
-                                                    background: "#fff3e0",
-                                                    color: "#e65100",
-                                                    fontWeight: 500,
-                                                }}
-                                            >
-                                                {nbEx} E
-                                            </span>
-                                        </div>
+                                        <span style={{ background: "#ffebee", color: "#c62828", fontSize: 11, padding: "3px 8px", borderRadius: 8, fontWeight: 600 }}>
+                                            Absent
+                                        </span>
                                     </div>
-                                );
-                            })}
+                                ))}
+                                {activitesAbsences.length === 0 && (
+                                    <p style={{ color: "#888", textAlign: "center", padding: "20px 0" }}>
+                                        Aucune absence trouvée.
+                                    </p>
+                                )}
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+                                <button
+                                    onClick={() => setSelectedAbsentMembre(null)}
+                                    style={{ padding: "8px 20px", borderRadius: 8, background: "#1a237e", color: "#fff", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                                >
+                                    Fermer
+                                </button>
+                            </div>
                         </div>
                     </div>
-                )}
-            </div>
+                );
+            })()}
 
             {canManagePresenceMarker && modalMarqueurPresence && (
                 <div

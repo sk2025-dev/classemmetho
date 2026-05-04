@@ -3,6 +3,8 @@ import { Head, Link, router } from "@inertiajs/react";
 import { QRCodeCanvas } from "qrcode.react";
 import axios from "axios";
 import { withBasePath } from "../../../Utils/urlHelper";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // ==================== STYLES GLOBAUX ====================
 const GLOBAL_STYLES = `
@@ -1346,6 +1348,11 @@ function normalizeActeType(typeRaw) {
         naissance: "Naissance",
         premiere_communion: "1ère Communion",
         confirmation: "Confirmation",
+        grace: "Action de grâce",
+        priere: "Prière d'intercession",
+        generale: "Annonce générale",
+        annonce: "Annonce",
+        annonce_liturgique: "Annonce liturgique",
     };
     const normalized = String(typeRaw || "")
         .toLowerCase()
@@ -1355,6 +1362,40 @@ function normalizeActeType(typeRaw) {
 
 // --- Composant Principal (ActesLiturgique) ---
 export default function ActesLiturgique({ auth, actes = [] }) {
+    const getDocumentMeta = (acte) => {
+        const typeRaw = String(acte?.raw?.type_acte || "").toLowerCase();
+        const statutRaw = String(acte?.raw?.statut || "").toUpperCase();
+        const pasteurId = acte?.raw?.pasteur_id;
+        const isValidatedByPastor =
+            ["VALIDEE", "PUBLIEE", "ARCHIVEE", "CELEBRE", "TERMINE"].includes(
+                statutRaw,
+            ) && !!pasteurId;
+
+        const isFicheType = ["naissance", "deces"].includes(typeRaw);
+        const isCertificatType = ["bapteme", "mariage"].includes(typeRaw);
+        const isAnnonceType = [
+            "grace",
+            "priere",
+            "generale",
+            "annonce",
+            "annonce_liturgique",
+        ].includes(typeRaw);
+
+        const url = isFicheType || isAnnonceType
+            ? withBasePath("", `/admin/liturgie/${acte.id}/fiche`)
+            : isCertificatType
+              ? withBasePath("", `/admin/liturgie/${acte.id}/certificat`)
+              : null;
+
+        return {
+            isFicheType,
+            isCertificatType,
+            isAnnonceType,
+            url,
+            available: !!url && isValidatedByPastor,
+        };
+    };
+
     // États pour les actes - utiliser les vraies données du serveur
     const [allActs, setAllActs] = useState(
         actes.map((acte) => ({
@@ -1377,6 +1418,7 @@ export default function ActesLiturgique({ auth, actes = [] }) {
             attachment: null,
             status: acte.statut?.toLowerCase().replace("_", " ") || "pending",
             reference: acte.reference,
+            role: acte.membre?.role || "",
             raw: acte, // Conserve les données brutes pour les mises à jour
         })),
     );
@@ -1391,6 +1433,7 @@ export default function ActesLiturgique({ auth, actes = [] }) {
     const [typeFilter, setTypeFilter] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [pastorFilter, setPastorFilter] = useState("");
+    const [classeFilter, setClasseFilter] = useState("");
 
     // États pour les modales
     const [selectedAct, setSelectedAct] = useState(null);
@@ -1401,12 +1444,41 @@ export default function ActesLiturgique({ auth, actes = [] }) {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
-    // Charger les données / rafraîchir après changements
+    // Sync les props Inertia → state (après router.get/refresh)
     useEffect(() => {
-        if (allActs.length === 0 && actes.length > 0) {
-            applyFilters();
-        }
-    }, [allActs.length, actes.length]);
+        const mapped = actes.map((acte) => ({
+            id: acte.id,
+            type: normalizeActeType(acte.type_acte),
+            date: acte.date_souhaitee || acte.created_at,
+            member: acte.membre ? `${acte.membre.prenom} ${acte.membre.nom}` : "—",
+            memberPhoto: acte.membre?.profile_photo_url || null,
+            family: acte.family?.nom || acte.classe?.nom || "—",
+            class: acte.classe?.nom || "—",
+            conductor: acte.conducteur ? `${acte.conducteur.prenom} ${acte.conducteur.nom}` : "À assigner",
+            pastor: acte.pasteur ? `${acte.pasteur.prenom} ${acte.pasteur.nom}` : "À assigner",
+            description: acte.details?.notes || "Sans description",
+            attachment: null,
+            status: acte.statut?.toLowerCase().replace("_", " ") || "pending",
+            reference: acte.reference,
+            raw: acte,
+        }));
+        setAllActs(mapped);
+        // filteredActs sera recalculé par applyFilters via useEffect([applyFilters])
+    }, [actes]);
+
+    // --- HELPERS STATUT ---
+    const isValidated = (s) => {
+        const n = String(s || "").toLowerCase().trim();
+        return n.includes("valid") || n === "validee" || n === "publiee" || n === "publiée" || n === "celebre";
+    };
+    const isPending = (s) => {
+        const n = String(s || "").toLowerCase().trim();
+        return n.includes("attente") || n.includes("soumis") || n.includes("transmis") || n === "pending";
+    };
+    const isRejected = (s) => {
+        const n = String(s || "").toLowerCase().trim();
+        return n.includes("rejet") || n.includes("refus");
+    };
 
     // --- LOGIQUE DE FILTRAGE ---
     const applyFilters = useCallback(() => {
@@ -1421,21 +1493,33 @@ export default function ActesLiturgique({ auth, actes = [] }) {
             );
         }
 
-        if (typeFilter) {
+        const ANNONCE_TYPES_LABELS = ["Action de grâce", "Prière d'intercession", "Annonce générale", "Annonce", "Annonce liturgique"];
+        if (typeFilter === "__annonces__") {
+            filtered = filtered.filter((a) => ANNONCE_TYPES_LABELS.includes(a.type));
+        } else if (typeFilter) {
             filtered = filtered.filter((a) => a.type === typeFilter);
         }
 
         if (statusFilter) {
-            filtered = filtered.filter((a) => a.status === statusFilter);
+            filtered = filtered.filter((a) => {
+                if (statusFilter === "pending")   return isPending(a.status);
+                if (statusFilter === "validated") return isValidated(a.status);
+                if (statusFilter === "rejected")  return isRejected(a.status);
+                return true;
+            });
         }
 
         if (pastorFilter) {
-            filtered = filtered.filter((a) => a.pastor === pastorFilter);
+            filtered = filtered.filter((a) => a.pastor === pastorFilter || a.conductor === pastorFilter);
+        }
+
+        if (classeFilter) {
+            filtered = filtered.filter((a) => a.class === classeFilter);
         }
 
         setFilteredActs(filtered);
         setCurrentPage(1);
-    }, [allActs, searchTerm, typeFilter, statusFilter, pastorFilter]);
+    }, [allActs, searchTerm, typeFilter, statusFilter, pastorFilter, classeFilter]);
 
     useEffect(() => {
         applyFilters();
@@ -1443,7 +1527,7 @@ export default function ActesLiturgique({ auth, actes = [] }) {
 
     // Options uniques pour les filtres
     const uniqueTypes = [...new Set(allActs.map((a) => a.type))].sort();
-    const uniquePastors = [...new Set(allActs.map((a) => a.pastor))].sort();
+    const uniqueClasses = [...new Set(allActs.map((a) => a.class).filter((c) => c && c !== "—"))].sort();
 
     // --- OPÉRATIONS CRUD (COMMUNICATION BASE DE DONNÉES) ---
     const refreshActs = useCallback(async () => {
@@ -1497,12 +1581,11 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                     act.id === id
                         ? {
                               ...act,
-                              status: newStatus.toLowerCase().replace("_", " "),
+                              status: newStatus.toLowerCase().replace(/_/g, " "),
                           }
                         : act,
                 ),
             );
-            alert("Statut mis à jour");
         } catch (error) {
             alert(
                 "Erreur: " + (error.response?.data?.message || error.message),
@@ -1576,12 +1659,41 @@ export default function ActesLiturgique({ auth, actes = [] }) {
         document.body.removeChild(link);
     };
 
-    const exportToPDF = async () => {
+    const exportToPDF = () => {
         if (filteredActs.length === 0)
             return alert("Aucune donnée à exporter.");
-        alert(
-            "Fonctionnalité PDF globale - Veuillez installer jsPDF et jsPDF-autotable.",
-        );
+
+        const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+
+        // En-tête
+        doc.setFontSize(16);
+        doc.setTextColor(37, 99, 235);
+        doc.text("Actes Liturgiques", 14, 16);
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.text(`Exporté le ${new Date().toLocaleDateString("fr-FR")} — ${filteredActs.length} acte(s)`, 14, 23);
+
+        autoTable(doc, {
+            startY: 28,
+            head: [["Référence", "Type", "Membre", "Famille", "Classe", "Conducteur", "Pasteur", "Date", "Statut"]],
+            body: filteredActs.map((a) => [
+                a.reference || "—",
+                a.type || "—",
+                a.member || "—",
+                a.family || "—",
+                a.class || "—",
+                a.conductor || "—",
+                a.pastor || "—",
+                a.date ? new Date(a.date).toLocaleDateString("fr-FR") : "—",
+                a.status || "—",
+            ]),
+            styles: { fontSize: 8, cellPadding: 3 },
+            headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: "bold" },
+            alternateRowStyles: { fillColor: [240, 245, 255] },
+            columnStyles: { 0: { cellWidth: 22 }, 7: { cellWidth: 22 }, 8: { cellWidth: 24 } },
+        });
+
+        doc.save(`actes_liturgiques_${new Date().toISOString().slice(0, 10)}.pdf`);
     };
 
     // --- PAGINATION ---
@@ -1647,9 +1759,9 @@ export default function ActesLiturgique({ auth, actes = [] }) {
     // --- CALCUL DES STATISTIQUES (Dynamique) ---
     const stats = {
         total: filteredActs.length,
-        pending: filteredActs.filter((a) => a.status === "pending").length,
-        validated: filteredActs.filter((a) => a.status === "validated").length,
-        rejected: filteredActs.filter((a) => a.status === "rejected").length,
+        pending: filteredActs.filter((a) => isPending(a.status)).length,
+        validated: filteredActs.filter((a) => isValidated(a.status)).length,
+        rejected: filteredActs.filter((a) => isRejected(a.status)).length,
     };
 
     // Titre dynamique pour les stats
@@ -1739,15 +1851,18 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                             Gestion des Actes Liturgiques
                         </h1>
 
-                        {/* BOUTON FAIRE UNE DEMANDE - commenté pour plus tard */}
-                        {/*
                         <div className="w-full md:w-auto flex-shrink-0">
-                            <Link href={withBasePath("", "/admin/liturgie")} className="btn btn-secondary gap-2 w-full md:w-auto justify-center">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                                Mon espace liturgique
+                            <Link
+                                href={withBasePath("", "/admin/annonces")}
+                                className="btn btn-primary gap-2 w-full md:w-auto justify-center"
+                                style={{ background: "#7c3aed", borderColor: "#7c3aed" }}
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                                </svg>
+                                Annonces
                             </Link>
                         </div>
-                        */}
                     </div>
 
                     {/* --- STATS CARDS --- */}
@@ -1919,18 +2034,14 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                             </select>
 
                             <select
-                                value={pastorFilter}
-                                onChange={(e) =>
-                                    setPastorFilter(e.target.value)
-                                }
+                                value={classeFilter}
+                                onChange={(e) => setClasseFilter(e.target.value)}
                                 className="input-control"
-                                style={{ minWidth: "140px" }}
+                                style={{ minWidth: "160px" }}
                             >
-                                <option value="">Tous pasteurs</option>
-                                {uniquePastors.map((c) => (
-                                    <option key={c} value={c}>
-                                        {c}
-                                    </option>
+                                <option value="">Toutes les classes</option>
+                                {uniqueClasses.map((c) => (
+                                    <option key={c} value={c}>{c}</option>
                                 ))}
                             </select>
 
@@ -1940,6 +2051,7 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                                     setTypeFilter("");
                                     setStatusFilter("");
                                     setPastorFilter("");
+                                    setClasseFilter("");
                                 }}
                                 className="btn btn-success"
                             >
@@ -1990,32 +2102,17 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                                 >
                                     Décès
                                 </button>
+
+                                <button
+                                    onClick={() => setTypeFilter("__annonces__")}
+                                    className={`filter-nav-btn ${typeFilter === "__annonces__" ? "active" : ""}`}
+                                    style={typeFilter === "__annonces__" ? {} : { borderColor: "#7c3aed", color: "#7c3aed" }}
+                                >
+                                    📢 Annonces
+                                </button>
                             </div>
 
                             <div className="filter-actions">
-                                {/* Bouton Rafraîchir */}
-                                <button
-                                    onClick={refreshActs}
-                                    className="btn btn-primary"
-                                    disabled={loading}
-                                    title="Recharger les données depuis le serveur"
-                                >
-                                    <svg
-                                        className="w-4 h-4"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                        />
-                                    </svg>
-                                    {loading ? "Chargement..." : "Rafraîchir"}
-                                </button>
-
                                 {/* Bouton Vue Grille / Table */}
                                 <button
                                     onClick={() =>
@@ -2171,15 +2268,45 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                                                         )}
                                                     </td>
                                                     <td className="text-center">
-                                                        {acte.attachment ? (
-                                                            <button className="text-blue-600 hover:text-blue-800 underline">
-                                                                Fichier
-                                                            </button>
-                                                        ) : (
-                                                            <span className="text-gray-400 italic">
-                                                                -
-                                                            </span>
-                                                        )}
+                                                        {(() => {
+                                                            const doc =
+                                                                getDocumentMeta(
+                                                                    acte,
+                                                                );
+                                                            if (!doc.url) {
+                                                                return (
+                                                                    <span className="text-gray-400 italic">
+                                                                        -
+                                                                    </span>
+                                                                );
+                                                            }
+                                                            return (
+                                                                <button
+                                                                    onClick={() =>
+                                                                        doc.available &&
+                                                                        window.open(
+                                                                            doc.url,
+                                                                            "_blank",
+                                                                        )
+                                                                    }
+                                                                    className={`underline ${
+                                                                        doc.available
+                                                                            ? "text-blue-600 hover:text-blue-800"
+                                                                            : "text-gray-400 cursor-not-allowed"
+                                                                    }`}
+                                                                    title={
+                                                                        doc.available
+                                                                            ? "Télécharger le document PDF"
+                                                                            : "Document disponible après validation du pasteur"
+                                                                    }
+                                                                    disabled={
+                                                                        !doc.available
+                                                                    }
+                                                                >
+                                                                    Vue fichier
+                                                                </button>
+                                                            );
+                                                        })()}
                                                     </td>
                                                     <td className="text-center">
                                                         <ActeStatusBadge
@@ -2267,7 +2394,7 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                                                     colSpan={10}
                                                     className="text-center py-12 text-gray-400 italic"
                                                 >
-                                                    Aucun acte trouvé.
+                                                    Aucun acte trouv�.
                                                 </td>
                                             </tr>
                                         )}
@@ -2281,78 +2408,78 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                             <div className="grid-view">
                                 {getPaginatedActs().length > 0 ? (
                                     getPaginatedActs().map((acte) => {
+                                        const typeRaw = String(acte.raw?.type_acte || "").toLowerCase();
+                                        const isFicheType = ["naissance", "deces"].includes(typeRaw);
+                                        const isCertificatType = ["bapteme", "mariage"].includes(typeRaw);
+                                        const isAnnonce = ["grace", "priere", "generale", "annonce", "annonce_liturgique"].includes(typeRaw);
+                                        const documentMeta = getDocumentMeta(acte);
+                                        const documentDispo = documentMeta.available;
+                                        const documentUrl = documentMeta.url;
+
+
                                         let sealColor = "var(--primary)";
-                                        if (acte.status === "validated")
-                                            sealColor = "var(--success)";
-                                        if (acte.status === "rejected")
-                                            sealColor = "var(--danger)";
-                                        if (acte.status === "pending")
-                                            sealColor = "var(--warning)";
+                                        if (isValidated(acte.status)) sealColor = "var(--success)";
+                                        if (isRejected(acte.status)) sealColor = "var(--danger)";
+                                        if (isPending(acte.status)) sealColor = "var(--warning)";
+
+                                        const handleEnvelopeClick = () => {
+                                            if (documentUrl && documentDispo) {
+                                                window.open(documentUrl, "_blank");
+                                            } else if (isAnnonce) {
+                                                openModal(acte);
+                                            } else {
+                                                openModal(acte);
+                                            }
+                                        };
+
+                                        const grise = (isFicheType || isCertificatType || isAnnonce) && !documentDispo;
 
                                         return (
-                                            <div
-                                                key={acte.id}
-                                                className="envelope-card"
-                                                onClick={() => openModal(acte)}
-                                                title="Cliquez pour ouvrir la demande"
-                                            >
-                                                <div className="envelope-flap"></div>
-                                                <div className="envelope-inside">
-                                                    <div
-                                                        className="envelope-seal"
-                                                        style={{
-                                                            backgroundColor:
-                                                                sealColor,
-                                                        }}
-                                                    >
-                                                        <svg
-                                                            className="w-5 h-5"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth={2}
-                                                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                                            />
-                                                        </svg>
+                                            <div key={acte.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                                {/* Enveloppe */}
+                                                <div
+                                                    className="envelope-card"
+                                                    onClick={handleEnvelopeClick}
+                                                    title={grise ? "Document non encore disponible" : documentUrl ? "Cliquez pour télécharger le document" : "Cliquez pour ouvrir"}
+                                                    style={grise ? { opacity: 0.45, filter: "grayscale(80%)", cursor: "not-allowed" } : {}}
+                                                >
+                                                    <div className="envelope-flap"></div>
+                                                    <div className="envelope-inside">
+                                                        <div className="envelope-seal" style={{ backgroundColor: grise ? "#9ca3af" : sealColor }}>
+                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                            </svg>
+                                                        </div>
+                                                    </div>
+                                                    <div className="envelope-content">
+                                                        <div className="envelope-type">{acte.type}</div>
+                                                        <div className="envelope-name">{acte.member}</div>
+                                                        <div className="envelope-meta">
+                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                            </svg>
+                                                            {new Date(acte.date).toLocaleDateString("fr-FR")}
+                                                        </div>
+                                                        <div className="mt-2">
+                                                            <ActeStatusBadge status={acte.status} />
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="envelope-content">
-                                                    <div className="envelope-type">
-                                                        {acte.type}
+
+                                                {/* Libellé sous l'enveloppe */}
+                                                {grise ? (
+                                                    <div style={{ textAlign: "center", fontSize: 11, color: "#9ca3af", fontStyle: "italic" }}>
+                                                        Document non disponible
                                                     </div>
-                                                    <div className="envelope-name">
-                                                        {acte.member}
+                                                ) : documentUrl ? (
+                                                    <div style={{ textAlign: "center", fontSize: 11, color: "#15803d", fontWeight: 600 }}>
+                                                        {isFicheType ? "📄 Cliquer pour la fiche" : "📜 Cliquer pour le certificat"}
                                                     </div>
-                                                    <div className="envelope-meta">
-                                                        <svg
-                                                            className="w-3 h-3"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth={2}
-                                                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                                            />
-                                                        </svg>
-                                                        {new Date(
-                                                            acte.date,
-                                                        ).toLocaleDateString(
-                                                            "fr-FR",
-                                                        )}
+                                                ) : isAnnonce ? (
+                                                    <div style={{ textAlign: "center", fontSize: 11, color: "#7c3aed", fontWeight: 600 }}>
+                                                        📢 Annonce liturgique
                                                     </div>
-                                                    <div className="mt-2">
-                                                        <ActeStatusBadge
-                                                            status={acte.status}
-                                                        />
-                                                    </div>
-                                                </div>
+                                                ) : null}
                                             </div>
                                         );
                                     })

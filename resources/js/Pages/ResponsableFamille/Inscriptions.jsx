@@ -241,7 +241,7 @@ export default function Inscriptions({
                         {/* Bouton Transfert */}
                         <button
                             onClick={() =>
-                                router.get("/responsable-famille/transferts")
+                                router.get(withBasePath("", "/responsable-famille/transferts"))
                             }
                             className="flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg transition-all text-sm shadow-sm"
                             title="Transférer"
@@ -252,7 +252,7 @@ export default function Inscriptions({
 
                         <button
                             onClick={() =>
-                                router.get("/responsable-famille/family/edit")
+                                router.get(withBasePath("", "/responsable-famille/family/edit"))
                             }
                             className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-200 hover:border-gray-400 transition-all text-sm shadow-sm"
                         >

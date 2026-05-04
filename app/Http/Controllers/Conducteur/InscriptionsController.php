@@ -1042,18 +1042,32 @@ class InscriptionsController extends Controller
                 'lieu_mariage' => $validated['lieu_mariage'] ?? $member->lieu_mariage,
                 'date_divorce' => $validated['date_divorce'] ?? $member->date_divorce,
                 'date_deces' => $validated['date_deces'] ?? $member->date_deces,
-                'baptise' => $request->has('baptise') ? $request->boolean('baptise') : $member->baptise,
-                'date_bapteme' => $validated['date_bapteme'] ?? $member->date_bapteme,
-                'lieu_bapteme' => $validated['lieu_bapteme'] ?? $member->lieu_bapteme,
-                'premiere_communion' => $request->has('premiere_communion') ? $request->boolean('premiere_communion') : $member->premiere_communion,
-                'date_premiere_communion' => $validated['date_premiere_communion'] ?? $member->date_premiere_communion,
-                'lieu_premiere_communion' => $validated['lieu_premiere_communion'] ?? $member->lieu_premiere_communion,
-                'marie_religieusement' => $request->has('marie_religieusement') ? $request->boolean('marie_religieusement') : $member->marie_religieusement,
-                'date_mariage_religieux' => $validated['date_mariage_religieux'] ?? $member->date_mariage_religieux,
-                'lieu_mariage_religieux' => $validated['lieu_mariage_religieux'] ?? $member->lieu_mariage_religieux,
                 'contact_urgence' => $validated['contact_urgence'] ?? $member->contact_urgence,
                 'contact_urgence_tel' => $validated['contact_urgence_tel'] ?? $member->contact_urgence_tel,
             ]);
+
+            // Mettre à jour les sacrements dans user_sacrements (source de vérité)
+            $sac = $member->sacrements;
+            $sacData = [
+                'baptise'                  => $request->has('baptise') ? $request->boolean('baptise') : ($sac?->baptise ?? false),
+                'bapteme_date'             => ($validated['date_bapteme'] ?? null) ?: null,
+                'bapteme_lieu'             => ($validated['lieu_bapteme'] ?? null) ?: null,
+                'premiere_communion'       => $request->has('premiere_communion') ? $request->boolean('premiere_communion') : ($sac?->premiere_communion ?? false),
+                'premiere_communion_date'  => ($validated['date_premiere_communion'] ?? null) ?: null,
+                'premiere_communion_lieu'  => ($validated['lieu_premiere_communion'] ?? null) ?: null,
+                'marie_religieusement'     => $request->has('marie_religieusement') ? $request->boolean('marie_religieusement') : ($sac?->marie_religieusement ?? false),
+                'mariage_religieux_date'   => ($validated['date_mariage_religieux'] ?? null) ?: null,
+                'mariage_religieux_lieu'   => ($validated['lieu_mariage_religieux'] ?? null) ?: null,
+                'est_marie'                => in_array($validated['statut_marital'] ?? '', ['marie', 'Marié(e)', 'Marié']) ? true : ($sac?->est_marie ?? false),
+                'mariage_civil_date'       => ($validated['date_mariage'] ?? null) ?: null,
+                'mariage_civil_lieu'       => ($validated['lieu_mariage'] ?? null) ?: null,
+            ];
+            if ($sac) {
+                $sac->update($sacData);
+            } else {
+                \App\Models\UserSacrement::create(array_merge($sacData, ['user_id' => $member->id]));
+            }
+
             if ($request->has('fonction_ids') || $request->has('fonction_id')) {
                 $member->fonctions()->sync($resolvedFonctionIds);
             }

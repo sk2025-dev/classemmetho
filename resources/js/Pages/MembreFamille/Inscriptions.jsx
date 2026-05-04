@@ -50,10 +50,13 @@ const GenreBadge = ({ genre }) => {
     );
 };
 
+const PER_PAGE = 10;
+
 export default function Inscriptions({ family, members, familyStats }) {
     const { auth } = usePage().props;
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedMember, setSelectedMember] = useState(null);
+    const [page, setPage] = useState(1);
 
     const filteredMembers = members.filter(
         (member) =>
@@ -62,6 +65,9 @@ export default function Inscriptions({ family, members, familyStats }) {
             (member.email &&
                 member.email.toLowerCase().includes(searchTerm.toLowerCase())),
     );
+
+    const totalPages = Math.max(1, Math.ceil(filteredMembers.length / PER_PAGE));
+    const paginatedMembers = filteredMembers.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
     return (
         <div
@@ -169,7 +175,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                             className="w-full pl-12 pr-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-sm"
                             placeholder="Rechercher un membre..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
                         />
                     </div>
 
@@ -208,6 +214,9 @@ export default function Inscriptions({ family, members, familyStats }) {
                                     className="text-white font-semibold"
                                 >
                                     <tr>
+                                        <th className="px-6 py-4 text-left w-12">
+                                            #
+                                        </th>
                                         <th className="px-6 py-4 text-left">
                                             Nom & Photo
                                         </th>
@@ -244,14 +253,18 @@ export default function Inscriptions({ family, members, familyStats }) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredMembers.map((member, index) => {
+                                    {paginatedMembers.map((member, index) => {
                                         const isCurrentUser =
                                             auth.user.id === member.id;
+                                        const rowNumber = (page - 1) * PER_PAGE + index + 1;
                                         return (
                                             <tr
                                                 key={member.id}
                                                 className={`border-b border-gray-200 hover:bg-gray-50 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
                                             >
+                                                <td className="px-6 py-4 text-left text-sm text-gray-400 font-medium">
+                                                    {rowNumber}
+                                                </td>
                                                 <td className="px-6 py-4 text-left text-sm font-medium text-gray-900 flex items-center gap-3">
                                                     <ProfilePhoto
                                                         user={member}
@@ -318,7 +331,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                                                             <button
                                                                 onClick={() =>
                                                                     router.get(
-                                                                        "/membre-famille/profile/edit",
+                                                                        withBasePath("", "/membre-famille/profile/edit"),
                                                                     )
                                                                 }
                                                                 className="text-green-600 hover:text-green-800 hover:bg-green-50 p-1.5 rounded transition-colors"
@@ -347,7 +360,58 @@ export default function Inscriptions({ family, members, familyStats }) {
                                 </tbody>
                             </table>
                         </div>
-                    ) : (
+                    ) : null}
+
+                    {/* Pagination */}
+                    {filteredMembers.length > PER_PAGE && (
+                        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-white rounded-b-xl">
+                            <span className="text-sm text-gray-500">
+                                {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filteredMembers.length)} sur {filteredMembers.length} membres
+                            </span>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                                    disabled={page === 1}
+                                    className="px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    ‹ Préc.
+                                </button>
+                                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                    .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                                    .reduce((acc, p, idx, arr) => {
+                                        if (idx > 0 && p - arr[idx - 1] > 1) acc.push("…");
+                                        acc.push(p);
+                                        return acc;
+                                    }, [])
+                                    .map((p, idx) =>
+                                        p === "…" ? (
+                                            <span key={`dots-${idx}`} className="px-2 text-gray-400">…</span>
+                                        ) : (
+                                            <button
+                                                key={p}
+                                                onClick={() => setPage(p)}
+                                                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                                                    p === page
+                                                        ? "bg-blue-600 text-white border-blue-600"
+                                                        : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                                                }`}
+                                            >
+                                                {p}
+                                            </button>
+                                        )
+                                    )}
+                                <button
+                                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={page === totalPages}
+                                    className="px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    Suiv. ›
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {members.length === 0 && (
                         <div className="bg-white rounded-xl shadow-lg p-12 text-center">
                             <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                             <h3 className="text-xl font-semibold text-gray-900 mb-2">

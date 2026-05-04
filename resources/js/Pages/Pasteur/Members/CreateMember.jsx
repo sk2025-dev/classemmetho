@@ -344,7 +344,7 @@ export default function CreateMember({ family, errors }) {
 
         try {
             const res = await axios.post(
-                `/responsable-famille/members/store?family_id=${family.id}`,
+                withBasePath("", `/responsable-famille/members/store?family_id=${family.id}`),
                 formData,
                 {
                     headers: { "Content-Type": "multipart/form-data" },
@@ -410,7 +410,7 @@ export default function CreateMember({ family, errors }) {
             // Revenir automatiquement à la page des inscriptions après courte pause
             setTimeout(() => {
                 Inertia.get(
-                    `/responsable-famille/inscriptions?family_id=${family.id}`,
+                    withBasePath("", `/responsable-famille/inscriptions?family_id=${family.id}`),
                 );
             }, 1500);
         } catch (err) {

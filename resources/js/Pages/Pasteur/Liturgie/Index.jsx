@@ -597,7 +597,7 @@ export default function Index({
             setProcessing(true);
             const responses = await Promise.all(
                 selectedCeremonyIds.map((id) =>
-                    axios.post(`/pasteur/liturgie/${id}/ceremonie/decision`, {
+                    axios.post(withBasePath("", `/pasteur/liturgie/${id}/ceremonie/decision`), {
                         statut: "CEREMONIE_VALIDEE_PAR_PASTEUR",
                         commentaire: "",
                     }),
@@ -1413,7 +1413,7 @@ export default function Index({
             return;
         }
         selectedHistoryIds.forEach((id) =>
-            window.open(`/pasteur/liturgie/${id}/certificat`, "_blank"),
+            window.open(withBasePath("", `/pasteur/liturgie/${id}/certificat`), "_blank"),
         );
     };
 

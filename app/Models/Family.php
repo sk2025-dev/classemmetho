@@ -12,6 +12,11 @@ class Family extends Model
 {
     use HasFactory, SoftDeletes, TrackModifications;
 
+    // Attributs calculés en mémoire par TransferWorkflowService (non persistés en base)
+    public ?string $transfer_status = null;
+    public ?string $transfer_label  = null;
+    public bool    $transfer_locked = false;
+
     protected $fillable = [
         // === INFOS BASIQUES ===
         'nom',

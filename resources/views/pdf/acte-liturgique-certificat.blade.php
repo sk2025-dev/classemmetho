@@ -224,6 +224,11 @@
     }
     }
     }
+    $conducteurDisplayName = trim((string) ($conducteurName ?? ""));
+    if ($conducteurDisplayName === "") {
+    $conducteurDisplayName = trim(($acte->conducteur->prenom ?? "") . " " . ($acte->conducteur->nom ?? ""));
+    }
+    $conducteurDataUri = $signatureConducteurDataUri ?? null;
     @endphp
 
     <div class="page">
@@ -563,10 +568,26 @@
                                     {{ strtoupper($signatureDisplayName) }}
                                 </div>
 
+                                <div style="font-size:13px; font-weight:700; letter-spacing:1px;
+                                        text-transform:uppercase; color:#9098b4; margin-top:6mm; margin-bottom:3mm;">
+                                    Le Conducteur
+                                </div>
+                                @if(!empty($conducteurDataUri))
+                                <img src="{{ $conducteurDataUri }}"
+                                    style="max-width:180px; max-height:50px;
+                                            display:block; margin:0 0 3mm;">
+                                @else
+                                <div style="height:50px; margin-bottom:3mm;"></div>
+                                @endif
+                                <div style="font-size:12px; font-weight:700; text-transform:uppercase;
+                                        letter-spacing:1px; color:#0F1E40;">
+                                    {{ strtoupper($conducteurDisplayName ?: 'NON RENSEIGNE') }}
+                                </div>
+
                             </td>
 
                             {{-- Lieu & Date à droite en bas --}}
-                            <td width="60%" style="text-align:right; vertical-align:bottom; padding-bottom:6mm;">
+                            <td width="40%" style="text-align:right; vertical-align:bottom; padding-bottom:6mm;">
                                 <div style="font-size:20px; color:#4b5563; font-weight:600;
                                         line-height:2.2; letter-spacing:0.3px;">
                                     Fait à Cocody<br>

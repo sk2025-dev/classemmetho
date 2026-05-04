@@ -1197,7 +1197,7 @@ export default function RegisterFamille({
 
         // --- 2. Responsable (avec nettoyage téléphone) ---
         Object.entries(responsable).forEach(([k, v]) => {
-            if (k === "photoPreview") {
+            if (k === "photoPreview" || k === "fonction") {
                 return;
             }
 
@@ -1228,6 +1228,11 @@ export default function RegisterFamille({
 
                 formData.append(`responsable[${k}]`, valueToSend);
             }
+        });
+
+        // Envoyer les fonctions du responsable comme tableau
+        selectedRolesResponsable.forEach((id) => {
+            formData.append("responsable[fonction_ids][]", id);
         });
 
         // --- 3. Membres - Valider et envoyer ---
@@ -1316,7 +1321,11 @@ export default function RegisterFamille({
                         ) {
                             formData.append(`membres[${i}][photo]`, photoValue);
                         }
-                    } else if (k !== "photoPreview") {
+                    } else if (k === "fonction_ids" && Array.isArray(v)) {
+                        v.forEach((id) => {
+                            formData.append(`membres[${i}][fonction_ids][]`, id);
+                        });
+                    } else if (k !== "photoPreview" && k !== "fonction") {
                         // Nettoyer le téléphone si présent
                         let valueToSend = v;
                         if (k === "telephone" && valueToSend) {
@@ -2186,10 +2195,6 @@ export default function RegisterFamille({
                                         setSelectedRolesResponsable(
                                             e.target.value,
                                         );
-                                        setResponsable({
-                                            ...responsable,
-                                            fonction: e.target.value.join(","),
-                                        });
                                     }}
                                     options={churchRoles}
                                     placeholder="Sélectionner des fonctions..."
@@ -2875,10 +2880,7 @@ export default function RegisterFamille({
                                                 setSelectedMembresRoles(newSet);
                                                 setMembreTemp({
                                                     ...membreTemp,
-                                                    fonction:
-                                                        e.target.value.join(
-                                                            ",",
-                                                        ),
+                                                    fonction_ids: e.target.value,
                                                 });
                                             }}
                                             options={churchRoles}

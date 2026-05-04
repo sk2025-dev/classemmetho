@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
 import axios from 'axios';
+import { withBasePath } from '../../Utils/urlHelper';
 import html2pdf from 'html2pdf.js';
 import * as XLSX from 'xlsx';
 
@@ -1520,7 +1521,7 @@ export default function AllProgrammes() {
   };
 
   const handleGoBack = () => {
-    router.visit('/conducteur/programmes');
+    router.visit(withBasePath("", '/conducteur/programmes'));
   };
 
   const openEditModal = (event) => {
@@ -1574,7 +1575,7 @@ export default function AllProgrammes() {
 
   const handleUpdateEvent = async (data, eventId) => {
     try {
-      const response = await axios.put(`/conducteur/programmes/event/${eventId}`, data);
+      const response = await axios.put(withBasePath("", `/conducteur/programmes/event/${eventId}`), data);
       if (response.data.success) {
         showToast('Événement modifié avec succès', 'success');
         closeEditModal();
@@ -1601,7 +1602,7 @@ export default function AllProgrammes() {
       setIsEditModalOpen(true);
     } else if (action === 'delete') {
       try {
-        const response = await axios.delete(`/conducteur/programmes/event/${event.id}`);
+        const response = await axios.delete(withBasePath("", `/conducteur/programmes/event/${event.id}`));
         if (response.data.success) {
           showToast('Événement supprimé avec succès', 'success');
           setConfirmModal({ ...confirmModal, isOpen: false });
@@ -1879,7 +1880,7 @@ export default function AllProgrammes() {
     setIsQrLoading(true);
     setQrPayload(null);
     try {
-      const res = await axios.get(`/conducteur/programmes/event/${event.id}/qr/data`);
+      const res = await axios.get(withBasePath("", `/conducteur/programmes/event/${event.id}/qr/data`));
       setQrPayload(res.data);
     } catch {
       setQrPayload({ error: true });
@@ -1905,7 +1906,7 @@ export default function AllProgrammes() {
 
   const printQr = () => {
     if (!qrPayload?.event?.id) return;
-    window.open(`/conducteur/programmes/event/${qrPayload.event.id}/qr/fiche-pdf`, '_blank');
+    window.open(withBasePath("", `/conducteur/programmes/event/${qrPayload.event.id}/qr/fiche-pdf`), '_blank');
   };
 
   const months = [

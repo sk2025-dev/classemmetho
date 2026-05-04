@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\PhotoHelper;
 use App\Models\User;
 use App\Models\Family;
 use App\Models\Classe;
@@ -128,7 +129,7 @@ class AnnuaireService
             ->select(['id', 'nom', 'code_famille'])
             ->with([
                 'users' => function ($q) use ($roleScope, $filters) {
-                    $q->select('id', 'prenom', 'nom', 'telephone', 'profile_photo_url', 'classe_id', 'family_id')
+                    $q->select('id', 'prenom', 'nom', 'telephone', 'profile_photo_url', 'photo_path', 'classe_id', 'family_id')
                         ->with(['classe:id,nom']);
                     $this->applyUserFilters($q, $filters, $roleScope);
                 },
@@ -183,7 +184,11 @@ class AnnuaireService
                         'prenoms' => $user->prenom,
                         'nom' => $user->nom,
                         'telephone' => $user->telephone,
-                        'photo' => $user->profile_photo_url,
+                        'photo' => PhotoHelper::getPhotoUrl(
+                            $user->photo_path,
+                            $user->prenom,
+                            $user->nom
+                        ),
                         'classeMethodiste' => $user->classe?->nom,
                     ];
                 })
@@ -216,7 +221,7 @@ class AnnuaireService
             ->select(['id', 'nom'])
             ->with([
                 'users' => function ($q) use ($roleScope, $filters) {
-                    $q->select('id', 'prenom', 'nom', 'telephone', 'profile_photo_url', 'classe_id', 'family_id')
+                    $q->select('id', 'prenom', 'nom', 'telephone', 'profile_photo_url', 'photo_path', 'classe_id', 'family_id')
                         ->with(['family:id,code_famille']);
                     $this->applyUserFilters($q, $filters, $roleScope);
                 },
@@ -275,7 +280,11 @@ class AnnuaireService
                     'prenoms' => $user->prenom,
                     'nom' => $user->nom,
                     'telephone' => $user->telephone,
-                    'photo' => $user->profile_photo_url,
+                    'photo' => PhotoHelper::getPhotoUrl(
+                        $user->photo_path,
+                        $user->prenom,
+                        $user->nom
+                    ),
                     'famille' => $user->family?->code_famille,
                 ];
             })->values();
@@ -320,6 +329,7 @@ class AnnuaireService
             'updated_at',
             'code_membre',
             'profile_photo_url',
+            'photo_path',
             'baptise',
             'date_bapteme',
             'lieu_bapteme',
@@ -552,7 +562,11 @@ class AnnuaireService
             'fonction' => $user->fonction?->nom ?? $defaults['fonction'],
             'profession' => $user->profession ?? $defaults['profession'],
             'dateNaissance' => $user->date_naissance ?? $defaults['dateNaissance'],
-            'photo' => $user->profile_photo_url ?? null,
+            'photo' => PhotoHelper::getPhotoUrl(
+                $user->photo_path,
+                $user->prenom,
+                $user->nom
+            ),
             'numMembre' => $user->code_membre ?? null,
         ];
     }

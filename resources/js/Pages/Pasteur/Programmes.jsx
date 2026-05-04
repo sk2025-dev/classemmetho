@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
 import * as XLSX from 'xlsx';
 import html2pdf from 'html2pdf.js';
+import { withBasePath } from '../../Utils/urlHelper';
 
 // --- STYLES INTÉGRÉS ---
 const styles = `
@@ -1763,9 +1764,9 @@ export default function Programmes() {
 
   const handleGoBack = () => {
     if (userRole === 'admin') {
-      router.visit('/admin/dashboard');
+      router.visit(withBasePath("", '/admin/dashboard'));
     } else {
-      router.visit('/pasteur/dashboard');
+      router.visit(withBasePath("", '/pasteur/dashboard'));
     }
   };
 

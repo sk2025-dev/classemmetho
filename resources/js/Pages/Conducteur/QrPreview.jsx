@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { Head, usePage, router } from "@inertiajs/react";
 import html2pdf from "html2pdf.js";
+import { withBasePath } from "../../Utils/urlHelper";
 
 const pageStyles = `
 .qr-preview-page {
@@ -163,7 +164,7 @@ export default function QrPreview() {
                             type="button"
                             className="btn-back"
                             onClick={() =>
-                                router.visit("/conducteur/programmes")
+                                router.visit(withBasePath("", "/conducteur/programmes"))
                             }
                         >
                             ← Retour aux activités
