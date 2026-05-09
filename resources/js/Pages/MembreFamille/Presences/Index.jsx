@@ -170,9 +170,35 @@ function HistoriqueRow({ activite, date, classe, statut }) {
     );
 }
 
+const STATUT_ACTIVITE = {
+    a_venir:  { label: "À venir",  bg: "#e8f0fe", color: "#1d4ed8", dot: "#3b82f6" },
+    en_cours: { label: "En cours", bg: "#dcfce7", color: "#15803d", dot: "#22c55e" },
+    passe:    { label: "Passée",   bg: "#f3f4f6", color: "#6b7280", dot: "#9ca3af" },
+};
+
+function ActiviteRow({ titre, date_debut, date_fin, heure, lieu, statut }) {
+    const cfg = STATUT_ACTIVITE[statut] ?? STATUT_ACTIVITE.passe;
+    return (
+        <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: "0.5px solid #f0f0f5" }}>
+            <div style={{ width: 10, height: 10, borderRadius: "50%", background: cfg.dot, flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 600, color: "#1e2070" }}>{titre}</div>
+                <div style={{ fontSize: 12, color: "#aaa", marginTop: 2 }}>
+                    {date_debut}{date_fin && date_fin !== date_debut ? ` → ${date_fin}` : ""}{heure ? ` · ${heure}` : ""}{lieu ? ` · ${lieu}` : ""}
+                </div>
+            </div>
+            <span style={{ background: cfg.bg, color: cfg.color, borderRadius: 20, padding: "5px 14px", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
+                {cfg.label}
+            </span>
+        </div>
+    );
+}
+
 // ─── Composant principal ─────────────────────────────────────────────────────
-export default function MembreFamilleView({ membre = {}, historique = [] }) {
+export default function MembreFamilleView({ membre = {}, historique = [], activites = [] }) {
     const [showAll, setShowAll] = useState(false);
+    const [activeTab, setActiveTab] = useState("presences");
+    const [activiteFilter, setActiviteFilter] = useState("a_venir");
     const historiqueFiltree = useMemo(() => historique, [historique]);
 
     const nbPresents = useMemo(
@@ -205,9 +231,22 @@ export default function MembreFamilleView({ membre = {}, historique = [] }) {
         [historiqueFiltree, currentMonth],
     );
 
-    const displayed = showAll
-        ? historiqueFiltree
-        : historiqueFiltree.slice(0, 5);
+    const listePresences = useMemo(
+        () => historiqueFiltree.filter((h) => h.statut === "present"),
+        [historiqueFiltree],
+    );
+    const listeAbsences = useMemo(
+        () => historiqueFiltree.filter((h) => h.statut === "absent" || h.statut === "excuse"),
+        [historiqueFiltree],
+    );
+
+    const listeActive = activeTab === "presences" ? listePresences : listeAbsences;
+    const displayed = showAll ? listeActive : listeActive.slice(0, 5);
+
+    const activitesFiltrees = useMemo(
+        () => activites.filter((a) => a.statut === activiteFilter),
+        [activites, activiteFilter],
+    );
 
     return (
         <div
@@ -416,84 +455,141 @@ export default function MembreFamilleView({ membre = {}, historique = [] }) {
                 ))}
             </div>
 
-            {/* Historique récent */}
+            {/* Historique avec onglets */}
             <div
                 style={{
                     background: "white",
                     borderRadius: 20,
                     margin: "16px 24px 0",
-                    padding: "22px 24px",
                     color: "#1e2070",
+                    overflow: "hidden",
                 }}
             >
-                <div
-                    style={{
-                        fontSize: 18,
-                        fontWeight: 700,
-                        color: "#1e2070",
-                        marginBottom: 4,
-                    }}
-                >
-                    Mon historique récent
-                </div>
-                <div style={{ fontSize: 12, color: "#aaa", marginBottom: 16 }}>
-                    {historiqueFiltree.length} activités enregistrées
+                {/* Onglets */}
+                <div style={{ display: "flex", borderBottom: "1.5px solid #f0f0f5" }}>
+                    {[
+                        { key: "presences", label: "Présences", count: listePresences.length, dot: "#22c55e", activeBg: "#e6f4ea", activeColor: "#1a7740" },
+                        { key: "absences",  label: "Absences",  count: listeAbsences.length,  dot: "#e53e3e", activeBg: "#fce8e8", activeColor: "#c0392b" },
+                        { key: "activites", label: "Activités", count: activites.length,       dot: "#3b82f6", activeBg: "#e8f0fe", activeColor: "#1d4ed8" },
+                    ].map((tab) => {
+                        const isActive = activeTab === tab.key;
+                        return (
+                            <button
+                                key={tab.key}
+                                onClick={() => { setActiveTab(tab.key); setShowAll(false); }}
+                                style={{
+                                    flex: 1,
+                                    padding: "16px 12px",
+                                    background: isActive ? tab.activeBg : "transparent",
+                                    border: "none",
+                                    borderBottom: isActive ? `2.5px solid ${tab.dot}` : "2.5px solid transparent",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 8,
+                                    fontWeight: isActive ? 700 : 500,
+                                    fontSize: 14,
+                                    color: isActive ? tab.activeColor : "#999",
+                                    transition: "all 0.2s",
+                                }}
+                            >
+                                <span style={{ width: 8, height: 8, borderRadius: "50%", background: tab.dot, flexShrink: 0 }} />
+                                {tab.label}
+                                <span style={{
+                                    background: isActive ? tab.dot : "#eee",
+                                    color: isActive ? "white" : "#999",
+                                    borderRadius: 20,
+                                    padding: "1px 9px",
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                }}>
+                                    {tab.count}
+                                </span>
+                            </button>
+                        );
+                    })}
                 </div>
 
-                {displayed.map((h) => (
-                    <HistoriqueRow
-                        key={h.id}
-                        activite={h.activite}
-                        date={h.date}
-                        classe={membre.classe}
-                        statut={h.statut}
-                    />
-                ))}
+                {/* Contenu — Activités */}
+                {activeTab === "activites" && (
+                    <div style={{ padding: "16px 24px" }}>
+                        {/* Sous-filtres */}
+                        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+                            {[
+                                { key: "a_venir",  label: "À venir",  dot: "#3b82f6" },
+                                { key: "en_cours", label: "En cours", dot: "#22c55e" },
+                                { key: "passe",    label: "Passées",  dot: "#9ca3af" },
+                            ].map((f) => {
+                                const cnt = activites.filter((a) => a.statut === f.key).length;
+                                const isActive = activiteFilter === f.key;
+                                return (
+                                    <button key={f.key} onClick={() => setActiviteFilter(f.key)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 20, border: isActive ? `1.5px solid ${f.dot}` : "1.5px solid #e5e7eb", background: isActive ? f.dot : "white", color: isActive ? "white" : "#555", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>
+                                        {f.label}
+                                        <span style={{ background: isActive ? "rgba(255,255,255,0.3)" : "#eee", color: isActive ? "white" : "#888", borderRadius: 20, padding: "0 7px", fontSize: 11 }}>{cnt}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {activitesFiltrees.length === 0 ? (
+                            <div style={{ textAlign: "center", padding: "30px 0", color: "#bbb", fontSize: 14 }}>
+                                Aucune activité dans cette catégorie.
+                            </div>
+                        ) : (
+                            activitesFiltrees.map((a) => (
+                                <ActiviteRow key={`${a.type}-${a.id}`} {...a} />
+                            ))
+                        )}
+                    </div>
+                )}
 
-                {/* Voir plus / moins */}
-                <div
-                    style={{
-                        display: "flex",
-                        justifyContent: "center",
-                        marginTop: 18,
-                    }}
-                >
-                    <button
-                        onClick={() => setShowAll((p) => !p)}
-                        style={{
-                            background: "#f5f6ff",
-                            border: "1.5px solid #e0e0f0",
-                            borderRadius: 20,
-                            padding: "8px 24px",
-                            fontSize: 13,
-                            color: "#2d2f8f",
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                        }}
-                    >
-                        <span
-                            style={{
-                                width: 24,
-                                height: 24,
-                                borderRadius: "50%",
-                                background: "#e8f0fe",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: 14,
-                                color: "#2d2f8f",
-                            }}
-                        >
-                            {showAll ? "↑" : "↓"}
-                        </span>
-                        {showAll
-                            ? "Voir moins"
-                            : `Voir tout (${historiqueFiltree.length})`}
-                    </button>
+                {/* Contenu — Présences / Absences */}
+                {activeTab !== "activites" && (
+                <div style={{ padding: "16px 24px" }}>
+                    {listeActive.length === 0 ? (
+                        <div style={{ textAlign: "center", padding: "30px 0", color: "#bbb", fontSize: 14 }}>
+                            {activeTab === "presences" ? "Aucune présence enregistrée." : "Aucune absence enregistrée."}
+                        </div>
+                    ) : (
+                        <>
+                            {displayed.map((h) => (
+                                <HistoriqueRow
+                                    key={h.id}
+                                    activite={h.activite}
+                                    date={h.date}
+                                    classe={membre.classe}
+                                    statut={h.statut}
+                                />
+                            ))}
+                            {listeActive.length > 5 && (
+                                <div style={{ display: "flex", justifyContent: "center", marginTop: 18 }}>
+                                    <button
+                                        onClick={() => setShowAll((p) => !p)}
+                                        style={{
+                                            background: "#f5f6ff",
+                                            border: "1.5px solid #e0e0f0",
+                                            borderRadius: 20,
+                                            padding: "8px 24px",
+                                            fontSize: 13,
+                                            color: "#2d2f8f",
+                                            fontWeight: 600,
+                                            cursor: "pointer",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 8,
+                                        }}
+                                    >
+                                        <span style={{ width: 24, height: 24, borderRadius: "50%", background: "#e8f0fe", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: "#2d2f8f" }}>
+                                            {showAll ? "↑" : "↓"}
+                                        </span>
+                                        {showAll ? "Voir moins" : `Voir tout (${listeActive.length})`}
+                                    </button>
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
+                )}
             </div>
 
             {/* Encouragement card */}

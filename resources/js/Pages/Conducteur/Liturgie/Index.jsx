@@ -474,8 +474,8 @@ const ANNONCE_TYPES = [
     },
     {
         value: "generale",
-        label: "Annonce générale",
-        emoji: "📢",
+        label: "Demande de prière générale",
+        emoji: "🙏",
         color: "green",
     },
 ];
@@ -573,8 +573,7 @@ export default function Index({
         membre_id: familyMembers[0]?.id || "",
         message: "",
         date_annonce: "",
-        date_publication: "",
-        date_expiration: "",
+        heure_culte: "",
     });
     const [annonceStep, setAnnonceStep] = useState(1);
     const selectedType = ANNONCE_TYPES.find(
@@ -593,7 +592,7 @@ export default function Index({
     /* ── COMPUTED actes ── */
     const stats = useMemo(() => {
         const soumises = localActes.filter(
-            (a) => a.statut === "SOUMISE",
+            (a) => ["SOUMISE", "EN_ATTENTE_CONDUCTEUR"].includes(a.statut),
         ).length;
         const transmises = localActes.filter(
             (a) => a.statut === "TRANSMISE_AU_PASTEUR",
@@ -637,7 +636,7 @@ export default function Index({
 
     const soumises = filteredActes.filter(
         (a) =>
-            a.statut === "SOUMISE" &&
+            ["SOUMISE", "EN_ATTENTE_CONDUCTEUR"].includes(a.statut) &&
             !a.demandeur_is_conducteur &&
             !ANNONCE_TYPE_VALUES.includes(
                 String(a.type_acte || "").toLowerCase(),
@@ -646,7 +645,6 @@ export default function Index({
     const transmises = filteredActes.filter(
         (a) =>
             a.statut === "TRANSMISE_AU_PASTEUR" &&
-            !a.demandeur_is_conducteur &&
             !ANNONCE_TYPE_VALUES.includes(
                 String(a.type_acte || "").toLowerCase(),
             ),
@@ -1298,8 +1296,7 @@ export default function Index({
                 membre_id: familyMembers[0]?.id || "",
                 message: "",
                 date_annonce: "",
-                date_publication: "",
-                date_expiration: "",
+                heure_culte: "",
             });
             setAnnonceStep(1);
         }
@@ -1316,6 +1313,7 @@ export default function Index({
             membre_id: familyMembers[0]?.id || "",
             message: "",
             date_annonce: "",
+            heure_culte: "",
             date_publication: "",
             date_expiration: "",
         });
@@ -1390,8 +1388,8 @@ export default function Index({
             closeAnnonceModal();
             showToast(
                 statut === "TRANSMISE_AU_PASTEUR"
-                    ? "✅ Annonce transmise au pasteur."
-                    : "Annonce refusée.",
+                    ? "✅ Demande de prière transmise au pasteur."
+                    : "Demande de prière refusée.",
             );
         } catch (e) {
             showToast(e?.response?.data?.message || "Echec.");
@@ -1434,7 +1432,7 @@ export default function Index({
                 ),
             );
             setAnnSelectedIds(new Set());
-            showToast("✅ Annonces transmises au pasteur.");
+            showToast("✅ Demandes de prière transmises au pasteur.");
         } catch (e) {
             showToast("Echec de la validation groupée.");
         } finally {
@@ -1480,7 +1478,7 @@ export default function Index({
                 ),
             );
             setAnnSelectedIds(new Set());
-            showToast("Annonces refusées.");
+            showToast("Demandes de prière refusées.");
         } catch (e) {
             showToast("Echec du refus groupé.");
         } finally {
@@ -1522,7 +1520,7 @@ export default function Index({
             closeAnnonceModal();
             setAnnoncesSubTab("mine");
             setAnnoncesPage(1);
-            showToast("✅ Annonce soumise ! Elle sera traitée par le pasteur.");
+            showToast("✅ Demande de prière soumise ! Elle sera traitée par le pasteur.");
         } catch (e) {
             showToast(e?.response?.data?.message || "Une erreur est survenue.");
         } finally {
@@ -1906,7 +1904,7 @@ export default function Index({
                                         d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
                                     />
                                 </svg>
-                                Annonces
+                                Demandes de prière
                                 {annEnAttente.length > 0 && (
                                     <span className="tab-count tab-violet">
                                         {annEnAttente.length}
@@ -1994,7 +1992,7 @@ export default function Index({
                                         🍞 Première Communion
                                     </option>
                                 </optgroup>
-                                <optgroup label="Annonces">
+                                <optgroup label="Demandes de prière">
                                     <option value="grace">
                                         🙌 Action de grâce
                                     </option>
@@ -2002,7 +2000,7 @@ export default function Index({
                                 </optgroup>
                                 <optgroup label="Mes contenus">
                                     <option value="mes_annonces">
-                                        📣 Mes annonces
+                                        🙏 Mes demandes de prière
                                     </option>
                                     <option value="mes_demandes">
                                         📋 Mes demandes
@@ -2976,9 +2974,9 @@ export default function Index({
                         <div className="modal-head ann-modal-head">
                             <div>
                                 <div className="modal-title">
-                                    {annonceStep === 1 && "✦ Nouvelle annonce"}
+                                    {annonceStep === 1 && "✦ Nouvelle demande de prière"}
                                     {annonceStep === 2 &&
-                                        `${selectedType?.emoji || "📢"} ${selectedType?.label || "Annonce"}`}
+                                        `${selectedType?.emoji || "🙏"} ${selectedType?.label || "Demande de prière"}`}
                                     {annonceStep === 3 && "✓ Confirmation"}
                                 </div>
                                 <div className="modal-sub">
@@ -3161,48 +3159,36 @@ export default function Index({
                                             {annonceForm.message.length}/500
                                         </div>
                                     </Field>
-                                    <Field label="Date de l'événement" required>
-                                        <input
-                                            className="ann-input"
-                                            type="date"
-                                            value={annonceForm.date_annonce}
-                                            onChange={(e) =>
-                                                setAnnonceForm((prev) => ({
-                                                    ...prev,
-                                                    date_annonce:
-                                                        e.target.value,
-                                                }))
-                                            }
-                                        />
-                                    </Field>
-                                    <Field label="Date de publication">
-                                        <input
-                                            className="ann-input"
-                                            type="date"
-                                            value={annonceForm.date_publication}
-                                            onChange={(e) =>
-                                                setAnnonceForm((prev) => ({
-                                                    ...prev,
-                                                    date_publication:
-                                                        e.target.value,
-                                                }))
-                                            }
-                                        />
-                                    </Field>
-                                    <Field label="Date d'expiration">
-                                        <input
-                                            className="ann-input"
-                                            type="date"
-                                            value={annonceForm.date_expiration}
-                                            onChange={(e) =>
-                                                setAnnonceForm((prev) => ({
-                                                    ...prev,
-                                                    date_expiration:
-                                                        e.target.value,
-                                                }))
-                                            }
-                                        />
-                                    </Field>
+                                    <div style={{ display: "flex", gap: 12 }}>
+                                        <Field label="Date du culte" required style={{ flex: 1 }}>
+                                            <input
+                                                className="ann-input"
+                                                type="date"
+                                                value={annonceForm.date_annonce}
+                                                onChange={(e) =>
+                                                    setAnnonceForm((prev) => ({
+                                                        ...prev,
+                                                        date_annonce:
+                                                            e.target.value,
+                                                    }))
+                                                }
+                                            />
+                                        </Field>
+                                        <Field label="Heure du culte" style={{ flex: 1 }}>
+                                            <input
+                                                className="ann-input"
+                                                type="time"
+                                                value={annonceForm.heure_culte}
+                                                onChange={(e) =>
+                                                    setAnnonceForm((prev) => ({
+                                                        ...prev,
+                                                        heure_culte:
+                                                            e.target.value,
+                                                    }))
+                                                }
+                                            />
+                                        </Field>
+                                    </div>
                                 </div>
                             )}
 
@@ -3224,7 +3210,7 @@ export default function Index({
                                                 </div>
                                             )}
                                             <div className="art-sub">
-                                                Annonce conducteurs
+                                                Demande de prière conducteurs
                                             </div>
                                         </div>
                                     </div>
@@ -3248,26 +3234,16 @@ export default function Index({
                                     )}
                                     {annonceForm.date_annonce && (
                                         <RecapRow
-                                            label="Date"
+                                            label="Date du culte"
                                             value={formatDate(
                                                 annonceForm.date_annonce,
                                             )}
                                         />
                                     )}
-                                    {annonceForm.date_publication && (
+                                    {annonceForm.heure_culte && (
                                         <RecapRow
-                                            label="Publication"
-                                            value={formatDate(
-                                                annonceForm.date_publication,
-                                            )}
-                                        />
-                                    )}
-                                    {annonceForm.date_expiration && (
-                                        <RecapRow
-                                            label="Expiration"
-                                            value={formatDate(
-                                                annonceForm.date_expiration,
-                                            )}
+                                            label="Heure du culte"
+                                            value={annonceForm.heure_culte}
                                         />
                                     )}
                                     <div className="ann-recap-msg">
@@ -3778,7 +3754,7 @@ export default function Index({
                                             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                                         />
                                     </svg>
-                                    <span>Annonce validée et publiée</span>
+                                    <span>Demande de prière validée et publiée</span>
                                 </div>
                             )}
 

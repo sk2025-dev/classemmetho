@@ -82,9 +82,20 @@ export default function BaptemeForm({
             (m) => String(m.id) === String(form.membre_id),
         );
         if (!member) return;
-        const hasInfo = form.details.personne || form.details.date_naissance;
-        if (hasInfo) return;
-        applyMemberDefaults(member);
+        const fullName = `${member.prenom || ""} ${member.nom || ""}`.trim();
+        const dateNaissance = member.date_naissance
+            ? String(member.date_naissance).split("T")[0]
+            : "";
+        setForm((prev) => ({
+            ...prev,
+            membre_id: String(member.id ?? prev.membre_id),
+            classe_id: member.classe_id || prev.classe_id,
+            details: {
+                ...prev.details,
+                personne: prev.details.personne || fullName,
+                date_naissance: dateNaissance,
+            },
+        }));
     }, [form.membre_id, familyMembers]);
 
     const submit = async (e) => {
@@ -331,6 +342,16 @@ export default function BaptemeForm({
                                                 )
                                             }
                                         />
+                                        {currentMember && currentMember.date_naissance && (
+                                            <p style={{ fontSize: 12, color: "#16a34a", marginTop: 4 }}>
+                                                ✓ Chargée depuis le profil du membre
+                                            </p>
+                                        )}
+                                        {currentMember && !currentMember.date_naissance && (
+                                            <p style={{ fontSize: 12, color: "#d97706", marginTop: 4 }}>
+                                                ⚠️ Non renseignée dans le profil — veuillez la saisir
+                                            </p>
+                                        )}
                                     </Field>
                                 </div>
 

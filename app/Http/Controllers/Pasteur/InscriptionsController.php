@@ -85,6 +85,8 @@ class InscriptionsController extends Controller
                     'classe_name' => $m->classe?->nom ?? 'N/A',
                     'role' => $m->id === $user->id ? 'pasteur' : 'membre',
                     'is_responsable' => $m->id === $user->id,
+                    'is_deceased' => (bool) $m->is_deceased,
+                    'deceased_at' => $m->deceased_at?->format('Y-m-d'),
                     'profile_photo_url' => $m->profile_photo_url ?: PhotoHelper::getPhotoUrl($m->photo_path, $m->prenom, $m->nom),
                 ];
             })->values();

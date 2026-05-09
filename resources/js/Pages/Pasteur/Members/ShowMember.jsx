@@ -390,6 +390,61 @@ export default function ShowMember({ member, family, auth }) {
                             </SectionCard>
                         </div>
 
+                        {/* Section: Infos complémentaires */}
+                        {(member.lieu_naissance || member.numero_cni || member.hors_communaute || member.retrait) && (
+                            <div>
+                                <SectionCard
+                                    title="Informations Complémentaires"
+                                    icon={UserIcon}
+                                    colorClass="gray"
+                                >
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {member.lieu_naissance && (
+                                            <InfoField
+                                                label="Lieu de naissance"
+                                                value={member.lieu_naissance}
+                                                icon={MapPin}
+                                                colorClass="gray"
+                                            />
+                                        )}
+                                        {member.numero_cni && (
+                                            <InfoField
+                                                label="N° CNI"
+                                                value={member.numero_cni}
+                                                icon={UserIcon}
+                                                colorClass="gray"
+                                            />
+                                        )}
+                                        <InfoField
+                                            label="Hors communauté"
+                                            value={member.hors_communaute ? "Oui" : "Non"}
+                                            colorClass="gray"
+                                        />
+                                        <InfoField
+                                            label="Retrait"
+                                            value={member.retrait ? "Oui" : "Non"}
+                                            colorClass="gray"
+                                        />
+                                        {member.retrait && member.date_retrait && (
+                                            <InfoField
+                                                label="Date de retrait"
+                                                value={formatDate(member.date_retrait)}
+                                                icon={Calendar}
+                                                colorClass="gray"
+                                            />
+                                        )}
+                                        {member.retrait && member.commentaire_retrait && (
+                                            <InfoField
+                                                label="Commentaire retrait"
+                                                value={member.commentaire_retrait}
+                                                colorClass="gray"
+                                            />
+                                        )}
+                                    </div>
+                                </SectionCard>
+                            </div>
+                        )}
+
                         {/* Section 4: Sacrements */}
                         {member.sacrements &&
                             (member.sacrements.baptise ||

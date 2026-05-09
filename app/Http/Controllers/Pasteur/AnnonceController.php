@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Pasteur;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Http\Controllers\Controller;
 use App\Models\ActeLiturgique;
+use App\Models\ActeLiturgiqueHistorique;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -135,6 +136,8 @@ class AnnonceController extends Controller
             ], 403);
         }
 
+        $statutPrecedent = $acte->statut;
+
         // Validation pastorale + publication immédiate
         $acte->update([
             'statut' => ActeLiturgique::STATUT_PUBLIEE,
@@ -143,6 +146,14 @@ class AnnonceController extends Controller
             'date_publication' => $acte->date_publication ?? now(),
             'publiee_par' => $user->id,
             'updated_by' => $user->id,
+        ]);
+
+        ActeLiturgiqueHistorique::create([
+            'acte_id'         => $acte->id,
+            'statut_precedent' => $statutPrecedent,
+            'statut_nouveau'  => ActeLiturgique::STATUT_PUBLIEE,
+            'acteur_id'       => $user->id,
+            'commentaire'     => $request->input('note', null),
         ]);
 
         return response()->json([
@@ -174,11 +185,21 @@ class AnnonceController extends Controller
             'motif_rejet' => 'required|string|min:10',
         ]);
 
+        $statutPrecedent = $acte->statut;
+
         $acte->update([
             'statut' => ActeLiturgique::STATUT_REFUSEE_PAR_PASTEUR,
             'note_pastorale' => $validated['motif_rejet'],
             'pasteur_id' => $user->id,
             'updated_by' => $user->id,
+        ]);
+
+        ActeLiturgiqueHistorique::create([
+            'acte_id'         => $acte->id,
+            'statut_precedent' => $statutPrecedent,
+            'statut_nouveau'  => ActeLiturgique::STATUT_REFUSEE_PAR_PASTEUR,
+            'acteur_id'       => $user->id,
+            'commentaire'     => $validated['motif_rejet'],
         ]);
 
         return response()->json([

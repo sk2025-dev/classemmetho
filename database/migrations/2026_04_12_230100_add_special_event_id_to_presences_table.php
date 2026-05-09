@@ -27,12 +27,32 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('presences', function (Blueprint $table) {
-            $table->dropUnique('presences_special_event_member_unique');
-            $table->dropConstrainedForeignId('special_event_id');
-        });
+            if (Schema::hasColumn('presences', 'special_event_id')) {
+                // Supprimer la FK avant l'index unique (MySQL exige cet ordre)
+                $fks = collect(\DB::select("
+                    SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME = 'presences'
+                      AND COLUMN_NAME = 'special_event_id'
+                      AND REFERENCED_TABLE_NAME IS NOT NULL
+                "))->pluck('CONSTRAINT_NAME');
 
-        Schema::table('presences', function (Blueprint $table) {
-            $table->foreignId('activite_id')->nullable(false)->change();
+                foreach ($fks as $fk) {
+                    \DB::statement("ALTER TABLE presences DROP FOREIGN KEY `{$fk}`");
+                }
+
+                if (\DB::select("
+                    SELECT INDEX_NAME FROM information_schema.STATISTICS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME = 'presences'
+                      AND INDEX_NAME = 'presences_special_event_member_unique'
+                    LIMIT 1
+                ")) {
+                    $table->dropUnique('presences_special_event_member_unique');
+                }
+
+                $table->dropColumn('special_event_id');
+            }
         });
     }
 };

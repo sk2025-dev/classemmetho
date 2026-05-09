@@ -7,6 +7,7 @@ use App\Models\Campagne;
 use App\Models\Cotisation;
 use App\Models\Don;
 use App\Models\Family;
+use App\Models\Notification;
 use App\Models\Paiement;
 use App\Models\ProjectionFinanciere;
 use App\Services\PayDunyaService;
@@ -256,6 +257,39 @@ class TresorerieController extends Controller
 
         $projection = ProjectionFinanciere::summarize($cotisations, $paiements);
 
+        $notifications = Notification::query()
+            ->where('user_id', $user->id)
+            ->latest('sent_at')
+            ->limit(100)
+            ->get()
+            ->filter(function (Notification $n) {
+                $link = (string) ($n->data['link'] ?? '');
+                return !str_contains($link, 'liturgie') && !str_contains($link, 'annonce');
+            })
+            ->take(30)
+            ->map(function (Notification $n) {
+                $subject = strtolower((string) ($n->subject ?? ''));
+                $type = 'info';
+                if (str_contains($subject, 'validé') || str_contains($subject, 'confirmé') || str_contains($subject, 'succès')) {
+                    $type = 'success';
+                } elseif (str_contains($subject, 'refus') || str_contains($subject, 'échoué') || str_contains($subject, 'erreur')) {
+                    $type = 'warning';
+                } elseif (str_contains($subject, 'rappel') || str_contains($subject, 'échéance') || str_contains($subject, 'retard')) {
+                    $type = 'warning';
+                } elseif (str_contains($subject, 'annonce') || str_contains($subject, 'liturgie')) {
+                    $type = 'purple';
+                }
+                return [
+                    'id'      => $n->id,
+                    'type'    => $type,
+                    'titre'   => $n->subject ?? 'Notification',
+                    'message' => $n->body ?? '',
+                    'date'    => optional($n->sent_at)->format('d/m/Y H:i') ?? optional($n->created_at)->format('d/m/Y H:i'),
+                    'lu'      => false,
+                ];
+            })
+            ->values();
+
         return Inertia::render('ResponsableFamille/Tresorerie/Index', [
             'familyInfo' => [
                 'id' => $family->id,
@@ -271,6 +305,7 @@ class TresorerieController extends Controller
             'historiquePaiements' => $historiquePaiements,
             'donsFamille' => $donsFamille,
             'projection' => $projection,
+            'notifications' => $notifications,
         ]);
     }
 

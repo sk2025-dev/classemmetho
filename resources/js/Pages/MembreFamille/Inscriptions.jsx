@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Link, router, usePage } from "@inertiajs/react";
 import {
     Users,
@@ -14,7 +14,7 @@ import {
 import ProfilePhoto from "@/Components/ProfilePhoto";
 import { withBasePath } from "../../Utils/urlHelper";
 
-// Composant Badge pour le Rôle
+// Composant Badge pour le RÃ´le
 const StatusBadge = ({ role }) => {
     const isResp = role === "responsable";
 
@@ -221,6 +221,12 @@ export default function Inscriptions({ family, members, familyStats }) {
                                             Nom & Photo
                                         </th>
                                         <th className="px-6 py-4 text-left">
+                                            Code Famille
+                                        </th>
+                                        <th className="px-6 py-4 text-left">
+                                            Code Membre
+                                        </th>
+                                        <th className="px-6 py-4 text-left">
                                             Genre
                                         </th>
                                         <th className="px-6 py-4 text-left">
@@ -241,12 +247,6 @@ export default function Inscriptions({ family, members, familyStats }) {
                                         <th className="px-6 py-4 text-left">
                                             Rôle
                                         </th>
-                                        <th className="px-6 py-4 text-left">
-                                            Code Famille
-                                        </th>
-                                        <th className="px-6 py-4 text-left">
-                                            Code Membre
-                                        </th>
                                         <th className="px-6 py-4 text-center">
                                             Actions
                                         </th>
@@ -260,7 +260,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                                         return (
                                             <tr
                                                 key={member.id}
-                                                className={`border-b border-gray-200 hover:bg-gray-50 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
+                                                className={`border-b border-gray-200 ${member.is_deceased ? "bg-gray-100 opacity-60" : `hover:bg-gray-50 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}`}
                                             >
                                                 <td className="px-6 py-4 text-left text-sm text-gray-400 font-medium">
                                                     {rowNumber}
@@ -271,47 +271,24 @@ export default function Inscriptions({ family, members, familyStats }) {
                                                         size="sm"
                                                         rounded={true}
                                                     />
-                                                    <div>
-                                                        <span>
-                                                            {member.prenom}{" "}
-                                                            {member.nom}
-                                                        </span>
-                                                        {isCurrentUser && (
-                                                            <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                                                                (Moi)
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span>
+                                                                {member.prenom}{" "}
+                                                                {member.nom}
+                                                            </span>
+                                                            {isCurrentUser && (
+                                                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                                                    (Moi)
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        {member.is_deceased && (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-300 text-gray-600 border border-gray-400">
+                                                                âœ DÃ©cÃ©dÃ©
                                                             </span>
                                                         )}
                                                     </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-left text-sm">
-                                                    <GenreBadge
-                                                        genre={member.genre}
-                                                    />
-                                                </td>
-                                                <td className="px-6 py-4 text-left text-sm text-gray-600">
-                                                    {member.email || "—"}
-                                                </td>
-                                                <td className="px-6 py-4 text-left text-sm text-gray-600">
-                                                    {member.telephone || "—"}
-                                                </td>
-                                                <td className="px-6 py-4 text-left text-sm text-gray-600">
-                                                    {member.ville_name || "—"}
-                                                </td>
-                                                <td className="px-6 py-4 text-left text-sm text-gray-600">
-                                                    {member.profession || "—"}
-                                                </td>
-                                                <td className="px-6 py-4 text-left text-sm text-gray-600">
-                                                    {member.fonction_name ||
-                                                        "—"}
-                                                </td>
-                                                <td className="px-6 py-4 text-left text-sm">
-                                                    <StatusBadge
-                                                        role={
-                                                            member.is_responsable
-                                                                ? "responsable"
-                                                                : "membre"
-                                                        }
-                                                    />
                                                 </td>
                                                 <td className="px-6 py-4 text-left text-sm">
                                                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-semibold text-amber-700">
@@ -324,6 +301,36 @@ export default function Inscriptions({ family, members, familyStats }) {
                                                         {member.code_membre ||
                                                             "N/A"}
                                                     </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-left text-sm">
+                                                    <GenreBadge
+                                                        genre={member.genre}
+                                                    />
+                                                </td>
+                                                <td className="px-6 py-4 text-left text-sm text-gray-600">
+                                                    {member.email || "â€”"}
+                                                </td>
+                                                <td className="px-6 py-4 text-left text-sm text-gray-600">
+                                                    {member.telephone || "â€”"}
+                                                </td>
+                                                <td className="px-6 py-4 text-left text-sm text-gray-600">
+                                                    {member.ville_name || "â€”"}
+                                                </td>
+                                                <td className="px-6 py-4 text-left text-sm text-gray-600">
+                                                    {member.profession || "â€”"}
+                                                </td>
+                                                <td className="px-6 py-4 text-left text-sm text-gray-600">
+                                                    {member.fonction_name ||
+                                                        "â€”"}
+                                                </td>
+                                                <td className="px-6 py-4 text-left text-sm">
+                                                    <StatusBadge
+                                                        role={
+                                                            member.is_responsable
+                                                                ? "responsable"
+                                                                : "membre"
+                                                        }
+                                                    />
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
                                                     <div className="flex items-center justify-center gap-2">
@@ -347,7 +354,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                                                                     )
                                                                 }
                                                                 className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-1.5 rounded transition-colors"
-                                                                title="Voir les détails"
+                                                                title="Voir les dÃ©tails"
                                                             >
                                                                 <Eye className="w-4 h-4" />
                                                             </button>
@@ -366,7 +373,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                     {filteredMembers.length > PER_PAGE && (
                         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-white rounded-b-xl">
                             <span className="text-sm text-gray-500">
-                                {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filteredMembers.length)} sur {filteredMembers.length} membres
+                                {(page - 1) * PER_PAGE + 1}â€“{Math.min(page * PER_PAGE, filteredMembers.length)} sur {filteredMembers.length} membres
                             </span>
                             <div className="flex items-center gap-1">
                                 <button
@@ -374,18 +381,18 @@ export default function Inscriptions({ family, members, familyStats }) {
                                     disabled={page === 1}
                                     className="px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                 >
-                                    ‹ Préc.
+                                    â€¹ PrÃ©c.
                                 </button>
                                 {Array.from({ length: totalPages }, (_, i) => i + 1)
                                     .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
                                     .reduce((acc, p, idx, arr) => {
-                                        if (idx > 0 && p - arr[idx - 1] > 1) acc.push("…");
+                                        if (idx > 0 && p - arr[idx - 1] > 1) acc.push("â€¦");
                                         acc.push(p);
                                         return acc;
                                     }, [])
                                     .map((p, idx) =>
-                                        p === "…" ? (
-                                            <span key={`dots-${idx}`} className="px-2 text-gray-400">…</span>
+                                        p === "â€¦" ? (
+                                            <span key={`dots-${idx}`} className="px-2 text-gray-400">â€¦</span>
                                         ) : (
                                             <button
                                                 key={p}
@@ -405,7 +412,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                                     disabled={page === totalPages}
                                     className="px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                 >
-                                    Suiv. ›
+                                    Suiv. â€º
                                 </button>
                             </div>
                         </div>
@@ -419,7 +426,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                             </h3>
                             <p className="text-gray-500 mb-6">
                                 Votre famille n'a pas encore d'autres membres
-                                enregistrés.
+                                enregistrÃ©s.
                             </p>
                         </div>
                     )}
@@ -430,7 +437,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                         <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6">
                             <div className="flex items-start justify-between">
                                 <h3 className="text-lg font-bold">
-                                    Détails de {selectedMember.prenom}{" "}
+                                    DÃ©tails de {selectedMember.prenom}{" "}
                                     {selectedMember.nom}
                                 </h3>
                                 <button
@@ -446,15 +453,15 @@ export default function Inscriptions({ family, members, familyStats }) {
                                         Email
                                     </p>
                                     <p className="font-medium">
-                                        {selectedMember.email || "—"}
+                                        {selectedMember.email || "â€”"}
                                     </p>
                                 </div>
                                 <div>
                                     <p className="text-sm text-gray-600">
-                                        Téléphone
+                                        TÃ©lÃ©phone
                                     </p>
                                     <p className="font-medium">
-                                        {selectedMember.telephone || "—"}
+                                        {selectedMember.telephone || "â€”"}
                                     </p>
                                 </div>
                                 <div>
@@ -462,7 +469,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                                         Ville
                                     </p>
                                     <p className="font-medium">
-                                        {selectedMember.ville_name || "—"}
+                                        {selectedMember.ville_name || "â€”"}
                                     </p>
                                 </div>
                                 <div>
@@ -470,7 +477,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                                         Profession
                                     </p>
                                     <p className="font-medium">
-                                        {selectedMember.profession || "—"}
+                                        {selectedMember.profession || "â€”"}
                                     </p>
                                 </div>
                                 <div>
@@ -478,7 +485,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                                         Fonction
                                     </p>
                                     <p className="font-medium">
-                                        {selectedMember.fonction_name || "—"}
+                                        {selectedMember.fonction_name || "â€”"}
                                     </p>
                                 </div>
                                 <div>
@@ -486,7 +493,7 @@ export default function Inscriptions({ family, members, familyStats }) {
                                         Date de naissance
                                     </p>
                                     <p className="font-medium">
-                                        {selectedMember.date_naissance || "—"}
+                                        {selectedMember.date_naissance || "â€”"}
                                     </p>
                                 </div>
                             </div>
@@ -497,3 +504,5 @@ export default function Inscriptions({ family, members, familyStats }) {
         </div>
     );
 }
+
+

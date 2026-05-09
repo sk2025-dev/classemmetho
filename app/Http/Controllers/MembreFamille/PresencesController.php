@@ -4,6 +4,7 @@ namespace App\Http\Controllers\MembreFamille;
 
 use App\Http\Controllers\Controller;
 use App\Models\Presence;
+use App\Models\SpecialEvent;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -20,7 +21,7 @@ class PresencesController extends Controller
             ->where('membre_famille_id', $user->id)
             ->with([
                 'activite:id,title,type,day,time',
-                'specialEvent:id,title,date,time',
+                'specialEvent:id,title,start_date,start_time',
             ])
             ->orderByDesc('marquee_le')
             ->orderByDesc('updated_at')
@@ -36,9 +37,9 @@ class PresencesController extends Controller
                     $dateSource = $this->dateHeureDebut($presence->activite->day, $presence->activite->time);
                 }
 
-                if ($presence->specialEvent && $presence->specialEvent->date) {
-                    $eventDate = Carbon::parse($presence->specialEvent->date);
-                    $rawTime = trim((string) ($presence->specialEvent->time ?? ''));
+                if ($presence->specialEvent && $presence->specialEvent->start_date) {
+                    $eventDate = Carbon::parse($presence->specialEvent->start_date);
+                    $rawTime = trim((string) ($presence->specialEvent->start_time ?? ''));
 
                     if ($rawTime !== '') {
                         try {
@@ -83,9 +84,44 @@ class PresencesController extends Controller
             'initiales' => strtoupper(substr((string) $user->prenom, 0, 1) . substr((string) $user->nom, 0, 1)),
         ];
 
+        $today    = Carbon::today();
+        $classeId = $user->classe_id ?? $user->classe?->id;
+
+        $activites = collect();
+
+        if ($classeId) {
+            $activites = SpecialEvent::where('class_id', $classeId)
+                ->where('is_parish', false)
+                ->orderBy('start_date', 'asc')
+                ->get(['id', 'title', 'start_date', 'end_date', 'start_time', 'end_time', 'lieu'])
+                ->map(function (SpecialEvent $e) use ($today) {
+                    $start = $e->start_date;
+                    $end   = $e->end_date ?? $start;
+
+                    if ($start->gt($today)) {
+                        $statut = 'a_venir';
+                    } elseif ($end->lt($today)) {
+                        $statut = 'passe';
+                    } else {
+                        $statut = 'en_cours';
+                    }
+
+                    return [
+                        'id'         => $e->id,
+                        'titre'      => $e->title,
+                        'date_debut' => $start->locale('fr')->isoFormat('ddd D MMM YYYY'),
+                        'date_fin'   => $e->end_date ? $end->locale('fr')->isoFormat('ddd D MMM YYYY') : null,
+                        'heure'      => $e->start_time ? Carbon::parse($e->start_time)->format('H\hi') : null,
+                        'lieu'       => $e->lieu,
+                        'statut'     => $statut,
+                    ];
+                });
+        }
+
         return Inertia::render('MembreFamille/Presences/Index', [
-            'membre' => $membre,
+            'membre'    => $membre,
             'historique' => $historique,
+            'activites'  => $activites,
         ]);
     }
 

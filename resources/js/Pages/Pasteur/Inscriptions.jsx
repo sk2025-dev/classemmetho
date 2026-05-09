@@ -333,7 +333,7 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                                     {filteredMembers.map((member, index) => (
                                         <tr
                                             key={member.id}
-                                            className={`border-b border-gray-200 hover:bg-gray-50 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
+                                            className={`border-b border-gray-200 ${member.is_deceased ? "bg-gray-100 opacity-60" : `hover:bg-gray-50 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}`}
                                         >
                                             <td className="px-6 py-4 text-left text-sm font-medium text-gray-600">
                                                 #{member.id}
@@ -344,9 +344,16 @@ export default function Inscriptions({ family, members, familyStats, auth }) {
                                                     size="sm"
                                                     rounded={true}
                                                 />
-                                                <span>
-                                                    {member.prenom} {member.nom}
-                                                </span>
+                                                <div className="flex flex-col gap-1">
+                                                    <span>
+                                                        {member.prenom} {member.nom}
+                                                    </span>
+                                                    {member.is_deceased && (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-300 text-gray-600 border border-gray-400">
+                                                            ✝ Décédé
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4 text-left text-sm">
                                                 <GenreBadge

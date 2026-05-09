@@ -142,25 +142,27 @@ class PresenceController extends Controller
 
         $members = User::query()
             ->where('classe_id', $event->class_id)
-            ->get(['id', 'nom', 'prenom', 'code_membre']);
+            ->with('family:id,nom')
+            ->get(['id', 'nom', 'prenom', 'code_membre', 'family_id']);
 
         $presenceRows = Presence::query()
             ->where('special_event_id', $event->id)
             ->where('statut', 'present')
-            ->with('membre:id,nom,prenom,code_membre')
+            ->with('membre:id,nom,prenom,code_membre,family_id', 'membre.family:id,nom')
             ->get();
 
         $presentIds = $presenceRows->pluck('membre_famille_id')->unique();
 
         $presents = $presenceRows->map(function (Presence $presence) {
             return [
-                'id' => $presence->membre?->id,
-                'nom' => $presence->membre?->nom,
-                'prenom' => $presence->membre?->prenom,
+                'id'          => $presence->membre?->id,
+                'nom'         => $presence->membre?->nom,
+                'prenom'      => $presence->membre?->prenom,
                 'code_membre' => $presence->membre?->code_membre,
-                'statut' => $presence->statut,
-                'marquee_le' => $presence->marquee_le,
-                'methode' => $presence->methode,
+                'famille'     => $presence->membre?->family ? ['nom' => $presence->membre->family->nom] : null,
+                'statut'      => $presence->statut,
+                'marquee_le'  => $presence->marquee_le,
+                'methode'     => $presence->methode,
             ];
         })->values();
 
@@ -168,15 +170,18 @@ class PresenceController extends Controller
             ->whereNotIn('id', $presentIds)
             ->map(function (User $member) {
                 return [
-                    'id' => $member->id,
-                    'nom' => $member->nom,
-                    'prenom' => $member->prenom,
+                    'id'          => $member->id,
+                    'nom'         => $member->nom,
+                    'prenom'      => $member->prenom,
                     'code_membre' => $member->code_membre,
+                    'famille'     => $member->family ? ['nom' => $member->family->nom] : null,
                 ];
             })
             ->values();
 
-        $programmeEndAt = $this->resolveProgrammeEndAt($event);
+        $programmeStartAt = $this->resolveProgrammeStartAt($event);
+        $programmeEndAt   = $this->resolveProgrammeEndAt($event);
+        $graceEndAt       = $programmeEndAt->copy()->addHours(2);
 
         $isClosed = now()->greaterThanOrEqualTo($programmeEndAt);
         if ($isClosed) {
@@ -214,13 +219,15 @@ class PresenceController extends Controller
         return response()->json([
             'success' => true,
             'programme' => [
-                'id' => $event->id,
-                'title' => $event->title,
-                'date' => $event->date,
-                'time' => $event->time,
-                'end_time' => $event->end_time,
-                'is_closed' => $isClosed,
-                'end_at' => $programmeEndAt->toDateTimeString(),
+                'id'         => $event->id,
+                'title'      => $event->title,
+                'date'       => $event->date,
+                'time'       => $event->time,
+                'end_time'   => $event->end_time,
+                'is_closed'  => $isClosed,
+                'start_at'   => $programmeStartAt->toDateTimeString(),
+                'end_at'     => $programmeEndAt->toDateTimeString(),
+                'grace_end_at' => $graceEndAt->toDateTimeString(),
             ],
             'stats' => [
                 'total_membres' => $members->count(),
@@ -265,19 +272,20 @@ class PresenceController extends Controller
             ], 404);
         }
 
-        $programmeOpeningAt = $this->resolveProgrammeOpeningAt($event);
-        if (now()->lt($programmeOpeningAt)) {
+        $programmeStartAt = $this->resolveProgrammeStartAt($event);
+        if (now()->lt($programmeStartAt)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Le marquage sera disponible deux jours avant la date de cette activité.',
+                'message' => 'L\'activité n\'a pas encore commencé. Le marquage sera disponible à partir du ' . $programmeStartAt->format('d/m/Y à H\hi') . '.',
             ], 423);
         }
 
-        $programmeEndAt = $this->resolveProgrammeEndAt($event);
-        if (now()->greaterThanOrEqualTo($programmeEndAt)) {
+        $programmeEndAt  = $this->resolveProgrammeEndAt($event);
+        $graceEndAt      = $programmeEndAt->copy()->addHours(2);
+        if (now()->greaterThan($graceEndAt)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Cette activité est déjà passée. Le marquage est clôturé.',
+                'message' => 'Le délai de marquage est expiré. Vous aviez jusqu\'au ' . $graceEndAt->format('d/m/Y à H\hi') . ' pour marquer les présences.',
             ], 410);
         }
 
@@ -362,6 +370,20 @@ class PresenceController extends Controller
         ]);
 
         return in_array($nom, ['marqueur de presence', 'marqueur presence'], true);
+    }
+
+    private function resolveProgrammeStartAt(SpecialEvent $event): Carbon
+    {
+        $startAt = Carbon::parse($event->date);
+
+        if (!empty($event->time)) {
+            $t = Carbon::parse($event->time);
+            $startAt->setTime($t->hour, $t->minute, $t->second);
+        } else {
+            $startAt->setTime(0, 0, 0);
+        }
+
+        return $startAt;
     }
 
     private function resolveProgrammeOpeningAt(SpecialEvent $event): Carbon

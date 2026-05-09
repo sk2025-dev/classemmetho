@@ -4005,13 +4005,11 @@ export default function RegisterFamille({
                                             onClick={() => setStep(4)}
                                             disabled={
                                                 hasMembersToAdd === null ||
-                                                hasMembersToAdd === false ||
                                                 (hasMembersToAdd === true &&
                                                     membres.length === 0)
                                             }
                                             className={
                                                 hasMembersToAdd === null ||
-                                                hasMembersToAdd === false ||
                                                 (hasMembersToAdd === true &&
                                                     membres.length === 0)
                                                     ? `${STYLES.button.primary} ml-auto flex items-center gap-2 opacity-40 cursor-not-allowed`

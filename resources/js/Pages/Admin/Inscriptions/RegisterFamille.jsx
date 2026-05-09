@@ -971,20 +971,22 @@ export default function RegisterFamille({
 
         // Afficher les erreurs s'il y en a
         if (Object.keys(validationErrors).length > 0) {
-            let errorMessage =
-                "❌ Veuillez corriger les erreurs suivantes:\n\n";
+            const lines = [];
             Object.values(validationErrors).forEach((err) => {
                 if (typeof err === "string" && err.includes("\n")) {
-                    errorMessage +=
-                        err
-                            .split("\n")
-                            .map((e) => "• " + e)
-                            .join("\n") + "\n";
-                } else {
-                    errorMessage += "• " + err + "\n";
+                    err.split("\n").filter(Boolean).forEach((e) => lines.push(e));
+                } else if (err) {
+                    lines.push(err);
                 }
             });
-            alert(errorMessage);
+            showError(
+                <div>
+                    <div className="font-semibold mb-1">Veuillez corriger les erreurs suivantes :</div>
+                    <ul className="list-disc list-inside space-y-0.5 text-sm">
+                        {lines.map((l, i) => <li key={i}>{l}</li>)}
+                    </ul>
+                </div>
+            );
             setErrors(validationErrors);
             return;
         }

@@ -135,6 +135,21 @@ class ActeLiturgiqueService
                     $update['note_pastorale'] = $commentaire;
                 }
 
+                if ($newStatus === 'VALIDEE' && strtolower((string) $acte->type_acte) === 'deces') {
+                    if ($acte->membre_id) {
+                        $membre = User::find($acte->membre_id);
+                        if ($membre) {
+                            $details = (array) ($acte->details ?? []);
+                            $membre->update([
+                                'is_deceased' => true,
+                                'status'      => 'inactive',
+                                'deceased_at' => $details['date_deces'] ?? now()->toDateString(),
+                                'acte_deces_id' => $acte->id,
+                            ]);
+                        }
+                    }
+                }
+
                 if ($newStatus === 'VALIDEE' && strtolower((string) $acte->type_acte) === 'mariage') {
                     $details = (array) ($acte->details ?? []);
                     if (is_array($extraDetails) && !empty($extraDetails['date_souhaitee'])) {

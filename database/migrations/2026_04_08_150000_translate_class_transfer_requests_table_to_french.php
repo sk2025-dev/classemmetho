@@ -43,6 +43,12 @@ return new class extends Migration
                 $table->renameColumn('created_by_id', 'createur_id');
             });
 
+            // Purger les lignes orphelines avant d'ajouter les FK
+            \DB::statement('DELETE FROM demandes_transfert_classe WHERE famille_id IS NOT NULL AND famille_id NOT IN (SELECT id FROM families)');
+            \DB::statement('DELETE FROM demandes_transfert_classe WHERE membre_id IS NOT NULL AND membre_id NOT IN (SELECT id FROM users)');
+            \DB::statement('DELETE FROM demandes_transfert_classe WHERE classe_source_id IS NOT NULL AND classe_source_id NOT IN (SELECT id FROM classes)');
+            \DB::statement('DELETE FROM demandes_transfert_classe WHERE createur_id IS NOT NULL AND createur_id NOT IN (SELECT id FROM users)');
+
             Schema::table('demandes_transfert_classe', function (Blueprint $table) {
                 $table->foreign('famille_id')->references('id')->on('families')->onDelete('cascade');
                 $table->foreign('membre_id')->references('id')->on('users')->onDelete('cascade');

@@ -20,8 +20,10 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::table('special_events', function (Blueprint $table) {
-            $table->dropColumn('end_time');
-        });
+        if (Schema::hasColumn('special_events', 'end_time')) {
+            Schema::table('special_events', function (Blueprint $table) {
+                $table->dropColumn('end_time');
+            });
+        }
     }
 };

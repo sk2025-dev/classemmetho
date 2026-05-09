@@ -213,7 +213,7 @@ export default function Dashboard({
         },
         {
             title: "Flash Info",
-            desc: "Annonces paroissiales",
+            desc: "Demandes de prière",
             icon: "annonce",
             href: "/admin/annonces",
             color: "text-blue-600",

@@ -98,19 +98,28 @@ class LiturgieController extends Controller
             }
         }
 
-        $familyMembers = User::query()
-            ->where('family_id', $user->family_id)
-            ->with('classe', 'sacrements')
-            ->select($columns)
-            ->orderBy('prenom')
-            ->orderBy('nom')
-            ->get()
-            ->map(function ($member) {
-                if (!empty($member->date_naissance)) {
-                    $member->date_naissance = $member->date_naissance->format('Y-m-d');
-                }
-                return $member;
-            });
+        // Trouver la famille du pasteur : via son family_id ou via responsable_id
+        $familyId = $user->family_id;
+        if (!$familyId) {
+            $famille = \App\Models\Family::where('responsable_id', $user->id)->first();
+            $familyId = $famille?->id;
+        }
+
+        $familyMembers = $familyId
+            ? User::query()
+                ->where('family_id', $familyId)
+                ->with('classe', 'sacrements')
+                ->select($columns)
+                ->orderBy('prenom')
+                ->orderBy('nom')
+                ->get()
+                ->map(function ($member) {
+                    if (!empty($member->date_naissance)) {
+                        $member->date_naissance = $member->date_naissance->format('Y-m-d');
+                    }
+                    return $member;
+                })
+            : collect();
 
         // Load announcements from all families
         $annonces = ActeLiturgique::with([
@@ -118,6 +127,7 @@ class LiturgieController extends Controller
             'family',
             'classe',
             'membre.family',
+            'conducteur',
         ])
             ->annonces()
             ->where('statut', 'TRANSMISE_AU_PASTEUR')
@@ -130,6 +140,7 @@ class LiturgieController extends Controller
             'acte.family',
             'acte.classe',
             'acte.membre.family',
+            'acte.conducteur',
         ])
             ->whereHas('acte', function ($q) {
                 $q->annonces();
@@ -152,6 +163,7 @@ class LiturgieController extends Controller
                     'classe' => $acte?->classe,
                     'classe_id' => $acte?->classe_id,
                     'membre' => $acte?->membre,
+                    'conducteur' => $acte?->conducteur,
                     'reference' => $acte?->reference,
                     'statut' => $item->statut_nouveau,
                     'commentaire' => $item->commentaire,
@@ -186,6 +198,7 @@ class LiturgieController extends Controller
                     'reference' => $acte->reference,
                     'statut' => $acte->statut,
                     'ceremonie_statut' => $details['ceremonie_statut'] ?? null,
+                    'details' => $details,
                     'membre' => [
                         'id' => $acte->membre?->id,
                         'prenom' => $acte->membre?->prenom,
@@ -200,6 +213,28 @@ class LiturgieController extends Controller
             ->filter()
             ->values();
 
+        $mesDemandes = ActeLiturgique::with(['membre:id,prenom,nom', 'classe:id,nom'])
+            ->where('created_by', $user->id)
+            ->where(function ($q) use ($annonceTypes) {
+                $q->where('est_annonce', false)
+                  ->orWhereNull('est_annonce');
+            })
+            ->whereNotIn('type_acte', $annonceTypes)
+            ->latest()
+            ->get()
+            ->map(fn($a) => [
+                'id'            => $a->id,
+                'reference'     => $a->reference,
+                'type_acte'     => $a->type_acte,
+                'statut'        => $a->statut,
+                'date_souhaitee'=> optional($a->date_souhaitee)->format('d/m/Y'),
+                'created_at'    => optional($a->created_at)->format('d/m/Y'),
+                'membre'        => $a->membre ? ['prenom' => $a->membre->prenom, 'nom' => $a->membre->nom] : null,
+                'classe'        => $a->classe ? ['nom' => $a->classe->nom] : null,
+                'can_download'  => in_array($a->statut, ['VALIDEE', 'CELEBRE', 'TERMINE']),
+            ])
+            ->values();
+
         return Inertia::render('Pasteur/Liturgie/Index', [
             'actes' => $actes,
             'historique' => $historique,
@@ -207,6 +242,7 @@ class LiturgieController extends Controller
             'annonces' => $annonces,
             'annoncesHistorique' => $annoncesHistorique,
             'calendarEvents' => $calendarEvents,
+            'mesDemandes' => $mesDemandes,
         ]);
     }
 
@@ -328,7 +364,7 @@ class LiturgieController extends Controller
 
     public function certificat(int $id)
     {
-        $acte = ActeLiturgique::with(['membre', 'classe', 'conducteur', 'pasteur'])
+        $acte = ActeLiturgique::with(['membre', 'classe', 'conducteur', 'pasteur', 'historiques.acteur'])
             ->findOrFail($id);
 
         $typeActe = strtolower((string) $acte->type_acte);
@@ -410,9 +446,11 @@ class LiturgieController extends Controller
         $pasteurSignature = $acte->pasteur?->signature_path && Storage::disk('public')->exists($acte->pasteur->signature_path)
             ? Storage::disk('public')->path($acte->pasteur->signature_path)
             : null;
+        $certificateConducteur = $this->resolveCertificateConducteur($acte);
+
         $conducteurSignatureDataUri = null;
-        if ($acte->conducteur?->signature_path && Storage::disk('public')->exists($acte->conducteur->signature_path)) {
-            $conducteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->conducteur->signature_path));
+        if ($certificateConducteur?->signature_path && Storage::disk('public')->exists($certificateConducteur->signature_path)) {
+            $conducteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($certificateConducteur->signature_path));
         }
         $pasteurSignatureDataUri = $pasteurSignature
             ? $this->buildImageDataUri($pasteurSignature)
@@ -446,7 +484,7 @@ class LiturgieController extends Controller
                 'signatureRole' => $signatureRole,
                 'signaturePasteurDataUri' => $pasteurSignatureDataUri,
                 'signatureConducteurDataUri' => $conducteurSignatureDataUri,
-                'conducteurName' => trim(($acte->conducteur->prenom ?? '') . ' ' . ($acte->conducteur->nom ?? '')) ?: null,
+                'conducteurName' => trim(($certificateConducteur->prenom ?? '') . ' ' . ($certificateConducteur->nom ?? '')) ?: null,
                 'qrDataUri' => $qrDataUri,
                 'logoDataUri' => $logoDataUri,
                 'scanDataUri' => $scanDataUri,
@@ -1053,5 +1091,20 @@ class LiturgieController extends Controller
 
         return 'data:image/' . $type . ';base64,' . base64_encode($data);
     }
-}
 
+    private function resolveCertificateConducteur(ActeLiturgique $acte): ?User
+    {
+        $firstConducteurValidator = $acte->historiques
+            ->filter(function ($history) {
+                $role = strtolower((string) ($history?->acteur?->role ?? ''));
+                $newStatus = strtoupper((string) ($history?->statut_nouveau ?? ''));
+
+                return $role === 'conducteur'
+                    && in_array($newStatus, ['EN_ATTENTE_CONDUCTEUR', 'TRANSMISE_AU_PASTEUR'], true);
+            })
+            ->sortBy('created_at')
+            ->first()?->acteur;
+
+        return $firstConducteurValidator ?: $acte->conducteur;
+    }
+}

@@ -1350,9 +1350,9 @@ function normalizeActeType(typeRaw) {
         confirmation: "Confirmation",
         grace: "Action de grâce",
         priere: "Prière d'intercession",
-        generale: "Annonce générale",
-        annonce: "Annonce",
-        annonce_liturgique: "Annonce liturgique",
+        generale: "Demande de prière générale",
+        annonce: "Demande de prière",
+        annonce_liturgique: "Demande de prière liturgique",
     };
     const normalized = String(typeRaw || "")
         .toLowerCase()
@@ -1493,7 +1493,7 @@ export default function ActesLiturgique({ auth, actes = [] }) {
             );
         }
 
-        const ANNONCE_TYPES_LABELS = ["Action de grâce", "Prière d'intercession", "Annonce générale", "Annonce", "Annonce liturgique"];
+        const ANNONCE_TYPES_LABELS = ["Action de grâce", "Prière d'intercession", "Demande de prière générale", "Demande de prière", "Demande de prière liturgique"];
         if (typeFilter === "__annonces__") {
             filtered = filtered.filter((a) => ANNONCE_TYPES_LABELS.includes(a.type));
         } else if (typeFilter) {
@@ -1860,7 +1860,7 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                                 </svg>
-                                Annonces
+                                Demandes de prière
                             </Link>
                         </div>
                     </div>
@@ -2108,7 +2108,7 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                                     className={`filter-nav-btn ${typeFilter === "__annonces__" ? "active" : ""}`}
                                     style={typeFilter === "__annonces__" ? {} : { borderColor: "#7c3aed", color: "#7c3aed" }}
                                 >
-                                    📢 Annonces
+                                    🙏 Demandes de prière
                                 </button>
                             </div>
 
@@ -2477,7 +2477,7 @@ export default function ActesLiturgique({ auth, actes = [] }) {
                                                     </div>
                                                 ) : isAnnonce ? (
                                                     <div style={{ textAlign: "center", fontSize: 11, color: "#7c3aed", fontWeight: 600 }}>
-                                                        📢 Annonce liturgique
+                                                        🙏 Demande de prière liturgique
                                                     </div>
                                                 ) : null}
                                             </div>

@@ -21,15 +21,19 @@ $typeActe = ActeLiturgique::getTypeOptions()[$acte->type_acte] ?? ucfirst(str_re
 $typeKey = strtolower((string) ($acte->type_acte ?? ''));
 $titreDocument = match ($typeKey) {
     'deces', 'funerailles'                   => 'Avis de décès',
-    'grace', 'remerciement', 'felicitations' => 'Demande d\'action de grâce',
+    'grace', 'remerciement', 'felicitations' => 'Demande de prière d\'action de grâce',
+    'priere'                                 => 'Demande de prière d\'intercession',
+    'generale', 'annonce', 'annonce_liturgique' => 'Demande de prière générale',
     'mariage'                                => 'Annonce de mariage',
     'bapteme'                                => 'Présentation de baptême',
-    default                                  => 'Fiche d\'acte liturgique',
+    default                                  => 'Demande de prière',
 };
 
 $objet = match ($typeKey) {
     'deces', 'funerailles'                   => 'Décès',
     'grace', 'remerciement', 'felicitations' => 'Action de grâce',
+    'priere'                                 => 'Prière d\'intercession',
+    'generale', 'annonce', 'annonce_liturgique' => 'Demande de prière générale',
     'mariage'                                => 'Mariage',
     'bapteme'                                => 'Baptême',
     default                                  => $typeActe,
@@ -41,7 +45,8 @@ $dateAnnonce      = $_dateCarbon ? $_dateCarbon->format('d/m/Y') : '—';
 $dateAnnonceTexte = $_dateCarbon
     ? $_dateCarbon->locale('fr')->isoFormat('dddd D MMMM YYYY')
     : '—';
-$lieuAnnonce = $details['lieu'] ?? $details['lieu_deces'] ?? '—';
+$lieuAnnonce  = $details['lieu'] ?? $details['lieu_deces'] ?? '—';
+$heureCulte   = $details['heure_culte'] ?? null;
 
 $nomConcerne       = $details['nom_concerne'] ?? $details['nom_defunt'] ?? $details['conjoint_2'] ?? $nomComplet;
 $nomPartenaire     = trim((string) ($details['conjoint_1'] ?? $details['partenaire'] ?? '')) ?: '—';
@@ -214,7 +219,7 @@ $checkboxesIntercession = [
             text-transform: uppercase;
             color: #1a52a8;
             letter-spacing: 1px;
-            margin: 16px 0 14px 0;
+            margin: 8px 0 8px 0;
         }
 
         /* ══ CHAMPS SIMPLES ══ */
@@ -228,11 +233,11 @@ $checkboxesIntercession = [
         /* ══ VERSETS (italique centré) ══ */
         .verset-block {
             text-align: center;
-            margin: 14px 0 4px 0;
+            margin: 7px 0 2px 0;
             font-size: 11px;
             font-style: italic;
             font-weight: 700;
-            line-height: 1.7;
+            line-height: 1.5;
             color: #111;
             word-wrap: break-word;
         }
@@ -240,14 +245,14 @@ $checkboxesIntercession = [
             text-align: right;
             font-size: 11px;
             color: #333;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
 
         /* ══ SUJET ══ */
         .sujet-line {
             font-size: 11.5px;
             font-weight: 700;
-            margin: 10px 0 10px 0;
+            margin: 6px 0 6px 0;
         }
         .sujet-line span {
             text-decoration: underline;
@@ -258,18 +263,18 @@ $checkboxesIntercession = [
             font-size: 12px;
             font-weight: 700;
             color: #1a52a8;
-            margin: 10px 0 8px 24px;
+            margin: 6px 0 4px 24px;
         }
 
         /* ══ CASES À COCHER ══ */
         .checkbox-table {
             border-collapse: collapse;
             margin-left: 36px;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         .checkbox-table td {
             vertical-align: middle;
-            padding: 2px 0;
+            padding: 1px 0;
         }
         .checkbox-cell {
             width: 20px;
@@ -298,8 +303,8 @@ $checkboxesIntercession = [
         /* ══ LIGNE OUI/NON ══ */
         .oui-non {
             font-size: 11px;
-            margin: 6px 0 10px 36px;
-            line-height: 1.6;
+            margin: 4px 0 6px 36px;
+            line-height: 1.5;
         }
         .non-badge {
             display: inline-block;
@@ -314,7 +319,7 @@ $checkboxesIntercession = [
         .motif-line {
             font-size: 11.5px;
             font-weight: 700;
-            margin-top: 20px;
+            margin-top: 8px;
         }
         .motif-content {
             font-size: 11.5px;
@@ -339,7 +344,8 @@ $checkboxesIntercession = [
         .sig-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 50px;
+            margin-top: 20px;
+            page-break-inside: avoid;
         }
         .sig-table td {
             width: 33.33%;
@@ -352,7 +358,7 @@ $checkboxesIntercession = [
             font-weight: 700;
             text-decoration: underline;
             display: block;
-            margin-bottom: 44px;
+            margin-bottom: 28px;
         }
         .sig-image {
             display: block;
@@ -432,7 +438,8 @@ $checkboxesIntercession = [
     <div class="field-line">
         <b>Pour le culte du :</b>
         {{ $dateAnnonce !== '—' ? $dateAnnonce : '' }}
-        @if($lieuAnnonce !== '—') à {{ $lieuAnnonce }} @endif
+        @if($heureCulte) à {{ $heureCulte }} @endif
+        @if($lieuAnnonce !== '—') — {{ $lieuAnnonce }} @endif
     </div>
     
     {{-- ══ VERSETS D'OUVERTURE ══ --}}
@@ -506,8 +513,8 @@ $checkboxesIntercession = [
         </div>
     @endif -->
     {{-- ══ SECTION MOTIF DU MESSAGE ══ --}}
-    <div class="motif-line" style="margin-top: 14px;">Motif / Message :</div>
-    <div style="margin-top: 6px; padding: 10px 14px; border: 1px solid #ccc; border-radius: 4px; min-height: 40px; font-size: 11.5px; line-height: 1.7;">
+    <div class="motif-line" style="margin-top: 8px;">Motif / Message :</div>
+    <div style="margin-top: 4px; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; min-height: 36px; font-size: 11.5px; line-height: 1.6;">
         @if(!empty($messageContent))
             {!! nl2br(e($messageContent)) !!}
         @else
@@ -515,7 +522,7 @@ $checkboxesIntercession = [
         @endif
     </div>
 
-    <div style="margin-top: 10px;">
+    <div style="margin-top: 4px;">
 
     <!-- {{-- ══ SIGNATURES ══ --}} -->
     <table class="sig-table">

@@ -258,9 +258,12 @@ class AdministrationController extends Controller
                 	'transfer_history_label' => count($familyCodeHistory) > 1 ? 'Nouveau membre' : null,
                 	'transfer_locked' => (bool) ($m->transfer_locked ?? false),
                 'code_membre' => $m->code_membre,
+                'is_deceased' => (bool) $m->is_deceased,
+                'deceased_at' => $m->deceased_at?->format('Y-m-d'),
 
                 // === CHAMPS SUPPLÉMENTAIRES POUR LA MODIFICATION ===
-                'profession' => $m->profession,
+                'profession'        => $m->profession,
+                'employment_status' => $m->employment_status,
                 'relation' => $m->relation,
                 'famille_nom' => $m->family?->nom,
                 'statut_marital' => $statut_marital,
@@ -281,8 +284,14 @@ class AdministrationController extends Controller
                 'lieu_mariage_religieux' => $sacrements?->mariage_religieux_lieu,
 
                 'dot_effectue' => (bool) $sacrements?->dot_effectue,
-                'adresse' => $m->family?->adresse,
-                'quartier' => $m->family?->quartier,
+                'adresse'              => $m->family?->adresse,
+                'quartier'             => $m->family?->quartier,
+                'lieu_naissance'       => $m->lieu_naissance,
+                'numero_cni'           => $m->numero_cni,
+                'hors_communaute'      => (bool) $m->hors_communaute,
+                'retrait'              => (bool) $m->retrait,
+                'date_retrait'         => $m->date_retrait?->format('Y-m-d'),
+                'commentaire_retrait'  => $m->commentaire_retrait,
             ];
         });
 
@@ -371,7 +380,7 @@ class AdministrationController extends Controller
         // ÉTAPE 9: CRÉER LES FAMILLES FORMATÉES
         // ═══════════════════════════════════════════════════════════════
 
-        $famillesFormatted = Family::with(['responsable'])->get()->map(function ($f) use ($membersByFamily) {
+        $famillesFormatted = Family::with(['responsable', 'ville', 'classe'])->get()->map(function ($f) use ($membersByFamily) {
             return [
                 'id' => $f->id,
                 'nom' => $f->nom,

@@ -39,7 +39,6 @@ use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\LiturgieController as AdminLiturgieController;
 use App\Http\Controllers\Admin\FamilyCodeController;
 use App\Http\Controllers\ExcelImportController;
-use App\Http\Controllers\MembreFamille\FamilyController as MembreFamilleFamilyController;
 use App\Http\Controllers\MembreFamille\ProfileController as MembreFamilleProfileController;
 use App\Http\Controllers\MembreFamille\LiturgieController as MembreFamilleLiturgieController;
 use App\Http\Controllers\Conducteur\LiturgieController as ConducteurLiturgieController;
@@ -563,6 +562,8 @@ Route::middleware(['auth'])->group(function () {
         // Routes module Trésorerie (Pasteur)
         Route::get('/pasteur/tresorerie', [PasteurTresorerieController::class, 'index'])
             ->name('pasteur.tresorerie.index');
+        Route::post('/pasteur/tresorerie/encouragement', [PasteurTresorerieController::class, 'storeEncouragement'])
+            ->name('pasteur.tresorerie.encouragement');
 
         // ===== ROUTES PROGRAMMES PASTEUR =====
         Route::get('/pasteur/programmes', [ProgrammesPasteurController::class, 'index'])->name('pasteur.programmes');
@@ -596,7 +597,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/membre-famille/sondages/{id}', [\App\Http\Controllers\MembreFamille\Sondage\SondageController::class, 'show'])->whereNumber('id')->name('membre_famille.sondages.show');
         Route::post('/membre-famille/sondages/{id}/reponses', [\App\Http\Controllers\MembreFamille\Sondage\SondageController::class, 'storeResponse'])->whereNumber('id')->name('membre_famille.sondages.responses.store');
         Route::get('/membre-famille/inscriptions', [\App\Http\Controllers\MembreFamille\InscriptionsController::class, 'index'])->name('membre_famille.inscriptions');
-        Route::get('/membre-famille/family', [MembreFamilleFamilyController::class, 'index'])->name('membre_famille.family');
         Route::get('/membre-famille/profile/edit', [MembreFamilleProfileController::class, 'edit'])->name('membre_famille.profile.edit');
         Route::put('/membre-famille/profile/update', [MembreFamilleProfileController::class, 'update'])->name('membre_famille.profile.update');
         Route::get('/membre-famille/liturgie', [MembreFamilleLiturgieController::class, 'index'])->name('membre_famille.liturgie.index');

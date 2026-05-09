@@ -19,7 +19,7 @@ import {
 
 const CATEGORY_OPTIONS = [
     { value: "generale", label: "Information générale" },
-    { value: "annonce", label: "Annonce" },
+    { value: "annonce", label: "Demande de prière" },
     { value: "priere", label: "Sujet de prière" },
 ];
 
@@ -237,7 +237,7 @@ export default function Annonces({ publiees = [], archivees = [], auth }) {
                                 onClick={() => setShowModal(true)}
                                 className="mt-4 px-4 py-2 bg-yellow-400 hover:bg-yellow-300 text-gray-900 rounded-lg text-sm font-semibold transition-colors"
                             >
-                                + Créer la première annonce
+                                + Créer la première demande de prière
                             </button>
                         </div>
                     ) : (
@@ -292,7 +292,7 @@ export default function Annonces({ publiees = [], archivees = [], auth }) {
                                 <Megaphone className="w-5 h-5 text-blue-600" />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold text-gray-900">Nouvelle annonce</h2>
+                                <h2 className="text-lg font-bold text-gray-900">Nouvelle demande de prière</h2>
                                 <p className="text-xs text-gray-500">Visible immédiatement dans le flash info</p>
                             </div>
                         </div>

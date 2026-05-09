@@ -65,6 +65,22 @@ class User extends Authenticatable
         'must_change_password',
         'last_login_at',
         'signature_path',
+
+        // === STATUT ===
+        'status',
+
+        // === DÉCÈS ===
+        'is_deceased',
+        'deceased_at',
+        'acte_deces_id',
+
+        // === IMPORT EXCEL ===
+        'lieu_naissance',
+        'numero_cni',
+        'hors_communaute',
+        'retrait',
+        'date_retrait',
+        'commentaire_retrait',
     ];
 
     /**
@@ -82,7 +98,9 @@ class User extends Authenticatable
         'password' => 'hashed',
         'must_change_password' => 'boolean',
         'is_family_responsible' => 'boolean',
+        'is_deceased' => 'boolean',
         'date_naissance' => 'date',
+        'deceased_at' => 'date',
         'last_login_at' => 'datetime',
     ];
 

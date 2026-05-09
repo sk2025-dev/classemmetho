@@ -19,209 +19,6 @@ import {
 import { PaymentModal } from "../../../Components/PaymentModal";
 import { withBasePath } from "../../../Utils/urlHelper";
 
-/* ─────────────────────────────────────────
-   FALLBACK DATA
-───────────────────────────────────────── */
-const FALLBACK_FAMILY = {
-    id: 1,
-    nom: "N'GORAN",
-    chef: "MARYSE N'GORAN",
-    classe: "Romains",
-    totalMembers: 3,
-};
-
-const FALLBACK_MEMBRES = [
-    {
-        id: 1,
-        nom: "MARYSE N'GORAN",
-        role: "Chef",
-        profil: "femme",
-        profil_label: "Femme",
-        montant_cible: 50000,
-        cotisationDue: 0,
-        paiements: 65000,
-    },
-    {
-        id: 2,
-        nom: "KONAN N'GORAN",
-        role: "Membre",
-        profil: "homme",
-        profil_label: "Homme",
-        montant_cible: 75000,
-        cotisationDue: 60000,
-        paiements: 15000,
-    },
-    {
-        id: 3,
-        nom: "ANGE N'GORAN",
-        role: "Membre",
-        profil: "enfant",
-        profil_label: "Enfant",
-        montant_cible: 25000,
-        cotisationDue: 25000,
-        paiements: 0,
-    },
-];
-
-const FALLBACK_COTISATIONS = [
-    {
-        id: 1,
-        nom: "FIMECO",
-        montant: 15000,
-        periodicite: "Mensuel",
-        statut: "Actif",
-    },
-    {
-        id: 2,
-        nom: "Affiliation CEMEC",
-        montant: 50000,
-        periodicite: "Annuel",
-        statut: "Actif",
-    },
-    {
-        id: 3,
-        nom: "Cotisation Romains",
-        montant: 10000,
-        periodicite: "Mensuel",
-        statut: "Actif",
-    },
-];
-
-const FALLBACK_HISTORIQUE = [
-    {
-        id: 1,
-        membre: "MARYSE N'GORAN",
-        type: "FIMECO",
-        montant: 15000,
-        date: "16/03/2026",
-        mode: "Virement",
-        recu: "RECU-2-1-1",
-    },
-    {
-        id: 2,
-        membre: "MARYSE N'GORAN",
-        type: "Affiliation CEMEC",
-        montant: 50000,
-        date: "15/03/2026",
-        mode: "Virement",
-        recu: "RECU-2-2-2",
-    },
-    {
-        id: 3,
-        membre: "KONAN N'GORAN",
-        type: "FIMECO",
-        montant: 15000,
-        date: "10/03/2026",
-        mode: "Mobile Money",
-        recu: "RECU-2-3-1",
-    },
-    {
-        id: 4,
-        membre: "ANGE N'GORAN",
-        type: "Cotisation Romains",
-        montant: 10000,
-        date: "05/03/2026",
-        mode: "Espèces",
-        recu: "RECU-2-4-1",
-    },
-    {
-        id: 5,
-        membre: "MARYSE N'GORAN",
-        type: "FIMECO",
-        montant: 15000,
-        date: "14/02/2026",
-        mode: "Virement",
-        recu: "RECU-1-1-3",
-    },
-];
-
-const FALLBACK_DONS = [
-    {
-        id: 1,
-        date: "15/03/2026",
-        montant: 25000,
-        campagne: "Rénovation temple",
-        contributeur: "MARYSE N'GORAN",
-        affectation: "Campagne",
-        recu: "DON-2026-001523",
-    },
-    {
-        id: 2,
-        date: "01/03/2026",
-        montant: 10000,
-        campagne: "Aide aux nécessiteux",
-        contributeur: "KONAN N'GORAN",
-        affectation: "Global",
-        recu: "DON-2026-001401",
-    },
-    {
-        id: 3,
-        date: "14/02/2026",
-        montant: 15000,
-        campagne: "Solidarité classe",
-        contributeur: "ANGE N'GORAN",
-        affectation: "Classe",
-        recu: "DON-2026-001203",
-    },
-];
-
-const FALLBACK_CAMPAGNES = [
-    {
-        id: 1,
-        titre: "Rénovation temple",
-        scope: "CLASSE",
-        statut: "ACTIVE",
-        objectif: 500000,
-        collecte: 220000,
-        date_debut: "01/03/2026",
-        date_fin: "31/05/2026",
-    },
-    {
-        id: 2,
-        titre: "Solidarité paroissiale",
-        scope: "GLOBAL",
-        statut: "ACTIVE",
-        objectif: 800000,
-        collecte: 350000,
-        date_debut: "01/02/2026",
-        date_fin: "30/06/2026",
-    },
-];
-
-const FALLBACK_NOTIFICATIONS = [
-    {
-        id: 1,
-        type: "success",
-        titre: "Paiement confirmé",
-        message: "FIMECO 15 000 F validé — RECU-2-1-1",
-        date: "Aujourd'hui, 09h14",
-        lu: false,
-    },
-    {
-        id: 2,
-        type: "warning",
-        titre: "Rappel de cotisation",
-        message: "ANGE N'GORAN — Affiliation CEMEC due avant le 31/03",
-        date: "Hier, 18h30",
-        lu: false,
-    },
-    {
-        id: 3,
-        type: "info",
-        titre: "Reçu disponible",
-        message: "RECU-2-2-2 prêt au téléchargement",
-        date: "15/03/2026",
-        lu: true,
-    },
-    {
-        id: 4,
-        type: "purple",
-        titre: "Clôture de campagne",
-        message: "Campagne Rentrée 2025 clôturée — 450 000 F collectés",
-        date: "28/02/2026",
-        lu: true,
-    },
-];
 
 /* ─────────────────────────────────────────
    HELPERS
@@ -2162,17 +1959,6 @@ function TabPaiement({
 }
 
 function TabDons({ membres, donsFamille, campagnesActives, familyInfo }) {
-    const [selectedCampagne, setSelectedCampagne] = useState(null);
-    const [donMontant, setDonMontant] = useState("");
-    const [donMode, setDonMode] = useState("wave");
-    const [donMembre, setDonMembre] = useState(membres[0]?.id ?? "");
-    const [confirming, setConfirming] = useState(false);
-    const [donSuccess, setDonSuccess] = useState(false);
-    const [isDonLibreModalOpen, setIsDonLibreModalOpen] = useState(false);
-    const [donLibreMontant, setDonLibreMontant] = useState("");
-    const [donLibreMembre, setDonLibreMembre] = useState(membres[0]?.id ?? "");
-    const [donLibreMode, setDonLibreMode] = useState("MOBILE_MONEY");
-    const [submittingDonLibre, setSubmittingDonLibre] = useState(false);
     const [toast, setToast] = useState(null);
 
     const showToast = (message, type = "error") => {
@@ -2180,7 +1966,7 @@ function TabDons({ membres, donsFamille, campagnesActives, familyInfo }) {
         setTimeout(() => setToast(null), 4000);
     };
 
-    // Lire le résultat PayDunya au retour de la page (?don=success/cancelled/failed/error)
+    // Notification au retour d'un paiement en ligne (PayDunya)
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const donStatus = params.get("don");
@@ -2193,655 +1979,102 @@ function TabDons({ membres, donsFamille, campagnesActives, familyInfo }) {
             showToast("Le paiement a échoué. Veuillez réessayer.", "error");
         else
             showToast("Erreur lors du traitement du don.", "error");
-        // Nettoyer le paramètre de l'URL sans recharger
-        const clean = window.location.pathname;
-        window.history.replaceState({}, "", clean);
+        window.history.replaceState({}, "", window.location.pathname);
     }, []);
 
-    const PRESETS = [5000, 10000, 25000, 50000];
-
-    const campagnesDisponibles =
-        Array.isArray(campagnesActives) && campagnesActives.length
-            ? campagnesActives
-            : FALLBACK_CAMPAGNES;
-
-    const handleDonSubmit = async () => {
-        if (!donMontant) return;
-        setConfirming(true);
-        try {
-            const modePaiement =
-                donMode === "especes"
-                    ? "ESPECES"
-                    : donMode === "virement"
-                      ? "VIREMENT"
-                      : "MOBILE_MONEY";
-
-            await fetch(
-                withBasePath("", "/responsable-famille/tresorerie/dons"),
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRF-TOKEN": getCsrfToken(),
-                        Accept: "application/json",
-                    },
-                    credentials: "same-origin",
-                    body: JSON.stringify({
-                        family_id: familyInfo?.id,
-                        user_id: donMembre,
-                        campagne_id:
-                            selectedCampagne === "LIBRE" || !selectedCampagne
-                                ? null
-                                : Number(selectedCampagne),
-                        montant: Number(donMontant),
-                        type:
-                            selectedCampagne === "LIBRE" || !selectedCampagne
-                                ? "LIBRE"
-                                : "CAMPAGNE",
-                        mode_paiement: modePaiement,
-                        date_don: new Date().toISOString().slice(0, 10),
-                        note:
-                            selectedCampagne === "LIBRE" || !selectedCampagne
-                                ? "Don libre"
-                                : "Don campagne",
-                    }),
-                },
-            );
-            setDonSuccess(true);
-            setDonMontant("");
-            setSelectedCampagne(null);
-            setTimeout(() => setDonSuccess(false), 4000);
-        } catch {
-            alert("Erreur lors de l'enregistrement du don.");
-        } finally {
-            setConfirming(false);
-        }
-    };
-
-    const totalDons = donsFamille.reduce((s, d) => s + d.montant, 0);
-
-    const handleSubmitDonLibre = async () => {
-        const amount = Number(donLibreMontant || 0);
-        if (submittingDonLibre) return;
-        if (amount < 100) {
-            showToast("Veuillez saisir un montant valide (minimum 100 F CFA).");
-            return;
-        }
-
-        setSubmittingDonLibre(true);
-        try {
-            const isMobileMoney = donLibreMode === "MOBILE_MONEY";
-
-            if (isMobileMoney) {
-                // Flux PayDunya : initier le paiement en ligne
-                const res = await fetch(
-                    "/responsable-famille/tresorerie/dons/initiate",
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-CSRF-TOKEN": getCsrfToken(),
-                            Accept: "application/json",
-                        },
-                        credentials: "same-origin",
-                        body: JSON.stringify({
-                            montant: amount,
-                            note: "Don libre depuis l'espace responsable famille",
-                        }),
-                    },
-                );
-                const payload = await res.json().catch(() => ({}));
-                if (!res.ok) {
-                    throw new Error(payload?.message || "Erreur d'initialisation PayDunya.");
-                }
-                if (payload?.redirect_url) {
-                    window.location.href = payload.redirect_url;
-                    return; // la page se recharge après paiement
-                }
-                throw new Error("URL de paiement non reçue.");
-            } else {
-                // Paiement en espèces ou virement : enregistrement direct
-                const res = await fetch(
-                    "/responsable-famille/tresorerie/dons",
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-CSRF-TOKEN": getCsrfToken(),
-                            Accept: "application/json",
-                        },
-                        credentials: "same-origin",
-                        body: JSON.stringify({
-                            family_id: familyInfo?.id,
-                            user_id: donLibreMembre,
-                            campagne_id: null,
-                            montant: amount,
-                            type: "LIBRE",
-                            mode_paiement: donLibreMode,
-                            date_don: new Date().toISOString().slice(0, 10),
-                            note: "Don libre depuis l'espace responsable famille",
-                        }),
-                    },
-                );
-                if (!res.ok) throw new Error("Don libre impossible.");
-                setIsDonLibreModalOpen(false);
-                setDonLibreMontant("");
-                showToast("✅ Don enregistré avec succès.", "success");
-                setTimeout(() => window.location.reload(), 1500);
-            }
-        } catch (err) {
-            showToast(err?.message || "Erreur lors de l'enregistrement du don.", "error");
-        } finally {
-            setSubmittingDonLibre(false);
-        }
-    };
+    const totalDons = donsFamille.reduce((s, d) => s + (d.montant ?? 0), 0);
+    const dons = donsFamille;
 
     return (
         <div>
-            {/* Toast local */}
+            {/* Toast retour paiement en ligne */}
             {toast && (
-                <div
-                    style={{
-                        position: "fixed",
-                        bottom: 24,
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        zIndex: 9999,
-                        background: toast.type === "error" ? "#e24b4a" : "#1d9e75",
-                        color: "#fff",
-                        borderRadius: 10,
-                        padding: "12px 22px",
-                        fontSize: 13,
-                        fontWeight: 600,
-                        boxShadow: "0 8px 30px rgba(0,0,0,0.2)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        minWidth: 260,
-                        maxWidth: 420,
-                        textAlign: "center",
-                    }}
-                >
+                <div style={{
+                    position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
+                    zIndex: 9999, background: toast.type === "error" ? "#e24b4a" : "#1d9e75",
+                    color: "#fff", borderRadius: 10, padding: "12px 22px", fontSize: 13,
+                    fontWeight: 600, boxShadow: "0 8px 30px rgba(0,0,0,0.2)",
+                    display: "flex", alignItems: "center", gap: 10, minWidth: 260,
+                }}>
                     <span>{toast.type === "error" ? "⚠️" : "✅"}</span>
                     {toast.message}
                 </div>
             )}
 
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: 10,
-                    marginBottom: 10,
-                }}
-            >
-                <h3 style={{ ...sectionTitle, marginBottom: 0 }}>
-                    Réaliser un don
-                </h3>
-                <button
-                    onClick={() => {
-                        setDonLibreMontant("");
-                        setDonLibreMode("MOBILE_MONEY");
-                        setDonLibreMembre(membres[0]?.id ?? "");
-                        setIsDonLibreModalOpen(true);
-                    }}
-                    style={{
-                        border: "none",
-                        background: "#7f77dd",
-                        color: "white",
-                        borderRadius: 10,
-                        padding: "8px 12px",
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 6,
-                    }}
-                >
-                    <Gift size={14} /> Faire un don libre
-                </button>
+            {/* Info */}
+            <div style={{
+                display: "flex", alignItems: "center", gap: 10,
+                background: "#f0f4ff", border: "1px solid #d0d8f0",
+                borderRadius: 10, padding: "10px 14px", marginBottom: 18, fontSize: 13, color: "#444",
+            }}>
+                <span style={{ fontSize: 18 }}>ℹ️</span>
+                Les dons sont enregistrés par le trésorier de classe ou via un paiement en ligne. Voici l'historique des contributions de votre famille.
             </div>
 
-            {donSuccess && (
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        background: "#eeedfe",
-                        border: "0.5px solid #7f77dd",
-                        borderRadius: 10,
-                        padding: "12px 16px",
-                        marginBottom: 16,
-                        color: "#534ab7",
-                        fontSize: 13,
-                    }}
-                >
-                    <CheckCircle size={16} /> Don enregistré ! Un reçu numérique
-                    est disponible dans l'historique.
+            {/* KPI total */}
+            <div style={{
+                background: "linear-gradient(135deg,#7f77dd,#534ab7)",
+                borderRadius: 14, padding: "16px 20px", color: "white",
+                display: "flex", alignItems: "center", gap: 16, marginBottom: 20,
+            }}>
+                <div style={{ fontSize: 28 }}>🎁</div>
+                <div>
+                    <div style={{ fontSize: 11, opacity: 0.75, textTransform: "uppercase", letterSpacing: 1 }}>
+                        Total des dons de la famille
+                    </div>
+                    <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.2 }}>
+                        {fmt(totalDons)} <span style={{ fontSize: 14, fontWeight: 500 }}>F CFA</span>
+                    </div>
+                    <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>
+                        {dons.length} contribution{dons.length > 1 ? "s" : ""} enregistrée{dons.length > 1 ? "s" : ""}
+                    </div>
                 </div>
-            )}
+            </div>
 
-            {/* Dons disponibles */}
-            <h3 style={{ ...sectionTitle, marginBottom: 10 }}>
-                Dons et campagnes disponibles
-            </h3>
-            <div style={{ overflowX: "auto", marginBottom: 16 }}>
-                <table
-                    style={{
-                        width: "100%",
-                        borderCollapse: "collapse",
-                        fontSize: 13,
-                    }}
-                >
-                    <thead>
-                        <tr style={{ background: "#f8f8fc" }}>
-                            {[
-                                "Nom",
-                                "Portée",
-                                "Objectif",
-                                "Collecté",
-                                "Période",
-                            ].map((h) => (
-                                <th
-                                    key={h}
-                                    style={{
-                                        padding: "7px 10px",
-                                        textAlign: "left",
-                                        color: "#888",
-                                        fontWeight: 500,
-                                        fontSize: 11,
-                                        borderBottom: "1px solid #eee",
-                                    }}
-                                >
-                                    {h}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr style={{ borderBottom: "0.5px solid #f5f5f5" }}>
-                            <td
-                                style={{ padding: "9px 10px", fontWeight: 600 }}
-                            >
-                                Don libre
-                            </td>
-                            <td style={{ padding: "9px 10px" }}>
-                                <Badge color="blue">GLOBAL</Badge>
-                            </td>
-                            <td style={{ padding: "9px 10px", color: "#888" }}>
-                                -
-                            </td>
-                            <td style={{ padding: "9px 10px", color: "#888" }}>
-                                -
-                            </td>
-                            <td style={{ padding: "9px 10px", color: "#888" }}>
-                                -
-                            </td>
-                        </tr>
-
-                        {campagnesDisponibles.map((c) => (
-                            <tr
-                                key={c.id}
-                                style={{ borderBottom: "0.5px solid #f5f5f5" }}
-                            >
-                                <td
-                                    style={{
-                                        padding: "9px 10px",
-                                        fontWeight: 600,
-                                    }}
-                                >
-                                    {c.titre}
-                                </td>
-                                <td style={{ padding: "9px 10px" }}>
-                                    <Badge
-                                        color={
-                                            c.scope === "GLOBAL"
-                                                ? "blue"
-                                                : "green"
-                                        }
-                                    >
-                                        {c.scope}
-                                    </Badge>
-                                </td>
-                                <td
-                                    style={{
-                                        padding: "9px 10px",
-                                        color: "#854f0b",
-                                        fontWeight: 600,
-                                    }}
-                                >
-                                    {fmt(Number(c.objectif || 0))} F
-                                </td>
-                                <td
-                                    style={{
-                                        padding: "9px 10px",
-                                        color: "#1d9e75",
-                                        fontWeight: 600,
-                                    }}
-                                >
-                                    {fmt(Number(c.collecte || 0))} F
-                                </td>
-                                <td
-                                    style={{
-                                        padding: "9px 10px",
-                                        color: "#888",
-                                    }}
-                                >
-                                    {c.date_debut || "-"} - {c.date_fin || "-"}
-                                </td>
+            {/* Historique */}
+            <h3 style={{ ...sectionTitle, marginBottom: 12 }}>Historique des dons</h3>
+            {dons.length === 0 ? (
+                <div style={{
+                    textAlign: "center", padding: "40px 0", color: "#aaa", fontSize: 13,
+                    background: "#fafafa", borderRadius: 12, border: "1px dashed #e0e0e0",
+                }}>
+                    <div style={{ fontSize: 32, marginBottom: 8 }}>🎁</div>
+                    Aucun don enregistré pour votre famille.
+                </div>
+            ) : (
+                <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                        <thead>
+                            <tr style={{ background: "#f8f8fc" }}>
+                                {["Date", "Contributeur", "Campagne", "Affectation", "Montant"].map(h => (
+                                    <th key={h} style={{
+                                        padding: "8px 10px", textAlign: "left", color: "#888",
+                                        fontWeight: 600, fontSize: 11, borderBottom: "2px solid #eee",
+                                    }}>{h}</th>
+                                ))}
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-
-            {/* Formulaire don */}
-            {selectedCampagne && (
-                <div
-                    style={{
-                        background: "#f8f8fc",
-                        borderRadius: 12,
-                        padding: 16,
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 12,
-                    }}
-                >
-                    <p style={{ fontSize: 13, fontWeight: 600, color: "#444" }}>
-                        Don —{" "}
-                        {selectedCampagne === "LIBRE"
-                            ? "Don libre"
-                            : campagnesDisponibles.find(
-                                  (c) =>
-                                      String(c.id) === String(selectedCampagne),
-                              )?.titre}
-                    </p>
-
-                    <div>
-                        <label style={labelStyle}>Contributeur</label>
-                        <select
-                            style={inputStyle}
-                            value={donMembre}
-                            onChange={(e) =>
-                                setDonMembre(Number(e.target.value))
-                            }
-                        >
-                            {membres.map((m) => (
-                                <option key={m.id} value={m.id}>
-                                    {m.nom}
-                                </option>
+                        </thead>
+                        <tbody>
+                            {dons.map((d, i) => (
+                                <tr key={d.id ?? i} style={{
+                                    borderBottom: "0.5px solid #f0f0f5",
+                                    background: i % 2 === 0 ? "#fff" : "#fafafa",
+                                }}>
+                                    <td style={{ padding: "10px 10px", color: "#666" }}>{d.date ?? "—"}</td>
+                                    <td style={{ padding: "10px 10px", fontWeight: 600, color: "#1e2070" }}>{d.contributeur ?? "—"}</td>
+                                    <td style={{ padding: "10px 10px", color: "#555" }}>{d.campagne ?? "Don libre"}</td>
+                                    <td style={{ padding: "10px 10px" }}>
+                                        <Badge color={d.affectation === "Classe" ? "green" : d.affectation === "Campagne" ? "orange" : "blue"}>
+                                            {d.affectation ?? "GLOBAL"}
+                                        </Badge>
+                                    </td>
+                                    <td style={{ padding: "10px 10px", fontWeight: 700, color: "#1d9e75" }}>
+                                        {fmt(Number(d.montant ?? 0))} F
+                                    </td>
+                                </tr>
                             ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style={labelStyle}>Montant rapide</label>
-                        <div
-                            style={{
-                                display: "flex",
-                                gap: 8,
-                                flexWrap: "wrap",
-                            }}
-                        >
-                            {PRESETS.map((p) => (
-                                <button
-                                    key={p}
-                                    onClick={() => setDonMontant(String(p))}
-                                    style={{
-                                        border:
-                                            donMontant === String(p)
-                                                ? "1.5px solid #7f77dd"
-                                                : "0.5px solid #ddd",
-                                        borderRadius: 8,
-                                        padding: "5px 12px",
-                                        background:
-                                            donMontant === String(p)
-                                                ? "#eeedfe"
-                                                : "white",
-                                        color:
-                                            donMontant === String(p)
-                                                ? "#534ab7"
-                                                : "#555",
-                                        fontSize: 12,
-                                        cursor: "pointer",
-                                    }}
-                                >
-                                    {fmt(p)} F
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div>
-                        <label style={labelStyle}>
-                            Ou saisir un montant libre (F CFA)
-                        </label>
-                        <input
-                            type="number"
-                            style={inputStyle}
-                            placeholder="Montant personnalisé"
-                            value={donMontant}
-                            onChange={(e) => setDonMontant(e.target.value)}
-                        />
-                    </div>
-
-                    <div>
-                        <label style={labelStyle}>Mode de paiement</label>
-                        <select
-                            style={inputStyle}
-                            value={donMode}
-                            onChange={(e) => setDonMode(e.target.value)}
-                        >
-                            <option value="wave">Wave</option>
-                            <option value="orange">Orange Money</option>
-                            <option value="mtn">MTN Money</option>
-                            <option value="especes">Espèces</option>
-                            <option value="virement">Virement</option>
-                        </select>
-                    </div>
-
-                    <button
-                        onClick={handleDonSubmit}
-                        disabled={confirming || !donMontant}
-                        style={{
-                            background:
-                                confirming || !donMontant
-                                    ? "#b8b6d9"
-                                    : "#7f77dd",
-                            color: "white",
-                            border: "none",
-                            borderRadius: 10,
-                            padding: "11px 0",
-                            fontSize: 13,
-                            fontWeight: 600,
-                            cursor:
-                                confirming || !donMontant
-                                    ? "not-allowed"
-                                    : "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: 8,
-                        }}
-                    >
-                        <Heart size={16} />
-                        {confirming
-                            ? "Confirmation…"
-                            : `Confirmer le don — ${fmt(Number(donMontant) || 0)} F`}
-                    </button>
-                </div>
-            )}
-
-
-            {isDonLibreModalOpen && (
-                <div
-                    style={{
-                        position: "fixed",
-                        inset: 0,
-                        background: "rgba(0,0,0,0.55)",
-                        zIndex: 210,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        padding: 16,
-                    }}
-                >
-                    <div
-                        style={{
-                            background: "white",
-                            borderRadius: 14,
-                            width: "100%",
-                            maxWidth: 420,
-                            boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
-                        }}
-                    >
-                        <div
-                            style={{
-                                padding: "14px 16px",
-                                borderBottom: "1px solid #eee",
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                            }}
-                        >
-                            <h4
-                                style={{
-                                    margin: 0,
-                                    fontSize: 16,
-                                    fontWeight: 700,
-                                    color: "#1a1a2e",
-                                }}
-                            >
-                                Don libre
-                            </h4>
-                            <button
-                                onClick={() => setIsDonLibreModalOpen(false)}
-                                style={{
-                                    border: "none",
-                                    background: "none",
-                                    cursor: "pointer",
-                                    color: "#777",
-                                }}
-                            >
-                                <X size={18} />
-                            </button>
-                        </div>
-
-                        <div
-                            style={{
-                                padding: 16,
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: 10,
-                            }}
-                        >
-                            <div>
-                                <label style={labelStyle}>Contributeur</label>
-                                <select
-                                    style={inputStyle}
-                                    value={donLibreMembre}
-                                    onChange={(e) =>
-                                        setDonLibreMembre(
-                                            Number(e.target.value),
-                                        )
-                                    }
-                                >
-                                    {membres.map((m) => (
-                                        <option key={m.id} value={m.id}>
-                                            {m.nom}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label style={labelStyle}>
-                                    Montant (F CFA)
-                                </label>
-                                <input
-                                    type="number"
-                                    min={100}
-                                    style={inputStyle}
-                                    placeholder="Saisir le montant"
-                                    value={donLibreMontant}
-                                    onChange={(e) =>
-                                        setDonLibreMontant(e.target.value)
-                                    }
-                                />
-                            </div>
-
-                            <div>
-                                <label style={labelStyle}>
-                                    Mode de paiement
-                                </label>
-                                <select
-                                    style={inputStyle}
-                                    value={donLibreMode}
-                                    onChange={(e) =>
-                                        setDonLibreMode(e.target.value)
-                                    }
-                                >
-                                    <option value="MOBILE_MONEY">
-                                        Mobile Money
-                                    </option>
-                                    <option value="ESPECES">Espèces</option>
-                                    <option value="VIREMENT">Virement</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div
-                            style={{
-                                borderTop: "1px solid #eee",
-                                padding: 14,
-                                display: "flex",
-                                gap: 8,
-                            }}
-                        >
-                            <button
-                                onClick={() => setIsDonLibreModalOpen(false)}
-                                style={{
-                                    flex: 1,
-                                    border: "1px solid #ddd",
-                                    background: "white",
-                                    color: "#555",
-                                    borderRadius: 10,
-                                    padding: "9px 0",
-                                    fontSize: 12,
-                                    fontWeight: 600,
-                                    cursor: "pointer",
-                                }}
-                            >
-                                Annuler
-                            </button>
-                            <button
-                                onClick={handleSubmitDonLibre}
-                                disabled={submittingDonLibre}
-                                style={{
-                                    flex: 1,
-                                    border: "none",
-                                    background: submittingDonLibre
-                                        ? "#b8b6d9"
-                                        : "#7f77dd",
-                                    color: "white",
-                                    borderRadius: 10,
-                                    padding: "9px 0",
-                                    fontSize: 12,
-                                    fontWeight: 600,
-                                    cursor: submittingDonLibre
-                                        ? "not-allowed"
-                                        : "pointer",
-                                }}
-                            >
-                                {submittingDonLibre
-                                    ? "Enregistrement..."
-                                    : "Valider le don libre"}
-                            </button>
-                        </div>
-                    </div>
+                        </tbody>
+                    </table>
                 </div>
             )}
         </div>
@@ -2988,7 +2221,6 @@ function TabHistorique({ historique, membres, cotisations, onOpenReceipt }) {
                                 "Mode",
                                 "Date",
                                 "Statut",
-                                "Reçu",
                             ].map((h) => (
                                 <th
                                     key={h}
@@ -3086,21 +2318,6 @@ function TabHistorique({ historique, membres, cotisations, onOpenReceipt }) {
                                             {statusBadge.label}
                                         </span>
                                     </td>
-                                    <td style={{ padding: "9px 10px" }}>
-                                        <button
-                                            onClick={() => onOpenReceipt(p)}
-                                            style={{
-                                                color: "#3b2a8a",
-                                                background: "none",
-                                                border: "none",
-                                                cursor: "pointer",
-                                                fontSize: 11,
-                                                fontWeight: 500,
-                                            }}
-                                        >
-                                            {p.recu}
-                                        </button>
-                                    </td>
                                 </tr>
                             );
                         })}
@@ -3145,6 +2362,16 @@ function TabNotifications({ notifications }) {
     return (
         <div>
             <h3 style={sectionTitle}>Notifications</h3>
+            {notifications.length === 0 && (
+                <div style={{
+                    textAlign: "center", padding: "40px 0", color: "#aaa",
+                    background: "#fafafa", borderRadius: 12, border: "1px dashed #e0e0e0",
+                    fontSize: 13,
+                }}>
+                    <div style={{ fontSize: 32, marginBottom: 8 }}>🔔</div>
+                    Aucune notification pour le moment.
+                </div>
+            )}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {notifications.map((n) => {
                     const ic = icons[n.type] || icons.info;
@@ -3276,29 +2503,13 @@ export default function ResponsableFamilleFinances({
     const [activeTab, setActiveTab] = useState("fimeco");
     const [openReceipt, setOpenReceipt] = useState(null);
 
-    const familyInfo = familyInfoProp || FALLBACK_FAMILY;
-    const membres =
-        Array.isArray(membresProp) && membresProp.length
-            ? membresProp
-            : FALLBACK_MEMBRES;
-    const cotisations =
-        Array.isArray(cotisationsProp) && cotisationsProp.length
-            ? cotisationsProp
-            : FALLBACK_COTISATIONS;
-    const historique =
-        Array.isArray(historiqueProp) && historiqueProp.length
-            ? historiqueProp
-            : FALLBACK_HISTORIQUE;
-    const donsFamille =
-        Array.isArray(donsProp) && donsProp.length ? donsProp : FALLBACK_DONS;
-    const campagnesActives =
-        Array.isArray(campagnesActivesProp) && campagnesActivesProp.length
-            ? campagnesActivesProp
-            : FALLBACK_CAMPAGNES;
-    const notifs =
-        Array.isArray(notifsProp) && notifsProp.length
-            ? notifsProp
-            : FALLBACK_NOTIFICATIONS;
+    const familyInfo = familyInfoProp || null;
+    const membres = Array.isArray(membresProp) ? membresProp : [];
+    const cotisations = Array.isArray(cotisationsProp) ? cotisationsProp : [];
+    const historique = Array.isArray(historiqueProp) ? historiqueProp : [];
+    const donsFamille = Array.isArray(donsProp) ? donsProp : [];
+    const campagnesActives = Array.isArray(campagnesActivesProp) ? campagnesActivesProp : [];
+    const notifs = Array.isArray(notifsProp) ? notifsProp : [];
 
     const cotisationsNorm = cotisations.map((c) => ({
         ...c,

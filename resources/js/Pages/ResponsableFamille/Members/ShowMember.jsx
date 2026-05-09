@@ -1,5 +1,7 @@
-import React, { useMemo } from "react";
-import { Link, router } from "@inertiajs/react";
+import React, { useMemo, useEffect } from "react";
+import { Link, router, usePage } from "@inertiajs/react";
+import useToast from "../../../Hooks/useToast";
+import ToastContainer from "../../../Components/ToastContainer";
 import {
     Users,
     Mail,
@@ -22,6 +24,14 @@ import { getMemberPhotoUrl } from "../../../Helpers/PhotoHelper";
 import { withBasePath } from "../../../Utils/urlHelper";
 
 export default function ShowMember({ member, family, auth }) {
+    const { props } = usePage();
+    const { toasts, removeToast, success: showSuccess, error: showError } = useToast();
+
+    useEffect(() => {
+        if (props.flash?.success) showSuccess(props.flash.success);
+        if (props.flash?.error)   showError(props.flash.error);
+    }, [props.flash?.success, props.flash?.error]);
+
     const photoUrl = useMemo(() => getMemberPhotoUrl(member), [member]);
     // --- Logique inchangée ---
     const formatDate = (date) => {
@@ -150,6 +160,8 @@ export default function ShowMember({ member, family, auth }) {
     );
 
     return (
+        <>
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
         <div
             className="min-h-screen py-12 px-4 sm:px-6 lg:px-8"
             style={{
@@ -832,5 +844,6 @@ export default function ShowMember({ member, family, auth }) {
                 </div>
             </div>
         </div>
+        </>
     );
 }

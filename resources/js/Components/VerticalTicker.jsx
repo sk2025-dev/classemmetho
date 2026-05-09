@@ -143,12 +143,12 @@ export function App() {
     const messages = [
         {
             id: 1,
-            text: "Annonce publiée: Culte d'action de grâce ce dimanche à 9h.",
+            text: "Demande de prière publiée: Culte d'action de grâce ce dimanche à 9h.",
         },
-        { id: 2, text: "Annonce publiée: Veillée de prière vendredi à 19h30." },
+        { id: 2, text: "Demande de prière publiée: Veillée de prière vendredi à 19h30." },
         {
             id: 3,
-            text: "Annonce publiée: Réunion des responsables après le culte.",
+            text: "Demande de prière publiée: Réunion des responsables après le culte.",
         },
     ];
 

@@ -268,7 +268,7 @@ const TabFamille = ({ familles = [], membersByFamilyCode = {} }) => {
                                     icon: "📞",
                                 },
                                 {
-                                    label: "Ville",
+                                    label: "Commune",
                                     value: selectedFamily.ville || "—",
                                     icon: "📍",
                                 },
@@ -436,7 +436,7 @@ const TabFamille = ({ familles = [], membersByFamilyCode = {} }) => {
                                     "Responsable",
                                     "Classe",
                                     "Téléphone",
-                                    "Ville",
+                                    "Commune",
                                     "Membres",
                                     "Actions",
                                 ].map((h) => (

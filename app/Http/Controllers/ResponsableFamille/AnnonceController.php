@@ -63,6 +63,7 @@ class AnnonceController extends Controller
             'message'          => 'nullable|string',
             'date_publication' => 'nullable|date',
             'date_annonce'     => 'nullable|date',
+            'heure_culte'      => 'nullable|string|max:10',
             'date_expiration'  => 'nullable|date|after:date_publication',
         ]);
 
@@ -90,6 +91,7 @@ class AnnonceController extends Controller
             'contenu'           => $contenu,
             'motif'             => $validated['motif'] ?? null,
             'temoignage_public' => $validated['temoignage_public'] ?? false,
+            'heure_culte'       => $validated['heure_culte'] ?? null,
         ];
 
         // Use date_annonce if date_publication is not set
@@ -206,6 +208,18 @@ class AnnonceController extends Controller
         // Ensure user can view this annonce
         if ($acte->family_id !== $user->family_id && $acte->created_by !== $user->id) {
             abort(403, 'Vous n\'avez pas accès à cette annonce.');
+        }
+
+        // Fallback conducteur : chercher dans l'historique qui a transmis au pasteur
+        if (!$acte->conducteur) {
+            $hist = $acte->historiques()
+                ->where('statut_nouveau', ActeLiturgique::STATUT_TRANSMISE_AU_PASTEUR)
+                ->with('acteur')
+                ->latest()
+                ->first();
+            if ($hist?->acteur) {
+                $acte->setRelation('conducteur', $hist->acteur);
+            }
         }
 
         // PDF disponible pour les déclarations de naissance avant validation finale,

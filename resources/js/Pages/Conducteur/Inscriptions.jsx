@@ -2180,7 +2180,7 @@ export default function Inscriptions({
                                                                     member.id ||
                                                                     idx
                                                                 }
-                                                                className={`${member.transfer_locked ? "opacity-60" : "hover:bg-slate-50"} transition`}
+                                                                className={`${member.is_deceased ? "bg-gray-100 opacity-60" : member.transfer_locked ? "opacity-60" : "hover:bg-slate-50"} transition`}
                                                             >
                                                                 <td className="p-5 text-slate-500 font-mono text-xs">
                                                                     {idx + 1}
@@ -2214,9 +2214,11 @@ export default function Inscriptions({
                                                                                     member.last_name ||
                                                                                     member.lastName}
                                                                             </div>
-                                                                            {renderTransferBadge(
-                                                                                member,
-                                                                            )}
+                                                                            {member.is_deceased ? (
+                                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-300 text-gray-600 border border-gray-400">
+                                                                                    ✝ Décédé
+                                                                                </span>
+                                                                            ) : renderTransferBadge(member)}
                                                                         </div>
                                                                     </div>
                                                                 </td>
@@ -2551,7 +2553,7 @@ export default function Inscriptions({
                                                         return (
                                                             <tr
                                                                 key={member.id}
-                                                                className={`${member.transfer_locked ? "opacity-60" : "hover:bg-slate-50"} transition`}
+                                                                className={`${member.is_deceased ? "bg-gray-100 opacity-60" : member.transfer_locked ? "opacity-60" : "hover:bg-slate-50"} transition`}
                                                             >
                                                                 <td className="p-5 text-slate-500 font-mono text-xs">
                                                                     {startIndex +
@@ -2581,9 +2583,11 @@ export default function Inscriptions({
                                                                                     member.nom
                                                                                 }
                                                                             </div>
-                                                                            {renderTransferBadge(
-                                                                                member,
-                                                                            )}
+                                                                            {member.is_deceased ? (
+                                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-300 text-gray-600 border border-gray-400">
+                                                                                    ✝ Décédé
+                                                                                </span>
+                                                                            ) : renderTransferBadge(member)}
                                                                         </div>
                                                                     </div>
                                                                 </td>

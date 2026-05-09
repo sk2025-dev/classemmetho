@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class ProgrammesController extends Controller
@@ -58,6 +59,7 @@ class ProgrammesController extends Controller
             ->with('specialEvent')
             ->orderBy('created_at', 'desc')
             ->get();
+        $galleryMedia = $this->normalizeMediaCollection($galleryMedia);
         
         // Déterminer le rôle pour le rendu de la vue
         $role = $user->role;
@@ -133,6 +135,7 @@ class ProgrammesController extends Controller
             ->with('specialEvent')
             ->orderBy('created_at', 'desc')
             ->get();
+        $galleryMedia = $this->normalizeMediaCollection($galleryMedia);
         
         $role = $user->role;
         $viewPath = $role === 'responsable_famille' ? 'ResponsableFamille/HistoryProgrammes' : 'MembreFamille/HistoryProgrammes';
@@ -279,6 +282,9 @@ class ProgrammesController extends Controller
             // Pagination
             $perPage = $request->get('per_page', 12);
             $medias = $query->paginate($perPage);
+            $medias->getCollection()->transform(function ($media) {
+                return $this->normalizeMediaModel($media);
+            });
             
             return response()->json([
                 'success' => true,
@@ -391,7 +397,7 @@ class ProgrammesController extends Controller
                 ->with('specialEvent')
                 ->orderBy('created_at', 'desc')
                 ->get();
-            
+            $media = $this->normalizeMediaCollection($media);
             return response()->json([
                 'success' => true,
                 'media' => $media
@@ -537,6 +543,7 @@ class ProgrammesController extends Controller
                 ->where('class_id', $classe->id)
                 ->orderBy('created_at', 'desc')
                 ->get();
+            $media = $this->normalizeMediaCollection($media);
             
             return response()->json([
                 'success' => true,
@@ -556,4 +563,63 @@ class ProgrammesController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Normaliser les URLs de media pour le frontend.
+     */
+    private function normalizeMediaCollection($mediaCollection)
+    {
+        return $mediaCollection->map(function ($media) {
+            return $this->normalizeMediaModel($media);
+        });
+    }
+
+    private function normalizeMediaModel($media)
+    {
+        if (!$media) {
+            return $media;
+        }
+
+        $media->url = $this->normalizeMediaUrl($media->url ?? null);
+        $media->thumbnail = $this->normalizeMediaUrl($media->thumbnail ?? null);
+
+        return $media;
+    }
+
+    private function normalizeMediaUrl(?string $url): ?string
+    {
+        if (!$url) {
+            return null;
+        }
+
+        $normalized = trim(str_replace('\\', '/', $url));
+        if ($normalized === '') {
+            return null;
+        }
+
+        if (Str::startsWith($normalized, ['http://', 'https://', '//', 'data:'])) {
+            return $normalized;
+        }
+
+        if (Str::contains($normalized, '/storage/')) {
+            $relative = ltrim(Str::after($normalized, '/storage/'), '/');
+            return '/storage/' . $relative;
+        }
+
+        $normalized = ltrim($normalized, '/');
+        if (Str::startsWith($normalized, 'public/')) {
+            $normalized = Str::after($normalized, 'public/');
+        }
+
+        if (Str::startsWith($normalized, 'storage/')) {
+            return '/' . $normalized;
+        }
+
+        if (Str::startsWith($normalized, 'media/')) {
+            return '/storage/' . $normalized;
+        }
+
+        return '/' . $normalized;
+    }
 }
+

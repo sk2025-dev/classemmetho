@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useRef } from "react";
-import { Link, usePage, router } from "@inertiajs/react";
+import { usePage, router } from "@inertiajs/react";
 import { withBasePath } from "../../Utils/urlHelper";
 import {
     usePersistentState,
@@ -145,6 +145,8 @@ export default function Profile({ member, family, fonctions, currentFonctionIds 
         telephone2: member.telephone2 || "",
         genre: member.genre || "M",
         date_naissance: formatDateForInput(member.date_naissance),
+        lieu_naissance: member.lieu_naissance || "",
+        numero_cni: member.numero_cni || "",
         statut_marital: member.statut_marital || "",
         date_mariage: formatDateForInput(member.date_mariage),
         lieu_mariage: member.lieu_mariage || "",
@@ -228,10 +230,11 @@ export default function Profile({ member, family, fonctions, currentFonctionIds 
             submitData[k] = v;
         });
 
-        router.put(
+        router.post(
             withBasePath("", "/membre-famille/profile/update"),
-            submitData,
+            { ...submitData, _method: "put" },
             {
+                forceFormData: true,
                 onSuccess: () => {
                     showToast("Profil mis à jour avec succès !");
                 },
@@ -265,12 +268,13 @@ export default function Profile({ member, family, fonctions, currentFonctionIds 
 
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-6">
-                    <Link
-                        href={withBasePath("", "/membre-famille/family")}
+                    <button
+                        type="button"
+                        onClick={() => window.history.back()}
                         className="p-2 bg-white/90 backdrop-blur-xl rounded-full border border-white/50 shadow-lg hover:shadow-xl hover:bg-white transition-all"
                     >
                         <ArrowLeft className="w-5 h-5 text-gray-700" />
-                    </Link>
+                    </button>
                     <div>
                         <h1 className="text-3xl font-bold text-white drop-shadow-lg">
                             Modifier Mon Profil
@@ -455,6 +459,40 @@ export default function Profile({ member, family, fonctions, currentFonctionIds 
                                     }
                                 />
                             </FormField>
+
+                            <FormField label="Lieu de Naissance">
+                                <input
+                                    type="text"
+                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
+                                    value={data.lieu_naissance}
+                                    onChange={(e) =>
+                                        setData({ ...data, lieu_naissance: e.target.value })
+                                    }
+                                />
+                            </FormField>
+
+                            <FormField label="N° CNI">
+                                <input
+                                    type="text"
+                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300"
+                                    value={data.numero_cni}
+                                    onChange={(e) =>
+                                        setData({ ...data, numero_cni: e.target.value })
+                                    }
+                                />
+                            </FormField>
+
+                            {(member.hors_communaute || member.retrait) && (
+                                <div className="p-4 rounded-lg bg-orange-50 border border-orange-200 space-y-1 text-sm text-orange-800">
+                                    {member.hors_communaute && <p>⚠️ Membre hors communauté</p>}
+                                    {member.retrait && (
+                                        <p>
+                                            ⚠️ Retrait{member.date_retrait ? ` — ${member.date_retrait}` : ""}
+                                            {member.commentaire_retrait ? ` : ${member.commentaire_retrait}` : ""}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                         </section>
 
                         {/* Section Professionnelle */}
@@ -739,12 +777,13 @@ export default function Profile({ member, family, fonctions, currentFonctionIds 
 
                     {/* Footer Actions */}
                     <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end gap-3 bg-gray-50/50 -mx-6 -mb-6 p-6 rounded-b-2xl">
-                        <Link
-                            href={withBasePath("", "/membre-famille/family")}
+                        <button
+                            type="button"
+                            onClick={() => window.history.back()}
                             className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2"
                         >
                             <X className="w-4 h-4" /> Annuler
-                        </Link>
+                        </button>
                         <button
                             type="submit"
                             disabled={loading}

@@ -48,10 +48,11 @@ return new class extends Migration
             DB::statement("ALTER TABLE paiements DROP FOREIGN KEY {$foreignKey}");
         }
 
-        DB::statement('ALTER TABLE paiements MODIFY family_id BIGINT UNSIGNED NOT NULL');
+        // On garde la colonne nullable pour éviter les erreurs si des NULL existent déjà
+        DB::statement('ALTER TABLE paiements MODIFY family_id BIGINT UNSIGNED NULL');
 
         Schema::table('paiements', function (Blueprint $table) {
-            $table->foreign('family_id')->references('id')->on('families')->cascadeOnDelete();
+            $table->foreign('family_id')->references('id')->on('families')->nullOnDelete();
         });
     }
 };

@@ -14,17 +14,41 @@ class VillesSeeder extends Seeder
     public function run(): void
     {
         $villes = [
-            // DISTRICT AUTONOME D'ABIDJAN
+            // COMMUNES D'ABIDJAN
             ['nom' => 'Abidjan'],
             ['nom' => 'Adjamé'],
             ['nom' => 'Abobo'],
-            ['nom' => 'Plateaux'],
+            ['nom' => 'Plateau'],
             ['nom' => 'Cocody'],
             ['nom' => 'Yopougon'],
             ['nom' => 'Marcory'],
             ['nom' => 'Treichville'],
             ['nom' => 'Port-Bouët'],
             ['nom' => 'Attécoubé'],
+            ['nom' => 'Koumassi'],
+            ['nom' => 'Bingerville'],
+            ['nom' => 'Songon'],
+
+            // QUARTIERS / ZONES DE COCODY
+            ['nom' => 'Riviera'],
+            ['nom' => 'Angré'],
+            ['nom' => 'Bonoumin'],
+            ['nom' => 'Deux-Plateaux'],
+            ['nom' => 'Anono'],
+            ['nom' => 'Djibi'],
+            ['nom' => 'Faya'],
+            ['nom' => 'Akouédo'],
+            ['nom' => 'Attoban'],
+            ['nom' => 'Palmeraie'],
+
+            // AUTRES COMMUNES PROCHES D'ABIDJAN
+            ['nom' => 'Vridi'],
+            ['nom' => 'Grand-Bassam'],
+            ['nom' => 'Bassam'],
+            ['nom' => 'Bonoua'],
+            ['nom' => 'Jacqueville'],
+            ['nom' => 'Alépe'],
+            ['nom' => 'Bingerville'],
 
             // DISTRICT DU HAUT-SASSANDRA
             ['nom' => 'Sassandra'],

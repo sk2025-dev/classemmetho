@@ -13,7 +13,7 @@ class VilleController extends Controller
     {
         try {
             $searchTerm = $request->input('nom', '');
-            $limit = $request->input('limit', 20);
+            $limit = $request->input('limit', 500);
 
             $cacheKey = 'villes_search_' . md5($searchTerm . '_' . $limit);
 

@@ -1,14 +1,22 @@
 import React, { useMemo, useState } from "react";
-import { Head, Link } from "@inertiajs/react";
-import { ArrowLeft, BarChart3, Globe, TrendingUp, Users } from "lucide-react";
+import { Head, Link, router, usePage } from "@inertiajs/react";
+import { ArrowLeft, BarChart3, Globe, TrendingUp, Users, Send, Clock, CheckCircle } from "lucide-react";
 import { withBasePath } from "../../../Utils/urlHelper";
 
 export default function PasteurTresorerie({
     globalStats: globalStatsProp,
     classes: classesProp,
     cotisationsParClasse: cotisationsParClasseProp,
+    encouragements: encouragementsProp = [],
 }) {
+    const { props } = usePage();
     const [activeTab, setActiveTab] = useState("fimeco");
+    const [fimecoPage, setFimecoPage] = useState(1);
+    const [encMessage, setEncMessage] = useState("");
+    const [encLoading, setEncLoading] = useState(false);
+    const [encError, setEncError] = useState("");
+    const FIMECO_PER_PAGE = 5;
+    const [classeModal, setClasseModal] = useState(null);
     const [selectedCotisationClasseId, setSelectedCotisationClasseId] =
         useState(null);
     const [selectedCotisationModal, setSelectedCotisationModal] =
@@ -208,7 +216,6 @@ export default function PasteurTresorerie({
                     <div className="flex border-b border-gray-200">
                         {[
                             { id: "fimeco", label: "FIMECO" },
-                            { id: "classes", label: "Par classe" },
                             { id: "cotisations", label: "Cotisations" },
                             { id: "messages", label: "Encouragements" },
                         ].map((tab) => (
@@ -283,125 +290,85 @@ export default function PasteurTresorerie({
                                     <h3 className="text-lg font-bold text-gray-900 mb-4">
                                         Distribution par classe
                                     </h3>
-                                    {classes.length ? (
-                                        <div className="space-y-3">
-                                            {classes.map((classe, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    className="p-4 border border-gray-200 rounded-lg hover:border-blue-400 transition-colors"
-                                                >
-                                                    <div className="flex justify-between items-center mb-3">
-                                                        <div>
-                                                            <h4 className="font-semibold text-gray-900">
-                                                                {classe.nom}
-                                                            </h4>
-                                                            <p className="text-xs text-gray-600 mt-1">
-                                                                {asNumber(
-                                                                    classe.familles,
-                                                                )}{" "}
-                                                                familles
-                                                            </p>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <p className="font-bold text-gray-900">
-                                                                {asNumber(
-                                                                    classe.taux,
-                                                                )}
-                                                                %
-                                                            </p>
-                                                            <p className="text-xs text-gray-600">
-                                                                Taux paiement
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                    {classes.length ? (() => {
+                                        const totalPages = Math.max(1, Math.ceil(classes.length / FIMECO_PER_PAGE));
+                                        const paginated = classes.slice((fimecoPage - 1) * FIMECO_PER_PAGE, fimecoPage * FIMECO_PER_PAGE);
+                                        return (
+                                            <>
+                                                <div className="space-y-3">
+                                                    {paginated.map((classe, idx) => (
                                                         <div
-                                                            className="bg-blue-600 h-2.5 rounded-full transition-all"
-                                                            style={{
-                                                                width: `${Math.max(0, Math.min(100, asNumber(classe.taux)))}%`,
-                                                            }}
-                                                        ></div>
-                                                    </div>
+                                                            key={idx}
+                                                            className="p-4 border border-gray-200 rounded-lg hover:border-blue-400 transition-colors"
+                                                        >
+                                                            <div className="flex justify-between items-center mb-3">
+                                                                <div>
+                                                                    <h4 className="font-semibold text-gray-900">
+                                                                        {classe.nom}
+                                                                    </h4>
+                                                                    <p className="text-xs text-gray-600 mt-1">
+                                                                        {asNumber(classe.familles)}{" "}familles
+                                                                    </p>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <p className="font-bold text-gray-900">
+                                                                        {asNumber(classe.taux)}%
+                                                                    </p>
+                                                                    <p className="text-xs text-gray-600">
+                                                                        Taux paiement
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                                                <div
+                                                                    className="bg-blue-600 h-2.5 rounded-full transition-all"
+                                                                    style={{ width: `${Math.max(0, Math.min(100, asNumber(classe.taux)))}%` }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            ))}
-                                        </div>
-                                    ) : (
+
+                                                {totalPages > 1 && (
+                                                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+                                                        <p className="text-sm text-gray-500">
+                                                            {(fimecoPage - 1) * FIMECO_PER_PAGE + 1}–{Math.min(fimecoPage * FIMECO_PER_PAGE, classes.length)} sur {classes.length} classes
+                                                        </p>
+                                                        <div className="flex gap-1">
+                                                            <button
+                                                                onClick={() => setFimecoPage(p => Math.max(1, p - 1))}
+                                                                disabled={fimecoPage === 1}
+                                                                className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                                            >
+                                                                ‹ Préc.
+                                                            </button>
+                                                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                                                                <button
+                                                                    key={p}
+                                                                    onClick={() => setFimecoPage(p)}
+                                                                    className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${p === fimecoPage ? 'bg-blue-600 border-blue-600 text-white font-semibold' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+                                                                >
+                                                                    {p}
+                                                                </button>
+                                                            ))}
+                                                            <button
+                                                                onClick={() => setFimecoPage(p => Math.min(totalPages, p + 1))}
+                                                                disabled={fimecoPage === totalPages}
+                                                                className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                                            >
+                                                                Suiv. ›
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </>
+                                        );
+                                    })() : (
                                         <div className="p-6 rounded-lg border border-dashed border-gray-300 text-sm text-gray-600">
-                                            Aucune donnee de classe disponible
-                                            pour le moment.
+                                            Aucune donnee de classe disponible pour le moment.
                                         </div>
                                     )}
                                 </div>
-                            </div>
-                        )}
-
-                        {activeTab === "classes" && (
-                            <div>
-                                <h3 className="text-lg font-bold text-gray-900 mb-6">
-                                    Analyse par classe
-                                </h3>
-                                {classes.length ? (
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-sm">
-                                            <thead className="bg-gray-50 border-b-2 border-gray-200">
-                                                <tr>
-                                                    <th className="px-4 py-3 text-left font-semibold text-gray-900">
-                                                        Classe
-                                                    </th>
-                                                    <th className="px-4 py-3 text-left font-semibold text-gray-900">
-                                                        Familles
-                                                    </th>
-                                                    <th className="px-4 py-3 text-center font-semibold text-gray-900">
-                                                        Taux
-                                                    </th>
-                                                    <th className="px-4 py-3 text-right font-semibold text-gray-900">
-                                                        Payees
-                                                    </th>
-                                                    <th className="px-4 py-3 text-right font-semibold text-gray-900">
-                                                        Attendues
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-gray-200">
-                                                {classes.map((classe, idx) => (
-                                                    <tr
-                                                        key={idx}
-                                                        className="hover:bg-gray-50"
-                                                    >
-                                                        <td className="px-4 py-3 font-semibold text-gray-900">
-                                                            {classe.nom}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-gray-700">
-                                                            {asNumber(
-                                                                classe.familles,
-                                                            )}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-center">
-                                                            {asNumber(
-                                                                classe.taux,
-                                                            )}
-                                                            %
-                                                        </td>
-                                                        <td className="px-4 py-3 text-right font-semibold text-green-600">
-                                                            {formatAmount(
-                                                                classe.payees,
-                                                            )}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                                                            {formatAmount(
-                                                                classe.cotisations,
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                ) : (
-                                    <div className="p-6 rounded-lg border border-dashed border-gray-300 text-sm text-gray-600">
-                                        Aucune classe disponible pour l'analyse.
-                                    </div>
-                                )}
                             </div>
                         )}
 
@@ -592,28 +559,192 @@ export default function PasteurTresorerie({
                         )}
 
                         {activeTab === "messages" && (
-                            <div>
-                                <h3 className="text-lg font-bold text-gray-900 mb-6">
-                                    Messages d'encouragement
-                                </h3>
-                                <div className="p-6 bg-blue-50 border border-blue-200 rounded-lg mb-6">
+                            <div className="space-y-6">
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-900">Encouragement cotisation</h3>
+                                    <p className="text-sm text-gray-500 mt-1">Votre message apparaîtra immédiatement dans le flash info de tous les membres connectés.</p>
+                                </div>
+
+                                {/* Flash success */}
+                                {props.flash?.success && (
+                                    <div className="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm font-medium">
+                                        <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                                        {props.flash.success}
+                                    </div>
+                                )}
+
+                                {/* Formulaire */}
+                                <div className="p-6 bg-blue-50 border border-blue-200 rounded-xl">
                                     <label className="block text-sm font-semibold text-gray-900 mb-3">
-                                        Envoyer un message pastoral aux fideles
+                                        Rédiger un message pastoral
                                     </label>
                                     <textarea
-                                        className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white"
                                         rows="4"
-                                        placeholder="Ecrivez votre message d'encouragement..."
+                                        maxLength={500}
+                                        placeholder="Ex : Chers fidèles, nous vous encourageons à vous acquitter de vos cotisations FIMECO pour ce mois de mai. Que le Seigneur bénisse vos efforts !"
+                                        value={encMessage}
+                                        onChange={(e) => { setEncMessage(e.target.value); setEncError(""); }}
                                     />
-                                    <button className="mt-3 px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
-                                        Envoyer a tous les fideles
+                                    <div className="flex items-center justify-between mt-1 mb-3">
+                                        {encError ? (
+                                            <p className="text-xs text-red-500">{encError}</p>
+                                        ) : (
+                                            <span />
+                                        )}
+                                        <span className={`text-xs ${encMessage.length > 450 ? 'text-orange-500' : 'text-gray-400'}`}>
+                                            {encMessage.length}/500
+                                        </span>
+                                    </div>
+                                    <button
+                                        disabled={encLoading || encMessage.trim().length < 10}
+                                        onClick={() => {
+                                            if (encMessage.trim().length < 10) {
+                                                setEncError("Le message doit contenir au moins 10 caractères.");
+                                                return;
+                                            }
+                                            setEncLoading(true);
+                                            router.post(
+                                                withBasePath("", "/pasteur/tresorerie/encouragement"),
+                                                { message: encMessage.trim() },
+                                                {
+                                                    onSuccess: () => { setEncMessage(""); setEncLoading(false); },
+                                                    onError: () => { setEncError("Une erreur est survenue."); setEncLoading(false); },
+                                                }
+                                            );
+                                        }}
+                                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        <Send className="w-4 h-4" />
+                                        {encLoading ? "Publication..." : "Publier dans le flash info"}
                                     </button>
+                                </div>
+
+                                {/* Historique */}
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                        <Clock className="w-4 h-4" /> Historique des encouragements
+                                    </h4>
+                                    {encouragementsProp.length === 0 ? (
+                                        <p className="text-sm text-gray-400 italic">Aucun encouragement publié pour le moment.</p>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {encouragementsProp.map((enc) => (
+                                                <div key={enc.id} className="flex items-start gap-3 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+                                                    <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-1.5" />
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm text-gray-800">{enc.message}</p>
+                                                        <p className="text-xs text-gray-400 mt-1">{enc.created_at}</p>
+                                                    </div>
+                                                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium flex-shrink-0">
+                                                        Publié
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
+
+            {/* Modal familles par classe */}
+            {classeModal && (
+                <div
+                    className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+                    onClick={() => setClasseModal(null)}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-900">{classeModal.nom}</h2>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                    {asNumber(classeModal.familles)} famille{asNumber(classeModal.familles) > 1 ? 's' : ''} · Taux {asNumber(classeModal.taux)}%
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setClasseModal(null)}
+                                className="text-gray-400 hover:text-gray-600 text-xl leading-none p-1"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Stats rapides */}
+                        <div className="grid grid-cols-3 gap-3 px-6 py-4 bg-gray-50 border-b border-gray-100">
+                            <div className="text-center">
+                                <p className="text-xs text-gray-500">Soldées</p>
+                                <p className="text-xl font-bold text-green-600">
+                                    {(classeModal.famillesList ?? []).filter(f => f.solde).length}
+                                </p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-xs text-gray-500">Non soldées</p>
+                                <p className="text-xl font-bold text-red-500">
+                                    {(classeModal.famillesList ?? []).filter(f => !f.solde).length}
+                                </p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-xs text-gray-500">Total collecté</p>
+                                <p className="text-xl font-bold text-blue-600">
+                                    {formatAmount(classeModal.payees)} F
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Liste familles */}
+                        <div className="overflow-y-auto flex-1 px-6 py-4">
+                            {(classeModal.famillesList ?? []).length === 0 ? (
+                                <p className="text-center text-gray-400 italic py-8">Aucune famille trouvée pour cette classe.</p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {(classeModal.famillesList ?? [])
+                                        .slice()
+                                        .sort((a, b) => b.solde - a.solde)
+                                        .map((famille) => (
+                                        <div
+                                            key={famille.id}
+                                            className={`flex items-center justify-between px-4 py-3 rounded-xl border ${famille.solde ? 'border-green-200 bg-green-50' : 'border-red-100 bg-red-50'}`}
+                                        >
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <span className={`w-3 h-3 rounded-full flex-shrink-0 ${famille.solde ? 'bg-green-500' : 'bg-red-400'}`} />
+                                                <div className="min-w-0">
+                                                    <p className="font-semibold text-gray-800 text-sm truncate">{famille.nom}</p>
+                                                    {famille.code_famille && (
+                                                        <p className="text-xs text-gray-400">{famille.code_famille}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3 flex-shrink-0 ml-3">
+                                                <span className="text-xs text-gray-500">{formatAmount(famille.montant_paye)} F</span>
+                                                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${famille.solde ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                                                    {famille.solde ? '✓ Soldé' : '✗ Impayé'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-6 py-3 border-t border-gray-100 flex justify-end">
+                            <button
+                                onClick={() => setClasseModal(null)}
+                                className="px-5 py-2 text-sm font-semibold bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                            >
+                                Fermer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {selectedCotisationModal && (
                 <div className="fixed inset-0 bg-black/45 flex items-center justify-center z-50 p-4">

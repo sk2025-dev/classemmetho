@@ -190,38 +190,6 @@ export default function DatesTab({
                                                     {acte.reference || "Référence indisponible"}
                                                 </div>
                                             </div>
-                                            {/* Classe du membre */}
-                                            <div className="date-card-field">
-                                                <span className="date-card-label">Classe</span>
-                                                <span className="date-card-value">{acte.classe?.nom || "—"}</span>
-                                            </div>
-                                            {/* Nom du conjoint */}
-                                            <div className="date-card-field">
-                                                <span className="date-card-label">Conjoint(e)</span>
-                                                <span className="date-card-value">
-                                                    {
-                                                        [
-                                                            acte.details?.conjoint_prenom,
-                                                            acte.details?.conjoint_nom
-                                                        ].filter(Boolean).join(" ") ||
-                                                        [
-                                                            acte.details?.epoux_prenom,
-                                                            acte.details?.epoux_nom
-                                                        ].filter(Boolean).join(" ") ||
-                                                        [
-                                                            acte.details?.conjoint_1,
-                                                            acte.details?.conjoint_2
-                                                        ].filter(Boolean).join(" ") ||
-                                                        "—"
-                                                    }
-                                                </span>
-                                            </div>
-                                            {/* Lieu du mariage */}
-                                            <div className="date-card-field">
-                                                <span className="date-card-label">Lieu du mariage</span>
-                                                <span className="date-card-value">{acte.details?.lieu_ceremonie || acte.details?.lieu || "—"}</span>
-                                            </div>
-                                            {/* Statut de la cérémonie */}
                                             <span
                                                 className={`badge ${
                                                     statut &&
@@ -248,12 +216,51 @@ export default function DatesTab({
                                         <div className="date-card-body">
                                             <div className="date-card-field">
                                                 <span className="date-card-label">
+                                                    Classe
+                                                </span>
+                                                <span className="date-card-value">
+                                                    {acte.classe?.nom || "—"}
+                                                </span>
+                                            </div>
+                                            <div className="date-card-field">
+                                                <span className="date-card-label">
+                                                    Conjoint(e)
+                                                </span>
+                                                <span className="date-card-value">
+                                                    {[
+                                                        acte.details?.conjoint_prenom,
+                                                        acte.details?.conjoint_nom,
+                                                    ]
+                                                        .filter(Boolean)
+                                                        .join(" ") ||
+                                                        [
+                                                            acte.details
+                                                                ?.epoux_prenom,
+                                                            acte.details
+                                                                ?.epoux_nom,
+                                                        ]
+                                                            .filter(Boolean)
+                                                            .join(" ") ||
+                                                        [
+                                                            acte.details
+                                                                ?.conjoint_1,
+                                                            acte.details
+                                                                ?.conjoint_2,
+                                                        ]
+                                                            .filter(Boolean)
+                                                            .join(" ") ||
+                                                        "—"}
+                                                </span>
+                                            </div>
+                                            <div className="date-card-field">
+                                                <span className="date-card-label">
                                                     Lieu
                                                 </span>
                                                 <span className="date-card-value">
                                                     {acte
                                                         .details
                                                         ?.lieu_ceremonie ||
+                                                        acte.details?.lieu ||
                                                         "—"}
                                                 </span>
                                             </div>

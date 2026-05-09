@@ -735,9 +735,6 @@ export default function RegisterFamille({
         if (s === 1) {
             if (!famille.nom) newErrors["famille.nom"] = "Requis";
             if (!famille.quartier) newErrors["famille.quartier"] = "Requis";
-            if (!famille.ville)
-                newErrors["famille.ville"] =
-                    "Veuillez sélectionner une ville dans la liste.";
             if (!famille.telephone) {
                 newErrors["famille.telephone"] = "Requis";
             } else if (!isValidPhoneFormat(famille.telephone)) {
@@ -1167,7 +1164,7 @@ export default function RegisterFamille({
                                     }
                                 />
                             </FormField>
-                            <FormField label="Ville" icon={Building} required>
+                            <FormField label="Ville" icon={Building}>
                                 <Select2Single
                                     name="famille_ville"
                                     value={famille.ville}

@@ -1,13 +1,6 @@
 import React, { useState } from "react";
 import { Head, Link } from "@inertiajs/react";
-import {
-    CreditCard,
-    DollarSign,
-    Heart,
-    Download,
-    ArrowLeft,
-    X,
-} from "lucide-react";
+import { DollarSign, Heart, ArrowLeft } from "lucide-react";
 import { withBasePath } from "../../../Utils/urlHelper";
 
 const fmt = (n) => new Intl.NumberFormat("fr-FR").format(n);
@@ -18,22 +11,9 @@ export default function MembreFamilleFinances({
     cotisations: cotisationsProp,
     historiquePaiements: historiquePaiementsProp,
     donsFamille: donsFamilleProp,
-    campagnesActives: campagnesActivesProp,
     initialTab = "fimeco",
-    openDonModal = false,
 }) {
     const [activeTab, setActiveTab] = useState(initialTab);
-    const [paymentMethod, setPaymentMethod] = useState("MOBILE_MONEY");
-    const [mobileProvider, setMobileProvider] = useState("wave");
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-    const [selectedCotisationId, setSelectedCotisationId] = useState("");
-    const [paymentAmount, setPaymentAmount] = useState("");
-    const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
-    const [freeDonAmount, setFreeDonAmount] = useState("");
-    const [isSubmittingDon, setIsSubmittingDon] = useState(false);
-    const [isDonModalOpen, setIsDonModalOpen] = useState(openDonModal);
-    const [donPaymentMethod, setDonPaymentMethod] = useState("MOBILE_MONEY");
-    const [donMobileProvider, setDonMobileProvider] = useState("wave");
 
     const fallbackFamilyInfo = {
         nom: "Famille Koné",
@@ -71,107 +51,15 @@ export default function MembreFamilleFinances({
         },
     ];
 
-    const fallbackHistoriquePaiements = [
-        {
-            id: 1,
-            type: "FIMECO",
-            montant: 15000,
-            date: "14/03/2026",
-            mode: "Mobile Money",
-            recu: "REÇ-2026-003245",
-        },
-        {
-            id: 2,
-            type: "FIMECO",
-            montant: 15000,
-            date: "14/02/2026",
-            mode: "Espèces",
-            recu: "REÇ-2026-002845",
-        },
-        {
-            id: 3,
-            type: "FIMECO",
-            montant: 15000,
-            date: "14/01/2026",
-            mode: "Virement",
-            recu: "REÇ-2026-002145",
-        },
-        {
-            id: 4,
-            type: "Affiliation CEMEC",
-            montant: 50000,
-            date: "20/01/2026",
-            mode: "Virement",
-            recu: "REÇ-2026-001545",
-        },
-        {
-            id: 5,
-            type: "Cotisation paroissiale",
-            montant: 10000,
-            date: "15/03/2026",
-            mode: "Mobile Money",
-            recu: "REÇ-2026-003125",
-        },
-    ];
 
-    const fallbackDonsFamille = [
-        {
-            id: 1,
-            date: "15/03/2026",
-            montant: 25000,
-            campagne: "Rénovation temple",
-            recu: "DON-2026-001523",
-        },
-        {
-            id: 2,
-            date: "01/03/2026",
-            montant: 10000,
-            campagne: "Aide aux nécessiteux",
-            recu: "DON-2026-001401",
-        },
-        {
-            id: 3,
-            date: "14/02/2026",
-            montant: 15000,
-            campagne: "Rénovation temple",
-            recu: "DON-2026-001203",
-        },
-    ];
-
-    const fallbackCampagnesActives = [
-        {
-            id: 1,
-            titre: "Rénovation temple",
-            objectif: 5000000,
-            collecte: 3200000,
-            progression: 64,
-        },
-        {
-            id: 2,
-            titre: "Aide aux nécessiteux",
-            objectif: 2000000,
-            collecte: 1400000,
-            progression: 70,
-        },
-    ];
 
     const famillyInfo = familyInfoProp || fallbackFamilyInfo;
     const cotisationsRaw =
         Array.isArray(cotisationsProp) && cotisationsProp.length
             ? cotisationsProp
             : fallbackCotisations;
-    const historiquePaiements =
-        Array.isArray(historiquePaiementsProp) && historiquePaiementsProp.length
-            ? historiquePaiementsProp
-            : fallbackHistoriquePaiements;
-    const donsFamille =
-        Array.isArray(donsFamilleProp) && donsFamilleProp.length
-            ? donsFamilleProp
-            : fallbackDonsFamille;
-    const campagnesActives =
-        Array.isArray(campagnesActivesProp) && campagnesActivesProp.length
-            ? campagnesActivesProp
-            : fallbackCampagnesActives;
+    const historiquePaiements = Array.isArray(historiquePaiementsProp) ? historiquePaiementsProp : [];
+    const donsFamille = Array.isArray(donsFamilleProp) ? donsFamilleProp : [];
 
     const cotisations = cotisationsRaw.map((c) => ({
         ...c,
@@ -192,167 +80,10 @@ export default function MembreFamilleFinances({
     const autresCotisations = cotisations.filter(
         (c) => c.type_finance !== "FIMECO",
     );
-    const payableCotisations = cotisations.filter((c) => Number(c.du) > 0);
-    const selectedCotisation =
-        payableCotisations.find(
-            (c) => String(c.id) === String(selectedCotisationId),
-        ) ||
-        payableCotisations[0] ||
-        null;
-    const defaultSelectedAmount = selectedCotisation
-        ? Number(selectedCotisation.du)
-        : 0;
-    const selectedMontant = Number(paymentAmount || defaultSelectedAmount || 0);
-
     const totalCotisations = cotisations.reduce((sum, c) => sum + c.du, 0);
 
-    const getCsrfToken = () => {
-        const token = document.querySelector('meta[name="csrf-token"]');
-        return token ? token.getAttribute("content") : "";
-    };
 
-    const handleSubmitPaiement = async () => {
-        if (
-            totalCotisations <= 0 ||
-            isSubmittingPayment ||
-            !selectedCotisation
-        ) {
-            return;
-        }
 
-        if (selectedMontant < 100) {
-            alert("Le montant minimum de paiement est 100 F CFA.");
-            return;
-        }
-
-        if (selectedMontant > Number(selectedCotisation.du)) {
-            alert("Le montant ne peut pas dépasser le reste à payer.");
-            return;
-        }
-
-        setIsSubmittingPayment(true);
-        try {
-            const basePayload = {
-                cotisation_id: selectedCotisation.id,
-                montant: selectedMontant,
-                year: selectedYear,
-                date_paiement: new Date().toISOString().slice(0, 10),
-            };
-
-            const response =
-                paymentMethod === "MOBILE_MONEY"
-                    ? await fetch(
-                          withBasePath(
-                              "",
-                              "/membre-famille/finances/paiements/initiate",
-                          ),
-                          {
-                              method: "POST",
-                              headers: {
-                                  "Content-Type": "application/json",
-                                  "X-CSRF-TOKEN": getCsrfToken(),
-                                  Accept: "application/json",
-                              },
-                              credentials: "same-origin",
-                              body: JSON.stringify({
-                                  ...basePayload,
-                                  mode_paiement: "MOBILE_MONEY",
-                                  provider: mobileProvider,
-                              }),
-                          },
-                      )
-                    : await fetch(
-                          withBasePath(
-                              "",
-                              "/membre-famille/finances/paiements",
-                          ),
-                          {
-                              method: "POST",
-                              headers: {
-                                  "Content-Type": "application/json",
-                                  "X-CSRF-TOKEN": getCsrfToken(),
-                                  Accept: "application/json",
-                              },
-                              credentials: "same-origin",
-                              body: JSON.stringify({
-                                  ...basePayload,
-                                  mode_paiement: paymentMethod,
-                                  note: "Paiement saisi depuis l'espace membre famille",
-                              }),
-                          },
-                      );
-
-            if (!response.ok) {
-                throw new Error("Paiement impossible");
-            }
-
-            if (paymentMethod === "MOBILE_MONEY") {
-                const data = await response.json();
-                if (data.redirect_url) {
-                    window.location.href = data.redirect_url;
-                    return;
-                }
-            }
-
-            alert("Paiement enregistré avec succès.");
-            window.location.reload();
-        } catch (error) {
-            alert("Échec de l'enregistrement du paiement.");
-        } finally {
-            setIsSubmittingPayment(false);
-        }
-    };
-
-    const handleSubmitDonLibre = async () => {
-        const amount = Number(freeDonAmount || 0);
-        if (amount < 100 || isSubmittingDon) {
-            alert(
-                "Veuillez saisir un montant de don valide (minimum 100 F CFA).",
-            );
-            return;
-        }
-
-        setIsSubmittingDon(true);
-        try {
-            const response = await fetch(
-                withBasePath("", "/membre-famille/finances/dons"),
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRF-TOKEN": getCsrfToken(),
-                        Accept: "application/json",
-                    },
-                    credentials: "same-origin",
-                    body: JSON.stringify({
-                        campagne_id: null,
-                        montant: amount,
-                        type: "LIBRE",
-                        mode_paiement: donPaymentMethod,
-                        provider:
-                            donPaymentMethod === "MOBILE_MONEY"
-                                ? donMobileProvider
-                                : null,
-                        date_don: new Date().toISOString().slice(0, 10),
-                        note: "Don libre depuis l'espace membre famille",
-                    }),
-                },
-            );
-
-            if (!response.ok) {
-                throw new Error("Don impossible");
-            }
-
-            alert("Don enregistré avec succès.");
-            setFreeDonAmount("");
-            setIsDonModalOpen(false);
-            window.location.reload();
-        } catch (error) {
-            alert("Échec de l'enregistrement du don.");
-        } finally {
-            setIsSubmittingDon(false);
-        }
-    };
 
     const renderCotisationsList = (list, emptyMessage) => {
         if (!list.length) {
@@ -445,19 +176,6 @@ export default function MembreFamilleFinances({
                                 ></div>
                             </div>
 
-                            {Number(cot.du) > 0 && (
-                                <button
-                                    onClick={() => {
-                                        setSelectedCotisationId(String(cot.id));
-                                        setPaymentAmount(String(cot.du));
-                                        setActiveTab("paiement");
-                                    }}
-                                    className="px-4 py-2 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors inline-flex items-center gap-2"
-                                >
-                                    <CreditCard size={16} /> Payer cette
-                                    cotisation
-                                </button>
-                            )}
                         </div>
                     );
                 })}
@@ -536,7 +254,7 @@ export default function MembreFamilleFinances({
                                     {fmtCurrency(totalCotisations)}
                                 </p>
                             </div>
-                            <CreditCard
+                            <DollarSign
                                 className={
                                     totalCotisations > 0
                                         ? "text-red-500"
@@ -581,7 +299,6 @@ export default function MembreFamilleFinances({
                         {[
                             { id: "fimeco", label: "🏦 FIMECO" },
                             { id: "cotisations", label: "📋 Mes cotisations" },
-                            { id: "paiement", label: "💳 Paiement" },
                             { id: "dons", label: "❤️ Dons" },
                             { id: "historique", label: "📜 Historique" },
                         ].map((tab) => (
@@ -610,25 +327,6 @@ export default function MembreFamilleFinances({
                                     "Aucune cotisation FIMECO active pour le moment.",
                                 )}
 
-                                {totalCotisations > 0 && (
-                                    <div className="mt-6 p-4 bg-orange-50 border-l-4 border-orange-500 rounded">
-                                        <p className="font-semibold text-orange-900">
-                                            Montant total à régulariser
-                                        </p>
-                                        <p className="text-2xl font-bold text-orange-600 mt-2">
-                                            {fmtCurrency(totalCotisations)}
-                                        </p>
-                                        <button
-                                            onClick={() =>
-                                                setActiveTab("paiement")
-                                            }
-                                            className="mt-4 px-6 py-2 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors inline-flex items-center gap-2"
-                                        >
-                                            <CreditCard size={18} /> Payer
-                                            maintenant
-                                        </button>
-                                    </div>
-                                )}
                             </div>
                         )}
 
@@ -642,392 +340,40 @@ export default function MembreFamilleFinances({
                                     "Aucune autre cotisation active pour le moment.",
                                 )}
 
-                                {totalCotisations > 0 && (
-                                    <div className="mt-6 p-4 bg-orange-50 border-l-4 border-orange-500 rounded">
-                                        <p className="font-semibold text-orange-900">
-                                            Montant total à régulariser
-                                        </p>
-                                        <p className="text-2xl font-bold text-orange-600 mt-2">
-                                            {fmtCurrency(totalCotisations)}
-                                        </p>
-                                        <button
-                                            onClick={() =>
-                                                setActiveTab("paiement")
-                                            }
-                                            className="mt-4 px-6 py-2 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors inline-flex items-center gap-2"
-                                        >
-                                            <CreditCard size={18} /> Payer
-                                            maintenant
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {activeTab === "paiement" && (
-                            <div>
-                                <h3 className="text-lg font-bold text-gray-900 mb-6">
-                                    Effectuer un paiement
-                                </h3>
-
-                                {totalCotisations === 0 ? (
-                                    <div className="p-8 bg-green-50 border-2 border-green-200 rounded-lg text-center">
-                                        <Heart
-                                            className="text-green-600 mx-auto mb-4"
-                                            size={48}
-                                        />
-                                        <h4 className="text-xl font-bold text-green-700 mb-2">
-                                            Vous êtes à jour ✓
-                                        </h4>
-                                        <p className="text-green-700">
-                                            Toutes vos cotisations sont payées.
-                                        </p>
-                                        <p className="text-green-600 text-sm mt-3">
-                                            Vous pouvez néanmoins faire un don
-                                            libre pour soutenir les campagnes
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-6">
-                                        {/* Cotisation à payer */}
-                                        <div className="p-6 border-2 border-dashed border-orange-300 rounded-lg bg-orange-50">
-                                            <h4 className="font-bold text-gray-900 mb-4">
-                                                Sélectionnez votre cotisation
-                                            </h4>
-                                            <div className="mb-4">
-                                                <label className="block font-semibold text-gray-900 mb-2">
-                                                    Type de cotisation
-                                                </label>
-                                                <select
-                                                    value={
-                                                        selectedCotisation?.id ??
-                                                        ""
-                                                    }
-                                                    onChange={(e) => {
-                                                        setSelectedCotisationId(
-                                                            e.target.value,
-                                                        );
-                                                        setPaymentAmount("");
-                                                    }}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                                >
-                                                    {payableCotisations.map(
-                                                        (cot) => (
-                                                            <option
-                                                                key={cot.id}
-                                                                value={cot.id}
-                                                            >
-                                                                {cot.nom} —{" "}
-                                                                {fmtCurrency(
-                                                                    cot.du,
-                                                                )}
-                                                            </option>
-                                                        ),
-                                                    )}
-                                                </select>
-                                            </div>
-
-                                            <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block font-semibold text-gray-900 mb-2">
-                                                        Année
-                                                    </label>
-                                                    <select
-                                                        value={selectedYear}
-                                                        onChange={(e) =>
-                                                            setSelectedYear(
-                                                                Number(
-                                                                    e.target
-                                                                        .value,
-                                                                ),
-                                                            )
-                                                        }
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                                    >
-                                                        {[
-                                                            new Date().getFullYear() -
-                                                                1,
-                                                            new Date().getFullYear(),
-                                                            new Date().getFullYear() +
-                                                                1,
-                                                        ].map((y) => (
-                                                            <option
-                                                                key={y}
-                                                                value={y}
-                                                            >
-                                                                {y}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="block font-semibold text-gray-900 mb-2">
-                                                        Montant à payer
-                                                    </label>
-                                                    <input
-                                                        type="number"
-                                                        min={100}
-                                                        max={
-                                                            Number(
-                                                                selectedCotisation?.du,
-                                                            ) || undefined
-                                                        }
-                                                        value={selectedMontant}
-                                                        onChange={(e) =>
-                                                            setPaymentAmount(
-                                                                e.target.value,
-                                                            )
-                                                        }
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white font-bold text-orange-700"
-                                                    />
-                                                    <p className="text-xs text-gray-600 mt-2">
-                                                        Vous pouvez payer
-                                                        partiellement, sans
-                                                        dépasser le reste dû.
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            {/* Payment Method */}
-                                            <div className="mb-6">
-                                                <label className="block font-semibold text-gray-900 mb-3">
-                                                    Mode de paiement
-                                                </label>
-                                                <div className="space-y-2">
-                                                    {[
-                                                        {
-                                                            id: "momo",
-                                                            label: "📱 Mobile Money (Orange Money, MTN Money)",
-                                                            description:
-                                                                "Rapide et sûr",
-                                                        },
-                                                        {
-                                                            id: "cash",
-                                                            label: "💵 Espèces",
-                                                            description:
-                                                                "Remise directe",
-                                                        },
-                                                        {
-                                                            id: "bank",
-                                                            label: "🏦 Virement bancaire",
-                                                            description:
-                                                                "Compte paroissial",
-                                                        },
-                                                    ].map((method) => (
-                                                        <label
-                                                            key={method.id}
-                                                            className="flex items-center p-3 border border-gray-300 rounded-lg hover:border-teal-500 cursor-pointer"
-                                                        >
-                                                            <input
-                                                                type="radio"
-                                                                name="paymentMethod"
-                                                                className="w-4 h-4 text-teal-600"
-                                                                checked={
-                                                                    paymentMethod ===
-                                                                    (method.id ===
-                                                                    "momo"
-                                                                        ? "MOBILE_MONEY"
-                                                                        : method.id ===
-                                                                            "cash"
-                                                                          ? "ESPECES"
-                                                                          : "VIREMENT")
-                                                                }
-                                                                onChange={() =>
-                                                                    setPaymentMethod(
-                                                                        method.id ===
-                                                                            "momo"
-                                                                            ? "MOBILE_MONEY"
-                                                                            : method.id ===
-                                                                                "cash"
-                                                                              ? "ESPECES"
-                                                                              : "VIREMENT",
-                                                                    )
-                                                                }
-                                                            />
-                                                            <div className="ml-3">
-                                                                <p className="font-semibold text-gray-900">
-                                                                    {
-                                                                        method.label
-                                                                    }
-                                                                </p>
-                                                                <p className="text-xs text-gray-600">
-                                                                    {
-                                                                        method.description
-                                                                    }
-                                                                </p>
-                                                            </div>
-                                                        </label>
-                                                    ))}
-                                                </div>
-
-                                                {paymentMethod ===
-                                                    "MOBILE_MONEY" && (
-                                                    <div className="mt-4 grid grid-cols-3 gap-3">
-                                                        {[
-                                                            {
-                                                                id: "wave",
-                                                                label: "Wave",
-                                                                logo: "/images/wave.jpg",
-                                                            },
-                                                            {
-                                                                id: "orange",
-                                                                label: "Orange",
-                                                                logo: "/images/OM-logo.jpg",
-                                                            },
-                                                            {
-                                                                id: "mtn",
-                                                                label: "MTN",
-                                                                logo: "/images/mtn-logo.png",
-                                                            },
-                                                        ].map((provider) => (
-                                                            <button
-                                                                key={
-                                                                    provider.id
-                                                                }
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    setMobileProvider(
-                                                                        provider.id,
-                                                                    )
-                                                                }
-                                                                className={`p-3 rounded-lg border transition ${mobileProvider === provider.id ? "border-teal-600 bg-teal-50" : "border-gray-300 bg-white"}`}
-                                                            >
-                                                                <img
-                                                                    src={
-                                                                        provider.logo
-                                                                    }
-                                                                    alt={
-                                                                        provider.label
-                                                                    }
-                                                                    className="h-8 mx-auto object-contain"
-                                                                />
-                                                                <div className="text-xs font-semibold mt-2 text-gray-700">
-                                                                    {
-                                                                        provider.label
-                                                                    }
-                                                                </div>
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <button
-                                                onClick={handleSubmitPaiement}
-                                                disabled={isSubmittingPayment}
-                                                className="w-full px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 disabled:bg-teal-300 transition-colors inline-flex items-center justify-center gap-2"
-                                            >
-                                                <CreditCard size={20} />{" "}
-                                                {isSubmittingPayment
-                                                    ? "Traitement..."
-                                                    : paymentMethod ===
-                                                        "MOBILE_MONEY"
-                                                      ? `Payer avec ${mobileProvider.toUpperCase()}`
-                                                      : "Enregistrer le paiement"}
-                                            </button>
-                                        </div>
-
-                                        {/* Info */}
-                                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                                            <p className="text-blue-900 text-sm font-semibold">
-                                                ℹ️ Information
-                                            </p>
-                                            <p className="text-blue-800 text-sm mt-2">
-                                                Vous recevrez un reçu PDF par
-                                                email après confirmation du
-                                                paiement. Conservez-le
-                                                précieusement.
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         )}
 
                         {activeTab === "dons" && (
                             <div>
                                 <h3 className="text-lg font-bold text-gray-900 mb-6">
-                                    Contribuer par don
+                                    Mes dons
                                 </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                                    {/* Campagnes */}
-                                    <div className="space-y-4">
-                                        <h4 className="font-bold text-gray-900">
-                                            Campagnes en cours
-                                        </h4>
-                                        <div className="space-y-3">
-                                            {campagnesActives.map(
-                                                (campagne) => (
-                                                    <div
-                                                        key={campagne.id}
-                                                        className="p-4 border border-gray-200 rounded-lg hover:border-purple-400 cursor-pointer transition-colors"
-                                                    >
-                                                        <p className="font-semibold text-gray-900">
-                                                            {campagne.titre}
-                                                        </p>
-                                                        <p className="text-xs text-gray-600 mt-1">
-                                                            Objectif :{" "}
-                                                            {fmtCurrency(
-                                                                campagne.objectif,
-                                                            )}{" "}
-                                                            - Collecté :{" "}
-                                                            {fmtCurrency(
-                                                                campagne.collecte,
-                                                            )}{" "}
-                                                            (
-                                                            {
-                                                                campagne.progression
-                                                            }
-                                                            %)
-                                                        </p>
-                                                        <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
-                                                            <div
-                                                                className="bg-purple-600 h-2 rounded-full"
-                                                                style={{
-                                                                    width: `${campagne.progression}%`,
-                                                                }}
-                                                            ></div>
-                                                        </div>
-                                                        <input
-                                                            type="number"
-                                                            placeholder="Montant (F CFA)"
-                                                            className="w-full mt-3 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                                        />
-                                                    </div>
-                                                ),
-                                            )}
-                                        </div>
+                                {donsFamille.length === 0 ? (
+                                    <div className="p-8 bg-gray-50 border border-gray-200 rounded-lg text-center text-gray-500">
+                                        Aucun don enregistré pour le moment.
                                     </div>
-
-                                    {/* Don libre */}
-                                    <div>
-                                        <h4 className="font-bold text-gray-900 mb-4">
-                                            Don libre
-                                        </h4>
-                                        <div className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-dashed border-purple-300 rounded-lg">
-                                            <p className="text-xs text-gray-600 mt-3">
-                                                Votre contribution est
-                                                volontaire et soutient les
-                                                projets communautaires.
-                                            </p>
-                                            <button
-                                                onClick={() => {
-                                                    setFreeDonAmount("");
-                                                    setDonPaymentMethod(
-                                                        "MOBILE_MONEY",
-                                                    );
-                                                    setDonMobileProvider(
-                                                        "wave",
-                                                    );
-                                                    setIsDonModalOpen(true);
-                                                }}
-                                                className="w-full mt-4 px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 disabled:bg-purple-300 transition-colors"
-                                            >
-                                                Faire un don libre
-                                            </button>
-                                        </div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-gray-50 border-b-2 border-gray-200">
+                                                <tr>
+                                                    <th className="px-4 py-3 text-left font-semibold text-gray-900">Date</th>
+                                                    <th className="px-4 py-3 text-left font-semibold text-gray-900">Campagne / Motif</th>
+                                                    <th className="px-4 py-3 text-left font-semibold text-gray-900">Montant</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-200">
+                                                {donsFamille.map((don) => (
+                                                    <tr key={don.id} className="hover:bg-gray-50">
+                                                        <td className="px-4 py-3 text-gray-600">{don.date}</td>
+                                                        <td className="px-4 py-3 font-semibold text-gray-900">{don.campagne}</td>
+                                                        <td className="px-4 py-3 font-bold text-purple-600">{fmtCurrency(don.montant)}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         )}
 
@@ -1036,170 +382,54 @@ export default function MembreFamilleFinances({
                                 <h3 className="text-lg font-bold text-gray-900 mb-6">
                                     Historique des paiements
                                 </h3>
-                                <div className="mb-6 flex gap-2">
-                                    <button className="px-4 py-2 bg-teal-600 text-white rounded-lg font-semibold text-sm hover:bg-teal-700 transition-colors inline-flex items-center gap-2">
-                                        <Download size={16} /> Exporter PDF
-                                    </button>
-                                </div>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm">
-                                        <thead className="bg-gray-50 border-b-2 border-gray-200">
-                                            <tr>
-                                                <th className="px-4 py-3 text-left font-semibold text-gray-900">
-                                                    Type
-                                                </th>
-                                                <th className="px-4 py-3 text-left font-semibold text-gray-900">
-                                                    Montant
-                                                </th>
-                                                <th className="px-4 py-3 text-left font-semibold text-gray-900">
-                                                    Mode
-                                                </th>
-                                                <th className="px-4 py-3 text-left font-semibold text-gray-900">
-                                                    Date
-                                                </th>
-                                                <th className="px-4 py-3 text-left font-semibold text-gray-900">
-                                                    Reçu
-                                                </th>
-                                                <th className="px-4 py-3 text-center font-semibold text-gray-900">
-                                                    Actions
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-200">
-                                            {historiquePaiements.map(
-                                                (paiement) => (
-                                                    <tr
-                                                        key={paiement.id}
-                                                        className="hover:bg-gray-50"
-                                                    >
-                                                        <td className="px-4 py-3 font-semibold text-gray-900">
-                                                            {paiement.type}
-                                                        </td>
-                                                        <td className="px-4 py-3 font-bold text-teal-600">
-                                                            {fmtCurrency(
-                                                                paiement.montant,
-                                                            )}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-gray-600">
-                                                            {paiement.mode}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-gray-600">
-                                                            {paiement.date}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-blue-600 font-semibold text-sm">
-                                                            {paiement.recu}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-center">
-                                                            <button className="text-blue-600 hover:text-blue-800 font-semibold text-xs inline-flex items-center gap-1">
-                                                                <Download
-                                                                    size={14}
-                                                                />{" "}
-                                                                PDF
-                                                            </button>
+                                {historiquePaiements.length === 0 ? (
+                                    <div className="p-8 bg-gray-50 border border-gray-200 rounded-lg text-center text-gray-500">
+                                        Aucun paiement enregistré pour le moment.
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-gray-50 border-b-2 border-gray-200">
+                                                <tr>
+                                                    <th className="px-4 py-3 text-left font-semibold text-gray-900">Cotisation</th>
+                                                    <th className="px-4 py-3 text-left font-semibold text-gray-900">Montant</th>
+                                                    <th className="px-4 py-3 text-left font-semibold text-gray-900">Mode</th>
+                                                    <th className="px-4 py-3 text-left font-semibold text-gray-900">Date</th>
+                                                    <th className="px-4 py-3 text-left font-semibold text-gray-900">Statut</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-200">
+                                                {historiquePaiements.map((paiement) => (
+                                                    <tr key={paiement.id} className="hover:bg-gray-50">
+                                                        <td className="px-4 py-3 font-semibold text-gray-900">{paiement.type}</td>
+                                                        <td className="px-4 py-3 font-bold text-teal-600">{fmtCurrency(paiement.montant)}</td>
+                                                        <td className="px-4 py-3 text-gray-600">{paiement.mode}</td>
+                                                        <td className="px-4 py-3 text-gray-600">{paiement.date}</td>
+                                                        <td className="px-4 py-3">
+                                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                                                paiement.payment_status === 'PAYE'
+                                                                    ? 'bg-green-100 text-green-700'
+                                                                    : paiement.payment_status === 'EN_ATTENTE'
+                                                                      ? 'bg-yellow-100 text-yellow-700'
+                                                                      : 'bg-red-100 text-red-700'
+                                                            }`}>
+                                                                {paiement.payment_status === 'PAYE' ? 'Payé'
+                                                                    : paiement.payment_status === 'EN_ATTENTE' ? 'En attente'
+                                                                    : paiement.payment_status ?? 'Payé'}
+                                                            </span>
                                                         </td>
                                                     </tr>
-                                                ),
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
                 </div>
             </div>
 
-            {isDonModalOpen && (
-                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
-                    <div className="w-full max-w-md bg-white rounded-xl shadow-2xl overflow-hidden">
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-                            <h4 className="text-lg font-bold text-gray-900">
-                                Don libre
-                            </h4>
-                            <button
-                                onClick={() => setIsDonModalOpen(false)}
-                                className="p-1 rounded hover:bg-gray-100 text-gray-500"
-                            >
-                                <X size={18} />
-                            </button>
-                        </div>
-
-                        <div className="p-5 space-y-4">
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-800 mb-2">
-                                    Montant (F CFA)
-                                </label>
-                                <input
-                                    type="number"
-                                    min={100}
-                                    placeholder="Entrez le montant"
-                                    value={freeDonAmount}
-                                    onChange={(e) =>
-                                        setFreeDonAmount(e.target.value)
-                                    }
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-800 mb-2">
-                                    Mode de paiement
-                                </label>
-                                <select
-                                    value={donPaymentMethod}
-                                    onChange={(e) =>
-                                        setDonPaymentMethod(e.target.value)
-                                    }
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                >
-                                    <option value="MOBILE_MONEY">
-                                        Mobile Money
-                                    </option>
-                                    <option value="ESPECES">Espèces</option>
-                                    <option value="VIREMENT">Virement</option>
-                                </select>
-                            </div>
-
-                            {donPaymentMethod === "MOBILE_MONEY" && (
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-800 mb-2">
-                                        Opérateur
-                                    </label>
-                                    <select
-                                        value={donMobileProvider}
-                                        onChange={(e) =>
-                                            setDonMobileProvider(e.target.value)
-                                        }
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                    >
-                                        <option value="wave">Wave</option>
-                                        <option value="orange">Orange</option>
-                                        <option value="mtn">MTN</option>
-                                    </select>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="px-5 py-4 border-t border-gray-200 flex gap-3">
-                            <button
-                                onClick={() => setIsDonModalOpen(false)}
-                                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50"
-                            >
-                                Annuler
-                            </button>
-                            <button
-                                onClick={handleSubmitDonLibre}
-                                disabled={isSubmittingDon}
-                                className="flex-1 px-4 py-2 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700 disabled:bg-purple-300"
-                            >
-                                {isSubmittingDon
-                                    ? "Enregistrement..."
-                                    : "Valider le don"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

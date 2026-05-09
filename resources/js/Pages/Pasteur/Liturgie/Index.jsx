@@ -36,8 +36,8 @@ const ANNONCE_TYPES = [
     },
     {
         value: "generale",
-        label: "Annonce générale",
-        emoji: "📢",
+        label: "Demande de prière générale",
+        emoji: "🙏",
         color: "sage",
     },
 ];
@@ -64,6 +64,43 @@ function getPlaceholder(type) {
     };
     return p[type] || "Rédigez votre message…";
 }
+
+const ACTE_TYPES = [
+    { value: "bapteme", label: "Baptême" },
+    { value: "premiere_communion", label: "Première Communion" },
+    { value: "bapteme_premiere_communion", label: "Baptême + Première Communion" },
+    { value: "confirmation", label: "Confirmation" },
+    { value: "mariage", label: "Mariage" },
+    { value: "naissance", label: "Naissance" },
+    { value: "deces", label: "Décès" },
+];
+
+const ACTE_REQUIRED_FIELDS = {
+    bapteme: [],
+    premiere_communion: ["date", "lieu"],
+    bapteme_premiere_communion: ["date", "lieu"],
+    confirmation: ["confirmand", "date", "lieu"],
+    mariage: ["conjoint_1", "conjoint_2"],
+    naissance: [],
+    deces: ["date_deces"],
+};
+
+const ACTE_DETAIL_LABELS = {
+    date: "Date de l'acte",
+    lieu: "Lieu",
+    confirmand: "Confirmand",
+    conjoint_1: "Conjoint 1",
+    conjoint_2: "Conjoint 2",
+    date_naissance: "Date de naissance",
+    date_deces: "Date du décès",
+    lien_familial: "Lien familial",
+};
+
+const ACTE_DETAIL_INPUT_TYPES = {
+    date: "date",
+    date_naissance: "date",
+    date_deces: "date",
+};
 
 function Field({ label, required, children }) {
     return (
@@ -92,6 +129,7 @@ export default function Index({
     annonces: rawAnnonces = [],
     annoncesHistorique: rawAnnoncesHistorique = [],
     calendarEvents = [],
+    mesDemandes = [],
 }) {
     const { url } = usePage();
 
@@ -140,6 +178,8 @@ export default function Index({
     const [historyPage, setHistoryPage] = useState(1);
     const historyPerPage = 6;
     const [dateHistorySearch, setDateHistorySearch] = useState("");
+    const [dateHistoryClasseFilter, setDateHistoryClasseFilter] = useState("");
+    const [dateHistoryStatutFilter, setDateHistoryStatutFilter] = useState("");
     const [dateHistoryPage, setDateHistoryPage] = useState(1);
     const dateHistoryPerPage = 6;
     const [selectedCeremonyIds, setSelectedCeremonyIds] = useState([]);
@@ -155,7 +195,10 @@ export default function Index({
         type_acte: "",
         membre_id: familyMembers[0]?.id || "",
         date_souhaitee: "",
+        message: "",
+        details: {},
     });
+    const requiredActeFields = ACTE_REQUIRED_FIELDS[createForm.type_acte] || [];
 
     /* ── ANNONCES STATE ── */
     const [activeTab, setActiveTab] = useState("actes");
@@ -168,6 +211,7 @@ export default function Index({
     const [selectedFamily, setSelectedFamily] = useState("all");
     const [selectedClasse, setSelectedClasse] = useState("all");
     const [searchTerm, setSearchTerm] = useState("");
+    const [historiqueSearchTerm, setHistoriqueSearchTerm] = useState("");
     const [annPage, setAnnPage] = useState(1);
     const annPerPage = 6;
     const [activeAnnonce, setActiveAnnonce] = useState(null);
@@ -726,6 +770,7 @@ export default function Index({
                     typeActe: acte.type_acte,
                     statut: acte.statut,
                     ceremonyStatut: details?.ceremonie_statut,
+                    classeName: acte?.classe?.nom || "—",
                     reference: acte.reference || `ACTE-${acte.id}`,
                     memberName,
                     fianceName,
@@ -740,27 +785,60 @@ export default function Index({
     }, [ceremonyValidatedActs]);
 
     const dateHistoryNeedle = dateHistorySearch.trim().toLowerCase();
+    const dateHistoryClasseNeedle = dateHistoryClasseFilter.trim();
+    const dateHistoryStatutNeedle = dateHistoryStatutFilter.trim();
+
+    const dateHistoryClasses = useMemo(
+        () =>
+            Array.from(
+                new Set(
+                    ceremonyHistoryRows
+                        .map((row) => row.classeName)
+                        .filter(Boolean),
+                ),
+            ).sort((a, b) => a.localeCompare(b, "fr")),
+        [ceremonyHistoryRows],
+    );
+
+    const dateHistoryStatuts = useMemo(
+        () =>
+            Array.from(
+                new Set(
+                    ceremonyHistoryRows
+                        .map((row) => row.ceremonyStatut)
+                        .filter(Boolean),
+                ),
+            ),
+        [ceremonyHistoryRows],
+    );
 
     const filteredCeremonyHistoryRows = useMemo(() => {
-        if (!dateHistoryNeedle) {
-            return ceremonyHistoryRows;
-        }
-
         return ceremonyHistoryRows.filter((row) =>
-            [
-                row.reference,
-                row.memberName,
-                row.fianceName,
-                row.witnesses,
-                formatDate(row.dateChosen),
-                formatDateTime(row.validatedAt),
-            ].some((field) =>
-                String(field || "")
-                    .toLowerCase()
-                    .includes(dateHistoryNeedle),
-            ),
+            (!dateHistoryNeedle ||
+                [
+                    row.reference,
+                    row.memberName,
+                    row.fianceName,
+                    row.witnesses,
+                    row.classeName,
+                    formatDate(row.dateChosen),
+                    formatDateTime(row.validatedAt),
+                ].some((field) =>
+                    String(field || "")
+                        .toLowerCase()
+                        .includes(dateHistoryNeedle),
+                )) &&
+            (!dateHistoryClasseNeedle ||
+                row.classeName === dateHistoryClasseNeedle) &&
+            (!dateHistoryStatutNeedle ||
+                String(row.ceremonyStatut || "") === dateHistoryStatutNeedle),
         );
-    }, [ceremonyHistoryRows, dateHistoryNeedle]);
+    }, [
+        ceremonyHistoryRows,
+        dateHistoryNeedle,
+        dateHistoryClasseNeedle,
+        dateHistoryStatutNeedle,
+    ]);
 
     const dateHistoryTotalPages = Math.max(
         1,
@@ -777,7 +855,12 @@ export default function Index({
 
     useEffect(() => {
         setDateHistoryPage(1);
-    }, [dateHistoryNeedle, ceremonyHistoryRows.length]);
+    }, [
+        dateHistoryNeedle,
+        dateHistoryClasseNeedle,
+        dateHistoryStatutNeedle,
+        ceremonyHistoryRows.length,
+    ]);
 
     useEffect(() => {
         if (dateHistoryPage > dateHistoryTotalPages) {
@@ -830,6 +913,25 @@ export default function Index({
             );
         }
 
+        const histNeedle = historiqueSearchTerm.trim().toLowerCase();
+        if (histNeedle) {
+            result = result.filter((a) =>
+                [
+                    a.type_acte,
+                    a.reference,
+                    a.statut,
+                    a.membre?.prenom,
+                    a.membre?.nom,
+                    a.classe?.nom,
+                    getFamilyName(a),
+                ].some((field) =>
+                    String(field || "")
+                        .toLowerCase()
+                        .includes(histNeedle),
+                ),
+            );
+        }
+
         return result;
     }, [
         historiqueList,
@@ -837,6 +939,7 @@ export default function Index({
         selectedFamily,
         selectedClasse,
         searchNeedle,
+        historiqueSearchTerm,
     ]);
     const annFiltered = useMemo(() => {
         let result = [...annonces];
@@ -1471,16 +1574,30 @@ export default function Index({
             notify("Sélectionnez un type et un membre.");
             return;
         }
+        if (!createForm.date_souhaitee) {
+            notify("La date souhaitée est requise.");
+            return;
+        }
+        for (const field of requiredActeFields) {
+            if (!String(createForm.details?.[field] || "").trim()) {
+                notify(`Le champ "${ACTE_DETAIL_LABELS[field] || field}" est requis.`);
+                return;
+            }
+        }
         try {
             setProcessing(true);
             const member = familyMembers.find(
                 (m) => String(m.id) === String(createForm.membre_id),
             );
             const payload = {
-                ...createForm,
+                type_acte: createForm.type_acte,
                 membre_id: Number(createForm.membre_id),
                 classe_id: member?.classe_id || null,
-                details: {},
+                date_souhaitee: createForm.date_souhaitee,
+                details: {
+                    message: createForm.message,
+                    ...createForm.details,
+                },
             };
             const res = await axios.post(
                 withBasePath("", "/pasteur/liturgie"),
@@ -1496,6 +1613,7 @@ export default function Index({
                     },
                     ...prev,
                 ]);
+            setCreateForm({ type_acte: "", membre_id: familyMembers[0]?.id || "", date_souhaitee: "", message: "", details: {} });
             notify("Acte créé et validé.");
             closeModal();
         } catch (error) {
@@ -1626,7 +1744,7 @@ export default function Index({
                 );
                 setAnnoncesHistorique((prev) => [validatedAnnonce, ...prev]);
                 closeAnnModal();
-                notify("Annonce validée et publiée.");
+                notify("Demande de prière validée et publiée.");
                 return;
             }
 
@@ -1645,7 +1763,7 @@ export default function Index({
                     ),
                 );
                 closeAnnModal();
-                notify("Annonce publiée avec succès.");
+                notify("Demande de prière publiée avec succès.");
                 return;
             }
 
@@ -1661,7 +1779,7 @@ export default function Index({
                 );
                 setAnnoncesHistorique((prev) => [refusedAnnonce, ...prev]);
                 closeAnnModal();
-                notify("Annonce refusée.");
+                notify("Demande de prière refusée.");
                 return;
             }
 
@@ -1712,7 +1830,11 @@ export default function Index({
             setAnnonces((prev) => [newA, ...prev]);
             closeAnnModal();
             setActiveTab("annonces");
-            notify("✅ Annonce créée avec succès.");
+            setQuickFilter("all");
+            setSelectedFamily("all");
+            setSelectedClasse("all");
+            setSearchTerm("");
+            notify("✅ Demande de prière créée avec succès.");
         } catch (e) {
             notify(e?.response?.data?.message || "Une erreur est survenue.");
         } finally {
@@ -1729,7 +1851,7 @@ export default function Index({
 
     const bulkApproveAnn = async () => {
         if (!selectedAnnIds.length) {
-            notify("Sélectionnez au moins une annonce.");
+            notify("Sélectionnez au moins une demande de prière.");
             return;
         }
         try {
@@ -1755,7 +1877,7 @@ export default function Index({
                 ...prev,
             ]);
             clearAnnSelection();
-            notify("Annonces validées et publiées.");
+            notify("Demandes de prière validées et publiées.");
         } catch (error) {
             notify(
                 error?.response?.data?.message || "Une erreur est survenue.",
@@ -1767,7 +1889,7 @@ export default function Index({
 
     const bulkRefuseAnn = async () => {
         if (!selectedAnnIds.length) {
-            notify("Sélectionnez au moins une annonce.");
+            notify("Sélectionnez au moins une demande de prière.");
             return;
         }
         const motif = window.prompt("Motif du refus (obligatoire) :");
@@ -1881,8 +2003,8 @@ export default function Index({
                                         Validation & Gouvernance
                                     </h1>
                                     <div className="hero-subtitle">
-                                        Actes liturgiques · Annonces
-                                        paroissiales · Supervision communautaire
+                                        Actes liturgiques · Demandes de prière
+                                        · Supervision communautaire
                                     </div>
                                 </div>
                                 <div className="hero-stats-row">
@@ -1900,7 +2022,7 @@ export default function Index({
                                             {annStats.pending}
                                         </span>
                                         <span className="hero-stat-l">
-                                            Annonces en attente
+                                            Demandes de prière en attente
                                         </span>
                                     </div>
                                     <div className="hero-stat-sep" />
@@ -1920,6 +2042,10 @@ export default function Index({
                                     className="btn-hero-annonce"
                                     onClick={() => {
                                         setActiveTab("annonces");
+                                        setQuickFilter("all");
+                                        setSelectedFamily("all");
+                                        setSelectedClasse("all");
+                                        setSearchTerm("");
                                         openAnnModal("create");
                                     }}
                                 >
@@ -1937,7 +2063,7 @@ export default function Index({
                                             d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
                                         />
                                     </svg>
-                                    Nouvelle annonce
+                                    Nouvelle demande de prière
                                 </button>
                                 <button
                                     className="btn-hero-acte"
@@ -2120,11 +2246,11 @@ export default function Index({
                                 <span className="kpi-badge kpi-badge-ann">
                                     {annStats.pending > 0
                                         ? `${annStats.pending} en attente`
-                                        : "Annonces"}
+                                        : "Demandes de prière"}
                                 </span>
                             </div>
                             <div className="kpi-number">{annStats.total}</div>
-                            <div className="kpi-label">Annonces reçues</div>
+                            <div className="kpi-label">Demandes de prière reçues</div>
                             <div className="kpi-progress">
                                 <div
                                     className="kpi-progress-fill ann"
@@ -2268,8 +2394,26 @@ export default function Index({
                                 )}
                             </button>
                             <button
+                                className={`ptab ${activeTab === "mes_demandes" ? "active" : ""}`}
+                                onClick={() => setActiveTab("mes_demandes")}
+                            >
+                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                                Mes demandes
+                                {mesDemandes.length > 0 && (
+                                    <span className="ptab-badge">{mesDemandes.length}</span>
+                                )}
+                            </button>
+                            <button
                                 className={`ptab ptab-ann ${activeTab === "annonces" ? "active" : ""}`}
-                                onClick={() => setActiveTab("annonces")}
+                                onClick={() => {
+                                    setActiveTab("annonces");
+                                    setQuickFilter("all");
+                                    setSelectedFamily("all");
+                                    setSelectedClasse("all");
+                                    setSearchTerm("");
+                                }}
                             >
                                 <svg
                                     width="13"
@@ -2285,7 +2429,7 @@ export default function Index({
                                         d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
                                     />
                                 </svg>
-                                Annonces paroissiales
+                                Demandes de prière
                                 {annStats.pending > 0 && (
                                     <span className="ptab-badge ptab-badge-ann">
                                         {annStats.pending}
@@ -2322,7 +2466,7 @@ export default function Index({
                                 </optgroup>
                                 <optgroup label="Mes contenus">
                                     <option value="mes_annonces">
-                                        📣 Mes annonces
+                                        🙏 Mes demandes de prière
                                     </option>
                                     <option value="mes_demandes">
                                         📋 Mes demandes
@@ -3021,6 +3165,54 @@ export default function Index({
                                         </>
                                     )}
                                 </div>
+                                {historiqueList.length > 0 && (
+                                    <div style={{ padding: "10px 16px 4px" }}>
+                                        <div style={{ position: "relative" }}>
+                                            <svg
+                                                width="15"
+                                                height="15"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                style={{
+                                                    position: "absolute",
+                                                    left: "10px",
+                                                    top: "50%",
+                                                    transform: "translateY(-50%)",
+                                                    color: "#9ca3af",
+                                                    pointerEvents: "none",
+                                                }}
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M21 21l-4.35-4.35M17 11A6 6 0 111 11a6 6 0 0116 0z"
+                                                />
+                                            </svg>
+                                            <input
+                                                type="search"
+                                                placeholder="Rechercher dans l'historique (nom, type, référence…)"
+                                                value={historiqueSearchTerm}
+                                                onChange={(e) => {
+                                                    setHistoriqueSearchTerm(e.target.value);
+                                                    setHistoryPage(1);
+                                                }}
+                                                style={{
+                                                    width: "100%",
+                                                    padding: "7px 12px 7px 32px",
+                                                    border: "1px solid #e5e7eb",
+                                                    borderRadius: "7px",
+                                                    fontSize: "13px",
+                                                    outline: "none",
+                                                    background: "#f9fafb",
+                                                    color: "#374151",
+                                                    boxSizing: "border-box",
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                                 {historiqueList.length === 0 && (
                                     <div className="empty-state">
                                         <svg
@@ -3040,6 +3232,25 @@ export default function Index({
                                         <span>
                                             Aucun acte traité pour le moment
                                         </span>
+                                    </div>
+                                )}
+                                {historiqueList.length > 0 && filteredHistorique.length === 0 && (
+                                    <div className="empty-state">
+                                        <svg
+                                            width="36"
+                                            height="36"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            strokeWidth="1"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M21 21l-4.35-4.35M17 11A6 6 0 111 11a6 6 0 0116 0z"
+                                            />
+                                        </svg>
+                                        <span>Aucun résultat pour cette recherche.</span>
                                     </div>
                                 )}
                                 {pagedHistorique.map((item) => (
@@ -3532,13 +3743,71 @@ export default function Index({
                                                     )
                                                 }
                                             />
-                                            {dateHistorySearch && (
+                                            <select
+                                                className="quick-dropdown date-history-filter"
+                                                value={dateHistoryClasseFilter}
+                                                onChange={(e) =>
+                                                    setDateHistoryClasseFilter(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                            >
+                                                <option value="">
+                                                    Toutes les classes
+                                                </option>
+                                                {dateHistoryClasses.map(
+                                                    (classeName) => (
+                                                        <option
+                                                            key={classeName}
+                                                            value={classeName}
+                                                        >
+                                                            {classeName}
+                                                        </option>
+                                                    ),
+                                                )}
+                                            </select>
+                                            <select
+                                                className="quick-dropdown date-history-filter"
+                                                value={dateHistoryStatutFilter}
+                                                onChange={(e) =>
+                                                    setDateHistoryStatutFilter(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                            >
+                                                <option value="">
+                                                    Tous les statuts
+                                                </option>
+                                                {dateHistoryStatuts.map(
+                                                    (statut) => (
+                                                        <option
+                                                            key={statut}
+                                                            value={statut}
+                                                        >
+                                                            {ceremonyStatusLabel(
+                                                                statut,
+                                                            )}
+                                                        </option>
+                                                    ),
+                                                )}
+                                            </select>
+                                            {(dateHistorySearch ||
+                                                dateHistoryClasseFilter ||
+                                                dateHistoryStatutFilter) && (
                                                 <button
                                                     type="button"
                                                     className="btn-mini date-history-clear"
-                                                    onClick={() =>
-                                                        setDateHistorySearch("")
-                                                    }
+                                                    onClick={() => {
+                                                        setDateHistorySearch(
+                                                            "",
+                                                        );
+                                                        setDateHistoryClasseFilter(
+                                                            "",
+                                                        );
+                                                        setDateHistoryStatutFilter(
+                                                            "",
+                                                        );
+                                                    }}
                                                 >
                                                     Effacer
                                                 </button>
@@ -3786,7 +4055,7 @@ export default function Index({
                                                     d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
                                                 />
                                             </svg>
-                                            Annonces en attente de validation
+                                            Demandes de prière en attente de validation
                                         </div>
                                         <div className="panel-sub">
                                             Transmises par les conducteurs —
@@ -3817,7 +4086,7 @@ export default function Index({
                                                     d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
                                                 />
                                             </svg>
-                                            Nouvelle annonce
+                                            Nouvelle demande de prière
                                         </button>
                                         <button
                                             type="button"
@@ -3882,7 +4151,7 @@ export default function Index({
                                             />
                                         </svg>
                                         <span>
-                                            Aucune annonce en attente de
+                                            Aucune demande de prière en attente de
                                             validation
                                         </span>
                                         <button
@@ -3893,7 +4162,7 @@ export default function Index({
                                                 openAnnModal("create")
                                             }
                                         >
-                                            Créer la première annonce
+                                            Créer la première demande de prière
                                         </button>
                                     </div>
                                 )}
@@ -3973,6 +4242,13 @@ export default function Index({
                                                             <span>
                                                                 👥{" "}
                                                                 {ann.classe.nom}
+                                                            </span>
+                                                        )}
+                                                        {ann.conducteur && (
+                                                            <span>
+                                                                ✅ Validé par{" "}
+                                                                {ann.conducteur.prenom}{" "}
+                                                                {ann.conducteur.nom}
                                                             </span>
                                                         )}
                                                     </div>
@@ -4203,7 +4479,7 @@ export default function Index({
                                             />
                                         </svg>
                                         <span>
-                                            Aucune annonce traitée pour le
+                                            Aucune demande de prière traitée pour le
                                             moment
                                         </span>
                                     </div>
@@ -4789,7 +5065,8 @@ export default function Index({
                             <DetailRow
                                 label="Date choisie"
                                 value={formatDate(
-                                    activeActe.details?.date_souhaitee,
+                                    activeActe.details?.date_souhaitee ||
+                                        activeActe.date_souhaitee,
                                 )}
                             />
                             <DetailRow
@@ -4909,73 +5186,97 @@ export default function Index({
                             </button>
                         </div>
                         <div className="modal-body">
-                            <div className="modal-field">
-                                <label className="modal-label">
-                                    Type d'acte
-                                </label>
-                                <select
-                                    className="modal-select"
-                                    value={createForm.type_acte}
-                                    onChange={(e) =>
-                                        setCreateForm((prev) => ({
-                                            ...prev,
-                                            type_acte: e.target.value,
-                                        }))
-                                    }
-                                >
-                                    <option value="">Sélectionner</option>
-                                    <option value="bapteme">Baptême</option>
-                                    <option value="mariage">Mariage</option>
-                                    <option value="naissance">Naissance</option>
-                                    <option value="deces">Décès</option>
-                                    <option value="premiere_communion">
-                                        Première communion
-                                    </option>
-                                    <option value="confirmation">
-                                        Confirmation
-                                    </option>
-                                </select>
-                            </div>
-                            <div className="modal-field">
-                                <label className="modal-label">
-                                    Membre concerné
-                                </label>
-                                <select
-                                    className="modal-select"
-                                    value={createForm.membre_id}
-                                    onChange={(e) =>
-                                        setCreateForm((prev) => ({
-                                            ...prev,
-                                            membre_id: e.target.value,
-                                        }))
-                                    }
-                                >
-                                    <option value="">Sélectionner</option>
-                                    {familyMembers.map((m) => (
-                                        <option key={m.id} value={m.id}>
-                                            {m.prenom || ""} {m.nom || ""}
-                                        </option>
+                            <div className="acte-form-root">
+                                <div className="acte-form">
+                                    <Field label="Type d'acte" required>
+                                        <select
+                                            className="modal-input"
+                                            value={createForm.type_acte}
+                                            onChange={(e) =>
+                                                setCreateForm((prev) => ({
+                                                    ...prev,
+                                                    type_acte: e.target.value,
+                                                    details: {},
+                                                }))
+                                            }
+                                        >
+                                            <option value="">— Sélectionner —</option>
+                                            {ACTE_TYPES.map((type) => (
+                                                <option key={type.value} value={type.value}>
+                                                    {type.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </Field>
+                                    <Field label="Membre concerné" required>
+                                        <select
+                                            className="modal-input"
+                                            value={createForm.membre_id}
+                                            onChange={(e) =>
+                                                setCreateForm((prev) => ({
+                                                    ...prev,
+                                                    membre_id: e.target.value,
+                                                }))
+                                            }
+                                        >
+                                            <option value="">— Sélectionner un membre —</option>
+                                            {familyMembers.map((m) => (
+                                                <option key={m.id} value={m.id}>
+                                                    {m.prenom || ""} {m.nom || ""}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </Field>
+                                    <Field label="Date souhaitée" required>
+                                        <input
+                                            type="date"
+                                            className="modal-input"
+                                            value={createForm.date_souhaitee}
+                                            onChange={(e) =>
+                                                setCreateForm((prev) => ({
+                                                    ...prev,
+                                                    date_souhaitee: e.target.value,
+                                                }))
+                                            }
+                                        />
+                                    </Field>
+                                    <Field label="Note / contexte">
+                                        <textarea
+                                            className="modal-textarea"
+                                            rows={3}
+                                            placeholder="Ajoutez un contexte ou des précisions..."
+                                            value={createForm.message}
+                                            onChange={(e) =>
+                                                setCreateForm((prev) => ({
+                                                    ...prev,
+                                                    message: e.target.value,
+                                                }))
+                                            }
+                                        />
+                                    </Field>
+                                    {requiredActeFields.map((field) => (
+                                        <Field
+                                            key={field}
+                                            label={ACTE_DETAIL_LABELS[field] || field}
+                                            required
+                                        >
+                                            <input
+                                                className="modal-input"
+                                                type={ACTE_DETAIL_INPUT_TYPES[field] || "text"}
+                                                value={createForm.details?.[field] || ""}
+                                                onChange={(e) =>
+                                                    setCreateForm((prev) => ({
+                                                        ...prev,
+                                                        details: {
+                                                            ...(prev.details || {}),
+                                                            [field]: e.target.value,
+                                                        },
+                                                    }))
+                                                }
+                                            />
+                                        </Field>
                                     ))}
-                                </select>
-                            </div>
-                            <div className="modal-field">
-                                <label className="modal-label">
-                                    Date souhaitée{" "}
-                                    <span className="modal-optional">
-                                        (optionnel)
-                                    </span>
-                                </label>
-                                <input
-                                    type="date"
-                                    className="modal-input"
-                                    value={createForm.date_souhaitee}
-                                    onChange={(e) =>
-                                        setCreateForm((prev) => ({
-                                            ...prev,
-                                            date_souhaitee: e.target.value,
-                                        }))
-                                    }
-                                />
+                                </div>
                             </div>
                         </div>
                         <div className="modal-foot">
@@ -5715,6 +6016,85 @@ export default function Index({
                 </div>
             )}
 
+                    {/* ════════════════ TAB MES DEMANDES ════════════════ */}
+                    {activeTab === "mes_demandes" && (
+                        <div className="panel layout-full">
+                            <div className="panel-head">
+                                <div className="panel-title">Mes demandes d'actes liturgiques</div>
+                                <div className="panel-sub">Actes que vous avez soumis pour les membres de votre famille</div>
+                            </div>
+                            {mesDemandes.length === 0 ? (
+                                <div style={{ textAlign: "center", padding: "48px 0", color: "#aaa" }}>
+                                    <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" style={{ margin: "0 auto 12px", display: "block", opacity: 0.4 }}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
+                                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Aucune demande</div>
+                                    <div style={{ fontSize: 12 }}>Vous n'avez pas encore soumis de demande d'acte liturgique.</div>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                                        <thead>
+                                            <tr style={{ borderBottom: "2px solid #e8e8f0" }}>
+                                                {["Référence", "Type", "Membre", "Classe", "Date souhaitée", "Soumis le", "Statut", "Télécharger"].map(h => (
+                                                    <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700, color: "#1e2070", whiteSpace: "nowrap" }}>{h}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {mesDemandes.map((d, i) => {
+                                                const statutColors = {
+                                                    SOUMISE: ["#dbeafe","#1d4ed8"],
+                                                    EN_ATTENTE_CONDUCTEUR: ["#fef3c7","#b45309"],
+                                                    TRANSMISE_AU_PASTEUR: ["#e0e7ff","#4338ca"],
+                                                    VALIDEE: ["#dcfce7","#15803d"],
+                                                    CELEBRE: ["#d1fae5","#065f46"],
+                                                    TERMINE: ["#f0fdf4","#166534"],
+                                                    REFUSEE_PAR_CONDUCTEUR: ["#fee2e2","#dc2626"],
+                                                    REFUSEE_PAR_PASTEUR: ["#fee2e2","#dc2626"],
+                                                };
+                                                const [bg, color] = statutColors[d.statut] || ["#f3f4f6","#374151"];
+                                                const typeLabels = { bapteme:"Baptême", mariage:"Mariage", naissance:"Naissance", deces:"Décès", premiere_communion:"1re Communion", confirmation:"Confirmation", bapteme_premiere_communion:"Baptême + 1re Communion" };
+                                                return (
+                                                    <tr key={d.id} style={{ borderBottom: "1px solid #f0f0f8", background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+                                                        <td style={{ padding: "10px 14px", fontFamily: "monospace", color: "#666", fontSize: 11 }}>{d.reference || "-"}</td>
+                                                        <td style={{ padding: "10px 14px", fontWeight: 600, color: "#1e2070" }}>{typeLabels[d.type_acte] || d.type_acte}</td>
+                                                        <td style={{ padding: "10px 14px" }}>{d.membre ? `${d.membre.prenom} ${d.membre.nom}` : "-"}</td>
+                                                        <td style={{ padding: "10px 14px", color: "#666" }}>{d.classe?.nom || "-"}</td>
+                                                        <td style={{ padding: "10px 14px", color: "#666" }}>{d.date_souhaitee || "-"}</td>
+                                                        <td style={{ padding: "10px 14px", color: "#999", fontSize: 12 }}>{d.created_at}</td>
+                                                        <td style={{ padding: "10px 14px" }}>
+                                                            <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, background: bg, color }}>
+                                                                {d.statut?.replace(/_/g, " ")}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ padding: "10px 14px" }}>
+                                                            {d.can_download ? (
+                                                                <a
+                                                                    href={`/pasteur/liturgie/${d.id}/fiche`}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8, background: "#1e2070", color: "#fff", fontSize: 12, fontWeight: 600, textDecoration: "none" }}
+                                                                >
+                                                                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                                    </svg>
+                                                                    PDF
+                                                                </a>
+                                                            ) : (
+                                                                <span style={{ fontSize: 11, color: "#bbb", fontStyle: "italic" }}>Non disponible</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
             {/* ══════════════════════════════════════════════════
                 MODALS ANNONCES — VALIDATION
             ══════════════════════════════════════════════════ */}
@@ -5800,6 +6180,14 @@ export default function Index({
                             <DetailRow
                                 label="Classe"
                                 value={activeAnnonce.classe?.nom || "—"}
+                            />
+                            <DetailRow
+                                label="Validé par (conducteur)"
+                                value={
+                                    activeAnnonce.conducteur
+                                        ? `${activeAnnonce.conducteur.prenom} ${activeAnnonce.conducteur.nom}`
+                                        : "—"
+                                }
                             />
                             <DetailRow
                                 label="Soumise le"
@@ -5892,9 +6280,9 @@ export default function Index({
                             <div>
                                 <div className="modal-title">
                                     {annonceStep === 1 &&
-                                        "✦ Nouvelle annonce pastorale"}
+                                        "✦ Nouvelle demande de prière pastorale"}
                                     {annonceStep === 2 &&
-                                        `${selectedType?.emoji || "📢"} ${selectedType?.label || "Annonce"}`}
+                                        `${selectedType?.emoji || "🙏"} ${selectedType?.label || "Demande de prière"}`}
                                     {annonceStep === 3 &&
                                         "✓ Confirmation avant soumission"}
                                 </div>
@@ -6441,7 +6829,7 @@ export default function Index({
                                         d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                                     />
                                 </svg>
-                                Cette action valide d'abord l'annonce. La
+                                Cette action valide d'abord la demande de prière. La
                                 publication sera choisie juste après.
                             </p>
                             <div className="modal-field">

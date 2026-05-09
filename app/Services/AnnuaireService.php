@@ -105,7 +105,7 @@ class AnnuaireService
     {
         $query = $this->buildUsersQuery($roleScope, $filters);
         $perPage = $filters['perPage'] ?? 10;
-        $paginator = $query->paginate($perPage);
+        $paginator = $query->paginate($perPage)->withQueryString();
 
         $members = collect($paginator->items())->map(function ($user) {
             return $this->formatMemberForComponent($user);
@@ -126,18 +126,51 @@ class AnnuaireService
     protected function getFamiliesPaginated(Request $request, string $roleScope, array $filters, int $perPage): array
     {
         $query = Family::query()
-            ->select(['id', 'nom', 'code_famille'])
+            ->select(['id', 'nom', 'code_famille', 'responsable_id'])
             ->with([
-                'users' => function ($q) use ($roleScope, $filters) {
-                    $q->select('id', 'prenom', 'nom', 'telephone', 'profile_photo_url', 'photo_path', 'classe_id', 'family_id')
+                'users' => function ($q) use ($filters) {
+                    $q->select('id', 'prenom', 'nom', 'telephone', 'profile_photo_url', 'photo_path', 'classe_id', 'family_id', 'role')
                         ->with(['classe:id,nom']);
-                    $this->applyUserFilters($q, $filters, $roleScope);
+                    // Appliquer uniquement les filtres texte (search/profession/role), pas la restriction de classe
+                    if (!empty($filters['search'])) {
+                        $search = $filters['search'];
+                        $q->where(fn($s) => $s
+                            ->where('nom', 'like', "%{$search}%")
+                            ->orWhere('prenom', 'like', "%{$search}%")
+                            ->orWhere('telephone', 'like', "%{$search}%")
+                        );
+                    }
+                    if (!empty($filters['role'])) {
+                        $q->where('role', $filters['role']);
+                    }
                 },
+                'responsable:id,prenom,nom,telephone,profile_photo_url,photo_path,classe_id,family_id,role',
             ])
             ->orderBy('nom');
 
         if (!empty($filters['famille'])) {
             $query->where('id', $filters['famille']);
+        }
+
+        // Restriction conducteur : uniquement les familles ayant au moins un membre de ses classes
+        if ($roleScope === 'conducteur' && Auth::id()) {
+            $authUser = Auth::user();
+            $classeIds = [];
+            if ($authUser?->classe_id) {
+                $classeIds[] = $authUser->classe_id;
+            }
+            if ($authUser?->identifier) {
+                $conductedClassIds = Classe::where('conducteur', $authUser->identifier)->pluck('id')->toArray();
+                $classeIds = array_merge($classeIds, $conductedClassIds);
+            }
+            $classeIds = array_filter(array_unique($classeIds));
+            if (!empty($classeIds)) {
+                $query->whereHas('users', function ($q) use ($classeIds) {
+                    $q->whereIn('classe_id', $classeIds);
+                });
+            } else {
+                $query->where('id', 0);
+            }
         }
 
         // Restriction pour responsable_famille et membre_famille : uniquement les familles ayant au moins un membre de la classe de l'utilisateur
@@ -174,25 +207,34 @@ class AnnuaireService
             });
         }
 
-        $paginator = $query->paginate($perPage);
+        $paginator = $query->paginate($perPage)->withQueryString();
 
         $families = collect($paginator->items())->map(function (Family $family) {
-            $members = $family->users
-                ->map(function ($user) {
-                    return [
-                        'id' => $user->id,
-                        'prenoms' => $user->prenom,
-                        'nom' => $user->nom,
-                        'telephone' => $user->telephone,
-                        'photo' => PhotoHelper::getPhotoUrl(
-                            $user->photo_path,
-                            $user->prenom,
-                            $user->nom
-                        ),
-                        'classeMethodiste' => $user->classe?->nom,
-                    ];
-                })
-                ->values();
+            $formatUser = fn($user) => [
+                'id' => $user->id,
+                'prenoms' => $user->prenom,
+                'nom' => $user->nom,
+                'telephone' => $user->telephone,
+                'photo' => PhotoHelper::getPhotoUrl(
+                    $user->photo_path,
+                    $user->prenom,
+                    $user->nom
+                ),
+                'classeMethodiste' => $user->classe?->nom,
+                'is_responsable' => $user->role === 'responsable_famille',
+            ];
+
+            $members = $family->users->map($formatUser);
+
+            // S'assurer que le responsable figure toujours dans la liste
+            if ($family->responsable_id && !$members->contains('id', $family->responsable_id)) {
+                $resp = $family->responsable;
+                if ($resp) {
+                    $members = $members->prepend($formatUser($resp));
+                }
+            }
+
+            $members = $members->unique('id')->values();
 
             return [
                 'id' => $family->id,
@@ -271,7 +313,7 @@ class AnnuaireService
             });
         }
 
-        $paginator = $query->paginate($perPage);
+        $paginator = $query->paginate($perPage)->withQueryString();
 
         $classes = collect($paginator->items())->map(function (Classe $classe) {
             $members = $classe->users->map(function ($user) {

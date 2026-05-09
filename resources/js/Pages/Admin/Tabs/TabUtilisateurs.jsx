@@ -620,6 +620,35 @@ const MemberDetailsModal = ({ isOpen, onClose, member }) => {
                                 label="Quartier"
                                 value={displayValue(member.quartier)}
                             />
+                            <InfoItem
+                                label="Lieu de naissance"
+                                value={displayValue(member.lieu_naissance)}
+                            />
+                            <InfoItem
+                                label="N° CNI"
+                                value={displayValue(member.numero_cni)}
+                            />
+                            <InfoItem
+                                label="Hors communauté"
+                                value={member.hors_communaute ? "Oui" : "Non"}
+                            />
+                            <InfoItem
+                                label="Retrait"
+                                value={member.retrait ? "Oui" : "Non"}
+                            />
+                            {member.retrait && (
+                                <>
+                                    <InfoItem
+                                        label="Date de retrait"
+                                        value={formatDate(member.date_retrait)}
+                                    />
+                                    <InfoItem
+                                        label="Commentaire retrait"
+                                        value={displayValue(member.commentaire_retrait)}
+                                        className="md:col-span-2"
+                                    />
+                                </>
+                            )}
                         </div>
                     </DetailCard>
 
@@ -1932,63 +1961,60 @@ const EditMemberModal = ({ isOpen, onClose, memberData, onUpdate }) => {
 // ------------------------------------------------------------------
 // Composant Pagination
 // ------------------------------------------------------------------
-const Pagination = ({ currentPage, totalPages, paginate }) => {
-    const pageNumbers = [];
-    for (let i = 1; i <= totalPages; i++) {
-        pageNumbers.push(i);
-    }
+const Pagination = ({ currentPage, totalPages, paginate, totalItems, itemsPerPage }) => {
+    const getPages = () => {
+        const pages = [];
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+            return pages;
+        }
+        pages.push(1);
+        if (currentPage > 3) pages.push('...');
+        for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+            pages.push(i);
+        }
+        if (currentPage < totalPages - 2) pages.push('...');
+        pages.push(totalPages);
+        return pages;
+    };
+
+    const from = (currentPage - 1) * itemsPerPage + 1;
+    const to   = Math.min(currentPage * itemsPerPage, totalItems);
 
     return (
-        <div className="pagination">
-            <button
-                onClick={() => paginate(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="page-btn"
-            >
-                <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 19l-7-7 7-7"
-                    />
-                </svg>
-            </button>
-
-            {pageNumbers.map((number) => (
+        <div className="flex flex-col items-center gap-3 pt-3 pb-1">
+            <p className="text-sm text-gray-500">
+                Affichage <span className="font-semibold text-gray-700">{from}–{to}</span> sur <span className="font-semibold text-gray-700">{totalItems}</span> membres
+            </p>
+            <div className="flex items-center gap-1">
                 <button
-                    key={number}
-                    onClick={() => paginate(number)}
-                    className={`page-btn ${currentPage === number ? "active" : ""}`}
+                    onClick={() => paginate(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="page-btn"
+                    title="Page précédente"
                 >
-                    {number}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
                 </button>
-            ))}
 
-            <button
-                onClick={() => paginate(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="page-btn"
-            >
-                <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                {getPages().map((page, idx) =>
+                    page === '...'
+                        ? <span key={`ellipsis-${idx}`} className="w-9 h-9 flex items-center justify-center text-gray-400 font-bold text-lg select-none">…</span>
+                        : <button key={page} onClick={() => paginate(page)} className={`page-btn ${currentPage === page ? "active" : ""}`}>{page}</button>
+                )}
+
+                <button
+                    onClick={() => paginate(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="page-btn"
+                    title="Page suivante"
                 >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                    />
-                </svg>
-            </button>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
         </div>
     );
 };
@@ -2708,15 +2734,20 @@ const TabUtilisateurs = ({
                                         "Fonction",
                                         "Baptisé",
                                         "1ère Communion",
-                                        "Marié Civil",
-                                        "Marié Religieux",
-                                        "Doté",
-                                        "Veuf",
+                                        "Statut Matrimonial",
                                         "Date création",
                                         "Date modification",
                                         "Classe",
                                         "Famille",
+                                        "Date Naiss.",
                                         "Relation",
+                                        "Profession",
+                                        "Statut Emploi",
+                                        "Lieu Naiss.",
+                                        "N° CNI",
+                                        "Hors Comm.",
+                                        "Retrait",
+                                        "Date Retrait",
                                         "Statut",
                                         "Actions",
                                     ].map((h) => (
@@ -2738,7 +2769,7 @@ const TabUtilisateurs = ({
                                     currentItems.map((m, idx) => (
                                         <tr
                                             key={m.id}
-                                            className={`transition-all duration-200 ${m.transfer_status === 'completed' ? 'bg-[#eef2f7] text-slate-500 filter grayscale pointer-events-auto' : (idx % 2 === 0 ? 'bg-white' : 'bg-[#f5f7fa] hover:bg-white/90')}`}
+                                            className={`transition-all duration-200 ${m.is_deceased ? 'bg-gray-100 text-gray-400 opacity-60' : m.transfer_status === 'completed' ? 'bg-[#eef2f7] text-slate-500 filter grayscale pointer-events-auto' : (idx % 2 === 0 ? 'bg-white' : 'bg-[#f5f7fa] hover:bg-white/90')}`}
                                         >
                                             <td className="px-3 py-3 text-sm font-semibold text-gray-900 text-center whitespace-nowrap">
                                                 {idx + 1}
@@ -2776,7 +2807,12 @@ const TabUtilisateurs = ({
                                             <td className="px-3 py-3 text-sm text-gray-700 text-center whitespace-nowrap font-semibold">
                                                 <div className="flex flex-col items-center">
                                                     <div className="font-mono text-sm">{m.code_membre || "-"}</div>
-                                                    {m.transfer_status === 'completed' && (
+                                                    {m.is_deceased && (
+                                                        <span className="mt-1 inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-gray-300 text-gray-600 border border-gray-400">
+                                                            ✝ Décédé
+                                                        </span>
+                                                    )}
+                                                    {!m.is_deceased && m.transfer_status === 'completed' && (
                                                         <span className="mt-1 inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-slate-200 text-slate-700 border border-slate-300">
                                                             Ancien membre
                                                         </span>
@@ -2812,70 +2848,31 @@ const TabUtilisateurs = ({
                                             </td>
                                             <td className="px-3 py-3 text-sm text-center whitespace-nowrap">
                                                 {m.baptise ? (
-                                                    <span className="text-green-600 font-bold">
-                                                        Oui
-                                                    </span>
+                                                    <span className="text-green-600 font-bold">Oui</span>
                                                 ) : (
-                                                    <span className="text-gray-400">
-                                                        Non
-                                                    </span>
+                                                    <span className="text-gray-400">Non</span>
                                                 )}
                                             </td>
                                             <td className="px-3 py-3 text-sm text-center whitespace-nowrap">
                                                 {m.premiere_communion ? (
-                                                    <span className="text-green-600 font-bold">
-                                                        Oui
-                                                    </span>
+                                                    <span className="text-green-600 font-bold">Oui</span>
                                                 ) : (
-                                                    <span className="text-gray-400">
-                                                        Non
-                                                    </span>
+                                                    <span className="text-gray-400">Non</span>
                                                 )}
                                             </td>
                                             <td className="px-3 py-3 text-sm text-center whitespace-nowrap">
-                                                {m.statut_marital ===
-                                                "Marié(e)" ? (
-                                                    <span className="text-green-600 font-bold">
-                                                        Oui
+                                                {m.statut_marital ? (
+                                                    <span className={`px-2 py-1 text-xs font-bold rounded-full border ${
+                                                        m.statut_marital === "Marié(e)" ? "bg-green-100 text-green-700 border-green-200" :
+                                                        m.statut_marital === "Célibataire" ? "bg-blue-100 text-blue-700 border-blue-200" :
+                                                        m.statut_marital === "Veuf(ve)" ? "bg-gray-100 text-gray-600 border-gray-200" :
+                                                        m.statut_marital === "Divorcé(e)" ? "bg-orange-100 text-orange-700 border-orange-200" :
+                                                        "bg-purple-100 text-purple-700 border-purple-200"
+                                                    }`}>
+                                                        {m.statut_marital}
                                                     </span>
                                                 ) : (
-                                                    <span className="text-gray-400">
-                                                        Non
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-3 py-3 text-sm text-center whitespace-nowrap">
-                                                {m.marie_religieusement ? (
-                                                    <span className="text-green-600 font-bold">
-                                                        Oui
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-gray-400">
-                                                        Non
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-3 py-3 text-sm text-center whitespace-nowrap">
-                                                {m.statut_marital === "Dote" ? (
-                                                    <span className="text-green-600 font-bold">
-                                                        Oui
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-gray-400">
-                                                        Non
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-3 py-3 text-sm text-center whitespace-nowrap">
-                                                {m.statut_marital ===
-                                                "Veuf(ve)" ? (
-                                                    <span className="text-green-600 font-bold">
-                                                        Oui
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-gray-400">
-                                                        Non
-                                                    </span>
+                                                    <span className="text-gray-400">-</span>
                                                 )}
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
@@ -2905,10 +2902,46 @@ const TabUtilisateurs = ({
                                             <td className="px-3 py-3 text-sm text-gray-700 text-center whitespace-nowrap">
                                                 {m.famille || "-"}
                                             </td>
+                                            <td className="px-3 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
+                                                {m.date_naissance || "-"}
+                                            </td>
                                             <td className="px-3 py-3 text-sm text-gray-700 text-center whitespace-nowrap">
                                                 {m.relation ||
                                                     m.lien_parente ||
                                                     "Non renseigné"}
+                                            </td>
+                                            <td className="px-3 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
+                                                {m.profession || "-"}
+                                            </td>
+                                            <td className="px-3 py-3 text-sm text-center whitespace-nowrap">
+                                                {m.employment_status === "TRAVAILLEUR" && <span className="px-2 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-700 border border-blue-200">Travailleur</span>}
+                                                {m.employment_status === "ETUDIANT" && <span className="px-2 py-1 text-xs font-bold rounded-full bg-purple-100 text-purple-700 border border-purple-200">Étudiant</span>}
+                                                {m.employment_status === "RETRAITE" && <span className="px-2 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-700 border border-orange-200">Retraité</span>}
+                                                {m.employment_status === "SANS_EMPLOI" && <span className="px-2 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-600 border border-gray-200">Sans emploi</span>}
+                                                {!m.employment_status && <span className="text-gray-400">-</span>}
+                                            </td>
+                                            <td className="px-3 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
+                                                {m.lieu_naissance || "-"}
+                                            </td>
+                                            <td className="px-3 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
+                                                {m.numero_cni || "-"}
+                                            </td>
+                                            <td className="px-3 py-3 text-sm text-center whitespace-nowrap">
+                                                {m.hors_communaute ? (
+                                                    <span className="px-2 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-700 border border-orange-200">Oui</span>
+                                                ) : (
+                                                    <span className="text-gray-400">Non</span>
+                                                )}
+                                            </td>
+                                            <td className="px-3 py-3 text-sm text-center whitespace-nowrap">
+                                                {m.retrait ? (
+                                                    <span className="px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-700 border border-red-200">Oui</span>
+                                                ) : (
+                                                    <span className="text-gray-400">Non</span>
+                                                )}
+                                            </td>
+                                            <td className="px-3 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
+                                                {m.date_retrait || "-"}
                                             </td>
                                             <td className="px-3 py-3 text-sm text-center whitespace-nowrap">
                                                 <span
@@ -3018,6 +3051,8 @@ const TabUtilisateurs = ({
                                 currentPage={currentPage}
                                 totalPages={totalPages}
                                 paginate={setCurrentPage}
+                                totalItems={filteredMembres.length}
+                                itemsPerPage={itemsPerPage}
                             />
                         </div>
                     )}

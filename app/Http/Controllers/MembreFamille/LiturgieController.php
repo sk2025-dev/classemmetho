@@ -74,8 +74,19 @@ class LiturgieController extends Controller
 
     public function create(Request $request)
     {
+        $user = Auth::user();
+
+        $actesEnCours = ActeLiturgique::query()
+            ->where('membre_id', $user->id)
+            ->whereIn('statut', ActeLiturgique::statutsBloquantNouvelleDemande())
+            ->pluck('type_acte')
+            ->unique()
+            ->values()
+            ->toArray();
+
         return Inertia::render('ResponsableFamille/Liturgie/Selection', [
-            'basePath' => '/membre-famille/liturgie',
+            'basePath'     => '/membre-famille/liturgie',
+            'actesEnCours' => $actesEnCours,
         ]);
     }
 
@@ -196,10 +207,11 @@ class LiturgieController extends Controller
         ]);
     }
 
-    public function certificat(int $id)
+    public function certificat(Request $request, int $id)
     {
-        $user = Auth::user();
-        $acte = ActeLiturgique::with(['membre', 'classe', 'conducteur', 'pasteur'])
+        $user    = Auth::user();
+        $preview = $request->boolean('preview');
+        $acte    = ActeLiturgique::with(['membre', 'classe', 'conducteur', 'pasteur'])
             ->where(function ($query) use ($user) {
                 $query->where('created_by', $user->id)
                     ->orWhere('membre_id', $user->id);
@@ -215,19 +227,28 @@ class LiturgieController extends Controller
         }
 
         if (in_array($typeActe, $typesFiche, true)) {
-            $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
+            $logoDataUri  = $this->buildImageDataUri(public_path('images/logo.png'));
             $methoDataUri = $this->buildImageDataUri(public_path('images/metho.jpg'));
-            $view = $typeActe === 'naissance' ? 'pdf.fiche-naissance' : 'pdf.fiche-demande';
+            $view = match ($typeActe) {
+                'naissance' => 'pdf.fiche-naissance',
+                'deces'     => 'pdf.fiche-deces',
+                default     => 'pdf.fiche-demande',
+            };
+
+            $signatureConducteurDataUri = $this->buildSignatureDataUri($acte->conducteur?->signature_path);
+            $signaturePasteurDataUri    = $this->buildSignatureDataUri($acte->pasteur?->signature_path);
 
             try {
                 $pdf = Pdf::loadView($view, [
-                    'acte' => $acte,
-                    'logoDataUri' => $logoDataUri,
-                    'methoDataUri' => $methoDataUri,
+                    'acte'                      => $acte,
+                    'logoDataUri'               => $logoDataUri,
+                    'methoDataUri'              => $methoDataUri,
+                    'signatureConducteurDataUri' => $signatureConducteurDataUri,
+                    'signaturePasteurDataUri'   => $signaturePasteurDataUri,
                 ])->setPaper('a4', 'portrait');
 
                 $filename = 'fiche-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
-                return $pdf->download($filename);
+                return $this->respondWithPdf($pdf, $filename, $preview);
             } catch (\Throwable $e) {
                 Log::error('Echec generation fiche membre-famille', [
                     'acte_id' => $acte->id,
@@ -260,6 +281,9 @@ class LiturgieController extends Controller
         $signatureName = trim(($acte->pasteur->prenom ?? '') . ' ' . ($acte->pasteur->nom ?? '')) ?: null;
         $signatureRole = 'Pasteur';
 
+        $signatureConducteurDataUri = $this->buildSignatureDataUri($acte->conducteur?->signature_path);
+        $signaturePasteurDataUri    = $this->buildSignatureDataUri($acte->pasteur?->signature_path);
+
         $qrUrl = $acte->reference
             ? url('/certificat/verification/' . $acte->reference)
             : url('/certificat/verification/' . $acte->id);
@@ -279,18 +303,20 @@ class LiturgieController extends Controller
 
         try {
             $pdf = Pdf::loadView('pdf.acte-liturgique-certificat', [
-                'acte' => $acte,
-                'signaturePath' => $signaturePath,
-                'signatureName' => $signatureName,
-                'signatureRole' => $signatureRole,
-                'qrDataUri' => $qrDataUri,
-                'logoDataUri' => $logoDataUri,
-                'scanDataUri' => $scanDataUri,
+                'acte'                      => $acte,
+                'signaturePath'             => $signaturePath,
+                'signatureName'             => $signatureName,
+                'signatureRole'             => $signatureRole,
+                'signatureConducteurDataUri' => $signatureConducteurDataUri,
+                'signaturePasteurDataUri'   => $signaturePasteurDataUri,
+                'qrDataUri'                 => $qrDataUri,
+                'logoDataUri'               => $logoDataUri,
+                'scanDataUri'               => $scanDataUri,
             ])->setPaper('a4', 'landscape');
 
             $filename = 'certificat-' . ($acte->reference ?: ('acte-' . $acte->id)) . '.pdf';
 
-            return $pdf->download($filename);
+            return $this->respondWithPdf($pdf, $filename, $preview);
         } catch (\Throwable $e) {
             Log::error('Echec generation certificat membre-famille', [
                 'acte_id' => $acte->id,
@@ -341,5 +367,48 @@ class LiturgieController extends Controller
         }
 
         return 'data:image/' . $type . ';base64,' . base64_encode($data);
+    }
+
+    private function respondWithPdf($pdf, string $filename, bool $preview)
+    {
+        if (!$preview) {
+            return $pdf->download($filename);
+        }
+
+        return response($pdf->output(), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+        ]);
+    }
+
+    private function buildSignatureDataUri(?string $signaturePath): ?string
+    {
+        if (empty($signaturePath)) {
+            return null;
+        }
+
+        // Data URI directe (canvas/base64 déjà encodé)
+        if (str_starts_with($signaturePath, 'data:image/')) {
+            return $signaturePath;
+        }
+
+        $fullPath = Storage::disk('public')->exists($signaturePath)
+            ? Storage::disk('public')->path($signaturePath)
+            : null;
+
+        if (!$fullPath) {
+            return null;
+        }
+
+        $ext  = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION) ?: 'png');
+        $mime = match ($ext) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'gif'         => 'image/gif',
+            'webp'        => 'image/webp',
+            default       => 'image/png',
+        };
+
+        $raw = @file_get_contents($fullPath);
+        return $raw !== false ? 'data:' . $mime . ';base64,' . base64_encode($raw) : null;
     }
 }

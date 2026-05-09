@@ -104,8 +104,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Rollback: Renommer fonctions → church_roles
-        if (Schema::hasTable('fonctions')) {
+        // Rollback: Renommer fonctions → church_roles (seulement si church_roles n'existe pas déjà)
+        if (Schema::hasTable('fonctions') && !Schema::hasTable('church_roles')) {
             Schema::rename('fonctions', 'church_roles');
         }
 

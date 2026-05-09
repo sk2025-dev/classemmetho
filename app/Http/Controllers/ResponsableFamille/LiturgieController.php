@@ -257,6 +257,13 @@ class LiturgieController extends Controller
         $pasteurSignature = $acte->pasteur?->signature_path && Storage::disk('public')->exists($acte->pasteur->signature_path)
             ? Storage::disk('public')->path($acte->pasteur->signature_path)
             : null;
+        $conducteurSignatureDataUri = null;
+        if ($acte->conducteur?->signature_path && Storage::disk('public')->exists($acte->conducteur->signature_path)) {
+            $conducteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->conducteur->signature_path));
+        }
+        $pasteurSignatureDataUri = $pasteurSignature
+            ? $this->buildImageDataUri($pasteurSignature)
+            : null;
         $signaturePath = $pasteurSignature;
         $signatureName = trim(($acte->pasteur->prenom ?? '') . ' ' . ($acte->pasteur->nom ?? '')) ?: null;
         $signatureRole = 'Pasteur';
@@ -288,6 +295,9 @@ class LiturgieController extends Controller
                 'signaturePath' => $signaturePath,
                 'signatureName' => $signatureName,
                 'signatureRole' => $signatureRole,
+                'signaturePasteurDataUri' => $pasteurSignatureDataUri,
+                'signatureConducteurDataUri' => $conducteurSignatureDataUri,
+                'conducteurName' => trim(($acte->conducteur->prenom ?? '') . ' ' . ($acte->conducteur->nom ?? '')) ?: null,
                 'qrDataUri' => $qrDataUri,
                 'logoDataUri' => $logoDataUri,
                 'scanDataUri' => $scanDataUri,

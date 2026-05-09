@@ -344,7 +344,7 @@ export default function Inscriptions({
                                     {filteredMembers.map((member, index) => (
                                         <tr
                                             key={member.id}
-                                            className={`border-b border-gray-200 ${member.transfer_locked ? "opacity-60" : "hover:bg-gray-50"} ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
+                                            className={`border-b border-gray-200 ${member.is_deceased ? "bg-gray-100 opacity-60" : member.transfer_locked ? "opacity-60" : "hover:bg-gray-50"} ${member.is_deceased ? "" : index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
                                         >
                                             <td className="px-6 py-4 text-left text-sm font-medium text-gray-600">
                                                 #{member.id}
@@ -361,7 +361,12 @@ export default function Inscriptions({
                                                             {member.prenom}{" "}
                                                             {member.nom}
                                                         </span>
-                                                        <TransferBadge member={member} />
+                                                        {member.is_deceased && (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-300 text-gray-600 border border-gray-400">
+                                                                ✝ Décédé
+                                                            </span>
+                                                        )}
+                                                        {!member.is_deceased && <TransferBadge member={member} />}
                                                     </div>
                                                 </div>
                                             </td>

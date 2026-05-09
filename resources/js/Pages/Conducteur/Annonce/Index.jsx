@@ -32,7 +32,7 @@ export default function Index({
 
     const renderList = (list) => {
         const items = Array.isArray(list) ? list : list.data || [];
-        if (items.length === 0) return <p>Aucune annonce.</p>;
+        if (items.length === 0) return <p>Aucune demande de prière.</p>;
         return (
             <>
                 <ul className="simple-list">
@@ -59,7 +59,7 @@ export default function Index({
     return (
         <div className="conducteur-annonces-page">
             <div className="page-header">
-                <h1>Annonces</h1>
+                <h1>Demandes de prière</h1>
                 <Link
                     href={withBasePath("", "/conducteur/dashboard")}
                     className="btn-ghost"

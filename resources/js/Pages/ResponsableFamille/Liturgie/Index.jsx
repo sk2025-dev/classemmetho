@@ -31,8 +31,8 @@ const ANNONCE_TYPES = [
     },
     {
         value: "generale",
-        label: "Annonce générale",
-        emoji: "📢",
+        label: "Demande de prière générale",
+        emoji: "🙏",
         color: "sage",
     },
 ];
@@ -181,6 +181,7 @@ export default function Index({
         membre_id: "",
         message: "",
         date_annonce: "",
+        heure_culte: "",
     });
     const [annPage, setAnnPage] = useState(1);
     const [annFilter, setAnnFilter] = useState("tous");
@@ -539,7 +540,7 @@ export default function Index({
             closeAnnonce();
             setActiveTab("annonces");
             notify(
-                "✅ Annonce soumise ! Elle sera traitée par votre conducteur puis le pasteur.",
+                "✅ Demande de prière soumise ! Elle sera traitée par votre conducteur puis le pasteur.",
             );
         } catch (e) {
             notify(
@@ -723,9 +724,9 @@ export default function Index({
                     />
                     <Kpi
                         tone="violet"
-                        tag="Annonces"
+                        tag="Demandes de prière"
                         value={annStats.total}
-                        label="Annonces envoyées"
+                        label="Demandes de prière envoyées"
                         clickable
                         onClick={() => {
                             setActiveTab("annonces");
@@ -779,7 +780,7 @@ export default function Index({
                                     d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
                                 />
                             </svg>
-                            Annonces
+                            Demandes de prière
                             {annoncesEnCours > 0 && (
                                 <span className="tbadge tbadge-violet">
                                     {annoncesEnCours}
@@ -803,7 +804,7 @@ export default function Index({
                                 <option value="naissance">👶 Naissance</option>
                                 <option value="deces">🕯️ Décès</option>
                             </optgroup>
-                            <optgroup label="Annonces">
+                            <optgroup label="Demandes de prière">
                                 <option value="grace">
                                     🙌 Action de grâce
                                 </option>
@@ -814,7 +815,7 @@ export default function Index({
                                     📋 Mes demandes
                                 </option>
                                 <option value="mes_annonces">
-                                    📣 Mes annonces
+                                    🙏 Mes demandes de prière
                                 </option>
                             </optgroup>
                         </select>
@@ -1470,7 +1471,7 @@ export default function Index({
                                     className="ann-stab active"
                                     onClick={() => setAnnPage(1)}
                                 >
-                                    Mes annonces
+                                    Mes demandes de prière
                                     {annStats.total > 0 && (
                                         <span className="ann-stab-badge">
                                             {annStats.total}
@@ -1505,16 +1506,16 @@ export default function Index({
                                 <div className="panel-head">
                                     <div>
                                         <div className="ph-title">
-                                            Mes annonces
+                                            Mes demandes de prière
                                         </div>
                                         <div className="ph-sub">
                                             {annFilter === "tous"
-                                                ? "Toutes vos annonces"
+                                                ? "Toutes vos demandes de prière"
                                                 : annFilter === "en_cours"
                                                   ? "En attente de validation"
                                                   : annFilter === "validees"
-                                                    ? "Annonces publiées"
-                                                    : "Annonces refusées"}
+                                                    ? "Demandes de prière publiées"
+                                                    : "Demandes de prière refusées"}
                                         </div>
                                     </div>
                                     <button
@@ -1522,7 +1523,7 @@ export default function Index({
                                         className="ph-link"
                                         onClick={openAnnonce}
                                     >
-                                        + Nouvelle annonce
+                                        + Nouvelle demande de prière
                                     </button>
                                 </div>
 
@@ -1535,12 +1536,12 @@ export default function Index({
                                         </div>
                                         <div className="ann-empty-title">
                                             {annFilter === "tous"
-                                                ? "Aucune annonce pour le moment"
+                                                ? "Aucune demande de prière pour le moment"
                                                 : annFilter === "en_cours"
-                                                  ? "Aucune annonce en cours"
+                                                  ? "Aucune demande de prière en cours"
                                                   : annFilter === "validees"
-                                                    ? "Aucune annonce validée"
-                                                    : "Aucune annonce refusée"}
+                                                    ? "Aucune demande de prière validée"
+                                                    : "Aucune demande de prière refusée"}
                                         </div>
                                         <div className="ann-empty-sub">
                                             Partagez une prière, une action de
@@ -1557,7 +1558,7 @@ export default function Index({
                                                 }}
                                                 onClick={openAnnonce}
                                             >
-                                                Faire ma première annonce
+                                                Faire ma première demande de prière
                                             </button>
                                         )}
                                     </div>
@@ -1743,7 +1744,7 @@ export default function Index({
                                                     d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                                                 />
                                             </svg>
-                                            Circuit de l'annonce
+                                            Circuit de la demande de prière
                                         </div>
                                     </div>
                                     <div className="ann-circuit-steps">
@@ -1767,7 +1768,7 @@ export default function Index({
                                             <div className="ann-cs-line done" />
                                             <div className="ann-cs-text">
                                                 <strong>Vous soumettez</strong>
-                                                <span>Annonce enregistrée</span>
+                                                <span>Demande de prière enregistrée</span>
                                             </div>
                                         </div>
                                         <div className="ann-cs-step">
@@ -1836,7 +1837,7 @@ export default function Index({
                                                     d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                                                 />
                                             </svg>
-                                            Mes annonces par type
+                                            Mes demandes de prière par type
                                         </div>
                                     </div>
                                     <div
@@ -1959,9 +1960,9 @@ export default function Index({
                         <div className="modal-head">
                             <div>
                                 <div className="modal-title">
-                                    {annonceStep === 1 && "Type d'annonce"}
+                                    {annonceStep === 1 && "Type de demande de prière"}
                                     {annonceStep === 2 &&
-                                        `${selectedType?.emoji || "📢"} ${selectedType?.label || "Annonce"}`}
+                                        `${selectedType?.emoji || "🙏"} ${selectedType?.label || "Demande de prière"}`}
                                     {annonceStep === 3 && "Confirmation"}
                                 </div>
                                 <div className="modal-sub">
@@ -2085,7 +2086,7 @@ export default function Index({
                                         </Field>
                                     )}
                                     <Field
-                                        label="Personne / Famille concernée"
+                                        label="Personne concernée"
                                         required
                                     >
                                         <select
@@ -2130,20 +2131,36 @@ export default function Index({
                                             {annonceForm.message.length}/500
                                         </div>
                                     </Field>
-                                    <Field label="Date de l'événement">
-                                        <input
-                                            className="ann-input"
-                                            type="date"
-                                            value={annonceForm.date_annonce}
-                                            onChange={(e) =>
-                                                setAnnonceForm((f) => ({
-                                                    ...f,
-                                                    date_annonce:
-                                                        e.target.value,
-                                                }))
-                                            }
-                                        />
-                                    </Field>
+                                    <div style={{ display: "flex", gap: 12 }}>
+                                        <Field label="Date du culte" style={{ flex: 1 }}>
+                                            <input
+                                                className="ann-input"
+                                                type="date"
+                                                value={annonceForm.date_annonce}
+                                                onChange={(e) =>
+                                                    setAnnonceForm((f) => ({
+                                                        ...f,
+                                                        date_annonce:
+                                                            e.target.value,
+                                                    }))
+                                                }
+                                            />
+                                        </Field>
+                                        <Field label="Heure du culte" style={{ flex: 1 }}>
+                                            <input
+                                                className="ann-input"
+                                                type="time"
+                                                value={annonceForm.heure_culte}
+                                                onChange={(e) =>
+                                                    setAnnonceForm((f) => ({
+                                                        ...f,
+                                                        heure_culte:
+                                                            e.target.value,
+                                                    }))
+                                                }
+                                            />
+                                        </Field>
+                                    </div>
                                     <div className="ann-visibility">
                                         <svg
                                             width="13"
@@ -2184,7 +2201,7 @@ export default function Index({
                                                 </div>
                                             )}
                                             <div className="art-sub">
-                                                Annonce paroissiale
+                                                Demande de prière paroissiale
                                             </div>
                                         </div>
                                     </div>
@@ -2207,10 +2224,16 @@ export default function Index({
                                     )}
                                     {annonceForm.date_annonce && (
                                         <RecapRow
-                                            label="Date"
+                                            label="Date du culte"
                                             value={formatDate(
                                                 annonceForm.date_annonce,
                                             )}
+                                        />
+                                    )}
+                                    {annonceForm.heure_culte && (
+                                        <RecapRow
+                                            label="Heure du culte"
+                                            value={annonceForm.heure_culte}
                                         />
                                     )}
                                     <div className="ann-recap-msg">

@@ -32,121 +32,19 @@ export default function AdminTresorerie({
     const [paiementsPage, setPaiementsPage] = useState(1);
     const PAIEMENTS_PER_PAGE = 10;
 
-    const fallbackStats = {
-        cotisationsTotales: 2500000,
-        cotisationsPayees: 1875000,
-        cotisationsEnRetard: 625000,
-        tauxPaiement: 75,
-        donsTotaux: 450000,
-        famillesActives: 45,
+    const emptyStats = {
+        cotisationsTotales: 0,
+        cotisationsPayees: 0,
+        cotisationsEnRetard: 0,
+        tauxPaiement: 0,
+        donsTotaux: 0,
+        famillesActives: 0,
     };
 
-    const fallbackCotisations = [
-        {
-            id: 1,
-            nom: "FIMECO",
-            montant: 15000,
-            periodicite: "Mensuel",
-            statut: "Actif",
-            classes: "Toutes",
-        },
-        {
-            id: 2,
-            nom: "Affiliation CEMEC",
-            montant: 50000,
-            periodicite: "Annuel",
-            statut: "Actif",
-            classes: "Toutes",
-        },
-        {
-            id: 3,
-            nom: "Cotisation paroissiale",
-            montant: 10000,
-            periodicite: "Mensuel",
-            statut: "Actif",
-            classes: "Toutes",
-        },
-    ];
-
-    const fallbackPaiementsRecents = [
-        {
-            id: 1,
-            famille: "Famille Koné",
-            montant: 150000,
-            type: "FIMECO",
-            date: "15/03/2026",
-            mode: "Mobile Money",
-            statut: "✓ Payé",
-        },
-        {
-            id: 2,
-            famille: "Famille Traoré",
-            montant: 50000,
-            type: "Affiliation CEMEC",
-            date: "12/03/2026",
-            mode: "Espèces",
-            statut: "✓ Payé",
-        },
-        {
-            id: 3,
-            famille: "Famille Diallo",
-            montant: 75000,
-            type: "FIMECO",
-            date: "10/03/2026",
-            mode: "Virement",
-            statut: "✓ Payé",
-        },
-        {
-            id: 4,
-            famille: "Famille Cissé",
-            montant: 10000,
-            type: "Cotisation paroissiale",
-            date: "05/03/2026",
-            mode: "Mobile Money",
-            statut: "✓ Payé",
-        },
-    ];
-
-    const fallbackDons = [
-        {
-            id: 1,
-            donor_name: "Famille Koné",
-            amount: 50000,
-            donation_date: "15/03/2026",
-            treasurer_name: "Marie Dupont",
-            class_name: "Classe A",
-        },
-        {
-            id: 2,
-            donor_name: "Famille Traoré",
-            amount: 25000,
-            donation_date: "12/03/2026",
-            treasurer_name: "Jean Martin",
-            class_name: "Classe B",
-        },
-        {
-            id: 3,
-            donor_name: "Famille Diallo",
-            amount: 100000,
-            donation_date: "10/03/2026",
-            treasurer_name: "Sophie Bernard",
-            class_name: "Classe A",
-        },
-    ];
-
-    const stats = statsProp || fallbackStats;
-    const cotisations =
-        Array.isArray(cotisationsProp) && cotisationsProp.length
-            ? cotisationsProp
-            : fallbackCotisations;
-    const paiementsRecents =
-        Array.isArray(paiementsRecentsProp) && paiementsRecentsProp.length
-            ? paiementsRecentsProp
-            : fallbackPaiementsRecents;
-    const dons =
-        Array.isArray(donsProp) && donsProp.length
-            ? donsProp
-            : fallbackDons;
+    const stats = statsProp || emptyStats;
+    const cotisations = Array.isArray(cotisationsProp) ? cotisationsProp : [];
+    const paiementsRecents = Array.isArray(paiementsRecentsProp) ? paiementsRecentsProp : [];
+    const dons = Array.isArray(donsProp) ? donsProp : [];
     const reportDate = new Date();
     const currentMonthValue = `${reportDate.getFullYear()}-${String(
         reportDate.getMonth() + 1,
@@ -472,30 +370,38 @@ export default function AdminTresorerie({
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-200">
-                                                    {paginatedPaiements.map((paiement) => (
-                                                        <tr key={paiement.id} className="hover:bg-gray-50">
-                                                            <td className="px-4 py-3 font-medium text-gray-900">
-                                                                {paiement.famille}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-gray-700">
-                                                                {paiement.type}
-                                                            </td>
-                                                            <td className="px-4 py-3 font-semibold text-gray-900">
-                                                                {fmtCurrency(paiement.montant)}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-gray-600">
-                                                                {paiement.mode}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-gray-600">
-                                                                {paiement.date}
-                                                            </td>
-                                                            <td className="px-4 py-3">
-                                                                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                                                                    {paiement.statut}
-                                                                </span>
+                                                    {paginatedPaiements.length === 0 ? (
+                                                        <tr>
+                                                            <td colSpan={6} className="px-4 py-10 text-center text-gray-400 text-sm">
+                                                                Aucun paiement enregistré pour le moment.
                                                             </td>
                                                         </tr>
-                                                    ))}
+                                                    ) : (
+                                                        paginatedPaiements.map((paiement) => (
+                                                            <tr key={paiement.id} className="hover:bg-gray-50">
+                                                                <td className="px-4 py-3 font-medium text-gray-900">
+                                                                    {paiement.famille}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-gray-700">
+                                                                    {paiement.type}
+                                                                </td>
+                                                                <td className="px-4 py-3 font-semibold text-gray-900">
+                                                                    {fmtCurrency(paiement.montant)}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-gray-600">
+                                                                    {paiement.mode}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-gray-600">
+                                                                    {paiement.date}
+                                                                </td>
+                                                                <td className="px-4 py-3">
+                                                                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                                                                        {paiement.statut}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        ))
+                                                    )}
                                                 </tbody>
                                             </table>
                                         </div>

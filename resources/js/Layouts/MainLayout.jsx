@@ -346,7 +346,7 @@ export default function MainLayout({ children, auth }) {
             return details;
         }
         return (
-            details?.titre || details?.contenu || details?.message || "Annonce"
+            details?.titre || details?.contenu || details?.message || "Demande de prière"
         );
     };
 
@@ -450,7 +450,7 @@ export default function MainLayout({ children, auth }) {
         if (motif) {
             return `${source} annonce: ${motif}`;
         }
-        return `${source} a publie une annonce.`;
+        return `${source} a soumis une demande de prière.`;
     };
 
     const truncateText = (text, limit = TRUNCATE_DEFAULT) => {
@@ -620,7 +620,7 @@ export default function MainLayout({ children, auth }) {
                                             accent="blue"
                                         />
                                         <InfoCategory
-                                            title="📢 Annonces"
+                                            title="🙏 Demandes de prière"
                                             items={categorizedInfo.annonces.map((a) =>
                                                 truncateText(buildFlashSentence(a))
                                             )}

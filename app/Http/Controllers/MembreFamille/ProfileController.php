@@ -4,11 +4,9 @@ namespace App\Http\Controllers\MembreFamille;
 
 use App\Helpers\PhotoHelper;
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Models\Fonction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class ProfileController extends Controller
@@ -48,6 +46,8 @@ class ProfileController extends Controller
                 'telephone2' => 'nullable|string|max:20',
                 'genre' => 'required|in:M,F',
                 'date_naissance' => 'nullable|date',
+                'lieu_naissance' => 'nullable|string|max:255',
+                'numero_cni'     => 'nullable|string|max:50',
                 'statut_marital' => 'nullable|string|max:50',
                 'employment_status' => 'nullable|in:TRAVAILLEUR,ETUDIANT,RETRAITE,SANS_EMPLOI',
                 'profession' => 'nullable|string|max:255',
@@ -112,6 +112,8 @@ class ProfileController extends Controller
             'telephone2' => $validated['telephone2'] ?? $user->telephone2,
             'genre' => $validated['genre'],
             'date_naissance' => $validated['date_naissance'] ?? $user->date_naissance,
+            'lieu_naissance' => $validated['lieu_naissance'] ?? $user->lieu_naissance,
+            'numero_cni'     => $validated['numero_cni'] ?? $user->numero_cni,
             'employment_status' => $validated['employment_status'] ?? $user->employment_status,
             'profession' => ($validated['employment_status'] ?? '') === 'TRAVAILLEUR' ? ($validated['profession'] ?? null) : null,
             'niveau_etude' => ($validated['employment_status'] ?? '') === 'ETUDIANT' ? ($validated['niveau_etude'] ?? null) : null,
@@ -170,7 +172,7 @@ class ProfileController extends Controller
         }
 
         return redirect()
-            ->route('membre_famille.family')
+            ->route('membre_famille.inscriptions')
             ->with('success', 'Modifications sauvegardées avec succès');
     }
 

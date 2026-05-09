@@ -1,131 +1,6 @@
 import { useMemo, useState } from "react";
 import { withBasePath } from "@/Utils/urlHelper";
 
-const CLASSES = [
-    {
-        name: "Classe Espérance",
-        pct: 81,
-        present: 34,
-        total: 42,
-        color: "#2d2f8f",
-    },
-    {
-        name: "Classe Victoire",
-        pct: 74,
-        present: 37,
-        total: 50,
-        color: "#4a4db8",
-    },
-    { name: "Classe Grâce", pct: 92, present: 46, total: 50, color: "#7c3aed" },
-    { name: "Classe Foi", pct: 58, present: 29, total: 50, color: "#e53e3e" },
-    {
-        name: "Classe Lumière",
-        pct: 85,
-        present: 51,
-        total: 60,
-        color: "#2d2f8f",
-    },
-    {
-        name: "Classe Éphèse",
-        pct: 67,
-        present: 18,
-        total: 27,
-        color: "#4a4db8",
-    },
-];
-
-const ACTIVITES = [
-    {
-        name: "Activite dominicale",
-        pct: 79,
-        present: 247,
-        total: 312,
-        color: "#2d2f8f",
-    },
-    {
-        name: "École du dimanche",
-        pct: 65,
-        present: 203,
-        total: 312,
-        color: "#4a4db8",
-    },
-    {
-        name: "Réunion de prière",
-        pct: 48,
-        present: 150,
-        total: 312,
-        color: "#7c3aed",
-    },
-    {
-        name: "Groupe de cellule",
-        pct: 55,
-        present: 172,
-        total: 312,
-        color: "#4a4db8",
-    },
-    {
-        name: "Louange & Adoration",
-        pct: 72,
-        present: 225,
-        total: 312,
-        color: "#2d2f8f",
-    },
-];
-
-const ALERTES = [
-    {
-        name: "Jean-Baptiste Koné",
-        classe: "Classe Foi",
-        absences: 5,
-        level: "high",
-    },
-    {
-        name: "Marie-Claire Assoua",
-        classe: "Classe Victoire",
-        absences: 4,
-        level: "high",
-    },
-    {
-        name: "Samuel Ouédraogo",
-        classe: "Classe Éphèse",
-        absences: 4,
-        level: "high",
-    },
-    {
-        name: "Esther Bamba",
-        classe: "Classe Foi",
-        absences: 3,
-        level: "medium",
-    },
-    {
-        name: "David Tano",
-        classe: "Classe Lumière",
-        absences: 3,
-        level: "medium",
-    },
-    {
-        name: "Rachel Kouamé",
-        classe: "Classe Espérance",
-        absences: 3,
-        level: "medium",
-    },
-];
-
-const TENDANCES = [
-    { semaine: "Sem. 10", pct: 71 },
-    { semaine: "Sem. 11", pct: 74 },
-    { semaine: "Sem. 12", pct: 69 },
-    { semaine: "Sem. 13", pct: 78 },
-    { semaine: "Sem. 14", pct: 76 },
-    { semaine: "Sem. 15", pct: 79 },
-];
-
-const PERIODES = [
-    { mois: "Janvier", pct: 73 },
-    { mois: "Février", pct: 76 },
-    { mois: "Mars", pct: 71 },
-    { mois: "Avril", pct: 79 },
-];
 
 const TABS = [
     { id: "classe", label: "Par classe", icon: "📊" },
@@ -342,6 +217,8 @@ export default function AdminPresenceDashboard({
     topActivitesMois = [],
 }) {
     const [activeTab, setActiveTab] = useState("classe");
+    const [classePage, setClassePage] = useState(1);
+    const CLASSES_PER_PAGE = 12;
     const [activePeriod, setActivePeriod] = useState("avril");
     const [selectedClasseId, setSelectedClasseId] = useState(null);
     const [selectedMonth2026, setSelectedMonth2026] = useState("2026-01");
@@ -482,14 +359,11 @@ export default function AdminPresenceDashboard({
         </button>
     );
 
-    const classesRows =
-        classesData.length > 0
-            ? classesData
-            : CLASSES.map((c, index) => ({ ...c, id: `mock-${index}` }));
-    const activitesRows = activitesData.length > 0 ? activitesData : ACTIVITES;
-    const periodesRows = periodesData.length > 0 ? periodesData : PERIODES;
+    const classesRows = classesData;
+    const activitesRows = activitesData;
+    const periodesRows = periodesData;
     const alertesRows = alertesData;
-    const tendancesRows = tendancesData.length > 0 ? tendancesData : TENDANCES;
+    const tendancesRows = tendancesData;
 
     const selectedClassKey =
         selectedClasseId === null ? null : String(selectedClasseId);
@@ -1017,7 +891,7 @@ export default function AdminPresenceDashboard({
                             </div>
                         </button>
 
-                        {classesRows.map((c) => {
+                        {classesRows.slice((classePage - 1) * CLASSES_PER_PAGE, classePage * CLASSES_PER_PAGE).map((c) => {
                             const isActive =
                                 selectedClassKey !== null &&
                                 String(c.id) === selectedClassKey;
@@ -1092,6 +966,52 @@ export default function AdminPresenceDashboard({
                             ? `Classe sélectionnée: ${selectedClass.name}`
                             : "Sélectionnez une classe pour filtrer les autres onglets."}
                     </div>
+
+                    {/* Pagination par classe */}
+                    {classesRows.length > CLASSES_PER_PAGE && (() => {
+                        const totalPages = Math.ceil(classesRows.length / CLASSES_PER_PAGE);
+                        const from = (classePage - 1) * CLASSES_PER_PAGE + 1;
+                        const to = Math.min(classePage * CLASSES_PER_PAGE, classesRows.length);
+
+                        const getPages = () => {
+                            if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+                            const pages = [1];
+                            if (classePage > 3) pages.push('...');
+                            for (let i = Math.max(2, classePage - 1); i <= Math.min(totalPages - 1, classePage + 1); i++) pages.push(i);
+                            if (classePage < totalPages - 2) pages.push('...');
+                            pages.push(totalPages);
+                            return pages;
+                        };
+
+                        return (
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, marginTop: 16 }}>
+                                <p style={{ fontSize: 13, color: "#888" }}>
+                                    Affichage <strong>{from}–{to}</strong> sur <strong>{classesRows.length}</strong> classes
+                                </p>
+                                <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                                    <button
+                                        onClick={() => setClassePage(p => Math.max(1, p - 1))}
+                                        disabled={classePage === 1}
+                                        style={{ width: 34, height: 34, borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", cursor: classePage === 1 ? "not-allowed" : "pointer", opacity: classePage === 1 ? 0.4 : 1, fontWeight: 700, fontSize: 16 }}
+                                    >‹</button>
+                                    {getPages().map((page, idx) =>
+                                        page === '...'
+                                            ? <span key={`e-${idx}`} style={{ padding: "0 6px", color: "#aaa", fontWeight: 700 }}>…</span>
+                                            : <button
+                                                key={page}
+                                                onClick={() => setClassePage(page)}
+                                                style={{ width: 34, height: 34, borderRadius: 8, border: classePage === page ? "2px solid #2d2f8f" : "1px solid #e5e7eb", background: classePage === page ? "#2d2f8f" : "#fff", color: classePage === page ? "#fff" : "#374151", cursor: "pointer", fontWeight: 700, fontSize: 14 }}
+                                            >{page}</button>
+                                    )}
+                                    <button
+                                        onClick={() => setClassePage(p => Math.min(totalPages, p + 1))}
+                                        disabled={classePage === totalPages}
+                                        style={{ width: 34, height: 34, borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", cursor: classePage === totalPages ? "not-allowed" : "pointer", opacity: classePage === totalPages ? 0.4 : 1, fontWeight: 700, fontSize: 16 }}
+                                    >›</button>
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </div>
             )}
 

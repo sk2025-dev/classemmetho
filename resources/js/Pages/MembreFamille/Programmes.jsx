@@ -1583,6 +1583,11 @@ const IconEye = () => (<svg xmlns="http://www.w3.org/2000/svg" width="18" height
 const IconPlay = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>);
 const IconPhoto = () => (<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>);
 const IconVideo = () => (<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>);
+const isVideoMedia = (media) => (media?.type || '').toString().toLowerCase() === 'video';
+const isPhotoMedia = (media) => {
+  const t = (media?.type || '').toString().toLowerCase();
+  return t === 'photo' || t === 'image';
+};
 const IconChevronLeft = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>);
 const IconChevronRight = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>);
 const IconStar = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>);
@@ -1671,10 +1676,16 @@ const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
 
   const getActivityImage = (activityId) => {
     if (!mediaImages) return null;
-    const featuredImage = mediaImages.find(media => media.special_event_id === activityId && media.type === 'photo' && media.is_featured === true);
+    const featuredImage = mediaImages.find(media => media.special_event_id === activityId && isPhotoMedia(media) && media.is_featured === true);
     if (featuredImage) return featuredImage.url;
-    const firstPhoto = mediaImages.find(media => media.special_event_id === activityId && media.type === 'photo');
+    const firstPhoto = mediaImages.find(media => media.special_event_id === activityId && isPhotoMedia(media));
     return firstPhoto ? firstPhoto.url : null;
+  };
+
+  const getSafeBackgroundImage = (imageUrl) => {
+    if (!imageUrl) return 'none';
+    const safeUrl = encodeURI(String(imageUrl).trim());
+    return `url("${safeUrl}")`;
   };
 
   const slides = useMemo(() => {
@@ -1714,7 +1725,7 @@ const HeroCarousel = ({ mediaImages, pastEvents = [] }) => {
     <div className="carousel-simple" onMouseEnter={() => setIsAutoPlaying(false)} onMouseLeave={() => setIsAutoPlaying(true)}>
       <div className="carousel-simple-wrapper">
         <div className="carousel-simple-image">
-          <div className="carousel-simple-image-bg" style={{ backgroundImage: `url(${currentSlideData.image})` }} />
+          <div className="carousel-simple-image-bg" style={{ backgroundImage: getSafeBackgroundImage(currentSlideData.image) }} />
         </div>
         <div className="carousel-simple-info">
           <div className="carousel-simple-header">ACTIVITÉ RÉCENTES</div>
@@ -1889,7 +1900,7 @@ const PastEventContentModal = ({ isOpen, onClose, date, events, mediaData }) => 
                         <div className="media-gallery">
                           {eventMedia.map(media => (
                             <div key={media.id} className="media-gallery-item" onClick={() => openMediaViewer(media, eventMedia)}>
-                              <img src={media.type === 'video' ? (media.thumbnail || '/default-video-thumb.jpg') : media.url} alt={media.title} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
+                              <img src={isVideoMedia(media) ? (media.thumbnail || '/default-video-thumb.jpg') : media.url} alt={media.title} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
                               <div style={{ padding: '6px', fontSize: '0.7rem', textAlign: 'center', background: 'white' }}>{media.title.length > 20 ? media.title.substring(0, 20) + '...' : media.title}</div>
                             </div>
                           ))}
@@ -1963,7 +1974,7 @@ const MediaViewerModal = ({ isOpen, onClose, media, mediaList = [], currentIndex
         </div>
         <div className="modal-body">
           <div className="media-viewer">
-            {currentMedia.type === 'video' ? (
+            {isVideoMedia(currentMedia) ? (
               embedUrl && (embedUrl.includes('youtube') || embedUrl.includes('vimeo')) ? (
                 <div className="relative" style={{ paddingBottom: '56.25%', height: 0 }}>
                   <iframe src={embedUrl} title={currentMedia.title} className="absolute top-0 left-0 w-full h-full rounded-lg" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
@@ -2683,8 +2694,8 @@ export default function Programmes() {
                 paginatedGroups.map(group => {
                   const scrollKey = `gallery_${group.id}`;
                   const scrollState = scrollStates[scrollKey] || { hasLeftScroll: false, hasRightScroll: false };
-                  const imagesCount = group.medias.filter(m => m.type === 'photo').length;
-                  const videosCount = group.medias.filter(m => m.type === 'video').length;
+                  const imagesCount = group.medias.filter(m => isPhotoMedia(m)).length;
+                  const videosCount = group.medias.filter(m => isVideoMedia(m)).length;
                   
                   return (
                     <div key={group.id} className="gallery-section">
@@ -2721,22 +2732,22 @@ export default function Programmes() {
                               <div key={media.id} className="media-card-wrapper">
                                 <div className="media-card" onClick={() => openMediaViewer(media, group.medias)}>
                                   <div className="media-thumbnail">
-                                    {media.type === 'photo' ? (
+                                    {isPhotoMedia(media) ? (
                                       <img src={media.url} alt={media.title} />
                                     ) : (
                                       <img src={media.thumbnail || media.url || '/default-video-thumb.jpg'} alt={media.title} />
                                     )}
-                                    {media.type === 'video' && (
+                                    {isVideoMedia(media) && (
                                       <div className="media-play-icon"><IconPlay /></div>
                                     )}
-                                    {media.type === 'photo' && media.is_featured && (
+                                    {isPhotoMedia(media) && media.is_featured && (
                                       <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 z-20 shadow-md">
                                         <IconStar /> À la une
                                       </div>
                                     )}
                                     <div className="media-badge">
-                                      {media.type === 'video' ? <IconVideo /> : <IconPhoto />}
-                                      {media.type === 'video' ? 'Vidéo' : 'Photo'}
+                                      {isVideoMedia(media) ? <IconVideo /> : <IconPhoto />}
+                                      {isVideoMedia(media) ? 'Vidéo' : 'Photo'}
                                     </div>
                                   </div>
                                   <div className="media-info">
@@ -2828,3 +2839,4 @@ export default function Programmes() {
     </>
   );
 }
+

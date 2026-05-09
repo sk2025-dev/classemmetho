@@ -35,6 +35,7 @@ const ACTE_OPTIONS = [
 
 export default function Selection({
     basePath = "/responsable-famille/liturgie",
+    actesEnCours = [],
 }) {
     return (
         <div
@@ -67,7 +68,35 @@ export default function Selection({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-                    {ACTE_OPTIONS.map((option) => (
+                    {ACTE_OPTIONS.map((option) => {
+                        const isBlocked = actesEnCours.includes(option.key);
+                        if (isBlocked) {
+                            return (
+                                <div
+                                    key={option.key}
+                                    className="bg-white/60 rounded-2xl shadow border border-gray-200 overflow-hidden opacity-75 cursor-not-allowed"
+                                >
+                                    <div className="h-1.5 bg-gray-300" />
+                                    <div className="p-5">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <span className="text-xs font-bold px-2.5 py-1 rounded-full border bg-orange-50 text-orange-700 border-orange-200">
+                                                En cours
+                                            </span>
+                                        </div>
+                                        <h2 className="text-xl font-bold text-gray-400 mb-2">
+                                            {option.title}
+                                        </h2>
+                                        <p className="text-sm text-gray-400 mb-4">
+                                            {option.description}
+                                        </p>
+                                        <div className="inline-flex items-center gap-2 text-sm font-semibold text-orange-600 bg-orange-50 px-3 py-1.5 rounded-lg w-full justify-center">
+                                            ⚠ Demande déjà soumise
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        }
+                        return (
                         <Link
                             key={option.key}
                             href={`${basePath}/nouvelle/formulaire?type_acte=${option.key}`}
@@ -96,7 +125,8 @@ export default function Selection({
                                 </div>
                             </div>
                         </Link>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 <div className="mt-6 bg-white/95 rounded-xl p-4 border border-gray-200">

@@ -628,6 +628,7 @@ function TabAbsences({ absences = [], famille }) {
 
 // ─── Composant principal ─────────────────────────────────────────────────────
 const TABS = [
+    { id: "presences", label: "Présences", icon: "✅" },
     { id: "activites", label: "Activités", icon: "📅" },
     { id: "statistiques", label: "Statistiques", icon: "📊" },
     { id: "absences", label: "Absences", icon: "⚠️" },
@@ -644,7 +645,7 @@ export default function RespoFamilleDashboard(props) {
     const activites = props.activites ?? [];
     const presencesByActivity = props.presences ?? {};
 
-    const [activeTab, setActiveTab] = useState("historique");
+    const [activeTab, setActiveTab] = useState("presences");
     const [selectedEvt, setSelectedEvt] = useState(null);
     const [selectedActiviteId, setSelectedActiviteId] = useState(
         activites[0]?.id ?? null,
@@ -1132,6 +1133,153 @@ export default function RespoFamilleDashboard(props) {
                     color: "#1e2070",
                 }}
             >
+                {/* ── Présences ───────────────────────────────────────────────── */}
+                {activeTab === "presences" && (
+                    <div>
+                        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>
+                            Présences de votre famille
+                        </div>
+                        <div style={{ fontSize: 13, color: "#888", marginBottom: 16 }}>
+                            Sélectionnez une activité pour voir les présences des membres.
+                        </div>
+
+                        {/* Sélecteur activité */}
+                        <select
+                            style={{
+                                width: "100%",
+                                padding: "10px 14px",
+                                borderRadius: 10,
+                                border: "1.5px solid #e0e0f0",
+                                fontSize: 14,
+                                color: "#333",
+                                marginBottom: 18,
+                                outline: "none",
+                            }}
+                            value={selectedActiviteId ?? ""}
+                            onChange={(e) =>
+                                handleSelectActivite(e.target.value ? Number(e.target.value) : null)
+                            }
+                        >
+                            <option value="">— Choisir une activité —</option>
+                            {(activitesAffichables ?? []).map((a) => (
+                                <option key={a.id} value={a.id}>
+                                    {`${a.titre} · ${a.heure ?? toHour(a.date_heure_debut)}`}
+                                </option>
+                            ))}
+                        </select>
+
+                        {/* Liste membres avec statut */}
+                        {selectedActiviteId ? (
+                            <>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                    <div style={{ fontSize: 14, fontWeight: 600, color: "#1e2070" }}>
+                                        Membres — {activitesAffichables.find(a => a.id === selectedActiviteId)?.titre}
+                                    </div>
+                                    <div style={{ display: "flex", gap: 8 }}>
+                                        {[
+                                            { s: "present", bg: "#e6f4ea", c: "#1a7740", label: "présent" },
+                                            { s: "absent",  bg: "#fce8e8", c: "#c0392b", label: "absent" },
+                                            { s: "excuse",  bg: "#fff3e0", c: "#c45c00", label: "excusé" },
+                                        ].map(({ s, bg, c, label }) => {
+                                            const n = Object.values(presences).filter(v => v === s).length;
+                                            if (!n) return null;
+                                            return (
+                                                <span key={s} style={{ background: bg, color: c, borderRadius: 20, padding: "3px 12px", fontSize: 12, fontWeight: 600 }}>
+                                                    {n} {label}{n > 1 ? "s" : ""}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {(famille.membres ?? []).length === 0 ? (
+                                    <div style={{ textAlign: "center", padding: "32px 0", color: "#aaa", fontSize: 13 }}>
+                                        Aucun membre dans la famille.
+                                    </div>
+                                ) : (
+                                    (famille.membres ?? []).map((m) => {
+                                        const st = presences[m.id];
+                                        const cfg = {
+                                            present: { bg: "#e6f4ea", color: "#1a7740", label: "✓ Présent" },
+                                            absent:  { bg: "#fce8e8", color: "#c0392b", label: "✗ Absent" },
+                                            excuse:  { bg: "#fff3e0", color: "#c45c00", label: "~ Excusé" },
+                                        }[st] ?? { bg: "#f0f0f0", color: "#777", label: "Non marqué" };
+
+                                        return (
+                                            <div
+                                                key={m.id}
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 14,
+                                                    padding: "12px 16px",
+                                                    borderRadius: 12,
+                                                    marginBottom: 8,
+                                                    background: cfg.bg + "55",
+                                                    border: `1px solid ${cfg.bg}`,
+                                                }}
+                                            >
+                                                <Avatar initiales={m.initiales} size={38} bg={
+                                                    st === "present" ? "#1a7740" : st === "absent" ? "#c0392b" : st === "excuse" ? "#c45c00" : "#aaa"
+                                                } />
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ fontSize: 14, fontWeight: 600, color: "#1e2070" }}>
+                                                        {m.prenom} {m.nom ?? ""}
+                                                    </div>
+                                                    <div style={{ fontSize: 11, color: "#aaa" }}>{m.role}</div>
+                                                </div>
+                                                <span style={{
+                                                    background: cfg.bg,
+                                                    color: cfg.color,
+                                                    borderRadius: 20,
+                                                    padding: "4px 14px",
+                                                    fontSize: 12,
+                                                    fontWeight: 700,
+                                                }}>
+                                                    {cfg.label}
+                                                </span>
+                                            </div>
+                                        );
+                                    })
+                                )}
+
+                                {/* Récap */}
+                                <div style={{
+                                    marginTop: 16,
+                                    background: "#f5f6ff",
+                                    borderRadius: 10,
+                                    padding: "10px 16px",
+                                    fontSize: 13,
+                                    color: "#555",
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                }}>
+                                    <span>
+                                        {Object.values(presences).filter(Boolean).length}/{(famille.membres ?? []).length} membres marqués
+                                    </span>
+                                    <span style={{ color: "#2d2f8f", fontWeight: 600 }}>
+                                        {Math.round((nbPresents / ((famille.membres ?? []).length || 1)) * 100)}% de présence
+                                    </span>
+                                </div>
+                            </>
+                        ) : (
+                            <div style={{
+                                textAlign: "center",
+                                padding: "40px 0",
+                                color: "#aaa",
+                            }}>
+                                <div style={{ fontSize: 36, marginBottom: 10 }}>📋</div>
+                                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, color: "#555" }}>
+                                    Aucune activité sélectionnée
+                                </div>
+                                <div style={{ fontSize: 12 }}>
+                                    Choisissez une activité dans la liste ci-dessus.
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* ── Marquer ─────────────────────────────────────────────────── */}
                 {activeTab === "marquer" && (
                     <div>

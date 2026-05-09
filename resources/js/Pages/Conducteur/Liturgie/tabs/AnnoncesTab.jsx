@@ -78,7 +78,7 @@ export default function AnnoncesTab({
                                         setAnnoncesPage(1);
                                     }}
                                 >
-                                    Mes annonces
+                                    Mes demandes de prière
                                     {annMines.length > 0 && (
                                         <span className="ann-subtab-badge">
                                             {annMines.length}
@@ -120,7 +120,7 @@ export default function AnnoncesTab({
                                         d="M12 4v16m8-8H4"
                                     />
                                 </svg>
-                                Nouvelle annonce
+                                Nouvelle demande de prière
                             </button>
                             {annoncesSubTab === "pending" &&
                                 annEnAttente.length > 0 && (
@@ -218,11 +218,11 @@ export default function AnnoncesTab({
                                 <span>
                                     {annoncesSubTab ===
                                     "pending"
-                                        ? "Aucune annonce en attente"
+                                        ? "Aucune demande de prière en attente"
                                         : annoncesSubTab ===
                                             "done"
-                                          ? "Aucune annonce traitée"
-                                          : "Vous n'avez créé aucune annonce"}
+                                          ? "Aucune demande de prière traitée"
+                                          : "Vous n'avez créé aucune demande de prière"}
                                 </span>
                             </div>
                         )}

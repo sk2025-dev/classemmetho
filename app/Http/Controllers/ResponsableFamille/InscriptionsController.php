@@ -102,6 +102,8 @@ class InscriptionsController extends Controller
                     'transfer_status' => $member->transfer_status,
                     'transfer_label' => $member->transfer_label,
                     'transfer_locked' => (bool) $member->transfer_locked,
+                    'is_deceased' => (bool) $member->is_deceased,
+                    'deceased_at' => $member->deceased_at?->format('Y-m-d'),
                     'profile_photo_url' => $member->profile_photo_url
                         ?: PhotoHelper::getPhotoUrl($member->photo_path, $member->prenom, $member->nom),
                 ];

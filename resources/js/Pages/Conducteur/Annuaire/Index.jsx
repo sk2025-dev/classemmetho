@@ -637,6 +637,28 @@ const MemberDetailsModal = ({
                         <p>
                             <strong>Relation:</strong> {member.relation || "-"}
                         </p>
+                        {member.lieu_naissance && (
+                            <p>
+                                <strong>Lieu de naissance:</strong>{" "}
+                                {member.lieu_naissance}
+                            </p>
+                        )}
+                        {member.numero_cni && (
+                            <p>
+                                <strong>N° CNI:</strong> {member.numero_cni}
+                            </p>
+                        )}
+                        {member.hors_communaute && (
+                            <p>
+                                <strong>Hors communauté:</strong> Oui
+                            </p>
+                        )}
+                        {member.retrait && (
+                            <p>
+                                <strong>Retrait:</strong> Oui
+                                {member.date_retrait && ` — ${member.date_retrait}`}
+                            </p>
+                        )}
                     </div>
                 </div>
             </div>
@@ -1386,7 +1408,7 @@ const Annuaire = ({
                     <span className="text-sm text-gray-700">
                         Affichage de {(currentPage - 1) * perPage + 1} à{" "}
                         {Math.min(currentPage * perPage, total)} sur {total}{" "}
-                        membres
+                        {currentView === "families" ? "familles" : currentView === "classes" ? "classes" : "membres"}
                     </span>
                     {currentView === "all" && (
                         <select

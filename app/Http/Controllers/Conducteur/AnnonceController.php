@@ -104,6 +104,7 @@ class AnnonceController extends Controller
             'message'          => 'nullable|string',
             'date_publication' => 'nullable|date',
             'date_annonce'     => 'nullable|date',
+            'heure_culte'      => 'nullable|string|max:10',
             'date_expiration'  => 'nullable|date|after:date_publication',
         ]);
 
@@ -121,6 +122,7 @@ class AnnonceController extends Controller
             'contenu'            => $contenu,
             'motif'              => $validated['motif'] ?? null,
             'temoignage_public'  => $validated['temoignage_public'] ?? false,
+            'heure_culte'        => $validated['heure_culte'] ?? null,
         ];
         $datePublication = $validated['date_publication'] ?? now();
         $reference = 'ANN-' . strtoupper(uniqid());
@@ -137,6 +139,7 @@ class AnnonceController extends Controller
             'classe_id' => $membre?->classe_id ?? null,
             'family_id' => $user->family_id,
             'created_by' => $user->id,
+            'conducteur_id' => $user->id,
             'est_annonce' => true,
         ]);
 
@@ -298,6 +301,11 @@ class AnnonceController extends Controller
         // PDF disponible après validation du conducteur (transmission au pasteur)
         if (!in_array($acte->statut, ['TRANSMISE_AU_PASTEUR', 'VALIDEE', 'PUBLIEE', 'ARCHIVEE'], true)) {
             abort(403, 'La fiche PDF est disponible après transmission au pasteur.');
+        }
+
+        // Fallback conducteur : seul un conducteur gérant cette classe peut accéder ici
+        if (!$acte->conducteur) {
+            $acte->setRelation('conducteur', $user);
         }
 
         $logoPath = public_path('images/logo.png');

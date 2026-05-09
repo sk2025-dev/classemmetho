@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Pasteur;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActeLiturgique;
 use App\Models\Classe;
 use App\Models\Cotisation;
 use App\Models\Don;
 use App\Models\Family;
 use App\Models\Paiement;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
@@ -38,18 +41,41 @@ class TresorerieController extends Controller
         $famillesActives = (int) $families->count();
 
         $classRows = $classes->map(function (Classe $classe) {
-            $famillesClasse = Family::query()->where('classe_id', $classe->id)->pluck('id');
-            $payees = (int) Paiement::query()->whereIn('family_id', $famillesClasse)->sum('montant');
+            $famillesClasse = Family::query()
+                ->where('classe_id', $classe->id)
+                ->select('id', 'nom', 'code_famille')
+                ->get();
 
-            $expected = max(1, $famillesClasse->count()) * 15000;
-            $taux = $expected > 0 ? round(($payees / $expected) * 100) : 0;
+            $familyIds = $famillesClasse->pluck('id');
+            $payeesByFamily = Paiement::query()
+                ->whereIn('family_id', $familyIds)
+                ->selectRaw('family_id, SUM(montant) as total')
+                ->groupBy('family_id')
+                ->pluck('total', 'family_id');
+
+            $montantParFamille = 15000;
+            $payeesTotal = (int) $payeesByFamily->sum();
+            $expected = max(1, $famillesClasse->count()) * $montantParFamille;
+            $taux = $expected > 0 ? round(($payeesTotal / $expected) * 100) : 0;
+
+            $famillesList = $famillesClasse->map(function ($famille) use ($payeesByFamily, $montantParFamille) {
+                $montantPaye = (int) $payeesByFamily->get($famille->id, 0);
+                return [
+                    'id'           => $famille->id,
+                    'nom'          => $famille->nom,
+                    'code_famille' => $famille->code_famille ?? null,
+                    'montant_paye' => $montantPaye,
+                    'solde'        => $montantPaye >= $montantParFamille,
+                ];
+            })->values()->toArray();
 
             return [
-                'nom' => $classe->nom,
-                'taux' => max(0, min(100, $taux)),
-                'familles' => $famillesClasse->count(),
-                'cotisations' => $expected,
-                'payees' => $payees,
+                'nom'          => $classe->nom,
+                'taux'         => max(0, min(100, $taux)),
+                'familles'     => $famillesClasse->count(),
+                'cotisations'  => $expected,
+                'payees'       => $payeesTotal,
+                'famillesList' => $famillesList,
             ];
         })->values();
 
@@ -189,10 +215,52 @@ class TresorerieController extends Controller
             'famillesActives' => $famillesActives,
         ];
 
+        $encouragements = ActeLiturgique::query()
+            ->where('type_acte', 'generale')
+            ->where('est_annonce', true)
+            ->whereNull('family_id')
+            ->whereNull('membre_id')
+            ->where('created_by', Auth::id())
+            ->latest()
+            ->limit(20)
+            ->get(['id', 'details', 'statut', 'created_at', 'created_by'])
+            ->map(fn($a) => [
+                'id'         => $a->id,
+                'message'    => $a->details['contenu'] ?? $a->details['message'] ?? '',
+                'statut'     => $a->statut,
+                'created_at' => optional($a->created_at)->format('d/m/Y H:i'),
+            ]);
+
         return Inertia::render('Pasteur/Tresorerie/Index', [
-            'globalStats' => $globalStats,
-            'classes' => $classRows,
+            'globalStats'        => $globalStats,
+            'classes'            => $classRows,
             'cotisationsParClasse' => $cotisationsParClasse,
+            'encouragements'     => $encouragements,
         ]);
+    }
+
+    public function storeEncouragement(Request $request)
+    {
+        $request->validate([
+            'message' => 'required|string|min:10|max:500',
+        ]);
+
+        ActeLiturgique::create([
+            'type_acte'        => 'generale',
+            'statut'           => 'PUBLIEE',
+            'est_annonce'      => true,
+            'details'          => [
+                'titre'   => 'Encouragement cotisation',
+                'contenu' => $request->message,
+            ],
+            'date_publication' => now(),
+            'publiee_par'      => Auth::id(),
+            'created_by'       => Auth::id(),
+            'reference'        => 'ENC-' . now()->format('Ymd-His') . '-' . random_int(100, 999),
+        ]);
+
+        return redirect()
+            ->route('pasteur.tresorerie.index')
+            ->with('success', 'Encouragement publié dans le flash info !');
     }
 }
