@@ -1,0 +1,127 @@
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #fff;
+  border-bottom: 1px solid rgba(201, 160, 96, 0.2);
+  box-shadow: 0 8px 24px -22px rgba(26, 15, 10, 0.38);
+}
+
+.promo-bar {
+  background: #f3e7d0;
+  text-align: center;
+  padding: 10px 20px;
+  font-size: 12.5px;
+  letter-spacing: 0.08em;
+  color: #1a0f0a;
+  font-weight: 500;
+}
+
+.promo-bar span {
+  color: #c41420;
+  margin: 0 4px;
+}
+
+.logo-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 40px;
+  border-bottom: 1px solid rgba(201, 160, 96, 0.2);
+}
+
+.back-link {
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(26, 15, 10, 0.6);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.25s ease;
+  white-space: nowrap;
+}
+
+.back-link::before {
+  content: "←";
+  font-size: 14px;
+}
+
+.back-link:hover {
+  color: #c41420;
+}
+
+.site-logo {
+  height: 100px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.cart-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(26, 15, 10, 0.12);
+  background: #fff;
+  color: #1a0f0a;
+  text-decoration: none;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  box-shadow: 0 6px 22px -14px rgba(18, 11, 8, 0.26);
+  white-space: nowrap;
+}
+
+.cart-btn--placeholder {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.cart-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.cart-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #c41420;
+  color: #fff;
+  font-size: 11px;
+}
+
+@media (max-width: 1024px) {
+  .logo-zone {
+    padding-inline: 20px;
+  }
+
+  .site-logo {
+    height: 86px;
+  }
+}
+
+@media (max-width: 800px) {
+  .logo-zone {
+    flex-direction: column;
+    gap: 18px;
+    text-align: center;
+  }
+
+  .back-link {
+    align-self: flex-start;
+  }
+
+  .site-logo {
+    height: 74px;
+  }
+}

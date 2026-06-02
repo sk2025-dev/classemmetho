@@ -1,0 +1,495 @@
+.beauty-capillaires {
+  padding-top: 56px;
+}
+
+.beauty-capillaires__heading {
+  margin-bottom: 28px;
+}
+
+.beauty-capillaires__intro {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 28px;
+  align-items: start;
+  margin-bottom: 28px;
+}
+
+.beauty-capillaires__kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(18, 11, 8, 0.55);
+}
+
+.beauty-capillaires__kicker::before {
+  content: "";
+  width: 26px;
+  height: 1px;
+  background: currentColor;
+}
+
+.beauty-capillaires__lead {
+  font-size: 16px;
+  line-height: 1.8;
+  color: rgba(18, 11, 8, 0.72);
+  max-width: 640px;
+  margin-bottom: 18px;
+}
+
+.beauty-capillaires__steps {
+  list-style: none;
+  display: grid;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.beauty-capillaires__steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(196, 20, 32, 0.1);
+  color: rgba(18, 11, 8, 0.84);
+}
+
+.beauty-capillaires__steps span {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #c41420;
+  color: #fffaf7;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+}
+
+.beauty-capillaires__highlights {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.beauty-capillaires__photos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.beauty-capillaires__photos figure {
+  margin: 0;
+  overflow: hidden;
+  border-radius: 22px;
+  min-height: 100%;
+  background: #f3e7d0;
+  border: 1px solid rgba(196, 20, 32, 0.1);
+  box-shadow: 0 18px 48px -36px rgba(18, 11, 8, 0.35);
+}
+
+.beauty-capillaires__photos img {
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  object-fit: cover;
+  display: block;
+}
+
+.beauty-capillaires__photos figcaption {
+  position: relative;
+  margin-top: -62px;
+  padding: 10px 14px 14px;
+  color: #fffaf7;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(18, 11, 8, 0.72) 100%
+  );
+}
+
+.beauty-capillaires__products {
+  margin-top: 40px;
+}
+
+.beauty-capillaires__count {
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(18, 11, 8, 0.55);
+}
+
+.beauty-product-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.beauty-product-card {
+  overflow: hidden;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(196, 20, 32, 0.1);
+  box-shadow: 0 18px 48px -36px rgba(18, 11, 8, 0.35);
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.beauty-product-media {
+  position: relative;
+  aspect-ratio: 4 / 3.2;
+  overflow: hidden;
+  background: #f3e7d0;
+}
+
+.beauty-product-media__trigger {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: block;
+  overflow: hidden;
+}
+
+.beauty-product-media__trigger img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition:
+    transform 0.45s cubic-bezier(0.76, 0, 0.24, 1),
+    filter 0.45s ease;
+}
+
+.beauty-product-card--gommage .beauty-product-media__trigger img {
+  object-fit: contain;
+  padding: 20px;
+  background: #ffffff;
+}
+
+.beauty-product-media__trigger:hover img,
+.beauty-product-media__trigger.is-open img {
+  transform: scale(1.06);
+  filter: saturate(1.06) contrast(1.02);
+}
+
+.beauty-product-media__hint {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #c41420;
+  color: #fffaf7;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  backdrop-filter: blur(6px);
+}
+
+.beauty-product-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.beauty-product-badge {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(18, 11, 8, 0.78);
+  color: #fffaf7;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.beauty-product-body {
+  padding: 18px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.beauty-product-type {
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(18, 11, 8, 0.52);
+}
+
+.beauty-product-body h3 {
+  font-family: "Fraunces", serif;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.05;
+  color: #120b08;
+}
+
+.beauty-product-details {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transform: translateY(-4px);
+  transition:
+    max-height 0.45s cubic-bezier(0.76, 0, 0.24, 1),
+    opacity 0.3s ease,
+    transform 0.45s cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+.beauty-product-details.is-open {
+  max-height: 180px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.beauty-product-details p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba(18, 11, 8, 0.72);
+}
+
+.beauty-product-footer {
+  margin-top: auto;
+  padding-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.beauty-product-footer strong {
+  font-size: 18px;
+  color: #c41420;
+}
+
+.beauty-product-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: #120b08;
+  color: #fffaf7;
+  text-decoration: none;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transition:
+    transform 0.25s ease,
+    background 0.25s ease;
+}
+
+.beauty-product-link:hover {
+  transform: translateY(-2px);
+  background: #c41420;
+}
+
+.beauty-product-link:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.beauty-cart-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 11, 8, 0.34);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 1400;
+}
+
+.beauty-cart-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.beauty-cart-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(420px, 100vw);
+  height: 100vh;
+  background: #fffaf7;
+  box-shadow: -20px 0 60px -36px rgba(18, 11, 8, 0.45);
+  transform: translateX(100%);
+  transition: transform 0.32s ease;
+  z-index: 1450;
+  display: flex;
+  flex-direction: column;
+}
+
+.beauty-cart-drawer.is-open {
+  transform: translateX(0);
+}
+
+.beauty-cart-drawer__header {
+  padding: 22px 22px 18px;
+  border-bottom: 1px solid rgba(196, 20, 32, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.beauty-cart-drawer__header p {
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(18, 11, 8, 0.55);
+  margin-bottom: 8px;
+}
+
+.beauty-cart-drawer__header h2 {
+  font-family: "Fraunces", serif;
+  font-size: 28px;
+  font-weight: 400;
+}
+
+.beauty-cart-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(18, 11, 8, 0.12);
+  background: #fff;
+  cursor: pointer;
+}
+
+.beauty-cart-drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 22px;
+}
+
+.beauty-cart-empty {
+  padding: 28px 0;
+  color: rgba(18, 11, 8, 0.68);
+}
+
+.beauty-cart-list {
+  display: grid;
+  gap: 12px;
+}
+
+.beauty-cart-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(196, 20, 32, 0.08);
+}
+
+.beauty-cart-item h3 {
+  font-family: "Fraunces", serif;
+  font-size: 19px;
+  font-weight: 400;
+  margin-bottom: 4px;
+}
+
+.beauty-cart-item p {
+  font-size: 13px;
+  color: rgba(18, 11, 8, 0.68);
+}
+
+.beauty-cart-item__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.beauty-cart-item__actions button {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(18, 11, 8, 0.12);
+  background: #fff;
+  cursor: pointer;
+}
+
+.beauty-cart-drawer__footer {
+  padding: 18px 22px 22px;
+  border-top: 1px solid rgba(196, 20, 32, 0.1);
+  display: grid;
+  gap: 16px;
+}
+
+.beauty-cart-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.beauty-cart-total strong {
+  font-size: 20px;
+  color: #c41420;
+}
+
+.beauty-cart-checkout {
+  width: 100%;
+}
+
+.beauty-cart-checkout:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1100px) {
+  .beauty-product-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .beauty-capillaires__intro {
+    grid-template-columns: 1fr;
+  }
+
+  .beauty-capillaires__photos img {
+    min-height: 260px;
+  }
+}
+
+@media (max-width: 800px) {
+  .beauty-product-grid,
+  .beauty-capillaires__highlights,
+  .beauty-capillaires__photos {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .beauty-product-grid,
+  .beauty-capillaires__highlights,
+  .beauty-capillaires__photos {
+    grid-template-columns: 1fr;
+  }
+
+  .beauty-capillaires__photos figcaption {
+    margin-top: -54px;
+  }
+}
