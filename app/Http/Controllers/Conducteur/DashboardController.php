@@ -1,0 +1,261 @@
+<?php
+
+namespace App\Http\Controllers\Conducteur;
+
+use App\Http\Controllers\Controller;
+use App\Models\ActeLiturgique;
+use App\Models\Inscription;
+use App\Models\Priere;
+use App\Models\User;
+use App\Services\SondageService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
+
+class DashboardController extends Controller
+{
+    public function __construct(
+        private readonly SondageService $sondageService,
+    ) {
+    }
+
+    public function index()
+    {
+        $user = Auth::user();
+        $user->loadMissing('family', 'classe');
+        $familyName = $user->family?->nom
+            ?? $user->familiesAsResponsible()->value('nom');
+
+        // Vérifier que c'est un conducteur
+        if ($user->role !== 'conducteur') {
+            abort(403, 'Accès non autorisé');
+        }
+
+        // Récupérer les classes gérées par le conducteur
+        $conductorClasses = $user->getManagedClasses();
+
+        if ($conductorClasses->isEmpty()) {
+            return Inertia::render('Conducteur/Dashboard', [
+                'role' => $user->role,
+                'pendingInscriptions' => 0,
+                'pendingLiturgieCount' => 0,
+                'surveyBadgeCount' => 0,
+                'prayerBadgeCount' => 0,
+                'flashAnnouncements' => $this->buildFlashAnnouncements(),
+                'pendingTransfers' => 0,
+                'inscriptions' => [],
+                'users' => [],
+                'className' => 'Aucune classe assignée',
+                'familyName' => $familyName,
+            ]);
+        }
+
+        $classIds = $conductorClasses->pluck('id')->toArray();
+        $classIdsStr = array_map('strval', $classIds);
+        $className = $conductorClasses->first()->nom ?? 'Classes multiples';
+
+        // 1. Récupérer TOUTES les inscriptions en attente de ses classes
+        // Même logique que l'écran Conducteur/Inscriptions (fallback sur plusieurs chemins de classe)
+        $pendingInscriptions = Inscription::whereIn('status', ['en_attente', 'pending'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->filter(function ($insc) use ($classIdsStr) {
+                $classeId = $insc->data['famille']['classe_id']
+                    ?? $insc->data['classe_id']
+                    ?? $insc->data['responsable']['classe_id']
+                    ?? $insc->classe_id
+                    ?? null;
+
+                return in_array((string) $classeId, $classIdsStr, true);
+            })
+            ->values()
+            ->map(function ($insc) {
+                return [
+                    'id' => $insc->id,
+                    'nom' => $insc->nom,
+                    'prenom' => $insc->prenom,
+                    'email' => $insc->email,
+                    'telephone' => $insc->telephone,
+                    'genre' => $insc->genre,
+                    'date_naissance' => $insc->date_naissance,
+                    'adresse' => $insc->adresse,
+                    'fonction_professionnelle' => $insc->fonction_professionnelle,
+                    'statut_marital' => $insc->statut_marital,
+                    'date_mariage' => $insc->date_mariage,
+                    'lieu_mariage' => $insc->lieu_mariage,
+                    'baptise' => $insc->baptise,
+                    'date_bapteme' => $insc->date_bapteme,
+                    'lieu_bapteme' => $insc->lieu_bapteme,
+                    'premiere_communion' => $insc->premiere_communion,
+                    'date_premiere_communion' => $insc->date_premiere_communion,
+                    'mariage_religieux' => $insc->mariage_religieux,
+                    'date_mariage_religieux' => $insc->date_mariage_religieux,
+                    'famille_id' => $insc->famille_id,
+                    'responsable_famille' => ($insc->responsable_nom && $insc->responsable_prenom) ? $insc->responsable_nom . ' ' . $insc->responsable_prenom : 'N/A',
+                    'status' => $insc->status,
+                    'classe_id' => $insc->data['famille']['classe_id'] ?? null,
+                    'created_at' => $insc->created_at,
+                ];
+            });
+
+        // 2. Récupérer TOUS les users de sa classe (responsables + membres)
+        $classUsers = User::whereIn('classe_id', $classIds)
+            ->where('id', '!=', $user->id) // Exclure l'utilisateur courant
+            ->with('family')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($u) {
+                return [
+                    'id' => $u->id,
+                    'nom' => $u->nom,
+                    'prenom' => $u->prenom,
+                    'email' => $u->email,
+                    'telephone' => $u->telephone,
+                    'genre' => $u->genre,
+                    'role' => $u->role,
+                    'is_family_responsible' => $u->is_family_responsible,
+                    'family_id' => $u->family_id,
+                    'family_name' => $u->family ? $u->family->nom : null,
+                    'created_at' => $u->created_at,
+                ];
+            });
+
+        $pendingCount = $pendingInscriptions->count();
+        $pendingLiturgieCount = ActeLiturgique::query()
+            ->whereIn('classe_id', $classIds)
+            ->where('statut', ActeLiturgique::STATUT_Soumise)
+            ->count();
+        $surveyBadgeCount = $this->sondageService
+            ->getVisibleSondagesForUser($user)
+            ->filter(fn (array $survey) => ($survey['statut'] ?? null) === 'Actif' && !($survey['aDejaRepondu'] ?? false))
+            ->count();
+        $prayerBadgeCount = Priere::query()
+            ->where('user_id', $user->id)
+            ->where(function ($query) {
+                $query->whereIn('statut', ['Transmise', 'En priere', 'Exaucement partage'])
+                    ->orWhereNotNull('vue_le')
+                    ->orWhereNotNull('prise_en_priere_le')
+                    ->orWhereNotNull('exaucee_le');
+            })
+            ->count();
+        $pendingTransfers = \App\Models\ClassTransferRequest::whereIn('classe_source_id', $classIds)
+                ->where('statut', 'EN_ATTENTE_SOURCE')
+                ->count()
+            + \App\Models\ClassTransferRequest::whereIn('classe_cible_id', $classIds)
+                ->where('statut', 'EN_ATTENTE_ACCUEIL')
+                ->count();
+
+        return Inertia::render('Conducteur/Dashboard', [
+            'role' => $user->role,
+            'pendingInscriptions' => $pendingCount,
+            'pendingLiturgieCount' => $pendingLiturgieCount,
+            'surveyBadgeCount' => $surveyBadgeCount,
+            'prayerBadgeCount' => $prayerBadgeCount,
+            'flashAnnouncements' => $this->buildFlashAnnouncements(),
+            'pendingTransfers' => $pendingTransfers,
+            'inscriptions' => $pendingInscriptions->values(),
+            'users' => $classUsers->values(),
+            'className' => $className,
+            'familyName' => $familyName,
+            'userCount' => $classUsers->count(),
+            'totalInscriptionCount' => Inscription::all()
+                ->filter(function ($insc) use ($classIdsStr) {
+                    $classeId = $insc->data['famille']['classe_id']
+                        ?? $insc->data['classe_id']
+                        ?? $insc->data['responsable']['classe_id']
+                        ?? $insc->classe_id
+                        ?? null;
+
+                    return in_array((string) $classeId, $classIdsStr, true);
+                })
+                ->count(),
+        ]);
+    }
+
+    private function buildFlashAnnouncements()
+    {
+        return ActeLiturgique::query()
+            ->where('est_annonce', true)
+            ->whereNotNull('pasteur_id')
+            ->whereIn('statut', [ActeLiturgique::STATUT_VALIDEE, ActeLiturgique::STATUT_PUBLIEE])
+            ->orderByDesc('date_publication')
+            ->orderByDesc('updated_at')
+            ->limit(12)
+            ->get()
+            ->map(function (ActeLiturgique $annonce) {
+                $text = trim((string) ($annonce->details['contenu'] ?? $annonce->message ?? ''));
+
+                if ($text === '') {
+                    $text = 'Annonce paroissiale publiee.';
+                }
+
+                return [
+                    'id' => $annonce->id,
+                    'text' => $text,
+                ];
+            })
+            ->values();
+    }
+
+    /**
+     * Approuver une inscription
+     */
+    public function approveInscription($inscriptionId)
+    {
+        $user = Auth::user();
+
+        if ($user->role !== 'conducteur') {
+            abort(403, 'Accès non autorisé');
+        }
+
+        $inscription = Inscription::findOrFail($inscriptionId);
+
+        // Vérifier que l'inscription est de sa classe
+        $conductorClasses = $user->getManagedClasses();
+        $inscriptionClasseId = $inscription->data['famille']['classe_id'] ?? null;
+        if (!$conductorClasses->pluck('id')->contains($inscriptionClasseId)) {
+            abort(403, 'Cette inscription n\'est pas de votre classe');
+        }
+
+        // Approuver l'inscription
+        $inscription->update([
+            'status' => 'approuve',
+            'conducteur_id' => $user->id,
+            'conducteur_approved_at' => now(),
+        ]);
+
+        return back()->with('success', 'Inscription approuvée avec succès');
+    }
+
+    /**
+     * Rejeter une inscription
+     */
+    public function rejectInscription(Request $request, $inscriptionId)
+    {
+        $user = Auth::user();
+
+        if ($user->role !== 'conducteur') {
+            abort(403, 'Accès non autorisé');
+        }
+
+        $inscription = Inscription::findOrFail($inscriptionId);
+
+        // Vérifier que l'inscription est de sa classe
+        $conductorClasses = $user->getManagedClasses();
+        if (!$conductorClasses->pluck('id')->contains($inscription->classe_id)) {
+            abort(403, 'Cette inscription n\'est pas de votre classe');
+        }
+
+        $reason = $request->input('raison_rejet', '');
+
+        // Rejeter l'inscription
+        $inscription->update([
+            'status' => 'rejetee',
+            'raison_rejet' => $reason,
+            'rejected_by' => $user->id,
+            'rejected_at' => now(),
+        ]);
+
+        return back()->with('success', 'Inscription rejetée avec succès');
+    }
+}
