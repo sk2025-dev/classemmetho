@@ -2,7 +2,7 @@ import "../../Styles/BeauteCosmetiques.css";
 import BeautyCard from "./BeautyCard";
 import { cosmetiqueProducts, cosmetiqueKits } from "./beauteData";
 
-function BeauteCosmetiquesSection() {
+function BeauteCosmetiquesSection({ onAddToCart }) {
   // split products into two groups for the two grids
   const firstGroup = cosmetiqueProducts.slice(0, 5);
   const secondGroup = cosmetiqueProducts.slice(5);
@@ -33,7 +33,12 @@ function BeauteCosmetiquesSection() {
 
         <div className="beauty-grid" id="grid-cremescorps">
           {firstGroup.map((item) => (
-            <BeautyCard key={item.title} variant="product" item={item} />
+            <BeautyCard
+              key={item.title}
+              variant="product"
+              item={item}
+              onAddToCart={() => onAddToCart(item)}
+            />
           ))}
         </div>
       </div>
@@ -53,7 +58,12 @@ function BeauteCosmetiquesSection() {
 
         <div className="beauty-grid" id="grid-savonsdouche">
           {secondGroup.map((item) => (
-            <BeautyCard key={item.title} variant="product" item={item} />
+            <BeautyCard
+              key={item.title}
+              variant="product"
+              item={item}
+              onAddToCart={() => onAddToCart(item)}
+            />
           ))}
         </div>
       </div>
@@ -73,7 +83,12 @@ function BeauteCosmetiquesSection() {
 
         <div className="beauty-grid" id="grid-kitsvisage">
           {cosmetiqueKits.map((item) => (
-            <BeautyCard key={item.title} variant="product" item={item} />
+            <BeautyCard
+              key={item.title}
+              variant="product"
+              item={item}
+              onAddToCart={() => onAddToCart(item)}
+            />
           ))}
         </div>
       </div>

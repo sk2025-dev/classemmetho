@@ -10,6 +10,7 @@ import BeauteSpaPage from "./Pages/BeauteSpaPage";
 import BeauteRdvPage from "./Pages/BeauteRdvPage";
 import BeauteAboutPage from "./Pages/BeauteAboutPage";
 import ConsultingPage from "./Pages/ConsultingPage";
+import Admin from "./admin/Admin";
 import "./Styles/Variables.css";
 import "./Styles/Holding.css";
 import "./Styles/Carrousel.css";
@@ -25,6 +26,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<HoldingPage />} />
+        <Route path="/admin" element={<Admin />} />
         <Route path="/beaute" element={<BeautePage />} />
         <Route
           path="/beaute/realisations"
