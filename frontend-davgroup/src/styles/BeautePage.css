@@ -1,0 +1,766 @@
+.beauty-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(196, 20, 32, 0.14),
+      transparent 30%
+    ),
+    linear-gradient(180deg, #fffaf7 0%, #f4ece5 100%);
+  color: #120b08;
+}
+
+.beauty-hero {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 42px;
+  align-items: center;
+  padding: 58px 32px 28px;
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+.beauty-eyebrow,
+.beauty-section-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  letter-spacing: 0.36em;
+  text-transform: uppercase;
+  color: #c41420;
+  margin-bottom: 18px;
+}
+
+.beauty-eyebrow::before,
+.beauty-section-kicker::before {
+  content: "";
+  width: 26px;
+  height: 1px;
+  background: currentColor;
+}
+
+.beauty-hero h1,
+.beauty-section h2,
+.beauty-story h2,
+.beauty-contact h2,
+.beauty-offers-copy h2,
+.beauty-cta-band h2,
+.beauty-rdv-copy h2 {
+  font-family: "Fraunces", serif;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 0.96;
+}
+
+.beauty-hero h1 {
+  max-width: 760px;
+  font-size: clamp(52px, 7vw, 98px);
+  margin-bottom: 20px;
+}
+
+.beauty-hero h1 span,
+.beauty-section h2 span,
+.beauty-offers-copy h2 span {
+  color: #c41420;
+  font-style: italic;
+}
+
+.beauty-lead,
+.beauty-service-body p,
+.beauty-story-copy p,
+.beauty-contact p,
+.beauty-real-body p,
+.beauty-info-card p,
+.beauty-rdv-copy p,
+.beauty-rdv-card p,
+.beauty-offers-copy p:last-child,
+.beauty-offer-card p:last-child {
+  font-size: 16px;
+  line-height: 1.8;
+  color: rgba(18, 11, 8, 0.72);
+}
+
+.beauty-lead {
+  max-width: 600px;
+  margin-bottom: 28px;
+}
+
+.beauty-actions,
+.beauty-contact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.beauty-btn {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  transition:
+    transform 0.25s ease,
+    background 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.beauty-btn:hover {
+  transform: translateY(-2px);
+}
+
+.beauty-btn--primary {
+  background: #c41420;
+  color: #fffaf7;
+  border: 1px solid #c41420;
+}
+
+.beauty-btn--ghost {
+  background: transparent;
+  color: #120b08;
+  border: 1px solid rgba(18, 11, 8, 0.16);
+}
+
+.beauty-highlights {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 32px;
+}
+
+.beauty-highlights li {
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(196, 20, 32, 0.12);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.beauty-hero-media {
+  position: relative;
+}
+
+.beauty-hero-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 620px;
+  border-radius: 28px;
+  box-shadow: 0 32px 90px -36px rgba(18, 11, 8, 0.4);
+  border: 1px solid rgba(196, 20, 32, 0.12);
+}
+
+.beauty-hero-card img,
+.beauty-gallery img,
+.beauty-real-image img,
+.beauty-service-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.beauty-hero-badge {
+  position: absolute;
+  left: 24px;
+  top: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #120b08;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.beauty-hero-badge span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #c41420;
+  color: #fffaf7;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.beauty-intro-strip {
+  max-width: 1320px;
+  margin: 10px auto 0;
+  padding: 0 32px 42px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.beauty-intro-strip > div {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(196, 20, 32, 0.1);
+  border-radius: 22px;
+  padding: 22px 20px;
+}
+
+.beauty-intro-strip strong {
+  display: block;
+  font-family: "Fraunces", serif;
+  font-size: 30px;
+  font-weight: 400;
+  color: #c41420;
+  margin-bottom: 4px;
+}
+
+.beauty-intro-strip span {
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(18, 11, 8, 0.68);
+}
+
+.beauty-section,
+.beauty-story,
+.beauty-contact {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 80px 32px;
+}
+
+.beauty-section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-end;
+  margin-bottom: 34px;
+}
+
+/* Inverse eyebrow/title order for spa & nails header */
+.beauty-section-heading--reverse {
+  /* keep the header as a row so the CTA stays on the right */
+  align-items: center;
+}
+
+/* Reverse only the eyebrow/title order inside the text block */
+.beauty-section-heading--reverse .beauty-section-heading__text {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+}
+
+/* Booking CTA */
+.beauty-cta-book {
+  display: inline-block;
+  background: #c41420;
+  color: #fffaf7;
+  padding: 10px 18px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 13px;
+}
+
+/* Keep CTA on the right with some spacing when header is reversed */
+.beauty-section-heading--reverse .beauty-cta-book {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+.beauty-section-heading--stack {
+  display: block;
+}
+
+.beauty-section-heading--stack p {
+  margin-bottom: 12px;
+}
+
+.beauty-section-heading p {
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(18, 11, 8, 0.55);
+}
+
+.beauty-coiffures__header p {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 24px;
+  border-radius: 999px;
+  background: #c41420;
+  color: #fffaf7;
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.beauty-coiffures__header h2 {
+  display: none;
+}
+
+.beauty-section-subtitle {
+  display: block;
+  margin-top: 10px;
+  max-width: 620px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: rgba(18, 11, 8, 0.68);
+}
+
+.beauty-realisations {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 80px 32px;
+}
+
+.beauty-real-section-header {
+  align-items: center;
+}
+
+.beauty-real-section-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.beauty-real-section-header .beauty-btn {
+  flex-shrink: 0;
+}
+
+.beauty-real-category {
+  margin-bottom: 72px;
+}
+
+.beauty-real-cat-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.beauty-real-cat-line {
+  width: 4px;
+  height: 52px;
+  background: linear-gradient(180deg, #c41420, #c9a060);
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.beauty-real-cat-title {
+  font-family: "Fraunces", serif;
+  font-size: clamp(22px, 3vw, 34px);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: #120b08;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+
+.beauty-real-cat-title em {
+  font-style: italic;
+  color: #c41420;
+  font-weight: 500;
+}
+
+.beauty-real-cat-sub {
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(18, 11, 8, 0.55);
+  font-weight: 500;
+}
+
+.beauty-real-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.beauty-real-card {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+  background: #f3e7d0;
+  cursor: pointer;
+  transition:
+    transform 0.35s cubic-bezier(0.76, 0, 0.24, 1),
+    box-shadow 0.35s cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+.beauty-real-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 16px 40px -12px rgba(26, 15, 10, 0.2);
+}
+
+.beauty-real-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.beauty-real-img[src=""] {
+  display: none;
+}
+
+.beauty-real-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #f3e7d0;
+  border: 2px dashed rgba(201, 160, 96, 0.4);
+  border-radius: 14px;
+  z-index: 0;
+  transition: background 0.3s;
+}
+
+.beauty-real-card:hover .beauty-real-placeholder {
+  background: #ede5d8;
+}
+
+.beauty-real-placeholder span {
+  font-size: 28px;
+  opacity: 0.5;
+}
+
+.beauty-real-placeholder p {
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(18, 11, 8, 0.55);
+  text-align: center;
+  padding: 0 8px;
+}
+
+.beauty-real-img:not([src=""]) ~ .beauty-real-placeholder {
+  display: none;
+}
+
+.beauty-section h2,
+.beauty-story h2,
+.beauty-contact h2,
+.beauty-rdv-copy h2,
+.beauty-cta-band h2 {
+  font-size: clamp(34px, 4vw, 58px);
+  max-width: 760px;
+}
+
+.beauty-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.beauty-grid--realisations {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.beauty-real-card,
+.beauty-info-card {
+  min-height: 220px;
+  padding: 22px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(196, 20, 32, 0.1);
+  box-shadow: 0 18px 48px -38px rgba(18, 11, 8, 0.38);
+}
+
+.beauty-real-image {
+  aspect-ratio: 4 / 4.7;
+  border-radius: 18px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.beauty-real-body h3,
+.beauty-info-card h3,
+.beauty-offer-card h3,
+.beauty-service-body h3 {
+  font-family: "Fraunces", serif;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.05;
+  margin-bottom: 10px;
+}
+
+.beauty-card-kicker {
+  display: inline-flex;
+  margin-bottom: 14px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: rgba(196, 20, 32, 0.08);
+  color: #c41420;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.beauty-section--alt {
+  background: rgba(255, 255, 255, 0.36);
+}
+
+.beauty-service-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-right: auto;
+}
+
+#ongleriespa .beauty-section-heading {
+  justify-content: flex-start;
+}
+
+.beauty-service-card {
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(196, 20, 32, 0.1);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 18px 50px -32px rgba(18, 11, 8, 0.35);
+}
+
+.beauty-service-image {
+  position: relative;
+  aspect-ratio: 4 / 4.4;
+  overflow: hidden;
+}
+
+.beauty-service-image span {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(18, 11, 8, 0.76);
+  color: #fffaf7;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.beauty-service-body {
+  padding: 20px 18px 24px;
+}
+
+.beauty-offers {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 20px 32px 72px;
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+.beauty-offers-copy h2 {
+  font-size: clamp(32px, 4vw, 54px);
+  margin-bottom: 14px;
+}
+
+.beauty-offers-copy p:last-child {
+  max-width: 560px;
+}
+
+.beauty-offers-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.beauty-offer-card {
+  min-height: 184px;
+  padding: 22px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(196, 20, 32, 0.1);
+  box-shadow: 0 18px 50px -36px rgba(18, 11, 8, 0.35);
+}
+
+.beauty-offer-price {
+  display: inline-flex;
+  margin-bottom: 18px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(196, 20, 32, 0.08);
+  color: #c41420;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.beauty-story {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 34px;
+  align-items: center;
+}
+
+.beauty-gallery {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.beauty-gallery img {
+  min-height: 300px;
+  border-radius: 24px;
+  border: 1px solid rgba(196, 20, 32, 0.08);
+  box-shadow: 0 24px 60px -36px rgba(18, 11, 8, 0.4);
+}
+
+.beauty-rdv {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 24px 32px 76px;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.beauty-rdv-copy,
+.beauty-rdv-card {
+  border-radius: 28px;
+  padding: 28px;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(196, 20, 32, 0.1);
+  box-shadow: 0 20px 64px -44px rgba(18, 11, 8, 0.4);
+}
+
+.beauty-rdv-card {
+  display: grid;
+  align-content: center;
+  gap: 12px;
+}
+
+.beauty-rdv-mini {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #c41420;
+  color: #fffaf7;
+  font-weight: 600;
+}
+
+.beauty-cta-band {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 24px 32px 72px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+
+.beauty-contact-box {
+  padding: 34px;
+  border-radius: 28px;
+  background: linear-gradient(
+    135deg,
+    rgba(196, 20, 32, 0.97),
+    rgba(140, 13, 22, 0.98)
+  );
+  color: #fffaf7;
+  box-shadow: 0 30px 80px -44px rgba(196, 20, 32, 0.7);
+}
+
+.beauty-contact-box .beauty-section-kicker,
+.beauty-contact-box p,
+.beauty-contact-box h2 {
+  color: inherit;
+}
+
+.beauty-contact-box .beauty-section-kicker::before {
+  background: rgba(255, 250, 247, 0.88);
+}
+
+@media (max-width: 1024px) {
+  .beauty-hero,
+  .beauty-story,
+  .beauty-rdv,
+  .beauty-offers {
+    grid-template-columns: 1fr;
+  }
+
+  .beauty-realisations,
+  .beauty-offers-grid,
+  .beauty-service-grid,
+  .beauty-grid,
+  .beauty-grid--realisations,
+  .beauty-intro-strip,
+  .beauty-gallery {
+    grid-template-columns: 1fr;
+  }
+
+  .beauty-real-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .beauty-hero-card {
+    min-height: 460px;
+  }
+
+  .beauty-section-heading,
+  .beauty-cta-band {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 800px) {
+  .beauty-section,
+  .beauty-story,
+  .beauty-contact,
+  .beauty-hero,
+  .beauty-intro-strip,
+  .beauty-rdv,
+  .beauty-offers,
+  .beauty-cta-band {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .beauty-hero h1 {
+    font-size: clamp(40px, 12vw, 64px);
+  }
+
+  .beauty-gallery img,
+  .beauty-hero-card {
+    border-radius: 20px;
+  }
+
+  .beauty-realisations {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .beauty-real-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .beauty-real-cat-title {
+    font-size: 22px;
+  }
+}

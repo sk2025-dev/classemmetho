@@ -1,0 +1,127 @@
+.main-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  padding: 0 40px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.main-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.nav-item {
+  display: inline-flex;
+  align-items: center;
+  padding: 18px 28px;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  color: rgba(26, 15, 10, 0.6);
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+  transition:
+    color 0.3s,
+    background 0.3s,
+    transform 0.3s,
+    box-shadow 0.3s;
+  border: none;
+  background: none;
+  font-family: "Inter", sans-serif;
+}
+
+.nav-item::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  right: 50%;
+  height: 2px;
+  background: #c41420;
+  transition:
+    left 0.3s cubic-bezier(0.76, 0, 0.24, 1),
+    right 0.3s cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+.nav-item:hover {
+  color: #1a0f0a;
+}
+
+.nav-item:hover::after,
+.nav-item.active::after {
+  left: 20px;
+  right: 20px;
+  background: #fff;
+}
+
+.nav-item.active {
+  color: #fff;
+  font-weight: 600;
+  background: #c41420;
+  border-radius: 999px;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px -14px rgba(196, 20, 32, 0.85);
+}
+
+@media (max-width: 800px) {
+  .main-nav {
+    justify-content: flex-start;
+    padding-inline: 18px;
+  }
+
+  .nav-item {
+    padding-inline: 18px;
+  }
+}
+
+/* ===== BOUTON RENDEZ-VOUS ===== */
+.nav-item--rendezvous {
+  background: #ffffff !important;
+  border: 1px solid #c41420 !important;
+  border-radius: 999px !important;
+  padding: 14px 26px !important;
+  font-size: 12px !important;
+  letter-spacing: 0.18em !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  color: #c41420 !important;
+  box-shadow: none !important;
+}
+
+.nav-item--rendezvous::after {
+  display: none !important;
+}
+
+.nav-item--rendezvous:hover,
+.nav-item--rendezvous:focus-visible {
+  background: rgba(196, 20, 32, 0.08) !important;
+  color: #c41420 !important;
+  box-shadow: none !important;
+  transform: translateY(0) !important;
+}
+
+.nav-item--rendezvous.active {
+  background: linear-gradient(135deg, #c41420 0%, #d87071 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 24px rgba(196, 20, 32, 0.18) !important;
+}
+
+.rendezvous-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.rendezvous-label {
+  display: inline-flex;
+  align-items: center;
+}
+
