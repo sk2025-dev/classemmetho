@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useAdmin } from "../hooks/useAdmin";
 import { MOCK_PRODUCTS, BADGE_OPTIONS } from "../utils/constants";
+import { adminApi } from "../utils/api";
 import "../styles/admin.css";
 
 const Products = () => {
@@ -14,6 +15,34 @@ const Products = () => {
       badge: "",
     })),
   );
+
+  useEffect(() => {
+    let mounted = true;
+
+    const load = async () => {
+      try {
+        const res = await adminApi.getProducts();
+        const data = res?.data || [];
+        const mapped = data.map((p) => ({
+          name: p.name,
+          cat: p.category || "",
+          price: p.price?.toString() || "0",
+          img: p.image || "/images/placeholder.png",
+          inStock: p.quantity > 0,
+          badge: "",
+        }));
+        if (mounted && mapped.length > 0) setProducts(mapped);
+      } catch (err) {
+        // leave local mock data
+      }
+    };
+
+    load();
+
+    return () => {
+      mounted = false;
+    };
+  }, [setProducts]);
   const [filter, setFilter] = useState("all");
 
   const filteredProducts = useMemo(() => {

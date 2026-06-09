@@ -90,7 +90,13 @@ class PromotionSeeder extends Seeder
         ];
 
         foreach ($promotions as $promotion) {
-            Promotion::create($promotion);
+            Promotion::updateOrCreate(
+                [
+                    'product_id' => $promotion['product_id'],
+                    'title' => $promotion['title'],
+                ],
+                $promotion,
+            );
         }
     }
 }

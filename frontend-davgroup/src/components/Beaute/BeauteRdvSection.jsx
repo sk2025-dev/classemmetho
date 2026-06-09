@@ -1,109 +1,43 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "../../styles/BeauteRdv.css";
 
-const services = {
-  coiffure: {
-    label: "Coiffure & Tressage",
-    icon: "💇",
-    items: [
-      {
-        id: 1,
-        title: "Micro-twist",
-        duration: "11H30",
-        price: "35 000 FCFA",
-        image: "/images/debut.png",
-      },
-      {
-        id: 2,
-        title: "Tresse enfant",
-        duration: "3H",
-        price: "25 000 FCFA",
-        image: "/images/mamouch.png",
-      },
-      {
-        id: 3,
-        title: "Coloration naturelle",
-        duration: "2H30",
-        price: "42 000 FCFA",
-        image: "/images/elegant.jpg",
-      },
-    ],
-  },
-  ongerie: {
-    label: "Ongerie",
-    icon: "💅",
-    items: [
-      {
-        id: 1,
-        title: "Pose gel simple",
-        duration: "1H30",
-        price: "24 000 FCFA",
-        image: "/images/designmarron.jpg",
-      },
-      {
-        id: 2,
-        title: "Nail art complet",
-        duration: "2H",
-        price: "30 000 FCFA",
-        image: "/images/ongletflachir.jpg",
-      },
-      {
-        id: 3,
-        title: "Manucure classique",
-        duration: "1H",
-        price: "18 000 FCFA",
-        image: "/images/elegant.jpg",
-      },
-    ],
-  },
-  spa: {
-    label: "Spa & Soins",
-    icon: "🧖",
-    items: [
-      {
-        id: 1,
-        title: "Massage relaxant",
-        duration: "1H30",
-        price: "38 000 FCFA",
-        image: "/images/spa4.jpeg",
-      },
-      {
-        id: 2,
-        title: "Soin du visage",
-        duration: "1H",
-        price: "29 000 FCFA",
-        image: "/images/spa2.jpeg",
-      },
-      {
-        id: 3,
-        title: "Gommage complet",
-        duration: "1H30",
-        price: "34 000 FCFA",
-        image: "/images/spa7.jpeg",
-      },
-    ],
-  },
-  conseil: {
-    label: "Conseil beauté",
-    icon: "✨",
-    items: [
-      {
-        id: 1,
-        title: "Conseil beauté",
-        duration: "1H",
-        price: "20 000 FCFA",
-        image: "/images/mere.png",
-      },
-      {
-        id: 2,
-        title: "Conseil entretien capillaire",
-        duration: "45mn",
-        price: "12 000 FCFA",
-        image: "/images/afro.png",
-      },
-    ],
-  },
+const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api";
+
+const serviceTabs = {
+  coiffure: { label: "Coiffure & Tressage", icon: "💇" },
+  ongerie: { label: "Ongerie", icon: "💅" },
+  spa: { label: "Spa & Soins", icon: "🧖" },
+  conseil: { label: "Conseil beauté", icon: "✨" },
 };
+
+const fallbackServices = {
+  coiffure: [
+    { id: 1, title: "Micro-twist", duration: "11H30", price: "35 000 FCFA", image: "/images/debut.png" },
+    { id: 2, title: "Tresse enfant", duration: "3H", price: "25 000 FCFA", image: "/images/mamouch.png" },
+    { id: 3, title: "Coloration naturelle", duration: "2H30", price: "42 000 FCFA", image: "/images/elegant.jpg" },
+  ],
+  ongerie: [
+    { id: 1, title: "Pose gel simple", duration: "1H30", price: "24 000 FCFA", image: "/images/designmarron.jpg" },
+    { id: 2, title: "Nail art complet", duration: "2H", price: "30 000 FCFA", image: "/images/ongletflachir.jpg" },
+    { id: 3, title: "Manucure classique", duration: "1H", price: "18 000 FCFA", image: "/images/elegant.jpg" },
+  ],
+  spa: [
+    { id: 1, title: "Massage relaxant", duration: "1H30", price: "38 000 FCFA", image: "/images/spa4.jpeg" },
+    { id: 2, title: "Soin du visage", duration: "1H", price: "29 000 FCFA", image: "/images/spa2.jpeg" },
+    { id: 3, title: "Gommage complet", duration: "1H30", price: "34 000 FCFA", image: "/images/spa7.jpeg" },
+  ],
+  conseil: [
+    { id: 1, title: "Conseil beauté", duration: "1H", price: "20 000 FCFA", image: "/images/mere.png" },
+    { id: 2, title: "Conseil entretien capillaire", duration: "45mn", price: "12 000 FCFA", image: "/images/afro.png" },
+  ],
+};
+
+const fallbackImagesByTitle = Object.values(fallbackServices)
+  .flat()
+  .reduce((accumulator, item) => {
+    accumulator[item.title] = item.image;
+    return accumulator;
+  }, {});
 
 const paymentMethods = [
   {
@@ -128,6 +62,7 @@ const paymentMethods = [
 
 function BeauteRdvSection() {
   const [activeService, setActiveService] = useState("ongerie");
+  const [serviceGroups, setServiceGroups] = useState(fallbackServices);
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedService, setSelectedService] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -143,6 +78,50 @@ function BeauteRdvSection() {
   const [isConfirmed, setIsConfirmed] = useState(false);
 
   const today = useMemo(() => new Date(), []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadServices = async () => {
+      try {
+        const response = await fetch(`${API_URL}/beauty-services?section_key=rendezvous`, {
+          headers: { Accept: "application/json" },
+        });
+        const payload = await response.json();
+        const items = payload?.data || [];
+
+        if (!mounted || items.length === 0) return;
+
+        const grouped = { coiffure: [], ongerie: [], spa: [], conseil: [] };
+        items.forEach((item) => {
+          const key = item.category_key || "coiffure";
+          if (!grouped[key]) grouped[key] = [];
+          grouped[key].push({
+            id: item.id,
+            title: item.title,
+            duration: item.duration || "—",
+            price: item.price || "—",
+            image:
+              item.image_url ||
+              fallbackImagesByTitle[item.title] ||
+              fallbackServices[key]?.[0]?.image ||
+              "/images/logo.png",
+            subtitle: item.subtitle,
+          });
+        });
+
+        setServiceGroups(grouped);
+      } catch {
+        // keep fallback data
+      }
+    };
+
+    loadServices();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
   const monthLabel = useMemo(
     () =>
       today.toLocaleDateString("fr-FR", {
@@ -257,7 +236,7 @@ function BeauteRdvSection() {
 
       <div className="rdv-services-container">
         <div className="rdv-tabs">
-          {Object.entries(services).map(([key, service]) => (
+          {Object.entries(serviceTabs).map(([key, service]) => (
             <button
               key={key}
               className={`rdv-tab ${activeService === key ? "active" : ""}`}
@@ -275,7 +254,7 @@ function BeauteRdvSection() {
 
         <div className={`rdv-panel ${currentStep === 1 ? "rdv-active" : ""}`}>
           <div className="rdv-cards-grid">
-            {services[activeService].items.map((item) => (
+            {serviceGroups[activeService].map((item) => (
               <div
                 key={item.id}
                 className={`rdv-card ${selectedService?.id === item.id ? "selected" : ""}`}
@@ -314,7 +293,7 @@ function BeauteRdvSection() {
         <div className={`rdv-panel ${currentStep === 2 ? "rdv-active" : ""}`}>
           <div className="rdv-selected-recap">
             <div className="rdv-recap-img">
-              <img
+                  <img
                 src={selectedService?.image || "/images/spa4.jpeg"}
                 alt={selectedService?.title || "Soin sélectionné"}
               />

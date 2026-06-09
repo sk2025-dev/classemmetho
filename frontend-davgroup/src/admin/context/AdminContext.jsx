@@ -1,11 +1,43 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { AdminContext } from "./context";
+import { adminApi } from "../utils/api";
+
+const getProfileStorageKey = (user) =>
+  user?.id ? `dav_admin_profile_${user.id}` : null;
+
+const readLocalProfile = (storageKey) => {
+  if (!storageKey) return {};
+
+  try {
+    const savedProfile = localStorage.getItem(storageKey);
+    return savedProfile ? JSON.parse(savedProfile) : {};
+  } catch {
+    return {};
+  }
+};
+
+const buildUserProfile = (user) => {
+  if (!user) return null;
+
+  const localProfile = readLocalProfile(getProfileStorageKey(user));
+
+  return {
+    id: user.id,
+    name: user.name || "",
+    email: user.email || "",
+    photo: localProfile.photo || null,
+    phone: localProfile.phone || "",
+    bio: localProfile.bio || "",
+  };
+};
 
 export const AdminProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [currentPanel, setCurrentPanel] = useState("dashboard");
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [authError, setAuthError] = useState("");
   const [toast, setToast] = useState(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
@@ -17,7 +49,7 @@ export const AdminProvider = ({ children }) => {
   const [promoBar, setPromoBar] = useState("");
 
   // Show toast notification
-  const showToast = useCallback((message = "✓ Enregistré", duration = 2600) => {
+  const showToast = useCallback((message = "Enregistre", duration = 2600) => {
     setToast(message);
     setTimeout(() => setToast(null), duration);
   }, []);
@@ -27,53 +59,92 @@ export const AdminProvider = ({ children }) => {
     setCurrentPanel(panelName);
   }, []);
 
-  // Login
-  const login = useCallback((username, password) => {
-    // Mock validation - in real app this would call backend
-    if (
-      (username === "admin" || username === "davadmin") &&
-      password === "DAV2026"
-    ) {
-      const user = {
-        name: "Administrateur",
-        role: "Accès complet",
-        username,
-      };
-      setCurrentUser(user);
-
-      // Load profile from localStorage or create default
-      const savedProfile = localStorage.getItem("dav_admin_profile");
-      const profile = savedProfile
-        ? JSON.parse(savedProfile)
-        : {
-            name: "Administrateur",
-            email: "admin@davbeaute.com",
-            phone: "+235 66 00 00 00",
-            photo: null,
-          };
-      setUserProfile(profile);
-
-      return true;
-    }
-    return false;
+  const setAuthenticatedUser = useCallback((user) => {
+    setCurrentUser(user);
+    setUserProfile(buildUserProfile(user));
   }, []);
 
-  // Update profile
+  useEffect(() => {
+    let isMounted = true;
+
+    const restoreSession = async () => {
+      try {
+        const user = await adminApi.user();
+        if (isMounted) {
+          setAuthenticatedUser(user);
+        }
+      } catch (error) {
+        if (isMounted && error.status !== 401) {
+          setAuthError(error.message);
+        }
+      } finally {
+        if (isMounted) {
+          setIsCheckingAuth(false);
+        }
+      }
+    };
+
+    restoreSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [setAuthenticatedUser]);
+
+  // Login
+  const login = useCallback(
+    async (email, password) => {
+      setAuthError("");
+      setIsLoading(true);
+
+      try {
+        const data = await adminApi.login(email, password);
+        setAuthenticatedUser(data.user);
+        return { ok: true };
+      } catch (error) {
+        setAuthError(error.message);
+        return { ok: false, message: error.message };
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [setAuthenticatedUser],
+  );
+
+  // Update local profile fields that do not exist yet in the backend.
   const updateProfile = useCallback(
     (profileData) => {
-      const updated = { ...userProfile, ...profileData };
+      const localProfile = {
+        photo: profileData.photo || null,
+        phone: profileData.phone || "",
+        bio: profileData.bio || "",
+      };
+      const updated = {
+        ...userProfile,
+        ...localProfile,
+      };
+      const storageKey = getProfileStorageKey(currentUser);
+
       setUserProfile(updated);
-      localStorage.setItem("dav_admin_profile", JSON.stringify(updated));
-      showToast("✓ Profil mis à jour");
+      if (storageKey) {
+        localStorage.setItem(storageKey, JSON.stringify(localProfile));
+      }
+      showToast("Profil mis a jour");
     },
-    [userProfile, showToast],
+    [currentUser, userProfile, showToast],
   );
 
   // Logout
-  const logout = useCallback(() => {
-    setCurrentUser(null);
-    setUserProfile(null);
-    setCurrentPanel("dashboard");
+  const logout = useCallback(async () => {
+    try {
+      await adminApi.logout();
+    } catch (error) {
+      setAuthError(error.message);
+    } finally {
+      setCurrentUser(null);
+      setUserProfile(null);
+      setCurrentPanel("dashboard");
+    }
   }, []);
 
   const value = {
@@ -84,6 +155,8 @@ export const AdminProvider = ({ children }) => {
     login,
     logout,
     isAuthenticated: !!currentUser,
+    isCheckingAuth,
+    authError,
 
     // UI
     currentPanel,

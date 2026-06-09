@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect } from "react";
+import { useCallback, useContext, useState, useEffect } from "react";
 import { AdminProvider } from "./context/AdminContext";
 import { AdminContext } from "./context/context";
 import Loader from "./components/Loader";
@@ -9,6 +9,9 @@ import "./styles/admin.css";
 const AdminContent = () => {
   const [showLoader, setShowLoader] = useState(true);
   const context = useContext(AdminContext);
+  const handleLoaderComplete = useCallback(() => {
+    setShowLoader(false);
+  }, []);
 
   useEffect(() => {
     // Complete loader animation
@@ -18,8 +21,8 @@ const AdminContent = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  if (showLoader) {
-    return <Loader onComplete={() => setShowLoader(false)} />;
+  if (showLoader || context.isCheckingAuth) {
+    return <Loader onComplete={handleLoaderComplete} />;
   }
 
   if (!context.isAuthenticated) {

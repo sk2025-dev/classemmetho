@@ -1,16 +1,58 @@
-# React + Vite
+# DAVGROUP
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Projet web DAVGROUP avec un frontend React/Vite et un backend Laravel API.
 
-Currently, two official plugins are available:
+## Structure
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```txt
+classemmetho_davgroup/
+  frontend-davgroup/   # Application React séparée qui consomme l'API
+  backend-davgroup/    # API Laravel séparée
+  .gitignore
+  README.md
+```
 
-## React Compiler
+## Installation Locale
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Frontend source:
 
-## Expanding the ESLint configuration
+```bash
+cd frontend-davgroup
+npm install
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Backend:
+
+```bash
+cd backend-davgroup
+composer install
+php artisan migrate
+php artisan serve
+```
+
+Le backend sert uniquement l'API et la page Laravel par défaut.
+
+## Variables D'environnement
+
+Frontend:
+
+```bash
+cp frontend-davgroup/.env.example frontend-davgroup/.env
+```
+
+En local, le frontend tourne séparément et appelle l'API du backend sur http://127.0.0.1:8000/api.
+
+Backend:
+
+```bash
+cp backend-davgroup/.env.example backend-davgroup/.env
+php artisan key:generate
+```
+
+## Production
+
+Le frontend React se compile avec `npm run build` dans `frontend-davgroup`.
+Le backend Laravel doit etre deploye comme API indépendante avec `APP_ENV=production` et `APP_DEBUG=false`.
+Le backend Laravel doit etre deploye avec `APP_ENV=production` et `APP_DEBUG=false`.
+
+Les dossiers `node_modules/`, `vendor/`, `dist/`, `.env` et les caches ne doivent pas etre versionnes.

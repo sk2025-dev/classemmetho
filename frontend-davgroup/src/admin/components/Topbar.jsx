@@ -15,6 +15,7 @@ const Topbar = () => {
     orders: "Commandes",
     rdvs: "Rendez-vous",
     products: "Produits & Stock",
+    beauty: "Beauté & Photos",
     promos: "Promotions",
   };
 

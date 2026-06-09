@@ -8,27 +8,27 @@ const ProfileModal = () => {
   const [formData, setFormData] = useState(userProfile || {});
   const [photoPreview, setPhotoPreview] = useState(userProfile?.photo || null);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  const handlePhotoChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result);
-        setFormData((prev) => ({
-          ...prev,
-          photo: reader.result,
-        }));
-      };
-      reader.readAsDataURL(file);
-    }
+  const handlePhotoChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPhotoPreview(reader.result);
+      setFormData((prev) => ({
+        ...prev,
+        photo: reader.result,
+      }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSave = () => {
@@ -37,7 +37,7 @@ const ProfileModal = () => {
   };
 
   const handleClose = () => {
-    setFormData(userProfile);
+    setFormData(userProfile || {});
     setPhotoPreview(userProfile?.photo || null);
     setShowProfileModal(false);
   };
@@ -45,18 +45,20 @@ const ProfileModal = () => {
   if (!showProfileModal) return null;
 
   return (
-    <>
-      <div className="modal-backdrop" onClick={handleClose}></div>
-      <div className="modal-content" style={{ maxWidth: "500px" }}>
+    <div className="modal-overlay open" onClick={handleClose}>
+      <div
+        className="modal-box"
+        style={{ maxWidth: "500px" }}
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="modal-head">
-          <div className="modal-title">Mon Profil</div>
+          <div className="modal-head-title">Mon profil</div>
           <button className="modal-close" onClick={handleClose}>
-            ✕
+            x
           </button>
         </div>
 
         <div className="modal-body">
-          {/* Photo upload section */}
           <div style={{ textAlign: "center", marginBottom: "24px" }}>
             <div className="profile-photo-container">
               {photoPreview ? (
@@ -67,7 +69,10 @@ const ProfileModal = () => {
                 />
               ) : (
                 <div className="profile-photo-placeholder">
-                  <span style={{ fontSize: "48px" }}>📸</span>
+                  {(userProfile?.name || userProfile?.email || "A")
+                    .trim()
+                    .charAt(0)
+                    .toUpperCase()}
                 </div>
               )}
             </div>
@@ -76,10 +81,10 @@ const ProfileModal = () => {
               style={{
                 marginTop: "12px",
                 cursor: "pointer",
-                display: "inline-block",
+                display: "inline-flex",
               }}
             >
-              🖼️ Ajouter une photo
+              Ajouter une photo
               <input
                 type="file"
                 accept="image/*"
@@ -96,21 +101,18 @@ const ProfileModal = () => {
                 }}
                 style={{ marginLeft: "8px" }}
               >
-                ✕ Supprimer
+                Supprimer
               </button>
             )}
           </div>
 
-          {/* Form fields */}
           <div className="admin-field">
             <label className="admin-label">Nom complet</label>
             <input
               type="text"
-              name="name"
               className="admin-inp"
-              value={formData.name || ""}
-              onChange={handleInputChange}
-              placeholder="Votre nom"
+              value={userProfile?.name || ""}
+              readOnly
             />
           </div>
 
@@ -118,16 +120,14 @@ const ProfileModal = () => {
             <label className="admin-label">Email</label>
             <input
               type="email"
-              name="email"
               className="admin-inp"
-              value={formData.email || ""}
-              onChange={handleInputChange}
-              placeholder="votre@email.com"
+              value={userProfile?.email || ""}
+              readOnly
             />
           </div>
 
           <div className="admin-field">
-            <label className="admin-label">Téléphone</label>
+            <label className="admin-label">Telephone</label>
             <input
               type="tel"
               name="phone"
@@ -139,37 +139,37 @@ const ProfileModal = () => {
           </div>
 
           <div className="admin-field">
-            <label className="admin-label">Bio/Description</label>
+            <label className="admin-label">Bio / description</label>
             <textarea
               name="bio"
               className="admin-inp"
               value={formData.bio || ""}
               onChange={handleInputChange}
-              placeholder="Décrivez votre rôle..."
+              placeholder="Role dans l'administration"
               rows="3"
               style={{ fontFamily: "inherit", resize: "vertical" }}
             />
           </div>
         </div>
 
-        <div className="modal-actions">
+        <div className="modal-status-row" style={{ padding: "0 28px 24px" }}>
           <button
             className="action-btn ab-primary"
             onClick={handleSave}
-            style={{ flex: 1 }}
+            style={{ flex: 1, justifyContent: "center" }}
           >
-            💾 Enregistrer
+            Enregistrer
           </button>
           <button
             className="action-btn"
             onClick={handleClose}
-            style={{ flex: 1 }}
+            style={{ flex: 1, justifyContent: "center" }}
           >
             Annuler
           </button>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

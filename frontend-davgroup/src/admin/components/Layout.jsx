@@ -6,6 +6,7 @@ import Dashboard from "../pages/Dashboard";
 import Orders from "../pages/Orders";
 import Rdvs from "../pages/Rdvs";
 import Products from "../pages/Products";
+import BeautyServices from "../pages/BeautyServices";
 import Promos from "../pages/Promos";
 import { useAdmin } from "../hooks/useAdmin";
 import "../styles/admin.css";
@@ -23,6 +24,8 @@ const Layout = () => {
         return <Rdvs />;
       case "products":
         return <Products />;
+      case "beauty":
+        return <BeautyServices />;
       case "promos":
         return <Promos />;
       default:

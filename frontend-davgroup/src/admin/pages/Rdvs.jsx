@@ -1,13 +1,51 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useAdmin } from "../hooks/useAdmin";
 import RdvModal from "../components/modals/RdvModal";
 import { MOCK_RDVS } from "../utils/constants";
+import { adminApi } from "../utils/api";
 import "../styles/admin.css";
 
 const Rdvs = () => {
   const { showToast } = useAdmin();
   const [rdvs, setRdvs] = useLocalStorage("dav_rdvs", MOCK_RDVS);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const load = async () => {
+      try {
+        const res = await adminApi.getRdvs();
+        const data = res?.data || [];
+        const mapped = data.map((r) => {
+          const dt = new Date(r.appointment_date);
+          const rdvDate = dt.toISOString().slice(0, 10);
+          const slot = dt.toTimeString().slice(0, 5);
+          const duration = r.duration ? (parseInt(r.duration) >= 60 ? `${Math.round(parseInt(r.duration)/60)}h` : `${r.duration}m`) : "";
+          return {
+            id: `#RDV-${r.id}`,
+            rdvDate,
+            slot,
+            service: r.service,
+            duration,
+            svcPrice: r.svcPrice || 0,
+            client: { name: r.client_name, phone: r.client_phone, email: r.client_email },
+            payMethod: r.payMethod || "",
+            acompte: r.acompte || 0,
+            status: r.status || "pending",
+          };
+        });
+
+        if (mounted && mapped.length > 0) setRdvs(mapped);
+      } catch (err) {
+        // keep mocks
+      }
+    };
+
+    load();
+
+    return () => (mounted = false);
+  }, [setRdvs]);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [selectedRdv, setSelectedRdv] = useState(null);

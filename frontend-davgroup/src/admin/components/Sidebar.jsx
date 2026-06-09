@@ -1,6 +1,13 @@
 import { useAdmin } from "../hooks/useAdmin";
 import "../styles/admin.css";
 
+const getInitial = (userProfile, currentUser) => {
+  const source =
+    userProfile?.name || currentUser?.name || currentUser?.email || "Admin";
+
+  return source.trim().charAt(0).toUpperCase();
+};
+
 const Sidebar = () => {
   const {
     currentUser,
@@ -12,17 +19,18 @@ const Sidebar = () => {
   } = useAdmin();
 
   const menuItems = [
-    { id: "dashboard", label: "Tableau de bord", icon: "📊" },
-    { id: "orders", label: "Commandes", icon: "📦", badge: "0" },
-    { id: "rdvs", label: "Rendez-vous", icon: "📅", badge: "0" },
-    { id: "products", label: "Produits & Stock", icon: "🏷️", badge: "0" },
-    { id: "promos", label: "Promotions", icon: "🎁" },
+    { id: "dashboard", label: "Tableau de bord", icon: "TB" },
+    { id: "orders", label: "Commandes", icon: "CO", badge: "0" },
+    { id: "rdvs", label: "Rendez-vous", icon: "RD", badge: "0" },
+    { id: "products", label: "Produits & Stock", icon: "PR", badge: "0" },
+    { id: "beauty", label: "Beauté & Photos", icon: "BP" },
+    { id: "promos", label: "Promotions", icon: "PM" },
   ];
 
   return (
     <aside className="sidebar">
       <div className="sb-logo">
-        <img src="/images/beauté.png" alt="Dav'Beauté" />
+        <img src="/images/logo.png" alt="DAVGROUP" />
         <div className="sb-logo-sub">Administration</div>
       </div>
 
@@ -34,7 +42,9 @@ const Sidebar = () => {
             className={`sb-item ${currentPanel === item.id ? "sb-active" : ""}`}
             onClick={() => switchPanel(item.id)}
           >
-            <span style={{ fontSize: "16px" }}>{item.icon}</span>
+            <span style={{ fontSize: "11px", fontWeight: 700 }}>
+              {item.icon}
+            </span>
             {item.label}
             {item.badge && <span className="sb-badge">{item.badge}</span>}
           </button>
@@ -66,19 +76,19 @@ const Sidebar = () => {
                 }}
               />
             ) : (
-              currentUser?.username?.[0].toUpperCase() || "A"
+              getInitial(userProfile, currentUser)
             )}
           </div>
           <div>
             <div className="sb-user-name">
-              {userProfile?.name || currentUser?.name || "Administrateur"}
+              {userProfile?.name || currentUser?.name || currentUser?.email}
             </div>
-            <div className="sb-user-role">Cliquez pour éditer</div>
+            <div className="sb-user-role">Profil</div>
           </div>
         </button>
         <button className="sb-logout" onClick={logout}>
-          <span style={{ fontSize: "14px" }}>🚪</span>
-          Se déconnecter
+          <span style={{ fontSize: "12px", fontWeight: 700 }}>X</span>
+          Se deconnecter
         </button>
       </div>
     </aside>

@@ -20,7 +20,7 @@ const Loader = ({ onComplete }) => {
 
   return (
     <div id="adminLoader" className="loader">
-      <img src="/images/beauté.png" alt="DAV Beauté" className="loader-logo" />
+      <img src="/images/logo.png" alt="DAVGROUP" className="loader-logo" />
       <div className="loader-label">Espace Administration</div>
       <div className="loader-bar-wrap">
         <div className="loader-bar-fill"></div>

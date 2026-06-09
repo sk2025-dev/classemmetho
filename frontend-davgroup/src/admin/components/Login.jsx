@@ -3,44 +3,45 @@ import { useAdmin } from "../hooks/useAdmin";
 import "../styles/admin.css";
 
 const Login = () => {
-  const { login } = useAdmin();
-  const [username, setUsername] = useState("");
+  const { login, isLoading } = useAdmin();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleLogin = () => {
-    setError(false);
-    if (login(username, password)) {
-      setUsername("");
-      setPassword("");
-    } else {
-      setError(true);
-      setPassword("");
-    }
-  };
+  const handleLogin = async (event) => {
+    event?.preventDefault();
+    setError("");
 
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter") {
-      handleLogin();
+    const result = await login(email.trim(), password);
+
+    if (result.ok) {
+      setEmail("");
+      setPassword("");
+      return;
     }
+
+    setError(result.message || "Email ou mot de passe incorrect.");
+    setPassword("");
   };
 
   return (
     <div className="login-screen">
-      <div className="login-box">
-        <img src="/images/beauté.png" alt="Dav'Beauté" className="login-logo" />
+      <form className="login-box" onSubmit={handleLogin}>
+        <img src="/images/logo.png" alt="Dav'Group" className="login-logo" />
         <div className="login-title">Espace Administration</div>
-        <div className="login-sub">Accès réservé à l'équipe Dav'Beauté</div>
+        <div className="login-sub">Acces reserve a l'equipe Dav'Beaute</div>
 
         <div className="login-field">
-          <label className="login-label">Identifiant</label>
+          <label className="login-label">Email</label>
           <input
-            type="text"
+            type="email"
             className="login-input"
-            placeholder="admin"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            autoComplete="username"
+            placeholder="email@domaine.com"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            autoComplete="email"
+            disabled={isLoading}
+            required
           />
         </div>
 
@@ -49,24 +50,25 @@ const Login = () => {
           <input
             type="password"
             className="login-input"
-            placeholder="••••••••"
+            placeholder="Mot de passe"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onChange={(event) => setPassword(event.target.value)}
             autoComplete="current-password"
+            disabled={isLoading}
+            required
           />
         </div>
 
-        <button className="login-btn" onClick={handleLogin}>
-          Connexion
+        <button className="login-btn" type="submit" disabled={isLoading}>
+          {isLoading ? "Connexion..." : "Connexion"}
         </button>
 
         {error && (
           <div className="login-err" style={{ display: "block" }}>
-            Identifiant ou mot de passe incorrect.
+            {error}
           </div>
         )}
-      </div>
+      </form>
     </div>
   );
 };
