@@ -261,7 +261,13 @@ class TresorerieController extends Controller
                 },
                 'provider' => $paiement->provider,
                 'recu' => $paiement->reference_recu,
-                'payment_status' => $paiement->payment_status ?? Paiement::PAYMENT_STATUS_PAYE,
+                'payment_status' => match ($paiement->statut) {
+                    Paiement::STATUT_PAYE             => Paiement::PAYMENT_STATUS_PAYE,
+                    Paiement::STATUT_PARTIELLEMENT_PAYE,
+                    Paiement::STATUT_EN_RETARD        => 'PARTIEL',
+                    Paiement::STATUT_ANNULE           => Paiement::PAYMENT_STATUS_ANNULE,
+                    default                           => $paiement->payment_status ?? Paiement::PAYMENT_STATUS_PAYE,
+                },
                 'paydunya_reference' => $paiement->paydunya_reference,
             ];
         })->values();

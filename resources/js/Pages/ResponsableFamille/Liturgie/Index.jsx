@@ -12,6 +12,11 @@ const IN_PROGRESS = [
     "TRANSMISE_AU_PASTEUR",
 ];
 const VALID = ["VALIDEE", "PUBLIEE", "ARCHIVEE", "CELEBRE", "TERMINE"];
+const CAN_DOWNLOAD_ANNONCE = [
+    "TRANSMISE_AU_BUREAU_CONDUCTEUR",
+    "TRANSMISE_AU_PASTEUR",
+    "VALIDEE", "PUBLIEE", "ARCHIVEE", "CELEBRE", "TERMINE",
+];
 const DONE = ["CELEBRE", "TERMINE"];
 const ACTE_PER_PAGE = 2;
 const FAMILY_PER_PAGE = 6;
@@ -651,17 +656,17 @@ export default function Index({
                             Bonjour, <span>{familyName}</span>
                         </div>
                         <div className="welcome-sub">
-                            {enCours} demande(s) en cours · {valides} acte(s)
+                            {enCours + annStats.enCours} demande(s) en cours · {valides + annStats.validees} acte(s)
                             validé(s) · Certificats disponibles au
                             téléchargement
                         </div>
                     </div>
                     <div className="chips">
                         <span className="chip chip-terra">
-                            {enCours} en cours
+                            {enCours + annStats.enCours} en cours
                         </span>
                         <span className="chip chip-sage">
-                            {valides} validés
+                            {valides + annStats.validees} validés
                         </span>
                         <span className="chip chip-amber">
                             {familyMembers.length} membres
@@ -674,19 +679,19 @@ export default function Index({
                     <Kpi
                         tone="terra"
                         tag="Total"
-                        value={total}
+                        value={total + annStats.total}
                         label="Demandes soumises"
                     />
                     <Kpi
                         tone="amber"
                         tag="En cours"
-                        value={enCours}
+                        value={enCours + annStats.enCours}
                         label="En attente de validation"
                     />
                     <Kpi
                         tone="sage"
                         tag="Validés"
-                        value={valides}
+                        value={valides + annStats.validees}
                         label="Actes validés & certifiés"
                     />
                     <Kpi
@@ -735,9 +740,9 @@ export default function Index({
                                 />
                             </svg>
                             Mes actes
-                            {enCours > 0 && (
+                            {(enCours + annStats.enCours) > 0 && (
                                 <span className="tbadge tbadge-terra">
-                                    {enCours}
+                                    {enCours + annStats.enCours}
                                 </span>
                             )}
                         </button>
@@ -844,6 +849,8 @@ export default function Index({
                                     });
                                     const refusConducteur =
                                         histMap["REFUSEE_PAR_CONDUCTEUR"];
+                                    const refusBureauConducteur =
+                                        histMap["REFUSEE_PAR_BUREAU_CONDUCTEUR"];
                                     const refusPasteur =
                                         histMap["REFUSEE_PAR_PASTEUR"];
                                     const celebrationEntry =
@@ -888,6 +895,9 @@ export default function Index({
                                         };
                                     };
                                     const etapeConducteur = getEtape(
+                                        "TRANSMISE_AU_BUREAU_CONDUCTEUR",
+                                    );
+                                    const etapeBureauConducteur = getEtape(
                                         "TRANSMISE_AU_PASTEUR",
                                     );
                                     const etapePasteur = getEtape("VALIDEE");
@@ -1012,6 +1022,8 @@ export default function Index({
                                                     label="Validation du conducteur"
                                                     done={
                                                         statut ===
+                                                            "TRANSMISE_AU_BUREAU_CONDUCTEUR" ||
+                                                        statut ===
                                                             "TRANSMISE_AU_PASTEUR" ||
                                                         statut ===
                                                             "REFUSEE_PAR_CONDUCTEUR" ||
@@ -1031,6 +1043,31 @@ export default function Index({
                                                                   refusConducteur.created_at,
                                                               )
                                                             : etapeConducteur?.date
+                                                    }
+                                                />
+                                                <StatusStep
+                                                    label="Bureau des Conducteurs"
+                                                    done={
+                                                        statut ===
+                                                            "TRANSMISE_AU_PASTEUR" ||
+                                                        statut ===
+                                                            "REFUSEE_PAR_BUREAU_CONDUCTEUR" ||
+                                                        VALID.includes(statut)
+                                                    }
+                                                    active={
+                                                        statut ===
+                                                        "TRANSMISE_AU_BUREAU_CONDUCTEUR"
+                                                    }
+                                                    refused={
+                                                        statut ===
+                                                        "REFUSEE_PAR_BUREAU_CONDUCTEUR"
+                                                    }
+                                                    date={
+                                                        refusBureauConducteur
+                                                            ? formatDateTime(
+                                                                  refusBureauConducteur.created_at,
+                                                              )
+                                                            : etapeBureauConducteur?.date
                                                     }
                                                 />
                                                 <StatusStep
@@ -1171,6 +1208,93 @@ export default function Index({
                                         >
                                             Suivant
                                         </button>
+                                    </div>
+                                )}
+
+                                {/* ── DEMANDES DE PRIÈRE ── */}
+                                {annFiltered.length > 0 && (
+                                    <div style={{ marginTop: 24, borderTop: '2px solid #ede9fe', paddingTop: 16 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingLeft: 4 }}>
+                                            <div>
+                                                <div className="ph-title" style={{ fontSize: 14 }}>🙏 Mes demandes de prière</div>
+                                                <div className="ph-sub">Suivi en temps réel de chaque étape</div>
+                                            </div>
+                                            <span style={{ fontSize: 12, fontWeight: 700, background: '#ede9fe', color: '#7c3aed', borderRadius: 99, padding: '2px 10px' }}>
+                                                {annFiltered.length}
+                                            </span>
+                                        </div>
+
+                                        {pagedAnn.map((ann) => {
+                                            const t = ANNONCE_TYPES.find(
+                                                (x) => x.value === ann.type_annonce || x.value === ann.type_acte,
+                                            );
+                                            const isValid  = VALID.includes(ann.statut);
+                                            const isRefuse = String(ann.statut).startsWith("REFUSEE");
+                                            const msg = ann.details?.contenu || ann.message || "";
+                                            const member = ann.membre ? `${ann.membre.prenom} ${ann.membre.nom}` : null;
+                                            return (
+                                                <div
+                                                    key={ann.id}
+                                                    className={`ann-item-rf ${isRefuse ? "ann-item-refuse" : isValid ? "ann-item-valid" : ""}`}
+                                                    onClick={() => setSelectedAnnonce(ann)}
+                                                >
+                                                    <div className={`ann-item-icon atype-${t?.color}`}>
+                                                        {t?.emoji || "🙏"}
+                                                    </div>
+                                                    <div className="ann-item-body">
+                                                        <div className="ann-item-header">
+                                                            <span className="ann-item-name">{t?.label || ann.type_annonce}</span>
+                                                            {member && <span className="ann-item-who">— {member}</span>}
+                                                        </div>
+                                                        <div className="ann-item-msg">
+                                                            {msg.slice(0, 100)}{msg.length > 100 ? "…" : ""}
+                                                        </div>
+                                                        <div className="ann-item-meta">
+                                                            {ann.created_at && (
+                                                                <span>📅 {formatDate(ann.created_at)}</span>
+                                                            )}
+                                                        </div>
+                                                        <AnnonceDotTrack statut={ann.statut} ann={ann} />
+                                                    </div>
+                                                    <div className="ann-item-right">
+                                                        {/* Badge statut */}
+                                                        {isRefuse && <span className="ann-badge ann-badge-terra">REFUSÉE</span>}
+                                                        {isValid && <span className="ann-badge ann-badge-sage">PUBLIÉE</span>}
+                                                        {!isValid && !isRefuse && ann.statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR" && (
+                                                            <span className="ann-badge" style={{ background: "#ede9fe", color: "#7c3aed" }}>CHEZ LE BUREAU</span>
+                                                        )}
+                                                        {!isValid && !isRefuse && ann.statut === "TRANSMISE_AU_PASTEUR" && (
+                                                            <span className="ann-badge" style={{ background: "#dbeafe", color: "#1d4ed8" }}>CHEZ LE PASTEUR</span>
+                                                        )}
+                                                        {!isValid && !isRefuse && !["TRANSMISE_AU_BUREAU_CONDUCTEUR", "TRANSMISE_AU_PASTEUR"].includes(ann.statut) && (
+                                                            <span className="ann-badge ann-badge-orange">EN COURS</span>
+                                                        )}
+                                                        {/* Bouton fiche dès la validation conducteur */}
+                                                        {CAN_DOWNLOAD_ANNONCE.includes(ann.statut) && (
+                                                            <button
+                                                                type="button"
+                                                                className="btn-pdf btn-pdf-sm"
+                                                                style={{ marginTop: 4 }}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    window.open(`/responsable-famille/annonces/${ann.id}/fiche`, "_blank");
+                                                                }}
+                                                            >
+                                                                📄 Voir la fiche
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+
+                                        {annTotalPages > 1 && (
+                                            <div className="pager">
+                                                <button type="button" className="pager-btn" onClick={() => setAnnPage(p => Math.max(1, p - 1))} disabled={annPage === 1}>Précédent</button>
+                                                <span className="pager-info">Page {annPage} / {annTotalPages}</span>
+                                                <button type="button" className="pager-btn" onClick={() => setAnnPage(p => Math.min(annTotalPages, p + 1))} disabled={annPage === annTotalPages}>Suivant</button>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
@@ -1699,22 +1823,20 @@ export default function Index({
                                                 />
                                             </div>
                                             <div className="ann-item-right">
-                                                {isCours && (
-                                                    <span className="ann-badge ann-badge-orange">
-                                                        EN COURS
-                                                    </span>
+                                                {/* Badges statut */}
+                                                {isRefuse && <span className="ann-badge ann-badge-terra">REFUSÉE</span>}
+                                                {isValid && <span className="ann-badge ann-badge-sage">PUBLIÉE</span>}
+                                                {isCours && ann.statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR" && (
+                                                    <span className="ann-badge" style={{ background: "#ede9fe", color: "#7c3aed" }}>CHEZ LE BUREAU</span>
                                                 )}
-                                                {isValid && (
-                                                    <span className="ann-badge ann-badge-sage">
-                                                        PUBLIÉE
-                                                    </span>
+                                                {isCours && ann.statut === "TRANSMISE_AU_PASTEUR" && (
+                                                    <span className="ann-badge" style={{ background: "#dbeafe", color: "#1d4ed8" }}>CHEZ LE PASTEUR</span>
                                                 )}
-                                                {isRefuse && (
-                                                    <span className="ann-badge ann-badge-terra">
-                                                        REFUSÉE
-                                                    </span>
+                                                {isCours && !["TRANSMISE_AU_BUREAU_CONDUCTEUR", "TRANSMISE_AU_PASTEUR"].includes(ann.statut) && (
+                                                    <span className="ann-badge ann-badge-orange">EN COURS</span>
                                                 )}
-                                                {isValid && (
+                                                {/* Bouton fiche accessible dès validation conducteur */}
+                                                {CAN_DOWNLOAD_ANNONCE.includes(ann.statut) && (
                                                     <button
                                                         type="button"
                                                         className="btn-pdf btn-pdf-sm"
@@ -1726,8 +1848,7 @@ export default function Index({
                                                             );
                                                         }}
                                                     >
-                                                        <Eye size={11} /> Voir
-                                                        la fiche
+                                                        <Eye size={11} /> Voir la fiche
                                                     </button>
                                                 )}
                                                 <svg
@@ -2681,17 +2802,20 @@ function fmtDT(val) {
 
 function AnnonceDotTrack({ statut, expanded, ann }) {
     const steps = [
-        { key: "SOUMISE",               label: "Soumise",    icon: "📝" },
-        { key: "EN_ATTENTE_CONDUCTEUR",  label: "Conducteur", icon: "📋" },
-        { key: "TRANSMISE_AU_PASTEUR",   label: "Pasteur",    icon: "✝" },
-        { key: "PUBLIEE",               label: "Acte validé", icon: "🌍" },
+        { key: "SOUMISE",                        label: "Soumise",               icon: "📝" },
+        { key: "EN_ATTENTE_CONDUCTEUR",           label: "Conducteur",            icon: "📋" },
+        { key: "TRANSMISE_AU_BUREAU_CONDUCTEUR",  label: "Bureau des Conducteurs", icon: "🏛" },
+        { key: "TRANSMISE_AU_PASTEUR",            label: "Pasteur",               icon: "✝" },
+        { key: "PUBLIEE",                        label: "Acte validé",           icon: "🌍" },
     ];
 
     const isRefuse = String(statut).startsWith("REFUSEE");
     const effectiveStatus = (statut === "VALIDEE" || statut === "ARCHIVEE") ? "PUBLIEE" : statut;
     const idx = steps.findIndex((s) => s.key === effectiveStatus);
     const activeIdx = isRefuse
-        ? statut === "REFUSEE_PAR_CONDUCTEUR" ? 1 : 2
+        ? statut === "REFUSEE_PAR_CONDUCTEUR" ? 1
+        : statut === "REFUSEE_PAR_BUREAU_CONDUCTEUR" ? 2
+        : 3
         : idx === -1 ? 0 : idx;
 
     // Build timestamp info from historiques
@@ -2700,12 +2824,13 @@ function AnnonceDotTrack({ statut, expanded, ann }) {
         .filter(h => statuts.includes(h.statut_nouveau))
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
 
-    const histConducteur = findHist(["EN_ATTENTE_CONDUCTEUR", "TRANSMISE_AU_PASTEUR"]);
-    const histPasteur    = findHist(["VALIDEE", "PUBLIEE"]);
-    const histPublie     = findHist(["PUBLIEE", "VALIDEE"]);
+    const histConducteur      = findHist(["EN_ATTENTE_CONDUCTEUR", "TRANSMISE_AU_BUREAU_CONDUCTEUR"]);
+    const histBureauConducteur = findHist(["TRANSMISE_AU_BUREAU_CONDUCTEUR", "TRANSMISE_AU_PASTEUR"]);
+    const histPasteur         = findHist(["VALIDEE", "PUBLIEE"]);
+    const histPublie          = findHist(["PUBLIEE", "VALIDEE"]);
 
     // Fallback conducteur name/date for records created before historique tracking was added
-    const conducteurFallbackDate = !histConducteur && ["TRANSMISE_AU_PASTEUR"].includes(statut)
+    const conducteurFallbackDate = !histConducteur && ["TRANSMISE_AU_BUREAU_CONDUCTEUR", "TRANSMISE_AU_PASTEUR"].includes(statut)
         ? fmtDT(ann?.updated_at) : null;
     const conducteurName = histConducteur?.acteur
         ? `${histConducteur.acteur.prenom} ${histConducteur.acteur.nom}`
@@ -2719,6 +2844,10 @@ function AnnonceDotTrack({ statut, expanded, ann }) {
         {
             date: fmtDT(histConducteur?.created_at) || conducteurFallbackDate,
             who: conducteurName,
+        },
+        {
+            date: fmtDT(histBureauConducteur?.created_at),
+            who: histBureauConducteur?.acteur ? `${histBureauConducteur.acteur.prenom} ${histBureauConducteur.acteur.nom}` : null,
         },
         {
             date: fmtDT(histPasteur?.created_at),

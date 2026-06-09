@@ -94,17 +94,33 @@ class TresorerieController extends Controller
                 ];
             })->values(),
             'dons' => $dons->map(function (Don $don) {
+                $modeLabels = [
+                    'WAVE'         => 'Wave',
+                    'ORANGE'       => 'Orange Money',
+                    'DJAMO'        => 'Djamo',
+                    'MOBILE_MONEY' => 'Mobile Money',
+                    'ESPECES'      => 'Espèces',
+                    'VIREMENT'     => 'Virement bancaire',
+                    'CARTE'        => 'Carte bancaire',
+                ];
+                $isOnline = in_array($don->mode_paiement, ['WAVE', 'ORANGE', 'DJAMO', 'MOBILE_MONEY', 'CARTE'], true);
+
                 return [
-                    'id' => $don->id,
-                    'donor_name' => $don->family?->nom ?? 'Famille anonyme',
-                    'amount' => (int) $don->montant,
-                    'donation_date' => optional($don->date_don)->format('d/m/Y'),
-                    'treasurer_name' => trim(($don->user?->prenom ?? '') . ' ' . ($don->user?->nom ?? '')) ?: 'Trésorier inconnu',
-                    'class_name' => $don->user?->classe?->nom ?? 'Classe inconnue',
-                    'type' => $don->type,
-                    'mode_paiement' => $don->mode_paiement,
-                    'reference_recu' => $don->reference_recu,
-                    'note' => $don->note,
+                    'id'              => $don->id,
+                    'donor_name'      => $don->nom_donateur
+                                        ?? $don->family?->nom
+                                        ?? 'Anonyme',
+                    'numero_donateur' => $don->numero_donateur,
+                    'amount'          => (int) $don->montant,
+                    'donation_date'   => optional($don->date_don)->format('d/m/Y'),
+                    'donation_time'   => optional($don->created_at)->format('H:i'),
+                    'treasurer_name'  => trim(($don->user?->prenom ?? '') . ' ' . ($don->user?->nom ?? '')) ?: null,
+                    'class_name'      => $don->user?->classe?->nom ?? null,
+                    'type'            => $don->type,
+                    'mode_paiement'   => $modeLabels[$don->mode_paiement] ?? $don->mode_paiement,
+                    'reference_recu'  => $don->reference_recu,
+                    'note'            => $don->note,
+                    'is_online'       => $isOnline,
                 ];
             })->values(),
             'campagnes' => $campagnes->map(function (Campagne $campagne) {

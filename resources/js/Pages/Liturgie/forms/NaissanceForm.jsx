@@ -273,8 +273,8 @@ export default function NaissanceForm({
                         Acte liturgique
                     </p>
                     <h1 className="text-4xl font-light text-white mt-4">
-                        Declaration de{" "}
-                        <em className="font-medium">Naissance</em>
+                        Présentation{" "}
+                        <em className="font-medium">Enfant</em>
                     </h1>
                     <p className="text-white/90 text-sm mt-2">
                         Église Méthodiste du Jubilé de Cocody
@@ -529,7 +529,7 @@ export default function NaissanceForm({
                                     presentation.
                                 </p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                    <Field label="Date souhaitee">
+                                    <Field label="Date de culte">
                                         <input
                                             type="date"
                                             value={
@@ -543,9 +543,8 @@ export default function NaissanceForm({
                                             }
                                         />
                                     </Field>
-                                    <Field label="Heure de presentation">
-                                        <input
-                                            type="time"
+                                    <Field label="Heure de culte">
+                                        <select
                                             value={form.details.heure}
                                             onChange={(e) =>
                                                 setDetail(
@@ -553,7 +552,11 @@ export default function NaissanceForm({
                                                     e.target.value,
                                                 )
                                             }
-                                        />
+                                        >
+                                            <option value="">-- Choisir une heure --</option>
+                                            <option value="7h30">7h30</option>
+                                            <option value="9h30">9h30</option>
+                                        </select>
                                     </Field>
                                 </div>
                                 <Field label="Observations">
@@ -594,7 +597,7 @@ export default function NaissanceForm({
                                 <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">
                                     Verifiez attentivement avant de soumettre.
                                 </p>
-                                <RecapCard title="Declaration de Naissance">
+                                <RecapCard title="Présentation Enfant">
                                     <RecapRow
                                         k="Membre concerné"
                                         v={recap.membre}

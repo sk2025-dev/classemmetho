@@ -98,18 +98,8 @@ class MemberController extends Controller
             ]
         );
 
-        // Auto-generate email if not provided
         if (empty($validated['email'])) {
-            $baseEmail = strtolower($validated['prenom'] . '.' . $validated['nom']) . '@famille.local';
-            $email = $baseEmail;
-            $counter = 1;
-
-            while (User::where('email', $email)->exists()) {
-                $email = strtolower($validated['prenom'] . '.' . $validated['nom']) . $counter . '@famille.local';
-                $counter++;
-            }
-
-            $validated['email'] = $email;
+            $validated['email'] = null;
         }
 
         // Handle photo upload

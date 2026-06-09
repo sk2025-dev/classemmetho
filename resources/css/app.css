@@ -652,6 +652,15 @@ body, #app {
     color: #fb923c !important;
 }
 
+/* ========== MAINLAYOUT HEADER PROTECTION ========== */
+/* Empêche les CSS resets des pages (font-family, padding, margin sur *)
+   d'affecter le header du MainLayout */
+header.app-header,
+header.app-header * {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+    box-sizing: border-box !important;
+}
+
 /* ========== BUTTONS ========== */
 .btn-main {
     background: #3b82f6;

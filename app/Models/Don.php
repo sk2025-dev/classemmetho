@@ -22,6 +22,8 @@ class Don extends Model
         'date_don',
         'reference_recu',
         'note',
+        'nom_donateur',
+        'numero_donateur',
     ];
 
     protected $casts = [

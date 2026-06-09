@@ -193,7 +193,7 @@ class LiturgieController extends Controller
     public function certificat(Request $request, int $id)
     {
         $user = Auth::user();
-        $acte = ActeLiturgique::with(['membre', 'classe', 'conducteur', 'pasteur'])->findOrFail($id);
+        $acte = ActeLiturgique::with(['membre', 'classe', 'conducteur', 'bureauConducteur', 'pasteur'])->findOrFail($id);
         $typeActe = strtolower((string) $acte->type_acte);
         $typesCertificat = ['bapteme', 'mariage'];
         $typesFiche = ['naissance', 'deces'];
@@ -231,6 +231,10 @@ class LiturgieController extends Controller
             if ($acte->conducteur?->signature_path && Storage::disk('public')->exists($acte->conducteur->signature_path)) {
                 $conducteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->conducteur->signature_path));
             }
+            $bureauConducteurSignatureDataUri = null;
+            if ($acte->bureauConducteur?->signature_path && Storage::disk('public')->exists($acte->bureauConducteur->signature_path)) {
+                $bureauConducteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->bureauConducteur->signature_path));
+            }
             $pasteurSignatureDataUri = null;
             if ($acte->pasteur?->signature_path && Storage::disk('public')->exists($acte->pasteur->signature_path)) {
                 $pasteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->pasteur->signature_path));
@@ -242,6 +246,8 @@ class LiturgieController extends Controller
                     'logoDataUri' => $logoDataUri,
                     'methoDataUri' => $methoDataUri,
                     'conducteurSignatureDataUri' => $conducteurSignatureDataUri,
+                    'signatureBureauConducteurDataUri' => $bureauConducteurSignatureDataUri,
+                    'bureauConducteurSignatureDataUri' => $bureauConducteurSignatureDataUri,
                     'pasteurSignatureDataUri' => $pasteurSignatureDataUri,
                 ])->setPaper('a4', 'portrait');
 
@@ -473,7 +479,7 @@ class LiturgieController extends Controller
     public function fiche(int $id)
     {
         $user = Auth::user();
-        $acte = ActeLiturgique::with(['createur', 'family', 'conducteur', 'pasteur', 'membre', 'classe'])
+        $acte = ActeLiturgique::with(['createur', 'family', 'conducteur', 'bureauConducteur', 'pasteur', 'membre', 'classe'])
             ->whereNotIn('type_acte', [
                 ActeLiturgique::TYPE_ANNOUNCE,
                 ActeLiturgique::TYPE_ANNOUNCE_LITURGIQUE,
@@ -504,10 +510,28 @@ class LiturgieController extends Controller
             ? 'pdf.fiche-naissance'
             : ($typeActe === 'deces' ? 'pdf.fiche-deces' : 'pdf.fiche-demande');
 
+        $conducteurSignatureDataUri = null;
+        if ($acte->conducteur?->signature_path && Storage::disk('public')->exists($acte->conducteur->signature_path)) {
+            $conducteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->conducteur->signature_path));
+        }
+        $bureauConducteurSignatureDataUri = null;
+        if ($acte->bureauConducteur?->signature_path && Storage::disk('public')->exists($acte->bureauConducteur->signature_path)) {
+            $bureauConducteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->bureauConducteur->signature_path));
+        }
+        $pasteurSignatureDataUri = null;
+        if ($acte->pasteur?->signature_path && Storage::disk('public')->exists($acte->pasteur->signature_path)) {
+            $pasteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->pasteur->signature_path));
+        }
+
         try {
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($view, [
                 'acte' => $acte,
                 'logoDataUri' => $logoDataUri,
+                'methoDataUri' => $this->buildImageDataUri(public_path('images/metho.jpg')),
+                'conducteurSignatureDataUri' => $conducteurSignatureDataUri,
+                'signatureBureauConducteurDataUri' => $bureauConducteurSignatureDataUri,
+                'bureauConducteurSignatureDataUri' => $bureauConducteurSignatureDataUri,
+                'pasteurSignatureDataUri' => $pasteurSignatureDataUri,
             ])
                 ->setPaper('a4', 'portrait');
 

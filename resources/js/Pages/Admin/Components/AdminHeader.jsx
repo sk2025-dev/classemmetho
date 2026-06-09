@@ -8,6 +8,7 @@ const AdminHeader = ({ activeTab, setActiveTab, auth }) => {
         const labels = {
             admin: "Administrateur",
             pasteur: "Pasteur",
+            bureau_conducteur: "Bureau des Conducteurs",
             conducteur: "Conducteur",
             responsable: "Responsable",
             responsable_famille: "Responsable Famille",

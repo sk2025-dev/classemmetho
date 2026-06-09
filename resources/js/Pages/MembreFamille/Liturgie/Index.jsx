@@ -393,6 +393,8 @@ export default function Index({
                                     });
                                     const refusConducteur =
                                         histMap["REFUSEE_PAR_CONDUCTEUR"];
+                                    const refusBureauConducteur =
+                                        histMap["REFUSEE_PAR_BUREAU_CONDUCTEUR"];
                                     const refusPasteur =
                                         histMap["REFUSEE_PAR_PASTEUR"];
                                     const getEtape = (key) => {
@@ -407,6 +409,9 @@ export default function Index({
                                         };
                                     };
                                     const etapeConducteur = getEtape(
+                                        "TRANSMISE_AU_BUREAU_CONDUCTEUR",
+                                    );
+                                    const etapeBureauConducteur = getEtape(
                                         "TRANSMISE_AU_PASTEUR",
                                     );
                                     const etapePasteur = getEtape("VALIDEE");
@@ -491,6 +496,8 @@ export default function Index({
                                                     label="Conducteur"
                                                     done={
                                                         acte.statut ===
+                                                            "TRANSMISE_AU_BUREAU_CONDUCTEUR" ||
+                                                        acte.statut ===
                                                             "TRANSMISE_AU_PASTEUR" ||
                                                         acte.statut ===
                                                             "REFUSEE_PAR_CONDUCTEUR" ||
@@ -512,6 +519,33 @@ export default function Index({
                                                                   refusConducteur.created_at,
                                                               )
                                                             : etapeConducteur?.date
+                                                    }
+                                                />
+                                                <StatusStep
+                                                    label="Bureau des Conducteurs"
+                                                    done={
+                                                        acte.statut ===
+                                                            "TRANSMISE_AU_PASTEUR" ||
+                                                        acte.statut ===
+                                                            "REFUSEE_PAR_BUREAU_CONDUCTEUR" ||
+                                                        VALID.includes(
+                                                            acte.statut,
+                                                        )
+                                                    }
+                                                    active={
+                                                        acte.statut ===
+                                                        "TRANSMISE_AU_BUREAU_CONDUCTEUR"
+                                                    }
+                                                    refused={
+                                                        acte.statut ===
+                                                        "REFUSEE_PAR_BUREAU_CONDUCTEUR"
+                                                    }
+                                                    date={
+                                                        refusBureauConducteur
+                                                            ? formatDateTime(
+                                                                  refusBureauConducteur.created_at,
+                                                              )
+                                                            : etapeBureauConducteur?.date
                                                     }
                                                 />
                                                 <StatusStep
@@ -1826,29 +1860,28 @@ export default function Index({
 
 function AnnonceDotTrack({ statut, expanded }) {
     const steps = [
-        { key: "SOUMISE", label: "Soumise", icon: "📝" },
-        { key: "EN_ATTENTE_CONDUCTEUR", label: "Conducteur", icon: "📋" },
-        { key: "TRANSMISE_AU_PASTEUR", label: "Pasteur", icon: "✝" },
+        { key: "SOUMISE",                       label: "Soumise",               icon: "📝" },
+        { key: "EN_ATTENTE_CONDUCTEUR",          label: "Conducteur",            icon: "📋" },
+        { key: "TRANSMISE_AU_BUREAU_CONDUCTEUR", label: "Bureau des Conducteurs", icon: "🏛" },
+        { key: "TRANSMISE_AU_PASTEUR",           label: "Pasteur",               icon: "✝" },
     ];
     const isRefuse = String(statut).startsWith("REFUSEE");
     const isValidated = VALID.includes(statut);
     const activeIdx = isRefuse
-        ? statut === "REFUSEE_PAR_CONDUCTEUR"
-            ? 1
-            : 2
-        : statut === "EN_ATTENTE_CONDUCTEUR"
-          ? 1
-          : statut === "TRANSMISE_AU_PASTEUR"
-            ? 2
-            : isValidated
-              ? 2
-              : 0;
+        ? statut === "REFUSEE_PAR_CONDUCTEUR" ? 1
+        : statut === "REFUSEE_PAR_BUREAU_CONDUCTEUR" ? 2
+        : 3
+        : statut === "EN_ATTENTE_CONDUCTEUR" ? 1
+        : statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR" ? 2
+        : statut === "TRANSMISE_AU_PASTEUR" ? 3
+        : isValidated ? 3
+        : 0;
 
     return (
         <div className={`ann-track ${expanded ? "ann-track-exp" : ""}`}>
             {steps.map((s, i) => {
                 const isDone = isValidated
-                    ? i <= 2
+                    ? i <= steps.length - 1
                     : !isRefuse && i < activeIdx;
                 const isActive = !isValidated && i === activeIdx;
                 const isRef = isRefuse && isActive;

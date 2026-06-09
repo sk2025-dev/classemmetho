@@ -364,7 +364,7 @@ class LiturgieController extends Controller
 
     public function certificat(int $id)
     {
-        $acte = ActeLiturgique::with(['membre', 'classe', 'conducteur', 'pasteur', 'historiques.acteur'])
+        $acte = ActeLiturgique::with(['membre', 'classe', 'conducteur', 'bureauConducteur', 'pasteur', 'historiques.acteur'])
             ->findOrFail($id);
 
         $typeActe = strtolower((string) $acte->type_acte);
@@ -380,7 +380,10 @@ class LiturgieController extends Controller
 
         $details = (array) ($acte->details ?? []);
         $dateValidatedMarriage = $typeActe === 'mariage'
-            && ($details['ceremonie_statut'] ?? null) === 'CEREMONIE_VALIDEE_PAR_PASTEUR';
+            && in_array($details['ceremonie_statut'] ?? null, [
+                'CEREMONIE_VALIDEE_PAR_PASTEUR',
+                'CEREMONIE_VALIDE_PAR_PASTEUR',
+            ], true);
         $validatedByPastorStatuses = ['VALIDEE', 'PUBLIEE', 'ARCHIVEE', 'CELEBRE', 'TERMINE'];
         $isValidatedByPastor = in_array($acte->statut, $validatedByPastorStatuses, true) && !empty($acte->pasteur_id);
 
@@ -388,7 +391,21 @@ class LiturgieController extends Controller
             if (!$isValidatedByPastor) {
                 abort(422, "La fiche est disponible uniquement apres validation par le pasteur.");
             }
-        } elseif (!$isValidatedByPastor && !$dateValidatedMarriage) {
+        } elseif ($typeActe === 'bapteme') {
+            if (!$isValidatedByPastor) {
+                abort(422, "Le certificat de baptême est disponible uniquement apres validation par le pasteur.");
+            }
+            $ficheSentFlag = $details['fiche_bapteme_envoyee'] ?? null;
+            $isFicheSent = $ficheSentFlag === true || $ficheSentFlag === 1
+                || (is_string($ficheSentFlag) && in_array(strtolower(trim($ficheSentFlag)), ['1', 'true'], true));
+            if (!$isFicheSent) {
+                abort(422, "Le certificat de baptême est disponible uniquement après l'envoi de la fiche liste baptêmes.");
+            }
+        } elseif ($typeActe === 'mariage') {
+            if (!$dateValidatedMarriage) {
+                abort(422, "Le certificat de mariage est disponible uniquement après validation de la date de cérémonie.");
+            }
+        } elseif (!$isValidatedByPastor) {
             abort(422, "Le certificat est disponible uniquement apres validation par le pasteur.");
         }
 
@@ -398,6 +415,10 @@ class LiturgieController extends Controller
             $conducteurSignatureDataUri = null;
             if ($acte->conducteur?->signature_path && Storage::disk('public')->exists($acte->conducteur->signature_path)) {
                 $conducteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->conducteur->signature_path));
+            }
+            $bureauConducteurSignatureDataUri = null;
+            if ($acte->bureauConducteur?->signature_path && Storage::disk('public')->exists($acte->bureauConducteur->signature_path)) {
+                $bureauConducteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->bureauConducteur->signature_path));
             }
             $pasteurSignatureDataUri = null;
             if ($acte->pasteur?->signature_path && Storage::disk('public')->exists($acte->pasteur->signature_path)) {
@@ -413,6 +434,8 @@ class LiturgieController extends Controller
                     'logoDataUri' => $logoDataUri,
                     'methoDataUri' => $methoDataUri,
                     'conducteurSignatureDataUri' => $conducteurSignatureDataUri,
+                    'signatureBureauConducteurDataUri' => $bureauConducteurSignatureDataUri,
+                    'bureauConducteurSignatureDataUri' => $bureauConducteurSignatureDataUri,
                     'pasteurSignatureDataUri' => $pasteurSignatureDataUri,
                 ])->setPaper('a4', 'portrait');
             } catch (\Throwable $e) {
@@ -588,6 +611,7 @@ class LiturgieController extends Controller
             'family.ville',
             'classe.conducteur',
             'conducteur',
+            'bureauConducteur',
             'pasteur',
             'membre.family',
             'membre.classe',
@@ -609,12 +633,19 @@ class LiturgieController extends Controller
             ? ($typeActe === 'naissance' ? 'pdf.fiche-naissance' : 'pdf.fiche-deces')
             : 'pdf.fiche-acte-conducteur';
 
+        $bureauSig = null;
+        if ($acte->bureauConducteur?->signature_path && Storage::disk('public')->exists($acte->bureauConducteur->signature_path)) {
+            $bureauSig = $this->buildImageDataUri(Storage::disk('public')->path($acte->bureauConducteur->signature_path));
+        }
+
         $pdfData = [
             'acte' => $acte,
             'logoDataUri' => $logoDataUri,
             'generatedBy' => $acte->conducteur ?? $acte->classe?->conducteur,
             'generatedAt' => $acte->updated_at ?? now(),
             'documentLabel' => 'Fiche recue du conducteur',
+            'signatureBureauConducteurDataUri' => $bureauSig,
+            'bureauConducteurSignatureDataUri' => $bureauSig,
         ];
 
         if ($typeActe === 'naissance') {
@@ -728,7 +759,7 @@ class LiturgieController extends Controller
             return $pdf->download($filename);
         }
 
-        $acte = ActeLiturgique::with(['createur', 'family', 'conducteur', 'pasteur', 'membre', 'classe'])
+        $acte = ActeLiturgique::with(['createur', 'family', 'conducteur', 'bureauConducteur', 'pasteur', 'membre', 'classe'])
             ->findOrFail($id);
 
         $typeActe = strtolower((string) $acte->type_acte);
@@ -741,6 +772,10 @@ class LiturgieController extends Controller
         $conducteurSignatureDataUri = null;
         if ($acte->conducteur?->signature_path && Storage::disk('public')->exists($acte->conducteur->signature_path)) {
             $conducteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->conducteur->signature_path));
+        }
+        $bureauConducteurSignatureDataUri = null;
+        if ($acte->bureauConducteur?->signature_path && Storage::disk('public')->exists($acte->bureauConducteur->signature_path)) {
+            $bureauConducteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->bureauConducteur->signature_path));
         }
         $pasteurSignatureDataUri = null;
         if ($acte->pasteur?->signature_path && Storage::disk('public')->exists($acte->pasteur->signature_path)) {
@@ -756,6 +791,8 @@ class LiturgieController extends Controller
                 'acte' => $acte,
                 'logoDataUri' => $logoDataUri,
                 'conducteurSignatureDataUri' => $conducteurSignatureDataUri,
+                'signatureBureauConducteurDataUri' => $bureauConducteurSignatureDataUri,
+                'bureauConducteurSignatureDataUri' => $bureauConducteurSignatureDataUri,
                 'pasteurSignatureDataUri' => $pasteurSignatureDataUri,
             ])->setPaper('a4', 'portrait');
         } catch (\Throwable $e) {
@@ -1075,6 +1112,43 @@ class LiturgieController extends Controller
         } catch (\Throwable $e) {
             return null;
         }
+    }
+
+    public function fichePriere(int $id)
+    {
+        $acte = ActeLiturgique::with(['createur', 'family', 'conducteur', 'bureauConducteur', 'pasteur', 'membre.classe', 'classe', 'historiques.acteur'])
+            ->where('est_annonce', true)
+            ->findOrFail($id);
+
+        $logoDataUri   = $this->buildImageDataUri(public_path('images/logo.png'));
+        $methoDataUri  = $this->buildImageDataUri(public_path('images/metho.jpg'));
+
+        $conducteurSignatureDataUri = null;
+        if ($acte->conducteur?->signature_path && Storage::disk('public')->exists($acte->conducteur->signature_path)) {
+            $conducteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->conducteur->signature_path));
+        }
+
+        $bureauSignatureDataUri = null;
+        if ($acte->bureauConducteur?->signature_path && Storage::disk('public')->exists($acte->bureauConducteur->signature_path)) {
+            $bureauSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->bureauConducteur->signature_path));
+        }
+
+        $pasteurSignatureDataUri = null;
+        if ($acte->pasteur?->signature_path && Storage::disk('public')->exists($acte->pasteur->signature_path)) {
+            $pasteurSignatureDataUri = $this->buildImageDataUri(Storage::disk('public')->path($acte->pasteur->signature_path));
+        }
+
+        $pdf = Pdf::loadView('pdf.fiche-demande', [
+            'acte'                             => $acte,
+            'logoDataUri'                      => $logoDataUri,
+            'methoDataUri'                     => $methoDataUri,
+            'signatureConducteurDataUri'       => $conducteurSignatureDataUri,
+            'signatureBureauConducteurDataUri' => $bureauSignatureDataUri,
+            'signaturePasteurDataUri'          => $pasteurSignatureDataUri,
+        ])->setPaper('a4', 'portrait');
+
+        $ref = $acte->reference ?? $acte->id;
+        return $pdf->download("Fiche-Priere_{$ref}.pdf");
     }
 
     private function buildImageDataUri(string $path): ?string

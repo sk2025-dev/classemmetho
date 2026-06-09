@@ -22,6 +22,8 @@ class ActeLiturgiqueService
     private const STATUTS = [
         'SOUMISE',
         'EN_ATTENTE_CONDUCTEUR',
+        'TRANSMISE_AU_BUREAU_CONDUCTEUR',
+        'REFUSEE_PAR_BUREAU_CONDUCTEUR',
         'TRANSMISE_AU_PASTEUR',
         'VALIDEE',
         'PUBLIEE',
@@ -129,6 +131,13 @@ class ActeLiturgiqueService
                 }
             }
 
+            if ($actor->role === 'bureau_conducteur') {
+                $update['bureau_conducteur_id'] = $actor->id;
+                if ($commentaire !== null && trim((string) $commentaire) !== '') {
+                    $update['note_admin'] = $commentaire;
+                }
+            }
+
             if ($actor->role === 'pasteur') {
                 $update['pasteur_id'] = $actor->id;
                 if ($commentaire !== null && trim((string) $commentaire) !== '') {
@@ -202,11 +211,34 @@ class ActeLiturgiqueService
         });
 
         // notifications outside transaction
-        // pasteur email when conducteur transmits
-        if ($actor->role === 'conducteur' && $newStatus === 'TRANSMISE_AU_PASTEUR') {
+
+        // bureau_conducteur notifié quand conducteur transmet (actes liturgiques)
+        if ($actor->role === 'conducteur' && $newStatus === 'TRANSMISE_AU_BUREAU_CONDUCTEUR') {
+            $bureauUsers = User::query()
+                ->where('role', 'bureau_conducteur')
+                ->whereNotNull('email')
+                ->get();
+            foreach ($bureauUsers as $b) {
+                try {
+                    Notification::create([
+                        'user_id' => $b->id,
+                        'channel' => 'in_app',
+                        'to'      => $b->email,
+                        'subject' => 'Demande transmise au Bureau',
+                        'body'    => "Une demande a été transmise par le conducteur (Réf {$acte->reference})",
+                        'data'    => ['link' => config('app.url') . '/bureau-conducteur/liturgie'],
+                        'sent_at' => now(),
+                    ]);
+                } catch (\Exception $e) {
+                    // ignore
+                }
+            }
+        }
+
+        // pasteur notifié quand bureau_conducteur transmet
+        if ($actor->role === 'bureau_conducteur' && $newStatus === 'TRANSMISE_AU_PASTEUR') {
             $pasteurs = User::query()
                 ->where('role', 'pasteur')
-                ->where('classe_id', $acte->classe_id)
                 ->whereNotNull('email')
                 ->get();
             foreach ($pasteurs as $p) {
@@ -215,23 +247,51 @@ class ActeLiturgiqueService
                     Notification::create([
                         'user_id' => $p->id,
                         'channel' => 'in_app',
-                        'to' => $p->email,
-                        'subject' => 'Demande transmise',
-                        'body' => "Une demande a été transmise par {$acte->createur?->prenom} {$acte->createur?->nom} (Réf {$acte->reference})",
-                        'data' => ['link' => config('app.url') . ($acte->isAnnonce() ? '/pasteur/annonces/' . $acte->id : '/pasteur/liturgie/' . $acte->id)],
+                        'to'      => $p->email,
+                        'subject' => 'Demande transmise au Pasteur',
+                        'body'    => "Une demande a été validée par le Bureau des Conducteurs (Réf {$acte->reference})",
+                        'data'    => ['link' => config('app.url') . ($acte->isAnnonce() ? '/pasteur/annonces/' . $acte->id : '/pasteur/liturgie/' . $acte->id)],
                         'sent_at' => now(),
                     ]);
                 } catch (\Exception $e) {
-                    // ignore notification errors
+                    // ignore
                 }
             }
         }
 
-        // email au créateur quand refus conducteur ou pasteur
-        if (in_array($newStatus, ['REFUSEE_PAR_CONDUCTEUR', 'REFUSEE_PAR_PASTEUR'], true)) {
+        // pasteur notifié quand conducteur transmet une ANNONCE directement
+        if ($actor->role === 'conducteur' && $newStatus === 'TRANSMISE_AU_PASTEUR') {
+            $pasteurs = User::query()
+                ->where('role', 'pasteur')
+                ->whereNotNull('email')
+                ->get();
+            foreach ($pasteurs as $p) {
+                $this->queueMailSafely($p->email, new ActeValidatedToPasteur($acte), 'ActeValidatedToPasteur');
+                try {
+                    Notification::create([
+                        'user_id' => $p->id,
+                        'channel' => 'in_app',
+                        'to'      => $p->email,
+                        'subject' => 'Demande transmise',
+                        'body'    => "Une annonce a été transmise par {$acte->createur?->prenom} {$acte->createur?->nom} (Réf {$acte->reference})",
+                        'data'    => ['link' => config('app.url') . '/pasteur/annonces/' . $acte->id],
+                        'sent_at' => now(),
+                    ]);
+                } catch (\Exception $e) {
+                    // ignore
+                }
+            }
+        }
+
+        // email au créateur quand refus conducteur, bureau ou pasteur
+        if (in_array($newStatus, ['REFUSEE_PAR_CONDUCTEUR', 'REFUSEE_PAR_BUREAU_CONDUCTEUR', 'REFUSEE_PAR_PASTEUR'], true)) {
             $owner = $acte->createur;
             if ($owner && $owner->email) {
-                $refusePar = $newStatus === 'REFUSEE_PAR_CONDUCTEUR' ? 'conducteur' : 'pasteur';
+                $refusePar = match ($newStatus) {
+                    'REFUSEE_PAR_CONDUCTEUR'        => 'conducteur',
+                    'REFUSEE_PAR_BUREAU_CONDUCTEUR' => 'Bureau des Conducteurs',
+                    default                         => 'pasteur',
+                };
                 $this->queueMailSafely($owner->email, new ActeRefusedToCreateur($acte, $refusePar), 'ActeRefusedToCreateur');
                 try {
                     Notification::create([
@@ -330,6 +390,8 @@ class ActeLiturgiqueService
             'membre_famille' => [
                 'SOUMISE' => [],
                 'EN_ATTENTE_CONDUCTEUR' => [],
+                'TRANSMISE_AU_BUREAU_CONDUCTEUR' => [],
+                'REFUSEE_PAR_BUREAU_CONDUCTEUR' => [],
                 'TRANSMISE_AU_PASTEUR' => [],
                 'VALIDEE' => [],
                 'REFUSEE_PAR_CONDUCTEUR' => [],
@@ -339,6 +401,8 @@ class ActeLiturgiqueService
             'responsable_famille' => [
                 'SOUMISE' => [],
                 'EN_ATTENTE_CONDUCTEUR' => [],
+                'TRANSMISE_AU_BUREAU_CONDUCTEUR' => [],
+                'REFUSEE_PAR_BUREAU_CONDUCTEUR' => [],
                 'TRANSMISE_AU_PASTEUR' => [],
                 'VALIDEE' => [],
                 'REFUSEE_PAR_CONDUCTEUR' => [],
@@ -346,37 +410,57 @@ class ActeLiturgiqueService
                 'ARCHIVEE' => [],
             ],
             'conducteur' => [
-                'SOUMISE' => ['EN_ATTENTE_CONDUCTEUR', 'TRANSMISE_AU_PASTEUR', 'REFUSEE_PAR_CONDUCTEUR'],
-                'EN_ATTENTE_CONDUCTEUR' => ['TRANSMISE_AU_PASTEUR', 'REFUSEE_PAR_CONDUCTEUR'],
-                'TRANSMISE_AU_PASTEUR' => [],
-                'VALIDEE' => [],
-                'REFUSEE_PAR_CONDUCTEUR' => [],
-                'REFUSEE_PAR_PASTEUR' => [],
-                'ARCHIVEE' => [],
+                // actes liturgiques → bureau des conducteurs en intermédiaire
+                'SOUMISE'                        => ['EN_ATTENTE_CONDUCTEUR', 'TRANSMISE_AU_BUREAU_CONDUCTEUR', 'REFUSEE_PAR_CONDUCTEUR'],
+                'EN_ATTENTE_CONDUCTEUR'          => ['TRANSMISE_AU_BUREAU_CONDUCTEUR', 'REFUSEE_PAR_CONDUCTEUR'],
+                // annonces : conducteur peut toujours envoyer directement au pasteur
+                'TRANSMISE_AU_BUREAU_CONDUCTEUR' => [],
+                'REFUSEE_PAR_BUREAU_CONDUCTEUR'  => [],
+                'TRANSMISE_AU_PASTEUR'           => [],
+                'VALIDEE'                        => [],
+                'REFUSEE_PAR_CONDUCTEUR'         => [],
+                'REFUSEE_PAR_PASTEUR'            => [],
+                'ARCHIVEE'                       => [],
+            ],
+            'bureau_conducteur' => [
+                'SOUMISE'                        => [],
+                'EN_ATTENTE_CONDUCTEUR'          => [],
+                'TRANSMISE_AU_BUREAU_CONDUCTEUR' => ['TRANSMISE_AU_PASTEUR', 'REFUSEE_PAR_BUREAU_CONDUCTEUR'],
+                'REFUSEE_PAR_BUREAU_CONDUCTEUR'  => [],
+                'TRANSMISE_AU_PASTEUR'           => [],
+                'VALIDEE'                        => [],
+                'REFUSEE_PAR_CONDUCTEUR'         => [],
+                'REFUSEE_PAR_PASTEUR'            => [],
+                'ARCHIVEE'                       => [],
             ],
             'pasteur' => [
-                'SOUMISE' => [],
-                'EN_ATTENTE_CONDUCTEUR' => [],
-                'TRANSMISE_AU_PASTEUR' => ['VALIDEE', 'REFUSEE_PAR_PASTEUR'],
-                'VALIDEE' => ['PUBLIEE', 'CELEBRE', 'TERMINE', 'ARCHIVEE'],
-                'PUBLIEE' => ['ARCHIVEE'],
-                'CELEBRE' => ['ARCHIVEE'],
-                'TERMINE' => ['ARCHIVEE'],
-                'REFUSEE_PAR_CONDUCTEUR' => [],
-                'REFUSEE_PAR_PASTEUR' => [],
-                'ARCHIVEE' => [],
+                'SOUMISE'                        => [],
+                'EN_ATTENTE_CONDUCTEUR'          => [],
+                'TRANSMISE_AU_BUREAU_CONDUCTEUR' => [],
+                'REFUSEE_PAR_BUREAU_CONDUCTEUR'  => [],
+                'TRANSMISE_AU_PASTEUR'           => ['VALIDEE', 'REFUSEE_PAR_PASTEUR'],
+                'VALIDEE'                        => ['PUBLIEE', 'CELEBRE', 'TERMINE', 'ARCHIVEE'],
+                'PUBLIEE'                        => ['ARCHIVEE'],
+                'CELEBRE'                        => ['ARCHIVEE'],
+                'TERMINE'                        => ['ARCHIVEE'],
+                'REFUSEE_PAR_CONDUCTEUR'         => [],
+                'REFUSEE_PAR_PASTEUR'            => [],
+                'ARCHIVEE'                       => [],
             ],
             'admin' => [
-                'SOUMISE' => ['EN_ATTENTE_CONDUCTEUR', 'TRANSMISE_AU_PASTEUR', 'REFUSEE_PAR_CONDUCTEUR'],
-                'EN_ATTENTE_CONDUCTEUR' => ['TRANSMISE_AU_PASTEUR', 'REFUSEE_PAR_CONDUCTEUR'],
-                'TRANSMISE_AU_PASTEUR' => ['VALIDEE', 'REFUSEE_PAR_PASTEUR'],
-                'VALIDEE' => ['PUBLIEE', 'CELEBRE', 'TERMINE', 'ARCHIVEE'],
-                'PUBLIEE' => ['ARCHIVEE'],
-                'CELEBRE' => ['ARCHIVEE'],
-                'TERMINE' => ['ARCHIVEE'],
-                'REFUSEE_PAR_CONDUCTEUR' => [],
-                'REFUSEE_PAR_PASTEUR' => [],
-                'ARCHIVEE' => [],
+                // admin peut bypass le bureau si besoin
+                'SOUMISE'                        => ['EN_ATTENTE_CONDUCTEUR', 'TRANSMISE_AU_BUREAU_CONDUCTEUR', 'TRANSMISE_AU_PASTEUR', 'REFUSEE_PAR_CONDUCTEUR'],
+                'EN_ATTENTE_CONDUCTEUR'          => ['TRANSMISE_AU_BUREAU_CONDUCTEUR', 'TRANSMISE_AU_PASTEUR', 'REFUSEE_PAR_CONDUCTEUR'],
+                'TRANSMISE_AU_BUREAU_CONDUCTEUR' => ['TRANSMISE_AU_PASTEUR', 'REFUSEE_PAR_BUREAU_CONDUCTEUR'],
+                'REFUSEE_PAR_BUREAU_CONDUCTEUR'  => [],
+                'TRANSMISE_AU_PASTEUR'           => ['VALIDEE', 'REFUSEE_PAR_PASTEUR'],
+                'VALIDEE'                        => ['PUBLIEE', 'CELEBRE', 'TERMINE', 'ARCHIVEE'],
+                'PUBLIEE'                        => ['ARCHIVEE'],
+                'CELEBRE'                        => ['ARCHIVEE'],
+                'TERMINE'                        => ['ARCHIVEE'],
+                'REFUSEE_PAR_CONDUCTEUR'         => [],
+                'REFUSEE_PAR_PASTEUR'            => [],
+                'ARCHIVEE'                       => [],
             ],
         ];
 

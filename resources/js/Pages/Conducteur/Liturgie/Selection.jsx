@@ -19,16 +19,16 @@ const ACTE_OPTIONS = [
     },
     {
         key: "naissance",
-        title: "Declaration de Naissance",
-        badge: "Declaration",
-        description: "Declaration de naissance avec informations parentales.",
+        title: "Présentation Enfant",
+        badge: "Présentation",
+        description: "Présentation de l'enfant devant l'assemblée.",
         tone: "green",
     },
     {
         key: "deces",
-        title: "Declaration de Deces",
-        badge: "Declaration",
-        description: "Declaration de deces pour accompagnement de l'eglise.",
+        title: "Annonce Décès",
+        badge: "Annonce",
+        description: "Annonce de décès pour accompagnement de l'église.",
         tone: "slate",
     },
 ];

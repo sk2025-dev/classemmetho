@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 
 const BADGE_CONFIG = {
     grace:  { label: 'Action de grâce',       emoji: '🙌', bg: '#fef3c7', color: '#d97706' },
@@ -174,10 +174,10 @@ export default function TransmisesTab({ transmises, annTransmises = [], openModa
                                 d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
                             />
                         </svg>
-                        Transmises au Pasteur
+                        Transmises au Bureau des Conducteurs
                     </div>
                     <div className="panel-subtitle">
-                        Actes liturgiques transmis — en attente de validation finale
+                        Actes liturgiques transmis — en attente de validation du Bureau
                     </div>
                 </div>
                 <span className="panel-count-badge panel-count-gold">
@@ -190,7 +190,7 @@ export default function TransmisesTab({ transmises, annTransmises = [], openModa
                         <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.2">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                         </svg>
-                        <span>Aucune demande transmise au pasteur</span>
+                        <span>Aucune demande transmise au Bureau des Conducteurs</span>
                     </div>
                 )}
                 {transmises.map((acte) => {

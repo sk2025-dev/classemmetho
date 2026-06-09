@@ -22,6 +22,7 @@ class ActeLiturgique extends Model
         'membre_id',
         'classe_id',
         'conducteur_id',
+        'bureau_conducteur_id',
         'pasteur_id',
         'date_souhaitee',
         'details',
@@ -71,6 +72,8 @@ class ActeLiturgique extends Model
     // Constantes pour les statuts
     public const STATUT_Soumise = 'SOUMISE';
     public const STATUT_EN_ATTENTE_CONDUCTEUR = 'EN_ATTENTE_CONDUCTEUR';
+    public const STATUT_TRANSMISE_AU_BUREAU_CONDUCTEUR = 'TRANSMISE_AU_BUREAU_CONDUCTEUR';
+    public const STATUT_REFUSEE_PAR_BUREAU_CONDUCTEUR = 'REFUSEE_PAR_BUREAU_CONDUCTEUR';
     public const STATUT_TRANSMISE_AU_PASTEUR = 'TRANSMISE_AU_PASTEUR';
     public const STATUT_VALIDEE = 'VALIDEE';
     public const STATUT_REFUSEE_PAR_CONDUCTEUR = 'REFUSEE_PAR_CONDUCTEUR';
@@ -83,6 +86,7 @@ class ActeLiturgique extends Model
     public const STATUTS_BLOQUANT_NOUVELLE_DEMANDE = [
         self::STATUT_Soumise,
         self::STATUT_EN_ATTENTE_CONDUCTEUR,
+        self::STATUT_TRANSMISE_AU_BUREAU_CONDUCTEUR,
         self::STATUT_TRANSMISE_AU_PASTEUR,
         self::STATUT_VALIDEE,
         self::STATUT_PUBLIEE,
@@ -120,6 +124,11 @@ class ActeLiturgique extends Model
     public function conducteur(): BelongsTo
     {
         return $this->belongsTo(User::class, 'conducteur_id');
+    }
+
+    public function bureauConducteur(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'bureau_conducteur_id');
     }
 
     public function pasteur(): BelongsTo

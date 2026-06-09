@@ -219,8 +219,23 @@ class UserManagementController extends Controller
             'statut' => 'required|in:actif,inactif,suspendu'
         ]);
 
+        $statut = $request->input('statut');
+
+        // LoginController vérifie $user->status ?? $user->statut
+        // Il faut synchroniser les deux colonnes pour éviter les incohérences
+        $statusEnum = match ($statut) {
+            'actif'    => 'active',
+            'inactif'  => 'inactive',
+            'suspendu' => 'inactive',
+            default    => 'inactive',
+        };
+
         $user = User::findOrFail($id);
-        $user->update(['statut' => $request->input('statut')]);
+        $user->update([
+            'statut' => $statut,
+            'status' => $statusEnum,
+        ]);
+
         return back();
     }
 

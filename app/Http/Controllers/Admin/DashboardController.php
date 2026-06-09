@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Inscription;
 use App\Models\Priere;
 use App\Models\PriereView;
 use App\Models\Sondage;
@@ -18,12 +17,8 @@ class DashboardController extends Controller
         $user = auth()->user();
         $user?->loadMissing('family', 'classe');
 
-        // Compter les inscriptions en attente
-        $pendingInscriptions = Inscription::where('status', 'en_attente')->count();
-
         return Inertia::render('Admin/Dashboard', [
             'role' => $user->role,
-            'pendingInscriptions' => $pendingInscriptions,
             'surveyBadgeCount' => Sondage::query()
                 ->where('statut', 'active')
                 ->whereNotIn(

@@ -30,7 +30,7 @@ class MemberController extends Controller
             $user = User::create([
                 'nom' => $validated['nom'],
                 'prenom' => $validated['prenom'],
-                'email' => $validated['email'] ?: $validated['prenom'] . '.' . $validated['nom'] . '@famille.local',
+                'email' => $validated['email'] ?: null,
                 'telephone' => $validated['telephone'],
                 'genre' => $validated['genre'],
                 'date_naissance' => $validated['date_naissance'],

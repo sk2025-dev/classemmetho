@@ -527,44 +527,60 @@ const toText = (value, fallback = "-") => {
 
 const normalizeMember = (member) => {
     if (!member) return null;
-    const prenoms = toText(
-        member?.prenoms || member?.prenom || member?.full_name,
-        "",
-    );
-    const classeName = toText(
-        member?.classe?.nom || member?.classeMethodiste || member?.classe,
-        "-",
-    );
+
+    const prenoms = toText(member?.prenoms || member?.prenom || member?.full_name, "");
+    const classeName = toText(member?.classe?.nom || member?.classeMethodiste || member?.classe, "-");
     const familleName = toText(
-        member?.famille ||
-            member?.family?.nom ||
-            member?.family?.code_famille ||
-            member?.family_code,
-        "-",
+        member?.famille || member?.family?.nom || member?.family_name || member?.family_code, "-"
     );
+
+    // Sacrements : extraits de la relation imbriquée member.sacrements avec fallback sur champs plats
+    const s = member?.sacrements || {};
+    const baptise           = s.baptise           ?? member?.baptise           ?? false;
+    const dateBapteme       = s.bapteme_date       || member?.dateBapteme       || s.date_bapteme       || null;
+    const lieuBapteme       = s.bapteme_lieu       || member?.lieuBapteme       || s.lieu_bapteme       || null;
+    const premiereCommunion = s.premiere_communion ?? member?.premiereCommunion ?? false;
+    const dateCommunion     = s.premiere_communion_date || member?.dateCommunion || null;
+    const lieuCommunion     = s.premiere_communion_lieu || member?.lieuCommunion || null;
+    const marieReligieusement = s.marie_religieusement ?? member?.marieReligieusement ?? false;
+    const dateMarReligieux  = s.mariage_religieux_date || member?.dateMarReligieux || null;
+    const lieuMarReligieux  = s.mariage_religieux_lieu || member?.lieuMarReligieux || null;
+    const mariageCivil      = s.est_marie          ?? member?.mariageCivil      ?? false;
+    const dateMarCivil      = s.mariage_civil_date || member?.dateMarCivil      || null;
+    const veuf              = s.est_veuf           ?? member?.veuf              ?? false;
+    const divorce           = s.est_divorce        ?? member?.divorce           ?? false;
+    const dote              = s.dot_effectue       ?? member?.dote              ?? false;
+
     return {
         ...member,
         prenoms,
         classeMethodiste: classeName,
-        famille: familleName,
-        codeFamille:
-            member?.code_famille || member?.family?.code_famille || null,
-        codeMembre: member?.numMembre || member?.code_membre || null,
-        photo: member?.photo || member?.profile_photo_url || "",
-        sexe: toText(member?.sexe || member?.genre, ""),
-        dateNaissance: member?.dateNaissance || member?.date_naissance || null,
-        telephone: toText(member?.telephone, "-"),
-        email: toText(member?.email, "-"),
+        famille:     familleName,
+        family:      member?.family || null,
+        codeFamille: member?.code_famille || member?.family?.code_famille || null,
+        codeMembre:  member?.numMembre    || member?.code_membre          || null,
+        photo:       member?.photo        || member?.profile_photo_url    || "",
+        sexe:        toText(member?.sexe  || member?.genre, ""),
+        dateNaissance: member?.dateNaissance || member?.date_naissance    || null,
+        lieu_naissance: member?.lieu_naissance || null,
+        telephone:   toText(member?.telephone, "-"),
+        email:       toText(member?.email, "-"),
         fonction: Array.isArray(member?.fonctions) && member.fonctions.length > 0
-            ? member.fonctions.map(f => f.nom || f).join(', ')
+            ? member.fonctions.map(f => f.nom || f).join(", ")
             : toText(member?.fonction, "-"),
-        profession: toText(member?.profession, "-"),
-        relation: toText(member?.relation, "-"),
-        adresse: toText(
-            member?.adresse || member?.family?.adresse || member?.address,
-            "-",
-        ),
-        quartier: toText(member?.quartier || member?.family?.quartier, "-"),
+        profession:    toText(member?.profession, "-"),
+        niveau_etude:  member?.niveau_etude  || null,
+        relation:      toText(member?.relation, "-"),
+        statut_marital: member?.statut_marital || null,
+        adresse:   toText(member?.adresse   || member?.family?.adresse   || member?.address, "-"),
+        quartier:  toText(member?.quartier  || member?.family?.quartier, "-"),
+        // Sacrements extraits proprement
+        baptise, dateBapteme, lieuBapteme,
+        premiereCommunion, dateCommunion, lieuCommunion,
+        marieReligieusement, dateMarReligieux, lieuMarReligieux,
+        mariageCivil, dateMarCivil,
+        veuf, divorce, dote,
+        confirme: s.confirme ?? member?.confirme ?? false,
     };
 };
 
@@ -630,9 +646,7 @@ const MemberDetailsModal = ({
         )}`;
     };
 
-    const initial = (member?.prenoms || member?.nom || "?")
-        .charAt(0)
-        .toUpperCase();
+    const initial = (member?.prenoms || member?.nom || "?").charAt(0).toUpperCase();
     const fallbackAvatar = getFallbackAvatar(initial);
     const photoSrc = member?.photo || fallbackAvatar;
 
@@ -648,69 +662,58 @@ const MemberDetailsModal = ({
                         <img
                             src={photoSrc}
                             alt={`${member.prenoms} ${member.nom}`}
-                            onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = fallbackAvatar;
-                            }}
+                            onError={(e) => { e.target.onerror = null; e.target.src = fallbackAvatar; }}
                         />
                     </div>
                     <div className="member-identity-info">
+                        <p><strong>Nom & Prénoms :</strong> {member.prenoms} {member.nom}</p>
                         <p>
-                            <strong>Nom & Prénoms:</strong> {member.prenoms}{" "}
-                            {member.nom}
-                        </p>
-                        <p>
-                            <strong>Famille:</strong> {member.famille || "-"}
-                        </p>
-                        <p>
-                            <strong>Genre:</strong>{" "}
+                            <strong>Genre :</strong>{" "}
                             {member.sexe === "M" ? "Masculin" : "Féminin"}
                         </p>
                         <p>
-                            <strong>Date de naissance:</strong>{" "}
+                            <strong>Date de naissance :</strong>{" "}
                             {member.dateNaissance
-                                ? new Date(
-                                      member.dateNaissance,
-                                  ).toLocaleDateString()
+                                ? new Date(member.dateNaissance).toLocaleDateString("fr-FR")
                                 : "-"}
                         </p>
-                        <p>
-                            <strong>Code membre:</strong>{" "}
-                            {member.codeMembre || "-"}
-                        </p>
-                        <p>
-                            <strong>Classe méthodiste:</strong>{" "}
-                            {member.classeMethodiste || "-"}
-                        </p>
-                        <p>
-                            <strong>Profession:</strong>{" "}
-                            {member.profession || "-"}
-                        </p>
-                        <p>
-                            <strong>Fonction:</strong> {member.fonction || "-"}
-                        </p>
-                        <p>
-                            <strong>Relation:</strong> {member.relation || "-"}
-                        </p>
                         {member.lieu_naissance && (
-                            <p>
-                                <strong>Lieu de naissance:</strong>{" "}
-                                {member.lieu_naissance}
-                            </p>
+                            <p><strong>Lieu de naissance :</strong> {member.lieu_naissance}</p>
+                        )}
+                        <p>
+                            <strong>Code membre :</strong>{" "}
+                            <span style={{ fontFamily: "monospace", background: "#f1f5f9", padding: "1px 6px", borderRadius: 4 }}>
+                                {member.codeMembre || "-"}
+                            </span>
+                        </p>
+                        <p>
+                            <strong>Code famille :</strong>{" "}
+                            <span style={{ fontFamily: "monospace", background: "#f1f5f9", padding: "1px 6px", borderRadius: 4 }}>
+                                {member.codeFamille || member?.family?.code_famille || "-"}
+                            </span>
+                        </p>
+                        <p><strong>Famille :</strong> {member.famille || "-"}</p>
+                        <p>
+                            <strong>Relation familiale :</strong>{" "}
+                            <span style={{ color: "#7c3aed", fontWeight: 600 }}>
+                                {member.relation || "-"}
+                            </span>
+                        </p>
+                        <p><strong>Classe méthodiste :</strong> {member.classeMethodiste || "-"}</p>
+                        <p><strong>Fonction :</strong> {member.fonction || "-"}</p>
+                        <p><strong>Profession :</strong> {member.profession || "-"}</p>
+                        {member.niveau_etude && (
+                            <p><strong>Niveau d'étude :</strong> {member.niveau_etude}</p>
                         )}
                         {member.numero_cni && (
-                            <p>
-                                <strong>N° CNI:</strong> {member.numero_cni}
-                            </p>
+                            <p><strong>N° CNI :</strong> {member.numero_cni}</p>
                         )}
                         {member.hors_communaute && (
-                            <p>
-                                <strong>Hors communauté:</strong> Oui
-                            </p>
+                            <p><strong>Hors communauté :</strong> Oui</p>
                         )}
                         {member.retrait && (
                             <p>
-                                <strong>Retrait:</strong> Oui
+                                <strong>Retrait :</strong> Oui
                                 {member.date_retrait && ` — ${member.date_retrait}`}
                             </p>
                         )}
@@ -723,41 +726,71 @@ const MemberDetailsModal = ({
                 <h3>🕊️ Informations spirituelles</h3>
                 <div className="spiritual-info">
                     <p>
-                        <strong>Baptême:</strong>{" "}
-                        {member.baptise ? "Oui" : "Non"}{" "}
-                        {member.dateBapteme &&
-                            `(${new Date(member.dateBapteme).toLocaleDateString()})`}
+                        <strong>Baptême :</strong>{" "}
+                        <span style={{ color: member.baptise ? "#16a34a" : "#dc2626", fontWeight: 600 }}>
+                            {member.baptise ? "Oui" : "Non"}
+                        </span>
+                        {member.dateBapteme && (
+                            <span style={{ color: "#6b7280", marginLeft: 6 }}>
+                                — le {new Date(member.dateBapteme).toLocaleDateString("fr-FR")}
+                            </span>
+                        )}
                     </p>
                     {member.lieuBapteme && (
-                        <p>
-                            <strong>Lieu de baptême:</strong>{" "}
-                            {member.lieuBapteme}
+                        <p style={{ paddingLeft: 12 }}>
+                            <strong>Lieu de baptême :</strong> {member.lieuBapteme}
                         </p>
                     )}
+
                     <p>
-                        <strong>1ère communion:</strong>{" "}
-                        {member.premiereCommunion ? "Oui" : "Non"}{" "}
-                        {member.dateCommunion &&
-                            `(${new Date(member.dateCommunion).toLocaleDateString()})`}
+                        <strong>1ère Communion :</strong>{" "}
+                        <span style={{ color: member.premiereCommunion ? "#16a34a" : "#dc2626", fontWeight: 600 }}>
+                            {member.premiereCommunion ? "Oui" : "Non"}
+                        </span>
+                        {member.dateCommunion && (
+                            <span style={{ color: "#6b7280", marginLeft: 6 }}>
+                                — le {new Date(member.dateCommunion).toLocaleDateString("fr-FR")}
+                            </span>
+                        )}
                     </p>
+                    {member.lieuCommunion && (
+                        <p style={{ paddingLeft: 12 }}>
+                            <strong>Lieu :</strong> {member.lieuCommunion}
+                        </p>
+                    )}
+
                     <p>
-                        <strong>Confirmation:</strong>{" "}
-                        {member.confirme ? "Oui" : "Non"}
+                        <strong>Mariage religieux :</strong>{" "}
+                        <span style={{ color: member.marieReligieusement ? "#16a34a" : "#dc2626", fontWeight: 600 }}>
+                            {member.marieReligieusement ? "Oui" : "Non"}
+                        </span>
+                        {member.dateMarReligieux && (
+                            <span style={{ color: "#6b7280", marginLeft: 6 }}>
+                                — le {new Date(member.dateMarReligieux).toLocaleDateString("fr-FR")}
+                            </span>
+                        )}
                     </p>
+                    {member.lieuMarReligieux && (
+                        <p style={{ paddingLeft: 12 }}>
+                            <strong>Lieu :</strong> {member.lieuMarReligieux}
+                        </p>
+                    )}
+
                     <p>
-                        <strong>Mariage religieux:</strong>{" "}
-                        {member.marieReligieusement ? "Oui" : "Non"}
+                        <strong>Confirmation :</strong>{" "}
+                        <span style={{ color: member.confirme ? "#16a34a" : "#dc2626", fontWeight: 600 }}>
+                            {member.confirme ? "Oui" : "Non"}
+                        </span>
                     </p>
+
                     <div className="actes-list">
-                        <strong>Actes liturgiques associés:</strong>
+                        <strong>Actes liturgiques associés :</strong>
                         {actesLiturgiques && actesLiturgiques.length > 0 ? (
                             <ul>
                                 {actesLiturgiques.map((acte, index) => (
                                     <li key={index}>
-                                        {acte.typeName} -{" "}
-                                        {new Date(
-                                            acte.proposedDate,
-                                        ).toLocaleDateString()}
+                                        {acte.typeName} —{" "}
+                                        {new Date(acte.proposedDate).toLocaleDateString("fr-FR")}
                                     </li>
                                 ))}
                             </ul>
@@ -772,15 +805,34 @@ const MemberDetailsModal = ({
             <div className="detail-section">
                 <h3>👪 Informations familiales</h3>
                 <div className="spiritual-info">
+                    {member.statut_marital && (
+                        <p>
+                            <strong>Statut marital :</strong>{" "}
+                            <span style={{ color: "#1d4ed8", fontWeight: 600 }}>{member.statut_marital}</span>
+                        </p>
+                    )}
                     <p>
-                        <strong>Mariage civil:</strong>{" "}
-                        {member.mariageCivil ? "Oui" : "Non"}
+                        <strong>Mariage civil :</strong>{" "}
+                        <span style={{ color: member.mariageCivil ? "#16a34a" : "#dc2626", fontWeight: 600 }}>
+                            {member.mariageCivil ? "Oui" : "Non"}
+                        </span>
+                        {member.dateMarCivil && (
+                            <span style={{ color: "#6b7280", marginLeft: 6 }}>
+                                — le {new Date(member.dateMarCivil).toLocaleDateString("fr-FR")}
+                            </span>
+                        )}
                     </p>
                     <p>
-                        <strong>Doté:</strong> {member.dote ? "Oui" : "Non"}
+                        <strong>Doté :</strong>{" "}
+                        <span style={{ fontWeight: 600 }}>{member.dote ? "Oui" : "Non"}</span>
                     </p>
                     <p>
-                        <strong>Veuf:</strong> {member.veuf ? "Oui" : "Non"}
+                        <strong>Divorcé :</strong>{" "}
+                        <span style={{ fontWeight: 600 }}>{member.divorce ? "Oui" : "Non"}</span>
+                    </p>
+                    <p>
+                        <strong>Veuf/Veuve :</strong>{" "}
+                        <span style={{ fontWeight: 600 }}>{member.veuf ? "Oui" : "Non"}</span>
                     </p>
                 </div>
             </div>
@@ -789,19 +841,11 @@ const MemberDetailsModal = ({
             <div className="detail-section">
                 <h3>🧾 Contact</h3>
                 <div className="contact-info">
-                    <p>
-                        <strong>Téléphone:</strong> {member.telephone || "-"}
-                    </p>
-                    <p>
-                        <strong>Email:</strong> {member.email || "-"}
-                    </p>
-                    <p>
-                        <strong>Adresse:</strong> {member.adresse || "-"}
-                    </p>
+                    <p><strong>Téléphone :</strong> {member.telephone || "-"}</p>
+                    <p><strong>Email :</strong> {member.email || "-"}</p>
+                    <p><strong>Adresse :</strong> {member.adresse || "-"}</p>
                     {member.quartier && (
-                        <p>
-                            <strong>Quartier:</strong> {member.quartier}
-                        </p>
+                        <p><strong>Quartier :</strong> {member.quartier}</p>
                     )}
                 </div>
             </div>
@@ -812,52 +856,30 @@ const MemberDetailsModal = ({
                 <div className="cotisations-info">
                     {cotisations?.fimeco ? (
                         <div className="cotisation-item">
-                            <strong>FIMECO:</strong>{" "}
+                            <strong>FIMECO :</strong>{" "}
                             {cotisations.fimeco.montantPaye} FCFA /{" "}
                             {cotisations.fimeco.montantDu} FCFA
                             <span className="solde">
-                                Solde: {cotisations.fimeco.solde} FCFA
+                                Solde : {cotisations.fimeco.solde} FCFA
                             </span>
                         </div>
                     ) : (
-                        <p>FIMECO: Aucune souscription</p>
+                        <p>FIMECO : Aucune souscription</p>
                     )}
                     {cotisations?.autres && cotisations.autres.length > 0 ? (
                         <div className="cotisation-item">
-                            <strong>Autres cotisations:</strong>
+                            <strong>Autres cotisations :</strong>
                             <ul>
                                 {cotisations.autres.map((c, index) => (
-                                    <li key={index}>
-                                        {c.nom}: {c.montant} FCFA
-                                    </li>
+                                    <li key={index}>{c.nom} : {c.montant} FCFA</li>
                                 ))}
                             </ul>
                         </div>
                     ) : (
-                        <p>Autres cotisations: Aucune</p>
+                        <p>Autres cotisations : Aucune</p>
                     )}
                 </div>
             </div>
-
-            {/* AUTRES INFORMATIONS (visible seulement pour les admins) */}
-            {userData?.role === "admin" && (
-                <div className="detail-section">
-                    <h3>📌 Autres informations</h3>
-                    <div className="other-info">
-                        <p>
-                            <strong>Statut:</strong> {member.statutVie || "-"}
-                        </p>
-                        <p>
-                            <strong>Date de création:</strong>{" "}
-                            {member.dateCreation
-                                ? new Date(
-                                      member.dateCreation,
-                                  ).toLocaleDateString()
-                                : "-"}
-                        </p>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
@@ -943,11 +965,19 @@ const Annuaire = ({
     const [actesLiturgiques, setActesLiturgiques] = useState([]);
     const [classMemberPages, setClassMemberPages] = useState({});
 
+    const PARAM_DEFAULTS = { page: 1, perPage: 10, view: "all" };
+    const buildParams = (raw) =>
+        Object.fromEntries(
+            Object.entries(raw).filter(([k, v]) =>
+                v !== "" && v !== null && v !== undefined && v !== PARAM_DEFAULTS[k]
+            )
+        );
+
     // Application des filtres
     const applyFilters = useCallback(() => {
         router.get(
             window.location.pathname,
-            {
+            buildParams({
                 search: searchTerm,
                 classe: classeFilter,
                 famille: familleFilter,
@@ -956,7 +986,7 @@ const Annuaire = ({
                 perPage: itemsPerPage,
                 view: currentView,
                 page: 1,
-            },
+            }),
             { preserveState: true, preserveScroll: true, replace: true },
         );
     }, [
@@ -984,7 +1014,7 @@ const Annuaire = ({
         setCurrentView(newView);
         router.get(
             window.location.pathname,
-            {
+            buildParams({
                 search: searchTerm,
                 classe: classeFilter,
                 famille: familleFilter,
@@ -994,7 +1024,7 @@ const Annuaire = ({
                 page: 1,
                 familiesPerPage: 5,
                 classesPerPage: 1,
-            },
+            }),
             { preserveState: true, preserveScroll: true },
         );
         setClassMemberPages({});

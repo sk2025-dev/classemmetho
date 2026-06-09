@@ -139,13 +139,24 @@ export default function Index({
 }) {
     const { url } = usePage();
 
-    const [actesPaginator] = useState(
+    const [actesPaginator, setActesPaginator] = useState(
         Array.isArray(actes) || !actes?.data ? null : actes,
     );
 
     const [localActes, setLocalActes] = useState(
-        actesPaginator?.data || (Array.isArray(actes) ? actes : []),
+        Array.isArray(actes) ? actes : (actes?.data ?? []),
     );
+
+    useEffect(() => {
+        if (Array.isArray(actes)) {
+            setLocalActes(actes);
+            setActesPaginator(null);
+        } else if (actes?.data) {
+            setLocalActes(actes.data);
+            setActesPaginator(actes);
+        }
+    }, [actes]);
+
     const currentPage = actesPaginator?.current_page || 1;
     const lastPage = actesPaginator?.last_page || 1;
     const totalActes = actesPaginator?.total || localActes.length;
@@ -479,6 +490,7 @@ export default function Index({
                 toBatchDateKey(acte?.created_at) ||
                 toBatchDateKey(acte?.details?.date_souhaitee) ||
                 toBatchDateKey(acte?.date_souhaitee) ||
+                toBatchDateKey(acte?.validated_at) ||
                 toBatchDateKey(acte?.updated_at);
             if (!batchDate) return;
             if (!map.has(batchDate)) {
@@ -2758,6 +2770,12 @@ export default function Index({
                                                         Voir la fiche
                                                     </button>
                                                 )}
+                                                {!isActe && (
+                                                    <button className="btn-pdf" onClick={(e) => { e.stopPropagation(); window.open(`/pasteur/liturgie/${item.id}/fiche-priere`, '_blank'); }}>
+                                                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                                        Télécharger fiche
+                                                    </button>
+                                                )}
                                                 <button className="btn-refuse-sm" onClick={() => isActe ? openModal('refuse', item) : openAnnModal('refuse', item)}>
                                                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                                     Refuser
@@ -2766,41 +2784,29 @@ export default function Index({
                                         </div>
                                         );
                                     })}
-                                    {combinedPending.length > 0 &&
-                                        lastPage > 1 && (
-                                            <div className="pager">
-                                                <button
-                                                    type="button"
-                                                    className="pager-btn"
-                                                    onClick={() =>
-                                                        goToActesPage(
-                                                            currentPage - 1,
-                                                        )
-                                                    }
-                                                    disabled={currentPage === 1}
-                                                >
-                                                    Précédent
-                                                </button>
-                                                <div className="pager-info">
-                                                    Page {currentPage} /{" "}
-                                                    {lastPage}
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    className="pager-btn"
-                                                    onClick={() =>
-                                                        goToActesPage(
-                                                            currentPage + 1,
-                                                        )
-                                                    }
-                                                    disabled={
-                                                        currentPage === lastPage
-                                                    }
-                                                >
-                                                    Suivant
-                                                </button>
-                                            </div>
-                                        )}
+                                    {lastPage > 1 && (
+                                        <div className="flex items-center justify-center gap-3 mt-4 py-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => goToActesPage(currentPage - 1)}
+                                                disabled={currentPage === 1}
+                                                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                            >
+                                                ← Précédent
+                                            </button>
+                                            <span className="text-xs text-gray-500 font-medium">
+                                                Page {currentPage} / {lastPage}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => goToActesPage(currentPage + 1)}
+                                                disabled={currentPage === lastPage}
+                                                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                            >
+                                                Suivant →
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="side-col">
@@ -3036,7 +3042,16 @@ export default function Index({
                                                 {isActe && item.statut === 'VALIDEE' && ((item.type_acte === 'mariage' && item.details?.date_souhaitee && item.details?.fiche_pasteur_envoyee) || item.type_acte === 'bapteme') && (
                                                     <button className="btn-pdf" onClick={() => finalizeActe(item)}>Marquer {finalLabelForType(item.type_acte)}</button>
                                                 )}
-                                                {isActe && (DONE_STATUSES.includes(item.statut) || item.details?.ceremonie_statut === 'CEREMONIE_VALIDEE_PAR_PASTEUR') && (
+                                                {isActe && ['deces', 'naissance'].includes(item.type_acte) && (
+                                                    <button className="btn-pdf" onClick={() => window.open(`/pasteur/liturgie/${item.id}/certificat`, '_blank')}>Télécharger la fiche</button>
+                                                )}
+                                                {!isActe && ['priere', 'grace'].includes(item.type_acte) && !item.statut?.includes('REFUS') && (
+                                                    <button className="btn-pdf" onClick={() => window.open(`/pasteur/liturgie/${item.id}/fiche-priere`, '_blank')}>Télécharger la fiche</button>
+                                                )}
+                                                {isActe && item.type_acte === 'mariage' && ['CEREMONIE_VALIDE_PAR_PASTEUR', 'CEREMONIE_VALIDEE_PAR_PASTEUR'].includes(item.details?.ceremonie_statut) && (
+                                                    <button className="btn-pdf" onClick={() => window.open(`/pasteur/liturgie/${item.id}/certificat`, '_blank')}>Télécharger certificat</button>
+                                                )}
+                                                {isActe && item.type_acte === 'bapteme' && item.details?.fiche_bapteme_envoyee && (
                                                     <button className="btn-pdf" onClick={() => window.open(`/pasteur/liturgie/${item.id}/certificat`, '_blank')}>Télécharger certificat</button>
                                                 )}
                                             </div>
@@ -6127,6 +6142,13 @@ function historyStatusLabel(status) {
     if (status === "CELEBRE") return "CÉLÉBRÉ";
     if (status === "TERMINE") return "TERMINÉ";
     return status || "-";
+}
+function ceremonyStatusLabel(status) {
+    if (status === "CEREMONIE_TRANSMISE_AU_PASTEUR") return "DATE TRANSMISE";
+    if (status === "CEREMONIE_VALIDEE_PAR_PASTEUR") return "DATE ACCEPTÉE";
+    if (status === "CEREMONIE_VALIDE_PAR_PASTEUR") return "DATE VALIDÉE";
+    if (status === "CEREMONIE_REFUSEE_PAR_PASTEUR") return "DATE REFUSÉE";
+    return historyStatusLabel(status);
 }
 function iconEmoji(type) {
     const m = {

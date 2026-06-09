@@ -153,7 +153,7 @@ class LiturgieController extends Controller
         $payload = $request->validated();
         $payload['created_by'] = $user->id;
         $payload['conducteur_id'] = $user->id;
-        $payload['statut'] = 'TRANSMISE_AU_PASTEUR';
+        $payload['statut'] = 'TRANSMISE_AU_BUREAU_CONDUCTEUR';
 
         if (empty($payload['classe_id']) && $user->classe_id) {
             $payload['classe_id'] = $user->classe_id;
@@ -163,7 +163,7 @@ class LiturgieController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Acte créé et transmis au pasteur.',
+            'message' => 'Acte créé et transmis au Bureau des Conducteurs.',
             'acte' => $acte,
         ]);
     }

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { normalizePhotoUrl } from "@/Helpers/PhotoUrlHelper";
 import { withBasePath } from "../../../Utils/urlHelper";
 
@@ -622,14 +622,22 @@ export default function Index({
         const soumises = localActes.filter(
             (a) => ["SOUMISE", "EN_ATTENTE_CONDUCTEUR"].includes(a.statut),
         ).length;
-        const transmises = localActes.filter(
-            (a) => a.statut === "TRANSMISE_AU_PASTEUR",
+        const actesTransmises = localActes.filter(
+            (a) =>
+                a.statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR" &&
+                !["priere", "grace", "generale"].includes(
+                    String(a.type_acte || "").toLowerCase(),
+                ),
         ).length;
+        const annoncesTransmises = localAnnonces.filter(
+            (a) => a.statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR",
+        ).length;
+        const transmises = actesTransmises + annoncesTransmises;
         const valides = localActes.filter((a) =>
             ["VALIDEE", "PUBLIEE", "ARCHIVEE"].includes(a.statut),
         ).length;
         return { soumises, transmises, valides, total: localActes.length };
-    }, [localActes]);
+    }, [localActes, localAnnonces]);
 
     const searchNeedle = searchTerm.trim().toLowerCase();
     const filteredActes = useMemo(() => {
@@ -672,8 +680,7 @@ export default function Index({
     );
     const transmises = filteredActes.filter(
         (a) =>
-            a.statut === "TRANSMISE_AU_PASTEUR" &&
-            !ANNONCE_TYPE_VALUES.includes(
+            a.statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR" && !ANNONCE_TYPE_VALUES.includes(
                 String(a.type_acte || "").toLowerCase(),
             ),
     );
@@ -683,10 +690,7 @@ export default function Index({
                 "VALIDEE",
                 "PUBLIEE",
                 "ARCHIVEE",
-                "REFUSEE_PAR_CONDUCTEUR",
-                "REFUSEE_PAR_PASTEUR",
-            ].includes(a.statut) &&
-            !ANNONCE_TYPE_VALUES.includes(
+                "REFUSEE_PAR_CONDUCTEUR", "REFUSEE_PAR_BUREAU_CONDUCTEUR", "REFUSEE_PAR_PASTEUR",].includes(a.statut) && !ANNONCE_TYPE_VALUES.includes(
                 String(a.type_acte || "").toLowerCase(),
             ),
     );
@@ -946,7 +950,7 @@ export default function Index({
         (a) => a.statut === "SOUMISE" && !isMyAnnonce(a),
     );
     const annTransmises = filteredAnnonces.filter(
-        (a) => a.statut === "TRANSMISE_AU_PASTEUR" && !isMyAnnonce(a),
+        (a) => a.statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR" && !isMyAnnonce(a),
     );
     const annTraitees = filteredAnnonces.filter(
         (a) => a.statut !== "SOUMISE" && !isMyAnnonce(a),
@@ -1157,8 +1161,7 @@ export default function Index({
                 await axios.post(
                     withBasePath("", `/conducteur/liturgie/${id}/transition`),
                     {
-                        statut: "TRANSMISE_AU_PASTEUR",
-                        commentaire: "",
+                        statut: "TRANSMISE_AU_BUREAU_CONDUCTEUR", commentaire: "",
                     },
                 );
             setLocalActes((prev) =>
@@ -1166,14 +1169,14 @@ export default function Index({
                     ids.includes(a.id)
                         ? {
                               ...a,
-                              statut: "TRANSMISE_AU_PASTEUR",
+                              statut: "TRANSMISE_AU_BUREAU_CONDUCTEUR",
                               updated_at: new Date().toISOString(),
                           }
                         : a,
                 ),
             );
             clearSelection();
-            showToast("✅ Demandes transmises au pasteur.");
+            showToast("✅ Demandes transmises au Bureau des Conducteurs.");
         } catch (e) {
             showToast(
                 e?.response?.data?.message || "Echec de la validation groupée.",
@@ -1251,8 +1254,7 @@ export default function Index({
             );
             closeModal();
             showToast(
-                statut === "TRANSMISE_AU_PASTEUR"
-                    ? "✅ Demande transmise au pasteur."
+                statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR" ? "✅ Demande transmise au Bureau des Conducteurs."
                     : "Demande refusée.",
             );
         } catch (e) {
@@ -1418,8 +1420,8 @@ export default function Index({
             );
             closeAnnonceModal();
             showToast(
-                statut === "TRANSMISE_AU_PASTEUR"
-                    ? "✅ Demande de prière transmise au pasteur."
+                statut === "TRANSMISE_AU_BUREAU_CONDUCTEUR"
+                    ? "✅ Demande de prière transmise au Bureau des Conducteurs."
                     : "Demande de prière refusée.",
             );
         } catch (e) {
@@ -1445,7 +1447,7 @@ export default function Index({
                     ids.includes(a.id)
                         ? {
                               ...a,
-                              statut: "TRANSMISE_AU_PASTEUR",
+                              statut: "TRANSMISE_AU_BUREAU_CONDUCTEUR",
                               updated_at: new Date().toISOString(),
                           }
                         : a,
@@ -1457,14 +1459,14 @@ export default function Index({
                     ids.includes(a.id)
                         ? {
                               ...a,
-                              statut: "TRANSMISE_AU_PASTEUR",
+                              statut: "TRANSMISE_AU_BUREAU_CONDUCTEUR",
                               updated_at: new Date().toISOString(),
                           }
                         : a,
                 ),
             );
             setAnnSelectedIds(new Set());
-            showToast("✅ Demandes de prière transmises au pasteur.");
+            showToast("✅ Demandes de prière transmises au Bureau des Conducteurs.");
         } catch (e) {
             showToast("Echec de la validation groupée.");
         } finally {
@@ -2635,11 +2637,7 @@ export default function Index({
                                         </div>
                                     )}
                                     {[
-                                        "TRANSMISE_AU_PASTEUR",
-                                        "VALIDEE",
-                                        "PUBLIEE",
-                                        "ARCHIVEE",
-                                    ].includes(selected?.statut) && (
+                                        "TRANSMISE_AU_BUREAU_CONDUCTEUR", "TRANSMISE_AU_PASTEUR", "VALIDEE", "PUBLIEE", "ARCHIVEE",].includes(selected?.statut) && (
                                         <div style={{ marginTop: 16 }}>
                                             <button
                                                 style={{
@@ -3104,7 +3102,7 @@ export default function Index({
                                     className="btn-modal btn-modal-gold"
                                     disabled={processing}
                                     onClick={() =>
-                                        submitTransition("TRANSMISE_AU_PASTEUR")
+                                        submitTransition("TRANSMISE_AU_BUREAU_CONDUCTEUR")
                                     }
                                 >
                                     <svg
@@ -4116,7 +4114,7 @@ export default function Index({
                                     disabled={annonceProcessing}
                                     onClick={() =>
                                         submitAnnonceTransition(
-                                            "TRANSMISE_AU_PASTEUR",
+                                            "TRANSMISE_AU_BUREAU_CONDUCTEUR",
                                         )
                                     }
                                 >
@@ -4136,7 +4134,7 @@ export default function Index({
                                     </svg>
                                     {annonceProcessing
                                         ? "Envoi..."
-                                        : "Transmettre au pasteur"}
+                                        : "Transmettre au Bureau"}
                                 </button>
                             )}
                             {annonceModal === "refuse" && (
@@ -4210,7 +4208,7 @@ function getActeBadgeClass(status) {
 function prettyStatut(s) {
     const m = {
         SOUMISE: "Soumise",
-        TRANSMISE_AU_PASTEUR: "Transmise au pasteur",
+        TRANSMISE_AU_BUREAU_CONDUCTEUR: "Transmise au Bureau", TRANSMISE_AU_PASTEUR: "Transmise au pasteur",
         EN_ATTENTE_CONDUCTEUR: "En attente du conducteur",
         CEREMONIE_SOUMISE_AU_CONDUCTEUR: "Date soumise au conducteur",
         CEREMONIE_TRANSMISE_AU_PASTEUR: "Date transmise au pasteur",
@@ -4218,7 +4216,7 @@ function prettyStatut(s) {
         VALIDEE: "Validée",
         PUBLIEE: "Publiée",
         ARCHIVEE: "Archivée",
-        REFUSEE_PAR_CONDUCTEUR: "Date refusée par conducteur",
+        REFUSEE_PAR_BUREAU_CONDUCTEUR: "Refusée par le Bureau", REFUSEE_PAR_CONDUCTEUR: "Date refusée par conducteur",
         CEREMONIE_REFUSEE_PAR_CONDUCTEUR: "Date refusée",
         REFUSEE_PAR_PASTEUR: "Refusée par pasteur",
         CEREMONIE_REFUSEE_PAR_PASTEUR: "Date refusée",

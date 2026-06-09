@@ -1216,8 +1216,23 @@ class ProgrammesClasseController extends Controller
                 ]);
             }
             
+            // Vérifier la limite de 20 photos par activité
+            if (!empty($validated['special_event_id']) && $validated['type'] === 'photo') {
+                $existingCount = Media::where('special_event_id', $validated['special_event_id'])
+                    ->where('type', 'photo')
+                    ->count();
+                $incoming = count($request->file('media') ?? []);
+                if ($existingCount + $incoming > 20) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Limite de 20 photos atteinte pour cette activité ({$existingCount}/20 déjà enregistrées).",
+                        'count' => $existingCount,
+                    ], 422);
+                }
+            }
+
             $uploadedMedia = [];
-            
+
             if ($validated['type'] === 'video') {
                 // Pour les vidéos externes
                 $media = Media::create([

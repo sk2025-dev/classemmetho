@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\ResponsableFamille;
 
-use Barryvdh\DomPDF\Facade\Pdf;
 use App\Http\Controllers\Controller;
 use App\Models\ActeLiturgique;
 use App\Models\User;
@@ -12,7 +11,7 @@ use Inertia\Inertia;
 
 class AnnonceController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
         $user = Auth::user();
 
@@ -202,45 +201,69 @@ class AnnonceController extends Controller
 
     public function fiche(int $id)
     {
-        $acte = ActeLiturgique::with(['createur', 'family', 'conducteur', 'pasteur', 'membre'])->annonces()->findOrFail($id);
+        $acte = ActeLiturgique::with([
+            'createur',
+            'family',
+            'conducteur',
+            'bureauConducteur',
+            'pasteur',
+            'membre.classe',
+            'historiques.acteur',
+        ])->annonces()->findOrFail($id);
+
         $user = Auth::user();
 
-        // Ensure user can view this annonce
+        // Vérifier que l'utilisateur appartient à la même famille
         if ($acte->family_id !== $user->family_id && $acte->created_by !== $user->id) {
-            abort(403, 'Vous n\'avez pas accès à cette annonce.');
+            abort(403, 'Vous n\'avez pas accès à cette fiche.');
         }
 
-        // Fallback conducteur : chercher dans l'historique qui a transmis au pasteur
+        // Fallback conducteur : chercher dans l'historique celui qui a transmis au Bureau
         if (!$acte->conducteur) {
-            $hist = $acte->historiques()
-                ->where('statut_nouveau', ActeLiturgique::STATUT_TRANSMISE_AU_PASTEUR)
-                ->with('acteur')
-                ->latest()
+            $hist = $acte->historiques
+                ->filter(fn ($h) => in_array($h->statut_nouveau, [
+                    ActeLiturgique::STATUT_TRANSMISE_AU_BUREAU_CONDUCTEUR,
+                    ActeLiturgique::STATUT_EN_ATTENTE_CONDUCTEUR,
+                ]) && strtolower((string) ($h->acteur?->role ?? '')) === 'conducteur')
+                ->sortBy('created_at')
                 ->first();
             if ($hist?->acteur) {
                 $acte->setRelation('conducteur', $hist->acteur);
             }
         }
 
-        // PDF disponible pour les déclarations de naissance avant validation finale,
-        // sinon uniquement après validation finale du pasteur.
         $typeActe = strtolower((string) $acte->type_acte);
+
+        // Statuts autorisant le téléchargement dès la validation conducteur
+        $statutsAutorises = [
+            'TRANSMISE_AU_BUREAU_CONDUCTEUR',
+            'TRANSMISE_AU_PASTEUR',
+            'VALIDEE', 'PUBLIEE', 'ARCHIVEE',
+        ];
+
         if ($typeActe === 'naissance') {
-            if (!in_array($acte->statut, ['SOUMISE', 'EN_ATTENTE_CONDUCTEUR', 'TRANSMISE_AU_PASTEUR', 'VALIDEE', 'PUBLIEE', 'ARCHIVEE'], true)) {
-                abort(403, 'La fiche PDF est disponible après transmission au pasteur.');
-            }
-        } elseif (!in_array($acte->statut, ['VALIDEE', 'PUBLIEE', 'ARCHIVEE'], true) || !$acte->pasteur_id) {
-            abort(403, 'La fiche PDF est disponible uniquement après validation du pasteur.');
+            // Naissance : disponible dès la soumission
+            $statutsAutorises = array_merge(
+                ['SOUMISE', 'EN_ATTENTE_CONDUCTEUR'],
+                $statutsAutorises
+            );
         }
 
-        $logoDataUri = $this->buildImageDataUri(public_path('images/logo.png'));
-        $view = $acte->type_acte === 'deces' ? 'pdf.fiche-deces' : 'pdf.fiche-demande';
+        if (!in_array($acte->statut, $statutsAutorises, true)) {
+            abort(403, 'La fiche est disponible après validation par le conducteur.');
+        }
+
+        $logoDataUri  = $this->buildImageDataUri(public_path('images/logo.png'));
+        $methoDataUri = $this->buildImageDataUri(public_path('images/metho.jpg'));
+        $view = $typeActe === 'deces' ? 'pdf.fiche-deces' : 'pdf.fiche-demande';
+
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($view, [
-            'acte' => $acte,
-            'logoDataUri' => $logoDataUri,
+            'acte'         => $acte,
+            'logoDataUri'  => $logoDataUri,
+            'methoDataUri' => $methoDataUri,
         ])->setPaper('a4', 'portrait');
 
-        $prefix = $acte->type_acte === 'priere' ? 'Priere' : 'Annonce';
+        $prefix = in_array($typeActe, ['priere', 'grace', 'felicitations']) ? 'Priere' : 'Fiche';
         return $pdf->stream("{$prefix}_{$acte->reference}.pdf");
     }
 

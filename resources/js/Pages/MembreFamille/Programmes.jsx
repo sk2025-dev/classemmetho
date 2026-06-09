@@ -22,8 +22,6 @@ const styles = `
     --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-
 /* Animations */
 @keyframes fade-in-up {
     from { opacity: 0; transform: translateY(30px); }
@@ -2812,9 +2810,9 @@ export default function Programmes() {
       <Head title="Programme et Activités" />
       <style>{styles}</style>
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
-      
-      <MediaViewerModal 
-        isOpen={isMediaViewerOpen} 
+
+      <MediaViewerModal
+        isOpen={isMediaViewerOpen}
         onClose={closeMediaViewer} 
         media={selectedMedia}
         mediaList={currentMediaList}

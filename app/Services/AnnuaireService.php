@@ -125,13 +125,23 @@ class AnnuaireService
      */
     protected function getFamiliesPaginated(Request $request, string $roleScope, array $filters, int $perPage): array
     {
+        $usersColumns = $this->getUsersColumnListing();
+        $userSelectCols = array_values(array_intersect([
+            'id', 'prenom', 'nom', 'telephone', 'email',
+            'profile_photo_url', 'photo_path',
+            'classe_id', 'family_id', 'role', 'genre',
+            'date_naissance', 'code_membre', 'relation',
+            'profession', 'fonction_id',
+            'lieu_naissance', 'numero_cni',
+            'hors_communaute', 'retrait', 'date_retrait',
+        ], $usersColumns));
+
         $query = Family::query()
-            ->select(['id', 'nom', 'code_famille', 'responsable_id'])
+            ->select(['id', 'nom', 'code_famille', 'responsable_id', 'adresse', 'quartier'])
             ->with([
-                'users' => function ($q) use ($filters) {
-                    $q->select('id', 'prenom', 'nom', 'telephone', 'profile_photo_url', 'photo_path', 'classe_id', 'family_id', 'role')
-                        ->with(['classe:id,nom']);
-                    // Appliquer uniquement les filtres texte (search/profession/role), pas la restriction de classe
+                'users' => function ($q) use ($filters, $userSelectCols) {
+                    $q->select($userSelectCols)
+                        ->with(['classe:id,nom', 'fonction:id,nom', 'fonctions:id,nom', 'sacrements']);
                     if (!empty($filters['search'])) {
                         $search = $filters['search'];
                         $q->where(fn($s) => $s
@@ -144,7 +154,10 @@ class AnnuaireService
                         $q->where('role', $filters['role']);
                     }
                 },
-                'responsable:id,prenom,nom,telephone,profile_photo_url,photo_path,classe_id,family_id,role',
+                'responsable' => function ($q) use ($userSelectCols) {
+                    $q->select($userSelectCols)
+                        ->with(['classe:id,nom', 'fonction:id,nom', 'fonctions:id,nom', 'sacrements']);
+                },
             ])
             ->orderBy('nom');
 
@@ -210,19 +223,17 @@ class AnnuaireService
         $paginator = $query->paginate($perPage)->withQueryString();
 
         $families = collect($paginator->items())->map(function (Family $family) {
-            $formatUser = fn($user) => [
-                'id' => $user->id,
-                'prenoms' => $user->prenom,
-                'nom' => $user->nom,
-                'telephone' => $user->telephone,
-                'photo' => PhotoHelper::getPhotoUrl(
-                    $user->photo_path,
-                    $user->prenom,
-                    $user->nom
-                ),
-                'classeMethodiste' => $user->classe?->nom,
-                'is_responsable' => $user->role === 'responsable_famille',
-            ];
+            $formatUser = function (User $user) use ($family): array {
+                $data = $this->formatMemberForComponent($user);
+                // La relation family n'est pas chargée sur $user dans ce contexte ;
+                // on injecte les données de la famille parente directement.
+                if (empty($data['adresse']))     $data['adresse']     = $family->adresse;
+                if (empty($data['quartier']))    $data['quartier']    = $family->quartier;
+                if ($data['famille'] === '-')    $data['famille']     = $family->nom;
+                if (empty($data['code_famille'])) $data['code_famille'] = $family->code_famille;
+                $data['is_responsable'] = $user->role === 'responsable_famille';
+                return $data;
+            };
 
             $members = $family->users->map($formatUser);
 
@@ -361,6 +372,14 @@ class AnnuaireService
             'code_membre',
             'profile_photo_url',
             'photo_path',
+            'relation',
+            'statut_vie',
+            'lieu_naissance',
+            'numero_cni',
+            'hors_communaute',
+            'retrait',
+            'date_retrait',
+            // Colonnes legacy sacrements (peuvent exister ou non selon la migration)
             'baptise',
             'date_bapteme',
             'lieu_bapteme',
@@ -371,18 +390,16 @@ class AnnuaireService
             'mariage_civil',
             'dote',
             'veuf',
-            'statut_vie',
-            'relation',
-            'adresse',
-            'quartier',
         ];
 
-        $selectColumns = array_intersect($selectColumns, $usersColumns);
+        $selectColumns = array_values(array_intersect($selectColumns, $usersColumns));
 
         $query = User::with([
             'classe:id,nom',
             'fonction:id,nom',
-            'family:id,code_famille,nom',
+            'fonctions:id,nom',
+            'family:id,code_famille,nom,adresse,quartier',
+            'sacrements',
         ])
             ->select($selectColumns)
             ->where('role', '!=', 'admin');
@@ -557,63 +574,86 @@ class AnnuaireService
 
     /**
      * Formate un utilisateur au format attendu par le composant React.
+     * Identique à l'Admin/AdministrationController pour garantir la cohérence des données.
      */
     protected function formatMemberForComponent(User $user): array
     {
-        $defaults = [
-            'baptise' => false,
-            'dateBapteme' => null,
-            'lieuBapteme' => null,
-            'premiereCommunion' => false,
-            'dateCommunion' => null,
-            'confirme' => false,
-            'marieReligieusement' => false,
-            'mariageCivil' => false,
-            'dote' => false,
-            'veuf' => false,
-            'statutVie' => null,
-            'relation' => null,
-            'adresse' => null,
-            'quartier' => null,
-            'fonction' => null,
-            'profession' => null,
-            'telephone' => null,
-            'email' => null,
-            'dateNaissance' => null,
-        ];
+        $sacrements = $user->relationLoaded('sacrements') ? $user->sacrements : null;
+
+        $statut_marital = 'Célibataire';
+        if ($sacrements) {
+            if ($sacrements->est_marie)   $statut_marital = 'Marié(e)';
+            elseif ($sacrements->est_divorce) $statut_marital = 'Divorcé(e)';
+            elseif ($sacrements->est_veuf)    $statut_marital = 'Veuf(ve)';
+        }
 
         return [
-            'id' => $user->id,
-            'prenoms' => $user->prenom,
-            'nom' => $user->nom,
-            'sexe' => $user->genre ?? 'M',
-            'famille' => $user->family?->code_famille ?? $user->family?->nom ?? '-',
+            // ── Identité ──
+            'id'              => $user->id,
+            'prenoms'         => $user->prenom,
+            'nom'             => $user->nom,
+            'sexe'            => $user->genre ?? 'M',
+            'famille'         => $user->family?->nom ?? $user->family?->code_famille ?? '-',
+            'code_famille'    => $user->family?->code_famille ?? null,
             'classeMethodiste' => $user->classe?->nom ?? '-',
-            'telephone' => $user->telephone ?? '-',
-            'email' => $user->email ?? '-',
-            'baptise' => $user->baptise ?? $defaults['baptise'],
-            'dateBapteme' => $user->date_bapteme ?? $defaults['dateBapteme'],
-            'lieuBapteme' => $user->lieu_bapteme ?? $defaults['lieuBapteme'],
-            'premiereCommunion' => $user->premiere_communion ?? $defaults['premiereCommunion'],
-            'dateCommunion' => $user->date_communion ?? $defaults['dateCommunion'],
-            'confirme' => $user->confirme ?? $defaults['confirme'],
-            'marieReligieusement' => $user->marie_religieusement ?? $defaults['marieReligieusement'],
-            'mariageCivil' => $user->mariage_civil ?? $defaults['mariageCivil'],
-            'dote' => $user->dote ?? $defaults['dote'],
-            'veuf' => $user->veuf ?? $defaults['veuf'],
-            'statutVie' => $user->statut_vie ?? $defaults['statutVie'],
-            'relation' => $user->relation ?? $defaults['relation'],
-            'adresse' => $user->adresse ?? $defaults['adresse'],
-            'quartier' => $user->quartier ?? $defaults['quartier'],
-            'fonction' => $user->fonction?->nom ?? $defaults['fonction'],
-            'profession' => $user->profession ?? $defaults['profession'],
-            'dateNaissance' => $user->date_naissance ?? $defaults['dateNaissance'],
-            'photo' => PhotoHelper::getPhotoUrl(
-                $user->photo_path,
-                $user->prenom,
-                $user->nom
-            ),
-            'numMembre' => $user->code_membre ?? null,
+            'telephone'       => $user->telephone ?? '-',
+            'email'           => $user->email ?? '-',
+            'numMembre'       => $user->code_membre ?? null,
+            'code_membre'     => $user->code_membre ?? null,
+            'relation'        => $user->relation ?? null,
+            'profession'      => $user->profession ?? null,
+            'niveau_etude'    => $user->niveau_etude ?? null,
+            'fonction'        => $user->fonction?->nom ?? null,
+            'fonctions'       => $user->relationLoaded('fonctions')
+                ? $user->fonctions->pluck('nom')->filter()->values()->all()
+                : [],
+            'dateNaissance'   => $user->date_naissance ? $user->date_naissance->format('Y-m-d') : null,
+            'lieu_naissance'  => $user->lieu_naissance ?? null,
+            'numero_cni'      => $user->numero_cni ?? null,
+            'adresse'         => $user->family?->adresse ?? $user->adresse ?? null,
+            'quartier'        => $user->family?->quartier ?? $user->quartier ?? null,
+            'photo'           => PhotoHelper::getPhotoUrl($user->photo_path, $user->prenom, $user->nom),
+            'statut_marital'  => $statut_marital,
+            'hors_communaute' => (bool) ($user->hors_communaute ?? false),
+            'retrait'         => (bool) ($user->retrait ?? false),
+            'date_retrait'    => $user->date_retrait ? $user->date_retrait->format('Y-m-d') : null,
+            'statutVie'       => $user->statut_vie ?? null,
+
+            // ── Sacrements (objet imbriqué pour normalizeMember BureauConducteur/Pasteur) ──
+            'sacrements' => $sacrements ? [
+                'baptise'                 => (bool) $sacrements->baptise,
+                'bapteme_date'            => $sacrements->bapteme_date ? $sacrements->bapteme_date->format('Y-m-d') : null,
+                'bapteme_lieu'            => $sacrements->bapteme_lieu,
+                'premiere_communion'      => (bool) $sacrements->premiere_communion,
+                'premiere_communion_date' => $sacrements->premiere_communion_date ? $sacrements->premiere_communion_date->format('Y-m-d') : null,
+                'premiere_communion_lieu' => $sacrements->premiere_communion_lieu,
+                'confirme'                => (bool) ($sacrements->confirme ?? false),
+                'marie_religieusement'    => (bool) $sacrements->marie_religieusement,
+                'mariage_religieux_date'  => $sacrements->mariage_religieux_date ? $sacrements->mariage_religieux_date->format('Y-m-d') : null,
+                'mariage_religieux_lieu'  => $sacrements->mariage_religieux_lieu,
+                'est_marie'               => (bool) $sacrements->est_marie,
+                'mariage_civil_date'      => $sacrements->mariage_civil_date ? $sacrements->mariage_civil_date->format('Y-m-d') : null,
+                'est_veuf'                => (bool) $sacrements->est_veuf,
+                'est_divorce'             => (bool) $sacrements->est_divorce,
+                'dot_effectue'            => (bool) $sacrements->dot_effectue,
+            ] : null,
+
+            // ── Champs plats (rétrocompatibilité avec anciens normalizeMember) ──
+            'baptise'           => (bool) ($sacrements?->baptise           ?? $user->baptise           ?? false),
+            'dateBapteme'       => $sacrements?->bapteme_date            ? $sacrements->bapteme_date->format('Y-m-d')              : ($user->date_bapteme  ?? null),
+            'lieuBapteme'       => $sacrements?->bapteme_lieu            ?? $user->lieu_bapteme       ?? null,
+            'premiereCommunion' => (bool) ($sacrements?->premiere_communion ?? $user->premiere_communion ?? false),
+            'dateCommunion'     => $sacrements?->premiere_communion_date ? $sacrements->premiere_communion_date->format('Y-m-d')   : ($user->date_communion ?? null),
+            'lieuCommunion'     => $sacrements?->premiere_communion_lieu ?? null,
+            'confirme'          => (bool) ($sacrements?->confirme          ?? $user->confirme           ?? false),
+            'marieReligieusement' => (bool) ($sacrements?->marie_religieusement ?? $user->marie_religieusement ?? false),
+            'dateMarReligieux'  => $sacrements?->mariage_religieux_date  ? $sacrements->mariage_religieux_date->format('Y-m-d')    : null,
+            'lieuMarReligieux'  => $sacrements?->mariage_religieux_lieu  ?? null,
+            'mariageCivil'      => (bool) ($sacrements?->est_marie         ?? $user->mariage_civil      ?? false),
+            'dateMarCivil'      => $sacrements?->mariage_civil_date      ? $sacrements->mariage_civil_date->format('Y-m-d')        : null,
+            'dote'              => (bool) ($sacrements?->dot_effectue      ?? $user->dote               ?? false),
+            'veuf'              => (bool) ($sacrements?->est_veuf          ?? $user->veuf               ?? false),
+            'divorce'           => (bool) ($sacrements?->est_divorce       ?? false),
         ];
     }
 

@@ -374,7 +374,7 @@ export default function Inscriptions({
     });
 
     // --- ÉTAT ---
-    const [activeTab, setActiveTab] = useState("pending"); // Onglet actif : pending, approved, rejected, families
+    const [activeTab, setActiveTab] = useState("families"); // Onglet actif : families, members, flash-info
 
     // --- AJOUT DES FILTRES ---
     const [filters, setFilters] = useState({
@@ -808,6 +808,23 @@ export default function Inscriptions({
             active_tab: activeTab,
         });
     }, [inscriptionsOnly, membersOnly, filteredItems, activeTab]);
+
+    // Stats membres pour le nouveau bloc de résumé
+    const memberStats = React.useMemo(() => {
+        const total = membersOnly.length;
+        const hommes = membersOnly.filter(m => String(m.raw?.genre || m.genre || '').toUpperCase() === 'M').length;
+        const femmes = membersOnly.filter(m => String(m.raw?.genre || m.genre || '').toUpperCase() === 'F').length;
+        const actifs = membersOnly.filter(m => m.status === 'actif').length;
+        return {
+            total,
+            hommes,
+            femmes,
+            pctHommes: total > 0 ? Math.round((hommes / total) * 100) : 0,
+            pctFemmes: total > 0 ? Math.round((femmes / total) * 100) : 0,
+            actifs,
+        };
+    }, [membersOnly]);
+
     const resetFilters = () => {
         setFilters({
             search: "",
@@ -2012,70 +2029,44 @@ setSelectedMember(normalized);
                         </div>
                     </div>
 
-                    {/* STATS RAPIDES (TRANSPARENT DESIGN) */}
+                    {/* STATS MEMBRES */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white flex items-center gap-4">
                             <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white text-xl">
                                 <Users />
                             </div>
                             <div>
-                                <div className="text-sm opacity-70 uppercase tracking-wider font-medium">
-                                    Total Demandes
-                                </div>
-                                <div className="text-2xl font-bold">
-                                    {calculatedStats.total}
-                                </div>
-                            </div>
-                        </div>
-                        <div
-                            onClick={() => switchTab("pending")}
-                            className={`cursor-pointer rounded-2xl p-6 text-white flex items-center gap-4 transition-all ${
-                                calculatedStats.pending > 0
-                                    ? "bg-red-500/80 border-2 border-red-300 shadow-lg shadow-red-500/30"
-                                    : "bg-white/10 backdrop-blur-md border border-white/20"
-                            }`}
-                        >
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-xl ${calculatedStats.pending > 0 ? "bg-red-400/50" : "bg-white/20"}`}>
-                                <Clock />
-                            </div>
-                            <div>
-                                <div className="text-sm opacity-70 uppercase tracking-wider font-medium">
-                                    En attente
-                                </div>
-                                <div className="text-2xl font-bold flex items-center gap-2">
-                                    {calculatedStats.pending}
-                                    {calculatedStats.pending > 0 && (
-                                        <span className="text-xs font-normal bg-white/20 px-2 py-0.5 rounded-full">
-                                            Action requise
-                                        </span>
-                                    )}
-                                </div>
+                                <div className="text-sm opacity-70 uppercase tracking-wider font-medium">Total membres</div>
+                                <div className="text-2xl font-bold">{memberStats.total}</div>
                             </div>
                         </div>
                         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white text-xl">
-                                <Check />
+                            <div className="w-12 h-12 rounded-full bg-blue-400/30 flex items-center justify-center text-white text-xl">
+                                <User />
                             </div>
                             <div>
-                                <div className="text-sm opacity-70 uppercase tracking-wider font-medium">
-                                    Approuvés
-                                </div>
-                                <div className="text-2xl font-bold">
-                                    {calculatedStats.approved}
-                                </div>
+                                <div className="text-sm opacity-70 uppercase tracking-wider font-medium">Hommes</div>
+                                <div className="text-2xl font-bold">{memberStats.hommes}</div>
+                                <div className="text-xs opacity-60 mt-0.5">{memberStats.pctHommes}%</div>
                             </div>
                         </div>
                         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white text-xl">
-                                <X />
+                            <div className="w-12 h-12 rounded-full bg-pink-400/30 flex items-center justify-center text-white text-xl">
+                                <User />
                             </div>
                             <div>
-                                <div className="text-sm opacity-70 uppercase tracking-wider font-medium">
-                                    Rejetés
-                                </div>
-                                <div className="text-2xl font-bold">
-                                    {calculatedStats.rejected}
-                                </div>
+                                <div className="text-sm opacity-70 uppercase tracking-wider font-medium">Femmes</div>
+                                <div className="text-2xl font-bold">{memberStats.femmes}</div>
+                                <div className="text-xs opacity-60 mt-0.5">{memberStats.pctFemmes}%</div>
+                            </div>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-green-400/30 flex items-center justify-center text-white text-xl">
+                                <UserCheck />
+                            </div>
+                            <div>
+                                <div className="text-sm opacity-70 uppercase tracking-wider font-medium">Membres actifs</div>
+                                <div className="text-2xl font-bold">{memberStats.actifs}</div>
                             </div>
                         </div>
                     </div>
@@ -2083,33 +2074,10 @@ setSelectedMember(normalized);
                     {/* ONGLETS */}
                     <div className="flex gap-3 mb-8 overflow-x-auto">
                         <button
-                            onClick={() => switchTab("pending")}
-                            className={`relative px-6 py-3 rounded-xl font-bold transition transform hover:scale-[1.02] flex items-center gap-2 whitespace-nowrap ${activeTab === "pending" ? "bg-yellow-500 text-white shadow-lg" : "bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20"}`}
-                        >
-                            <Clock className="w-5 h-5" /> En attente
-                            {calculatedStats.pending > 0 && (
-                                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold shadow animate-pulse">
-                                    {calculatedStats.pending}
-                                </span>
-                            )}
-                        </button>
-                        <button
-                            onClick={() => switchTab("approved")}
-                            className={`px-6 py-3 rounded-xl font-bold transition transform hover:scale-[1.02] flex items-center gap-2 whitespace-nowrap ${activeTab === "approved" ? "bg-green-500 text-white shadow-lg" : "bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20"}`}
-                        >
-                            <Check className="w-5 h-5" /> Approuvé
-                        </button>
-                        <button
-                            onClick={() => switchTab("rejected")}
-                            className={`px-6 py-3 rounded-xl font-bold transition transform hover:scale-[1.02] flex items-center gap-2 whitespace-nowrap ${activeTab === "rejected" ? "bg-red-500 text-white shadow-lg" : "bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20"}`}
-                        >
-                            <X className="w-5 h-5" /> Refusé
-                        </button>
-                        <button
                             onClick={() => switchTab("families")}
                             className={`px-6 py-3 rounded-xl font-bold transition transform hover:scale-[1.02] flex items-center gap-2 whitespace-nowrap ${activeTab === "families" ? "bg-blue-500 text-white shadow-lg" : "bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20"}`}
                         >
-                            <Users className="w-5 h-5" /> Famille
+                            <Users className="w-5 h-5" /> Ma famille
                         </button>
                         <button
                             onClick={() => switchTab("members")}

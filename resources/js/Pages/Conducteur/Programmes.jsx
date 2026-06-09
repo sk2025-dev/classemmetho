@@ -22,8 +22,6 @@ const styles = `
     --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-
 /* Animations */
 @keyframes fade-in-up {
     from { opacity: 0; transform: translateY(30px); }
@@ -1383,7 +1381,7 @@ const styles = `
     flex-direction: column;
     gap: 8px;
 }
-label {
+.form-group label {
     font-size: 0.8rem;
     font-weight: 700;
     color: #6b7280;
@@ -1400,7 +1398,7 @@ label {
     pointer-events: none;
     z-index: 2;
 }
-input, select, textarea {
+.form-group input, .form-group select, .form-group textarea {
     padding: 14px 14px 14px 42px;
     border: 2px solid #e2e8f0;
     border-radius: 12px;
@@ -1411,13 +1409,13 @@ input, select, textarea {
     color: #111827;
     font-weight: 500;
 }
-input:focus, select:focus, textarea:focus {
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
     outline: none;
     border-color: var(--primary);
     background: white;
     box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
 }
-textarea {
+.form-group textarea {
     resize: vertical;
     min-height: 100px;
 }
@@ -3608,6 +3606,14 @@ export default function Programmes() {
   const [openGalleryMenuId, setOpenGalleryMenuId] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, mediaToDelete: null, isMultiple: false, count: 0 });
   
+  // ── États photo en direct ──
+  const [livePhotoEvent, setLivePhotoEvent] = useState(null);
+  const [capturedPhoto, setCapturedPhoto] = useState(null); // { file, preview }
+  const [isLivePhotoModalOpen, setIsLivePhotoModalOpen] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [livePhotoCount, setLivePhotoCount] = useState({}); // { eventId: count }
+  const livePhotoInputRef = React.useRef(null);
+
   const [isEditMediaModalOpen, setIsEditMediaModalOpen] = useState(false);
   const [editingMedia, setEditingMedia] = useState(null);
   const [editMediaForm, setEditMediaForm] = useState({ title: '', description: '', date: '', special_event_id: '' });
@@ -4053,14 +4059,14 @@ export default function Programmes() {
 
   const handleSaveEventModal = async (activities, eventId = null) => {
     setIsLoading(true);
+    const todayStr = getLocalDateString(new Date());
     if (eventId && activities.length === 1) {
       try {
         const response = await axios.put(withBasePath("", `/conducteur/programmes/event/${eventId}`), activities[0]);
         if (response.data.success) {
           const updatedEvent = response.data.event;
-          const eventDate = new Date(updatedEvent.start_date);
-          const now = new Date();
-          if (eventDate < now) { setClassHistory(prev => { const filtered = prev.filter(event => event.id !== eventId); return [updatedEvent, ...filtered]; }); setClassList(prev => prev.filter(event => event.id !== eventId)); }
+          const eventDateStr = getLocalDateString(updatedEvent.start_date);
+          if (eventDateStr < todayStr) { setClassHistory(prev => { const filtered = prev.filter(event => event.id !== eventId); return [updatedEvent, ...filtered]; }); setClassList(prev => prev.filter(event => event.id !== eventId)); }
           else { setClassList(prev => { const filtered = prev.filter(event => event.id !== eventId); return [updatedEvent, ...filtered]; }); setClassHistory(prev => prev.filter(event => event.id !== eventId)); }
           showToast(response.data.message || 'Événement modifié avec succès !', 'success'); closeEventModal();
         } else showToast(response.data.message || 'Erreur lors de la modification', 'error');
@@ -4070,8 +4076,11 @@ export default function Programmes() {
         const response = await axios.post(withBasePath("", '/conducteur/programmes/events-multiple'), { activities });
         if (response.data.success) {
           const newEvents = response.data.events || [];
-          const now = new Date();
-          newEvents.forEach(event => { const eventDate = new Date(event.start_date); if (eventDate < now) setClassHistory(prev => [event, ...prev]); else setClassList(prev => [event, ...prev]); });
+          newEvents.forEach(event => {
+            const eventDateStr = getLocalDateString(event.start_date);
+            if (eventDateStr < todayStr) setClassHistory(prev => [event, ...prev]);
+            else setClassList(prev => [event, ...prev]);
+          });
           showToast(response.data.message, 'success'); closeEventModal();
         } else showToast(response.data.message || 'Erreur lors de la création', 'error');
       } catch (error) { console.error('Erreur création:', error.response?.data || error.message); showToast(error.response?.data?.message || 'Erreur lors de la création', 'error'); } finally { setIsLoading(false); }
@@ -4121,6 +4130,77 @@ export default function Programmes() {
     if (now < openingAt) return { enabled: false, reason: `QR actif à partir du ${openingAt.toLocaleString('fr-FR')}.` };
     if (now >= endAt) return { enabled: false, reason: "Activité passée. Scan non disponible." };
     return { enabled: true, reason: "QR code actif — cliquez pour afficher." };
+  };
+
+  const isEventOngoing = (event) => {
+    const rawDate    = event.start_date || event.date;
+    const rawEndDate = event.end_date || rawDate;
+    if (!rawDate) return false;
+    const build = (date, time, endOfDay = false) => {
+      const d = new Date(date);
+      if (endOfDay || !time) d.setHours(23, 59, 59, 0);
+      else { const [h, m] = time.split(':').map(Number); d.setHours(h, m, 0, 0); }
+      return d;
+    };
+    const now = new Date();
+    return now >= build(rawDate, event.start_time) && now <= build(rawEndDate, event.end_time, !event.end_time);
+  };
+
+  const getEventPhotoCount = (eventId) =>
+    (livePhotoCount[eventId] ?? mediaData.filter(m => m.special_event_id == eventId && m.type === 'photo').length);
+
+  const openLivePhotoModal = async (event) => {
+    setLivePhotoEvent(event);
+    setCapturedPhoto(null);
+    setIsLivePhotoModalOpen(true);
+    // Charger le compteur actuel
+    try {
+      const res = await axios.get(withBasePath("", `/activities/${event.id}/photos-count`));
+      setLivePhotoCount(prev => ({ ...prev, [event.id]: res.data.count }));
+    } catch { /* non bloquant */ }
+  };
+
+  const closeLivePhotoModal = () => {
+    setIsLivePhotoModalOpen(false);
+    setLivePhotoEvent(null);
+    setCapturedPhoto(null);
+    if (livePhotoInputRef.current) livePhotoInputRef.current.value = '';
+  };
+
+  const handleLivePhotoCapture = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setCapturedPhoto({ file, preview: ev.target.result });
+    reader.readAsDataURL(file);
+  };
+
+  const saveLivePhoto = async () => {
+    if (!capturedPhoto || !livePhotoEvent) return;
+    setIsUploadingPhoto(true);
+    const formData = new FormData();
+    formData.append('photo', capturedPhoto.file);
+    try {
+      const res = await axios.post(
+        withBasePath("", `/activities/${livePhotoEvent.id}/quick-photo`),
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      if (res.data.success) {
+        setMediaData(prev => [res.data.media, ...prev]);
+        setGalleryData(prev => [res.data.media, ...prev]);
+        setLivePhotoCount(prev => ({ ...prev, [livePhotoEvent.id]: res.data.count }));
+        setCapturedPhoto(null);
+        if (livePhotoInputRef.current) livePhotoInputRef.current.value = '';
+        showToast(`Photo sauvegardée ! (${res.data.count}/20)`, 'success');
+      } else {
+        showToast(res.data.message || 'Erreur lors de la sauvegarde', 'error');
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Erreur lors de la sauvegarde', 'error');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
   };
 
   const openQrModal = async (event) => {
@@ -4224,6 +4304,21 @@ export default function Programmes() {
                                 >
                                   <IconQr /> QR
                                 </button>
+                                {isEventOngoing(event) && (() => {
+                                  const photoCount = getEventPhotoCount(event.id);
+                                  const full = photoCount >= 20;
+                                  return (
+                                    <button
+                                      className="btn-qr-card"
+                                      onClick={(e) => { e.stopPropagation(); if (!full) openLivePhotoModal(event); }}
+                                      disabled={full}
+                                      title={full ? 'Limite de 20 photos atteinte' : 'Prendre une photo'}
+                                      style={{ background: full ? '#6b7280' : '#7c3aed', marginLeft: 6 }}
+                                    >
+                                      📷 {photoCount}/20
+                                    </button>
+                                  );
+                                })()}
                               </div>
                             </div>
                           );
@@ -4691,8 +4786,8 @@ export default function Programmes() {
       <Head title="Programme et Activités" />
       <style>{styles}</style>
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
-      
-      <ConfirmDialog 
+
+      <ConfirmDialog
         isOpen={confirmDialog.isOpen}
         onClose={() => setConfirmDialog({ isOpen: false, mediaToDelete: null, isMultiple: false, count: 0 })}
         onConfirm={confirmDialog.onConfirm}
@@ -4802,6 +4897,85 @@ export default function Programmes() {
         </div>
       )}
       <AddMediaModal isOpen={isAddMediaModalOpen} onClose={closeAddMediaModal} onAdd={handleAddMedia} isLoading={isLoading} events={allEvents} preselectedEventId={preselectedEventId} />
+
+      {/* ── MODAL PHOTO EN DIRECT ── */}
+      {isLivePhotoModalOpen && livePhotoEvent && (() => {
+        const count = getEventPhotoCount(livePhotoEvent.id);
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: 'rgba(0,0,0,0.75)' }}>
+            <div style={{ background: '#fff', borderRadius: 24, padding: '28px 24px', width: '100%', maxWidth: 440, boxShadow: '0 25px 50px rgba(0,0,0,0.4)' }}>
+              {/* En-tête */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#1e1b4b' }}>📷 Photo en direct</div>
+                  <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>{livePhotoEvent.title}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, background: count >= 20 ? '#fee2e2' : '#ede9fe', color: count >= 20 ? '#dc2626' : '#7c3aed', borderRadius: 99, padding: '3px 10px' }}>
+                    {count}/20 photos
+                  </span>
+                  <button onClick={closeLivePhotoModal} style={{ background: '#f3f4f6', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', fontSize: 16 }}>✕</button>
+                </div>
+              </div>
+
+              {/* Input caché */}
+              <input
+                ref={livePhotoInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                style={{ display: 'none' }}
+                onChange={handleLivePhotoCapture}
+              />
+
+              {/* Aperçu ou bouton déclencher */}
+              {!capturedPhoto ? (
+                <div>
+                  <button
+                    onClick={() => livePhotoInputRef.current?.click()}
+                    disabled={count >= 20}
+                    style={{
+                      width: '100%', padding: '40px 0', borderRadius: 16, border: '2px dashed #7c3aed',
+                      background: count >= 20 ? '#f9fafb' : '#faf5ff', cursor: count >= 20 ? 'not-allowed' : 'pointer',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10
+                    }}
+                  >
+                    <span style={{ fontSize: 48 }}>📷</span>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: count >= 20 ? '#9ca3af' : '#7c3aed' }}>
+                      {count >= 20 ? 'Limite atteinte' : 'Appuyer pour prendre une photo'}
+                    </span>
+                    {count < 20 && (
+                      <span style={{ fontSize: 12, color: '#9ca3af' }}>{20 - count} photo(s) restante(s)</span>
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  {/* Aperçu de la photo capturée */}
+                  <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 16, border: '2px solid #ede9fe' }}>
+                    <img src={capturedPhoto.preview} alt="Aperçu" style={{ width: '100%', maxHeight: 260, objectFit: 'cover', display: 'block' }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button
+                      onClick={() => { setCapturedPhoto(null); if (livePhotoInputRef.current) livePhotoInputRef.current.value = ''; livePhotoInputRef.current?.click(); }}
+                      style={{ flex: 1, padding: '12px 0', borderRadius: 12, border: '2px solid #e5e7eb', background: '#f9fafb', fontWeight: 700, cursor: 'pointer', fontSize: 14 }}
+                    >
+                      🔄 Reprendre
+                    </button>
+                    <button
+                      onClick={saveLivePhoto}
+                      disabled={isUploadingPhoto}
+                      style={{ flex: 2, padding: '12px 0', borderRadius: 12, border: 'none', background: isUploadingPhoto ? '#9ca3af' : '#7c3aed', color: '#fff', fontWeight: 700, cursor: isUploadingPhoto ? 'not-allowed' : 'pointer', fontSize: 14 }}
+                    >
+                      {isUploadingPhoto ? 'Sauvegarde...' : '✅ Sauvegarder'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
       <MediaViewerModal isOpen={isMediaViewerOpen} onClose={closeMediaViewer} media={selectedMedia} mediaList={currentMediaList} currentIndex={currentMediaIndex} onNavigate={handleNavigateMedia} />
       <PastEventContentModal isOpen={isDateContentModalOpen} onClose={closeDateContentModal} date={selectedDate} events={allEvents} mediaData={mediaData} />
       

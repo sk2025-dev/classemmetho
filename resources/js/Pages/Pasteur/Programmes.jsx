@@ -18,8 +18,6 @@ const styles = `
     --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-
 body {
     margin: 0;
     padding: 0;

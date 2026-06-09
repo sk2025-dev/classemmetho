@@ -40,14 +40,14 @@ class AnnonceController extends Controller
             ->orderBy('updated_at', 'desc')
             ->paginate(10, ['*'], 'validees_page');
 
-        // Annonces en attente de validation du pasteur
+        // Annonces transmises au Bureau des Conducteurs
         $enAttentePasteur = ActeLiturgique::with(['createur', 'family', 'conducteur'])
             ->annonces()
             ->where(function ($q) use ($classIds) {
                 $q->whereIn('classe_id', $classIds)
                     ->orWhereNull('classe_id');
             })
-            ->where('statut', ActeLiturgique::STATUT_TRANSMISE_AU_PASTEUR)
+            ->where('statut', ActeLiturgique::STATUT_TRANSMISE_AU_BUREAU_CONDUCTEUR)
             ->orderBy('updated_at', 'desc')
             ->paginate(10, ['*'], 'enAttentePasteur_page');
 
@@ -207,34 +207,41 @@ class AnnonceController extends Controller
             })
             ->findOrFail($id);
 
-        if (!$acte->peutEtreValideParConducteur($user)) {
+        // Accepter SOUMISE ou EN_ATTENTE_CONDUCTEUR
+        $statutsValides = [
+            ActeLiturgique::STATUT_Soumise,
+            ActeLiturgique::STATUT_EN_ATTENTE_CONDUCTEUR,
+        ];
+        if (!in_array($acte->statut, $statutsValides, true)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vous ne pouvez pas valider cette annonce.',
+                'message' => 'Cette demande ne peut pas être transmise au Bureau (statut actuel : ' . $acte->statut . ').',
             ], 403);
         }
+        if (!in_array($user->role, ['conducteur', 'admin'], true)) {
+            return response()->json(['success' => false, 'message' => 'Accès non autorisé.'], 403);
+        }
 
-        // Pour les annonces générales, on peut directement validé et publié
-        // Pour les annonces liturgiques, on transmet au pasteur
+        // Toutes les annonces passent maintenant par le Bureau des Conducteurs
         $statutPrecedent = $acte->statut;
         $acte->update([
-            'statut' => ActeLiturgique::STATUT_TRANSMISE_AU_PASTEUR,
-            'conducteur_id' => $user->id,
+            'statut'          => ActeLiturgique::STATUT_TRANSMISE_AU_BUREAU_CONDUCTEUR,
+            'conducteur_id'   => $user->id,
             'note_conducteur' => $request->input('note', null),
-            'updated_by' => $user->id,
+            'updated_by'      => $user->id,
         ]);
 
         ActeLiturgiqueHistorique::create([
             'acte_id'          => $acte->id,
             'statut_precedent' => $statutPrecedent,
-            'statut_nouveau'   => ActeLiturgique::STATUT_TRANSMISE_AU_PASTEUR,
+            'statut_nouveau'   => ActeLiturgique::STATUT_TRANSMISE_AU_BUREAU_CONDUCTEUR,
             'acteur_id'        => $user->id,
             'commentaire'      => $request->input('note', null),
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Annonce validée avec succès.',
+            'message' => 'Annonce transmise au Bureau des Conducteurs.',
         ]);
     }
 
@@ -252,18 +259,18 @@ class AnnonceController extends Controller
         if ($acte->statut !== ActeLiturgique::STATUT_EN_ATTENTE_CONDUCTEUR) {
             return response()->json([
                 'success' => false,
-                'message' => 'Cette annonce ne peut pas être transmise au pasteur.',
+                'message' => 'Cette annonce ne peut pas être transmise au Bureau.',
             ], 403);
         }
 
         $acte->update([
-            'statut' => ActeLiturgique::STATUT_TRANSMISE_AU_PASTEUR,
+            'statut'     => ActeLiturgique::STATUT_TRANSMISE_AU_BUREAU_CONDUCTEUR,
             'updated_by' => $user->id,
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Annonce transmise au pasteur pour validation.',
+            'message' => 'Annonce transmise au Bureau des Conducteurs pour validation.',
         ]);
     }
 
@@ -351,9 +358,9 @@ class AnnonceController extends Controller
             })
             ->findOrFail($id);
 
-        // PDF disponible après validation du conducteur (transmission au pasteur)
-        if (!in_array($acte->statut, ['TRANSMISE_AU_PASTEUR', 'VALIDEE', 'PUBLIEE', 'ARCHIVEE'], true)) {
-            abort(403, 'La fiche PDF est disponible après transmission au pasteur.');
+        // PDF disponible après validation du conducteur
+        if (!in_array($acte->statut, ['TRANSMISE_AU_BUREAU_CONDUCTEUR', 'TRANSMISE_AU_PASTEUR', 'VALIDEE', 'PUBLIEE', 'ARCHIVEE'], true)) {
+            abort(403, 'La fiche PDF est disponible après transmission au Bureau des Conducteurs.');
         }
 
         // Fallback conducteur : seul un conducteur gérant cette classe peut accéder ici

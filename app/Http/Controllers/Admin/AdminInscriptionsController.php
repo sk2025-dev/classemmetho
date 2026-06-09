@@ -106,6 +106,20 @@ class AdminInscriptionsController extends Controller
         return Inertia::render('Admin/Inscriptions/RegisterPasteur');
     }
 
+    public function createBureauConducteurForm()
+    {
+        return Inertia::render('Admin/Inscriptions/RegisterPasteur', [
+            'targetRole' => 'bureau_conducteur',
+            'roleLabel'  => 'Bureau des Conducteurs',
+        ]);
+    }
+
+    public function storeBureauConducteur(Request $request)
+    {
+        // Identique à storePastor mais avec rôle bureau_conducteur
+        return $this->storePastor($request, 'bureau_conducteur');
+    }
+
     /**
      * Créer directement une famille avec tous les utilisateurs
      * Admin crée = pas d'approbation requise
@@ -647,7 +661,7 @@ class AdminInscriptionsController extends Controller
      * Créer un pasteur avec sa famille et ses membres
      * Admin crée = pas d'approbation requise
      */
-    public function storePastor(Request $request)
+    public function storePastor(Request $request, string $role = 'pasteur')
     {
         DB::beginTransaction();
         try {
@@ -779,7 +793,7 @@ class AdminInscriptionsController extends Controller
                 'relation' => $validated['responsable']['relation'] ?? $validated['responsable']['lienParente'] ?? null,
                 'fonction_id' => ($validated['responsable']['fonction_ids'][0] ?? null) ?: ($validated['responsable']['fonction_id'] ?? null),
                 'family_id' => $family->id,
-                'role' => 'pasteur',
+                'role' => $role,
                 'photo_path' => $photoPath,
                 'classe_id' => $validated['famille']['classe_id'],
                 'ville_id' => $validated['famille']['ville'],

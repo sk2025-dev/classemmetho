@@ -4,6 +4,12 @@ namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
 use App\Models\Don;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\RoundBlockSizeMode;
+use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -19,8 +25,8 @@ class DonationController extends Controller
             'nom_donateur' => ['required', 'string', 'max:120'],
             'numero_donateur' => ['required', 'regex:/^\d{10}$/'],
             'montant' => ['required', 'integer', 'min:100'],
-            'mode_paiement' => ['required', 'in:MOBILE_MONEY,ESPECES,VIREMENT'],
-            'note' => ['nullable', 'string', 'max:1000'],
+            'mode_paiement' => ['required', 'in:MOBILE_MONEY,ESPECES,CARTE'],
+            'motif' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $reference = 'DON-ANON-' . now()->format('YmdHis') . '-' . strtoupper(substr(md5((string) random_int(1, 9999999)), 0, 6));
@@ -45,6 +51,11 @@ class DonationController extends Controller
             );
             $invoice->addCustomData('reference_recu', $reference);
 
+            // Canal carte bancaire
+            if ($validated['mode_paiement'] === 'CARTE') {
+                $invoice->addChannel('card');
+            }
+
             if (!$invoice->create()) {
                 return response()->json([
                     'message' => 'Erreur PayDunya: ' . ($invoice->response_text ?: $invoice->response_code),
@@ -56,7 +67,7 @@ class DonationController extends Controller
                 'mode_paiement' => $validated['mode_paiement'],
                 'nom_donateur' => trim((string) $validated['nom_donateur']),
                 'numero_donateur' => trim((string) $validated['numero_donateur']),
-                'note' => $validated['note'] ?? null,
+                'motif' => $validated['motif'] ?? null,
             ]);
 
             return response()->json([
@@ -109,18 +120,28 @@ class DonationController extends Controller
             }
 
             Don::create([
-                'family_id' => null,
-                'user_id' => null,
-                'campagne_id' => null,
-                'montant' => (int) ($pending['montant'] ?? 0),
-                'type' => Don::TYPE_LIBRE,
-                'mode_paiement' => $pending['mode_paiement'] ?? 'MOBILE_MONEY',
-                'date_don' => now()->toDateString(),
-                'reference_recu' => $reference,
-                'note' => trim('Don en ligne depuis accueil. Donateur: ' . ($pending['nom_donateur'] ?? '-') . ' - Numero: ' . ($pending['numero_donateur'] ?? '-') . ' - ' . ($pending['note'] ?? '')),
+                'family_id'       => null,
+                'user_id'         => null,
+                'campagne_id'     => null,
+                'montant'         => (int) ($pending['montant'] ?? 0),
+                'type'            => Don::TYPE_LIBRE,
+                'mode_paiement'   => $pending['mode_paiement'] ?? 'MOBILE_MONEY',
+                'date_don'        => now()->toDateString(),
+                'reference_recu'  => $reference,
+                'nom_donateur'    => $pending['nom_donateur'] ?? null,
+                'numero_donateur' => $pending['numero_donateur'] ?? null,
+                'motif'            => $pending['motif'] ?? null,
             ]);
 
-            return redirect('/?don=success');
+            $receiptUrl = $invoice->getReceiptUrl() ?? '';
+            $query = http_build_query([
+                'don'     => 'success',
+                'ref'     => $reference,
+                'montant' => (int) ($pending['montant'] ?? 0),
+                'receipt' => $receiptUrl,
+            ]);
+
+            return redirect('/?' . $query);
         } catch (\Throwable $e) {
             Log::error('Anonymous donation verify failed', [
                 'error' => $e->getMessage(),
@@ -129,6 +150,67 @@ class DonationController extends Controller
 
             return redirect('/?don=error');
         }
+    }
+
+    public function downloadReceipt(string $reference)
+    {
+        $don = Don::where('reference_recu', $reference)->firstOrFail();
+
+        $receiptUrl = route('public.dons.recu', ['reference' => $reference]);
+        $qrDataUri = null;
+
+        try {
+            $result = Builder::create()
+                ->writer(new PngWriter())
+                ->data($receiptUrl)
+                ->encoding(new Encoding('UTF-8'))
+                ->errorCorrectionLevel(ErrorCorrectionLevel::Medium)
+                ->size(160)
+                ->margin(4)
+                ->roundBlockSizeMode(RoundBlockSizeMode::Margin)
+                ->build();
+
+            $qrDataUri = 'data:image/png;base64,' . base64_encode($result->getString());
+        } catch (\Throwable) {
+            // QR code non bloquant
+        }
+
+        $modeLabels = [
+            'WAVE'         => 'Wave',
+            'ORANGE'       => 'Orange Money',
+            'DJAMO'        => 'Djamo',
+            'MOBILE_MONEY' => 'Mobile Money',
+            'ESPECES'      => 'Espèces',
+            'VIREMENT'     => 'Virement bancaire',
+            'CARTE'        => 'Carte bancaire',
+        ];
+
+        $logoDataUri = null;
+        $logoPath = public_path('images/logo.png');
+        if (file_exists($logoPath)) {
+            $logoDataUri = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+        }
+
+        $pdf = Pdf::loadView('pdf.recu-don', [
+            'don'        => $don,
+            'modeLabel'  => $modeLabels[$don->mode_paiement] ?? $don->mode_paiement,
+            'qrDataUri'  => $qrDataUri,
+            'logoDataUri'=> $logoDataUri,
+        ])->setPaper('a4', 'portrait');
+
+        $filename = 'recu-don-' . $reference . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    private function mapPaymentMethodToChannel(string $mode): ?string
+    {
+        return match ($mode) {
+            'WAVE'   => 'wave-ci',
+            'ORANGE' => 'orange-money-ci',
+            'DJAMO'  => 'djamo',
+            default  => null,
+        };
     }
 
     private function bootstrapPayDunya(): void

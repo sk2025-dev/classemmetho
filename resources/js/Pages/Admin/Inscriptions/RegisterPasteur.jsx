@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
-import { Link } from "@inertiajs/react";
+import { Link, usePage } from "@inertiajs/react";
 import AddressAutocomplete from "../../../Components/AddressAutocomplete";
 import Select2Single from "../../../Components/Select2Single";
 import Select2Fonction from "../../../Components/Select2Fonction";
@@ -227,8 +227,10 @@ const MultiSelectDropdown = ({
 
 // --- Main Component ---
 export default function RegisterFamille({
-    labels = ["Pasteur", "Responsable", "Membres", "Vérification"],
+    labels: labelsProp,
 }) {
+    const { targetRole = 'pasteur', roleLabel = 'Pasteur' } = usePage().props;
+    const labels = labelsProp ?? [roleLabel, "Responsable", "Membres", "Vérification"];
     // --- États ---
     const [step, setStep] = usePersistentState("registerPasteur_step", 1);
     const [errors, setErrors] = useState({});
@@ -1349,7 +1351,7 @@ export default function RegisterFamille({
             });
         }
 
-        formData.append("type", "pasteur");
+        formData.append("type", targetRole);
         formData.append("consentement", consentement ? "1" : "0");
 
         // 🔐 Récupérer et ajouter le token CSRF au FormData
@@ -1379,8 +1381,11 @@ export default function RegisterFamille({
                 headers["X-CSRF-TOKEN"] = csrfToken;
             }
 
+            const apiRoute = targetRole === 'bureau_conducteur'
+                ? "/admin/inscriptions/bureau-conducteur"
+                : "/admin/inscriptions/pasteur";
             const res = await axios.post(
-                "/admin/inscriptions/pasteur",
+                apiRoute,
                 formData,
                 {
                     headers: headers,

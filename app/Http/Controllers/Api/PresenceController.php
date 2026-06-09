@@ -35,7 +35,7 @@ class PresenceController extends Controller
         if ($event->qr_expires_at && now()->greaterThan($event->qr_expires_at)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Ce QR code a expiré.',
+                'message' => 'Ce QR code a expirÃ©.',
             ], 410);
         }
 
@@ -48,7 +48,7 @@ class PresenceController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => "L'activité n'a pas encore commencé. Vous pourrez scanner dans {$remainingLabel}.",
+                'message' => "L'activitÃ© n'a pas encore commencÃ©. Vous pourrez scanner dans {$remainingLabel}.",
             ], 423);
         }
 
@@ -60,7 +60,7 @@ class PresenceController extends Controller
         if (! $member) {
             return response()->json([
                 'success' => false,
-                'message' => 'Code membre invalide',
+                'message' => 'Code membre invalide.',
             ], 422);
         }
 
@@ -73,7 +73,7 @@ class PresenceController extends Controller
         if ($alreadyAbsent) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vous êtes déjà marqué absent pour cette activité. Pointage non autorisé.',
+                'message' => 'Vous Ãªtes dÃ©jÃ  marquÃ© absent pour cette activitÃ©. Pointage non autorisÃ©.',
             ], 409);
         }
 
@@ -81,7 +81,7 @@ class PresenceController extends Controller
         if (now()->greaterThanOrEqualTo($programmeEndAt)) {
             return response()->json([
                 'success' => false,
-                'message' => "Cette activité est terminée. Le scan n'est plus possible.",
+                'message' => "Cette activitÃ© est terminÃ©e. Le scan n'est plus possible.",
             ], 410);
         }
 
@@ -94,7 +94,7 @@ class PresenceController extends Controller
         if ($alreadyExists) {
             return response()->json([
                 'success' => false,
-                'message' => 'Présence déjà enregistrée',
+                'message' => 'PrÃ©sence dÃ©jÃ  enregistrÃ©e.',
             ], 409);
         }
 
@@ -111,7 +111,7 @@ class PresenceController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Présence enregistrée',
+            'message' => 'PrÃ©sence enregistrÃ©e avec succÃ¨s.',
             'data' => [
                 'event' => [
                     'id' => $event->id,
@@ -137,7 +137,7 @@ class PresenceController extends Controller
         if (! $user || (int) $user->classe_id !== (int) $event->class_id || (! $isConducteur && ! $isPresenceMarker)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Accès refusé.',
+                'message' => 'AccÃ¨s refusÃ©.',
             ], 403);
         }
 
@@ -255,7 +255,7 @@ class PresenceController extends Controller
         if (! $user || ! $this->isPresenceMarker($user)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Accès refusé.',
+                'message' => 'AccÃ¨s refusÃ©.',
             ], 403);
         }
 
@@ -268,7 +268,7 @@ class PresenceController extends Controller
         if (! $event) {
             return response()->json([
                 'success' => false,
-                'message' => 'Activité introuvable ou non autorisée.',
+                'message' => 'ActivitÃ© introuvable ou non autorisÃ©e.',
             ], 404);
         }
 
@@ -276,7 +276,7 @@ class PresenceController extends Controller
         if (now()->lt($programmeStartAt)) {
             return response()->json([
                 'success' => false,
-                'message' => "L'activité n'a pas encore commencé. Le marquage sera disponible à partir du " . $programmeStartAt->format('d/m/Y à H\\hi') . '.',
+                'message' => "L'activitÃ© n'a pas encore commencÃ©. Le marquage sera disponible Ã  partir du " . $programmeStartAt->format('d/m/Y Ã  H\hi') . '.',
             ], 423);
         }
 
@@ -285,7 +285,7 @@ class PresenceController extends Controller
         if (now()->greaterThan($graceEndAt)) {
             return response()->json([
                 'success' => false,
-                'message' => "Le délai de marquage est expiré. Vous aviez jusqu'au " . $graceEndAt->format('d/m/Y à H\\hi') . ' pour marquer les présences.',
+                'message' => "Le dÃ©lai de marquage est expirÃ©. Vous aviez jusqu'au " . $graceEndAt->format('d/m/Y Ã  H\hi') . ' pour marquer les prÃ©sences.',
             ], 410);
         }
 
@@ -297,7 +297,7 @@ class PresenceController extends Controller
         if (! $member) {
             return response()->json([
                 'success' => false,
-                'message' => 'Membre introuvable ou non autorisé.',
+                'message' => 'Membre introuvable ou non autorisÃ©.',
             ], 422);
         }
 
@@ -309,7 +309,7 @@ class PresenceController extends Controller
         if ($presence && $presence->statut === 'present') {
             return response()->json([
                 'success' => false,
-                'message' => 'Présence déjà enregistrée.',
+                'message' => 'PrÃ©sence dÃ©jÃ  enregistrÃ©e.',
             ], 409);
         }
 
@@ -321,7 +321,7 @@ class PresenceController extends Controller
             'marquee_par' => Auth::id(),
             'marquee_le' => now(),
             'methode' => 'marquage_manuel',
-            'notes' => 'Présence marquée manuellement par le marqueur de présence',
+            'notes' => 'PrÃ©sence marquÃ©e manuellement par le marqueur de prÃ©sence',
         ];
 
         if ($presence) {
@@ -332,7 +332,7 @@ class PresenceController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Présence marquée manuellement.',
+            'message' => 'PrÃ©sence marquÃ©e manuellement.',
             'data' => [
                 'event' => [
                     'id' => $event->id,
@@ -354,9 +354,9 @@ class PresenceController extends Controller
         $user->loadMissing('fonction');
         $nom = mb_strtolower(trim((string) ($user->fonction?->nom ?? '')));
         $nom = strtr($nom, [
-            'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
-            'à' => 'a', 'â' => 'a', 'ù' => 'u', 'û' => 'u',
-            'î' => 'i', 'ï' => 'i', 'ô' => 'o', 'ö' => 'o', 'ç' => 'c',
+            'Ã©' => 'e', 'Ã¨' => 'e', 'Ãª' => 'e', 'Ã«' => 'e',
+            'Ã ' => 'a', 'Ã¢' => 'a', 'Ã¹' => 'u', 'Ã»' => 'u',
+            'Ã®' => 'i', 'Ã¯' => 'i', 'Ã´' => 'o', 'Ã¶' => 'o', 'Ã§' => 'c',
         ]);
 
         return in_array($nom, ['marqueur de presence', 'marqueur presence'], true);
@@ -412,7 +412,7 @@ class PresenceController extends Controller
                     'marquee_par' => null,
                     'marquee_le' => now(),
                     'methode' => 'auto_cloture',
-                    'notes' => 'Absence automatique (non scanne avant fin d activite)',
+                    'notes' => 'Absence automatique (non scannÃ© avant fin de l\'activitÃ©)',
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];

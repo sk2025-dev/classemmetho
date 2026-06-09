@@ -71,6 +71,8 @@ Route::post('/dons/anonyme', [\App\Http\Controllers\Public\DonationController::c
     ->name('public.dons.anonyme.store');
 Route::get('/dons/anonyme/verify', [\App\Http\Controllers\Public\DonationController::class, 'verifyAnonymous'])
     ->name('public.dons.anonyme.verify');
+Route::get('/dons/recu/{reference}', [\App\Http\Controllers\Public\DonationController::class, 'downloadReceipt'])
+    ->name('public.dons.recu');
 
 // Pages d'authentification (Inertia)
 Route::get('/login', function () {
@@ -103,6 +105,8 @@ Route::middleware(['auth'])->group(function () {
                 return redirect()->route('conducteur.dashboard');
             case 'pasteur':
                 return redirect()->route('pasteur.dashboard');
+            case 'bureau_conducteur':
+                return redirect()->route('bureau_conducteur.dashboard');
             case 'responsable_famille':
                 return redirect()->route('responsable_famille.dashboard');
             case 'membre_famille':
@@ -113,29 +117,12 @@ Route::middleware(['auth'])->group(function () {
     })->name('dashboard');
 });
 
-// Routes d'inscription personnalisées
-Route::get('/register/famille', function () {
-    return Inertia::render('ResponsableFamille/RegisterFamille');
-})->name('register.famille');
+// Inscriptions désactivées côté public — gérées uniquement par admin et conducteur
 
-Route::get('/register/conducteur', function () {
-    return Inertia::render('Conducteur/RegisterConducteur');
-})->name('register.conducteur');
-
-// Endpoint pour soumettre le formulaire d'inscription
-Route::post('/register', [RegistrationController::class, 'store'])->name('register.store');
-Route::post('/register/family', [RegistrationController::class, 'store'])->name('register.family');
-Route::post('/register/conducteur', [RegistrationController::class, 'storeConductor'])->name('register.conductor');
-
-// Admin routes for inscriptions approval - avec protection CSRF explicite
-Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
-    Route::post('/inscriptions/{id}/approve', [\App\Http\Controllers\Admin\InscriptionApprovalController::class, 'approve'])
-        ->name('admin.inscriptions.approve');
-    Route::post('/inscriptions/{id}/reject', [\App\Http\Controllers\Admin\InscriptionApprovalController::class, 'reject'])
-        ->name('admin.inscriptions.reject')
-        ->middleware('verified');
-    Route::post('/inscriptions/bulk-delete', [\App\Http\Controllers\Admin\InscriptionApprovalController::class, 'bulkDelete'])
-        ->name('admin.inscriptions.bulk-delete');
+// Photos en direct (conducteur + marqueur de présence) — session web requise
+Route::middleware(['auth'])->group(function () {
+    Route::post('/activities/{eventId}/quick-photo', [\App\Http\Controllers\Api\LivePhotoController::class, 'store'])->name('activities.quick-photo');
+    Route::get('/activities/{eventId}/photos-count', [\App\Http\Controllers\Api\LivePhotoController::class, 'count'])->name('activities.photos-count');
 });
 
 // Routes authentifiées
@@ -147,8 +134,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/sondages', [\App\Http\Controllers\Admin\Sondage\SondageController::class, 'index'])->name('admin.sondages.index');
         Route::get('/admin/sondages/{id}/export', [\App\Http\Controllers\Admin\Sondage\SondageController::class, 'export'])->whereNumber('id')->name('admin.sondages.export');
         Route::get('/admin/sondages/{id}', [\App\Http\Controllers\Admin\Sondage\SondageController::class, 'show'])->whereNumber('id')->name('admin.sondages.show');
-        Route::get('/admin/inscriptions', [\App\Http\Controllers\Admin\InscriptionsController::class, 'index'])->name('admin.inscriptions');
-        Route::get('/admin/inscriptions/{id}/approval-log', [\App\Http\Controllers\Admin\InscriptionApprovalController::class, 'approvalLog'])->name('admin.inscriptions.approval_log');
         Route::get('/admin/inscriptions/type-selection', [\App\Http\Controllers\Admin\InscriptionsController::class, 'typeSelection'])->name('admin.inscriptions.type-selection');
         Route::post('/admin/inscriptions/import-excel', [ExcelImportController::class, 'import'])->name('admin.inscriptions.import-excel');
 
@@ -156,10 +141,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/inscriptions/famille/create', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'createFamilyForm'])->name('admin.inscriptions.famille.create');
         Route::get('/admin/inscriptions/conducteur/create', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'createConductorForm'])->name('admin.inscriptions.conducteur.create');
         Route::get('/admin/inscriptions/pasteur/create', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'createPastorForm'])->name('admin.inscriptions.pasteur.create');
+        Route::get('/admin/inscriptions/bureau-conducteur/create', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'createBureauConducteurForm'])->name('admin.inscriptions.bureau_conducteur.create');
 
         Route::post('/admin/inscriptions/famille', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'storeFamily'])->name('admin.inscriptions.famille.store');
         Route::post('/admin/inscriptions/conducteur', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'storeConductor'])->name('admin.inscriptions.conducteur.store');
         Route::post('/admin/inscriptions/pasteur', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'storePastor'])->name('admin.inscriptions.pasteur.store');
+        Route::post('/admin/inscriptions/bureau-conducteur', [\App\Http\Controllers\Admin\AdminInscriptionsController::class, 'storeBureauConducteur'])->name('admin.inscriptions.bureau_conducteur.store');
 
         Route::get('/admin/administration', [\App\Http\Controllers\Admin\AdministrationController::class, 'index'])->name('admin.administration');
 
@@ -528,6 +515,77 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/pasteur/transferts/{id}/approve', [\App\Http\Controllers\Pasteur\TransferController::class, 'approve'])->name('pasteur.transferts.approve');
     Route::post('/pasteur/transferts/{id}/refuse', [\App\Http\Controllers\Pasteur\TransferController::class, 'refuse'])->name('pasteur.transferts.refuse');
 
+    // ===== ROUTES BUREAU DES CONDUCTEURS =====
+    Route::middleware('role:bureau_conducteur')->group(function () {
+        Route::get('/bureau-conducteur/dashboard', [\App\Http\Controllers\BureauConducteur\DashboardController::class, 'index'])->name('bureau_conducteur.dashboard');
+
+        // Annuaire
+        Route::get('/bureau-conducteur/annuaire', [\App\Http\Controllers\BureauConducteur\AnnuaireController::class, 'index'])->name('bureau_conducteur.annuaire.index');
+
+        // Prières
+        Route::get('/bureau-conducteur/prieres', [\App\Http\Controllers\BureauConducteur\Prieres\PrieresController::class, 'index'])->name('bureau_conducteur.prieres.index');
+        Route::patch('/bureau-conducteur/prieres/{priere}/status', [\App\Http\Controllers\BureauConducteur\Prieres\PrieresController::class, 'updateStatus'])->name('bureau_conducteur.prieres.status');
+        Route::patch('/bureau-conducteur/prieres/{priere}/commentaire', [\App\Http\Controllers\BureauConducteur\Prieres\PrieresController::class, 'addComment'])->name('bureau_conducteur.prieres.comment');
+        Route::patch('/bureau-conducteur/prieres/{priere}/reaction', [\App\Http\Controllers\BureauConducteur\Prieres\PrieresController::class, 'toggleReaction'])->name('bureau_conducteur.prieres.reaction');
+
+        // Sondages
+        Route::get('/bureau-conducteur/sondages', [\App\Http\Controllers\BureauConducteur\Sondage\SondageController::class, 'index'])->name('bureau_conducteur.sondages.index');
+        Route::get('/bureau-conducteur/sondages/{id}/export', [\App\Http\Controllers\BureauConducteur\Sondage\SondageController::class, 'export'])->whereNumber('id')->name('bureau_conducteur.sondages.export');
+        Route::get('/bureau-conducteur/sondages/{id}', [\App\Http\Controllers\BureauConducteur\Sondage\SondageController::class, 'show'])->whereNumber('id')->name('bureau_conducteur.sondages.show');
+
+        // Inscriptions & Membres
+        Route::get('/bureau-conducteur/inscriptions', [\App\Http\Controllers\BureauConducteur\InscriptionsController::class, 'index'])->name('bureau_conducteur.inscriptions');
+        Route::get('/bureau-conducteur/family/edit', [\App\Http\Controllers\BureauConducteur\FamilyController::class, 'edit'])->name('bureau_conducteur.family.edit');
+        Route::post('/bureau-conducteur/family/update', [\App\Http\Controllers\BureauConducteur\FamilyController::class, 'update'])->name('bureau_conducteur.family.update');
+        Route::get('/bureau-conducteur/members/create', [\App\Http\Controllers\BureauConducteur\MemberController::class, 'create'])->name('bureau_conducteur.members.create');
+        Route::post('/bureau-conducteur/members/store', [\App\Http\Controllers\BureauConducteur\MemberController::class, 'store'])->name('bureau_conducteur.members.store');
+        Route::get('/bureau-conducteur/members/{id}', [\App\Http\Controllers\BureauConducteur\MemberController::class, 'show'])->name('bureau_conducteur.members.show');
+        Route::get('/bureau-conducteur/members/{id}/edit', [\App\Http\Controllers\BureauConducteur\MemberController::class, 'edit'])->name('bureau_conducteur.members.edit');
+        Route::put('/bureau-conducteur/members/{id}', [\App\Http\Controllers\BureauConducteur\MemberController::class, 'update'])->name('bureau_conducteur.members.update');
+
+        // Liturgie
+        Route::get('/bureau-conducteur/liturgie', [\App\Http\Controllers\BureauConducteur\LiturgieController::class, 'index'])->name('bureau_conducteur.liturgie.index');
+        Route::post('/bureau-conducteur/liturgie', [\App\Http\Controllers\BureauConducteur\LiturgieController::class, 'store'])->name('bureau_conducteur.liturgie.store');
+        Route::post('/bureau-conducteur/liturgie/{id}/transition', [\App\Http\Controllers\BureauConducteur\LiturgieController::class, 'transition'])->name('bureau_conducteur.liturgie.transition');
+        Route::post('/bureau-conducteur/liturgie/{id}/ceremonie/decision', [\App\Http\Controllers\BureauConducteur\LiturgieController::class, 'decisionCeremonie'])->name('bureau_conducteur.liturgie.ceremonie.decision');
+        Route::get('/bureau-conducteur/liturgie/{id}/certificat', [\App\Http\Controllers\BureauConducteur\LiturgieController::class, 'certificat'])->name('bureau_conducteur.liturgie.certificat');
+        Route::get('/bureau-conducteur/liturgie/{id}/fiche-conducteur', [\App\Http\Controllers\BureauConducteur\LiturgieController::class, 'ficheConducteur'])->name('bureau_conducteur.liturgie.fiche_conducteur');
+        Route::get('/bureau-conducteur/liturgie/{id}/fiche', [\App\Http\Controllers\BureauConducteur\LiturgieController::class, 'fiche'])->name('bureau_conducteur.liturgie.fiche');
+        Route::get('/bureau-conducteur/liturgie/{id}/fiche-priere', [\App\Http\Controllers\BureauConducteur\LiturgieController::class, 'fichePriere'])->name('bureau_conducteur.liturgie.fiche_priere');
+        Route::post('/bureau-conducteur/liturgie/fiche/envoyer', [\App\Http\Controllers\BureauConducteur\LiturgieController::class, 'envoyerFiche'])->name('bureau_conducteur.liturgie.fiche.envoyer');
+        Route::get('/bureau-conducteur/liturgie/bapteme/liste-pdf', [\App\Http\Controllers\BureauConducteur\LiturgieController::class, 'ficheBaptemeList'])->name('bureau_conducteur.liturgie.bapteme.liste_pdf');
+        Route::post('/bureau-conducteur/liturgie/bapteme/fiche/envoyer', [\App\Http\Controllers\BureauConducteur\LiturgieController::class, 'envoyerFicheBapteme'])->name('bureau_conducteur.liturgie.bapteme.fiche.envoyer');
+
+        // Annonces
+        Route::post('/bureau-conducteur/annonces', [\App\Http\Controllers\BureauConducteur\AnnonceController::class, 'store'])->name('bureau_conducteur.annonces.store');
+        Route::get('/bureau-conducteur/annonces', [\App\Http\Controllers\BureauConducteur\AnnonceController::class, 'index'])->name('bureau_conducteur.annonces.index');
+        Route::get('/bureau-conducteur/annonces/{id}', [\App\Http\Controllers\BureauConducteur\AnnonceController::class, 'show'])->name('bureau_conducteur.annonces.show');
+        Route::get('/bureau-conducteur/annonces/{id}/fiche', [\App\Http\Controllers\BureauConducteur\AnnonceController::class, 'fiche'])->name('bureau_conducteur.annonces.fiche');
+        Route::post('/bureau-conducteur/annonces/{id}/valider', [\App\Http\Controllers\BureauConducteur\AnnonceController::class, 'valider'])->name('bureau_conducteur.annonces.valider');
+        Route::post('/bureau-conducteur/annonces/{id}/rejeter', [\App\Http\Controllers\BureauConducteur\AnnonceController::class, 'rejeter'])->name('bureau_conducteur.annonces.rejeter');
+        Route::post('/bureau-conducteur/annonces/{id}/publier', [\App\Http\Controllers\BureauConducteur\AnnonceController::class, 'publier'])->name('bureau_conducteur.annonces.publier');
+        Route::post('/bureau-conducteur/annonces/{id}/archiver', [\App\Http\Controllers\BureauConducteur\AnnonceController::class, 'archiver'])->name('bureau_conducteur.annonces.archiver');
+
+        // Trésorerie
+        Route::get('/bureau-conducteur/tresorerie', [\App\Http\Controllers\BureauConducteur\TresorerieController::class, 'index'])->name('bureau_conducteur.tresorerie.index');
+        Route::post('/bureau-conducteur/tresorerie/encouragement', [\App\Http\Controllers\BureauConducteur\TresorerieController::class, 'storeEncouragement'])->name('bureau_conducteur.tresorerie.encouragement');
+
+        // Programmes
+        Route::get('/bureau-conducteur/programmes', [\App\Http\Controllers\BureauConducteur\ProgrammesController::class, 'index'])->name('bureau_conducteur.programmes');
+        Route::get('/bureau-conducteur/programmes/classe/{id}', [\App\Http\Controllers\BureauConducteur\ProgrammesController::class, 'getClassProgrammes'])->name('bureau_conducteur.programmes.classe');
+
+        // Présences
+        Route::get('/bureau-conducteur/presences', [\App\Http\Controllers\BureauConducteur\PresencesController::class, 'index'])->name('bureau_conducteur.presences.index');
+        Route::get('/bureau-conducteur/presences/export', [\App\Http\Controllers\BureauConducteur\PresencesController::class, 'export'])->name('bureau_conducteur.presences.export');
+
+        // Transferts
+        Route::get('/bureau-conducteur/transferts', [\App\Http\Controllers\BureauConducteur\TransferController::class, 'index'])->name('bureau_conducteur.transferts.index');
+        Route::post('/bureau-conducteur/transferts', [\App\Http\Controllers\BureauConducteur\TransferController::class, 'store'])->name('bureau_conducteur.transferts.store');
+        Route::post('/bureau-conducteur/transferts/{id}/approve', [\App\Http\Controllers\BureauConducteur\TransferController::class, 'approve'])->name('bureau_conducteur.transferts.approve');
+        Route::post('/bureau-conducteur/transferts/{id}/refuse', [\App\Http\Controllers\BureauConducteur\TransferController::class, 'refuse'])->name('bureau_conducteur.transferts.refuse');
+    });
+
+    // ===== ROUTES PASTEUR =====
     Route::middleware('role:pasteur')->group(function () {
         Route::get('/pasteur/annuaire', [PasteurAnnuaireController::class, 'index'])->name('pasteur.annuaire.index');
         Route::get('/pasteur/dashboard', [PasteurDashboardController::class, 'index'])->name('pasteur.dashboard');
@@ -556,6 +614,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/pasteur/liturgie/{id}/certificat', [PasteurLiturgieController::class, 'certificat'])->name('pasteur.liturgie.certificat');
         Route::get('/pasteur/liturgie/{id}/fiche-conducteur', [PasteurLiturgieController::class, 'ficheConducteur'])->name('pasteur.liturgie.fiche_conducteur');
         Route::get('/pasteur/liturgie/{id}/fiche', [PasteurLiturgieController::class, 'fiche'])->name('pasteur.liturgie.fiche');
+        Route::get('/pasteur/liturgie/{id}/fiche-priere', [PasteurLiturgieController::class, 'fichePriere'])->name('pasteur.liturgie.fiche_priere');
         Route::post('/pasteur/liturgie/fiche/envoyer', [PasteurLiturgieController::class, 'envoyerFiche'])->name('pasteur.liturgie.fiche.envoyer');
         Route::get('/pasteur/liturgie/bapteme/liste-pdf', [PasteurLiturgieController::class, 'ficheBaptemeList'])->name('pasteur.liturgie.bapteme.liste_pdf');
         Route::post('/pasteur/liturgie/bapteme/fiche/envoyer', [PasteurLiturgieController::class, 'envoyerFicheBapteme'])->name('pasteur.liturgie.bapteme.fiche.envoyer');

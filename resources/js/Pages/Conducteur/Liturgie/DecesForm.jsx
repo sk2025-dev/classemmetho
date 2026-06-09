@@ -35,7 +35,7 @@ export default function DecesForm({
         membre_id: defaultMemberId,
         classe_id: defaultClasseId,
         details: {
-            dec_lien: "lui-meme",
+            dec_lien: "",
             nom_defunt: "",
             prenom_defunt: "",
             date_naissance_defunt: "",
@@ -45,7 +45,7 @@ export default function DecesForm({
             def_membre: "",
             def_classe: "",
             def_baptise: "",
-            lien_familial: "lui-meme",
+            lien_familial: "",
             programme_obseques: "",
         },
         programme_piece: null,
@@ -74,8 +74,8 @@ export default function DecesForm({
                             ? "oui"
                             : "non",
                         def_membre: "membre_actif",
-                        dec_lien: "lui-meme",
-                        lien_familial: "lui-meme",
+                        dec_lien: "",
+                        lien_familial: "",
                     },
                 }));
             }
@@ -100,10 +100,7 @@ export default function DecesForm({
     }, [form.membre_id, familyMembers]);
 
     const recap = useMemo(() => {
-        let lienText = form.details.dec_lien || "-";
-        if (lienText === "lui-meme") {
-            lienText = "Le membre lui-même / elle-même";
-        }
+        const lienText = form.details.dec_lien || "-";
 
         return {
             lien: lienText,
@@ -125,8 +122,7 @@ export default function DecesForm({
         if (step === 1) {
             const nextErrors = {};
 
-            // Si "Autre membre" est sélectionné, "dec_lien" est requis
-            if (form.membre_id === "autre" && !form.details.dec_lien) {
+            if (!form.details.dec_lien) {
                 nextErrors["details.dec_lien"] = "Champ requis.";
             }
 
@@ -171,7 +167,7 @@ export default function DecesForm({
         payload.append("details[date_deces]", form.details.date_deces || "");
         payload.append(
             "details[lien_familial]",
-            form.details.lien_familial || form.details.dec_lien || "lui-meme",
+            form.details.lien_familial || form.details.dec_lien || "",
         );
         payload.append("details[lieu_deces]", form.details.lieu_deces || "");
         payload.append("details[sexe_defunt]", form.details.genre_defunt || "");
@@ -191,7 +187,7 @@ export default function DecesForm({
         }
         payload.append(
             "details[declarant_lien]",
-            form.details.dec_lien || "lui-meme",
+            form.details.dec_lien || "",
         );
 
         try {
@@ -229,7 +225,7 @@ export default function DecesForm({
             membre_id: defaultMemberId,
             classe_id: defaultClasseId,
             details: {
-                dec_lien: "lui-meme",
+                dec_lien: "",
                 nom_defunt: "",
                 prenom_defunt: "",
                 date_naissance_defunt: "",
@@ -268,7 +264,7 @@ export default function DecesForm({
                         Acte liturgique
                     </p>
                     <h1 className="text-4xl font-light text-white mt-4">
-                        Declaration de <em className="font-medium">Deces</em>
+                        Annonce <em className="font-medium">Décès</em>
                     </h1>
                     <p className="text-white/90 text-sm mt-2">
                         Eglise Methodiste du Jubile de Cocody
@@ -420,10 +416,9 @@ export default function DecesForm({
                                         </>
                                     )}
 
-                                {/* Si Autre membre : afficher le champ lien */}
-                                {form.membre_id === "autre" && (
-                                    <div className="mb-6">
-                                        <Field label="Lien avec le défunt *">
+                                {/* Lien du déclarant avec le défunt - toujours obligatoire */}
+                                <div className="mb-6">
+                                    <Field label="Votre lien avec le défunt *">
                                             <select
                                                 value={form.details.dec_lien}
                                                 onChange={(e) => {
@@ -441,25 +436,13 @@ export default function DecesForm({
                                                     Choisir
                                                 </option>
                                                 <option value="conjoint">
-                                                    Epoux / Epouse
+                                                    Époux / Épouse
                                                 </option>
                                                 <option value="enfant">
                                                     Enfant
                                                 </option>
-                                                <option value="parent">
-                                                    Parent
-                                                </option>
                                                 <option value="frere_soeur">
                                                     Frère / Sœur
-                                                </option>
-                                                <option value="autre">
-                                                    Autre membre de la famille
-                                                </option>
-                                                <option value="ami">
-                                                    Ami(e)
-                                                </option>
-                                                <option value="connaissance">
-                                                    Connaissance
                                                 </option>
                                             </select>
                                             {errors["details.dec_lien"] && (
@@ -468,8 +451,7 @@ export default function DecesForm({
                                                 </Err>
                                             )}
                                         </Field>
-                                    </div>
-                                )}
+                                </div>
 
                                 {/* Si membre inscrit (pas "autre") : afficher les infos en dessous du select */}
                                 {form.membre_id && form.membre_id !== "autre" && (
@@ -515,14 +497,6 @@ export default function DecesForm({
                                                     e.target.value,
                                                 )
                                             }
-                                            readOnly={
-                                                form.membre_id !== "autre"
-                                            }
-                                            className={
-                                                form.membre_id !== "autre"
-                                                    ? "bg-slate-100"
-                                                    : ""
-                                            }
                                         />
                                         {errors["details.nom_defunt"] && (
                                             <Err>
@@ -540,14 +514,6 @@ export default function DecesForm({
                                                         e.target.value,
                                                     ),
                                                 )
-                                            }
-                                            readOnly={
-                                                form.membre_id !== "autre"
-                                            }
-                                            className={
-                                                form.membre_id !== "autre"
-                                                    ? "bg-slate-100"
-                                                    : ""
                                             }
                                         />
                                         {errors["details.prenom_defunt"] && (
@@ -814,7 +780,7 @@ export default function DecesForm({
                                 <p className="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-200">
                                     Verifiez attentivement avant de soumettre.
                                 </p>
-                                <RecapCard title="Declaration de Deces">
+                                <RecapCard title="Annonce Décès">
                                     <RecapRow k="Lien" v={recap.lien} />
                                 </RecapCard>
                                 <RecapCard title="Defunt / Defunte">
