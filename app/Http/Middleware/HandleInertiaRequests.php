@@ -54,6 +54,8 @@ class HandleInertiaRequests extends Middleware
                 $user = $request->user();
                 $userClasseId = $user?->classe_id;
 
+                $userRole = $user?->role;
+
                 return ActeLiturgique::query()
                     ->with(['membre:id,prenom,nom', 'family:id,nom', 'createur:id,prenom,nom,role'])
                     ->whereIn('statut', ['VALIDEE', 'PUBLIEE'])
@@ -69,29 +71,37 @@ class HandleInertiaRequests extends Middleware
                                 'deces',
                             ]);
                     })
-                    // Flash info globaux (family_id null, classe_id null)
-                    // OU flash info scoped pour la classe de l'utilisateur
                     ->where(function ($q) use ($userClasseId) {
-                        $q->whereNull('family_id')
-                          ->where(function ($inner) use ($userClasseId) {
-                              $inner->whereNull('classe_id');
-                              if ($userClasseId) {
-                                  $inner->orWhere('classe_id', $userClasseId);
-                              }
-                          });
+                        // Flash info globaux (family_id null, classe_id null)
+                        // OU flash info scoped pour la classe de l'utilisateur
+                        $q->where(function ($inner) use ($userClasseId) {
+                            $inner->whereNull('family_id')
+                                  ->where(function ($inner2) use ($userClasseId) {
+                                      $inner2->whereNull('classe_id');
+                                      if ($userClasseId) {
+                                          $inner2->orWhere('classe_id', $userClasseId);
+                                      }
+                                  });
+                        })
+                        ->orWhere(function ($inner) {
+                            // Annonces avec family_id (liturgiques classiques)
+                            $inner->whereNotNull('family_id')
+                                  ->whereIn('statut', ['VALIDEE', 'PUBLIEE'])
+                                  ->where(function ($inner2) {
+                                      $inner2->where('est_annonce', true)
+                                            ->orWhereIn('type_acte', [
+                                                'annonce', 'annonce_liturgique',
+                                                'priere', 'grace', 'generale',
+                                                'mariage', 'deces',
+                                            ]);
+                                  });
+                        });
                     })
-                    ->orWhere(function ($q) {
-                        // Annonces avec family_id (liturgiques classiques)
-                        $q->whereNotNull('family_id')
-                          ->whereIn('statut', ['VALIDEE', 'PUBLIEE'])
-                          ->where(function ($inner) {
-                              $inner->where('est_annonce', true)
-                                    ->orWhereIn('type_acte', [
-                                        'annonce', 'annonce_liturgique',
-                                        'priere', 'grace', 'generale',
-                                        'mariage', 'deces',
-                                    ]);
-                          });
+                    // Ciblage par role : visible si pas de cible (legacy), cible "all", ou cible == role de l'utilisateur
+                    ->where(function ($q) use ($userRole) {
+                        $q->whereNull('target_role')
+                          ->orWhere('target_role', 'all')
+                          ->orWhere('target_role', $userRole);
                     })
                     ->latest()
                     ->limit(20)
@@ -107,6 +117,7 @@ class HandleInertiaRequests extends Middleware
                         'date_publication',
                         'created_at',
                         'statut',
+                        'target_role',
                     ]);
             },
             'auth' => [
@@ -129,6 +140,10 @@ class HandleInertiaRequests extends Middleware
                     'classe' => $request->user()->classe ? [
                         'id' => $request->user()->classe->id,
                         'nom' => $request->user()->classe->nom,
+                    ] : null,
+                    'fonction' => $request->user()->fonction ? [
+                        'id' => $request->user()->fonction->id,
+                        'nom' => $request->user()->fonction->nom,
                     ] : null,
                 ] : null,
             ],

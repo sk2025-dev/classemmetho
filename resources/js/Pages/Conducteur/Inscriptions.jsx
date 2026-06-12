@@ -430,6 +430,8 @@ export default function Inscriptions({
     const [bulkApproving, setBulkApproving] = useState(false);
     const [bulkRejecting, setBulkRejecting] = useState(false);
 
+    const [deleteTarget, setDeleteTarget] = useState(null); // { id, kind, name }
+
     // Modal famille
     const [showFamilyModal, setShowFamilyModal] = useState(false);
     const [selectedFamily, setSelectedFamily] = useState(null);
@@ -877,31 +879,21 @@ export default function Inscriptions({
     // --- ACTIONS ---
 
     // Suppression unifiée
-    const handleDelete = (id, kind) => {
-        const itemText =
-            kind === "inscription"
-                ? "cette demande d'inscription"
-                : "ce membre";
-        if (
-            !window.confirm(
-                `Êtes-vous sûr de vouloir supprimer ${itemText} ?`,
-            )
-        ) {
-            return;
-        }
+    const handleDelete = (id, kind, name = null) => {
+        setDeleteTarget({ id, kind, name });
+    };
 
+    const confirmDeleteAction = () => {
+        if (!deleteTarget) return;
+        const { id, kind } = deleteTarget;
         const url =
             kind === "inscription"
                 ? `/conducteur/inscriptions/${id}`
                 : `/conducteur/members/${id}`;
 
         router.delete(url, {
-            onSuccess: () => {
-                // Gestion succès
-            },
-            onError: (errors) => {
-                alert("Erreur lors de la suppression.");
-            },
+            onSuccess: () => setDeleteTarget(null),
+            onError: () => setDeleteTarget(null),
         });
     };
 
@@ -2081,9 +2073,14 @@ setSelectedMember(normalized);
                         </button>
                         <button
                             onClick={() => switchTab("members")}
-                            className={`px-6 py-3 rounded-xl font-bold transition transform hover:scale-[1.02] flex items-center gap-2 whitespace-nowrap ${activeTab === "members" ? "bg-purple-500 text-white shadow-lg" : "bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20"}`}
+                            className={`px-6 py-3 rounded-xl font-bold transition transform hover:scale-[1.02] flex items-center gap-2 whitespace-nowrap ${activeTab === "members" ? "bg-gradient-to-r from-purple-500 to-purple-700 text-white shadow-lg ring-2 ring-purple-300/50" : "bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20"}`}
                         >
                             <UserCheck className="w-5 h-5" /> Tous les Membres
+                            {membersOnly.length > 0 && (
+                                <span className="px-2 py-0.5 rounded-full text-xs bg-white/25 font-medium">
+                                    {membersOnly.length}
+                                </span>
+                            )}
                         </button>
                         <button
                             onClick={() => switchTab("flash-info")}
@@ -2214,39 +2211,43 @@ setSelectedMember(normalized);
                                 : familiesList;
 
                             return (
-                                <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
+                                <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100 border-t-4 border-t-blue-500">
+                                    <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2">
+                                        <Users className="w-4 h-4 text-blue-600" />
+                                        <span className="text-sm font-semibold text-slate-700">Membres de ma famille</span>
+                                    </div>
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-left">
-                                            <thead className="bg-blue-600 text-white border-b border-slate-200">
+                                            <thead className="bg-gradient-to-r from-slate-700 to-slate-800 text-white">
                                                 <tr>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                         #
                                                     </th>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                         Nom complet
                                                     </th>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                         Famille
                                                     </th>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                         Code Famille
                                                     </th>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                         Code Membre
                                                     </th>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                         Rôle
                                                     </th>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                         Email
                                                     </th>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                         Téléphone
                                                     </th>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                         Statut
                                                     </th>
-                                                    <th className="p-5 text-xs font-bold uppercase tracking-wider text-right">
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-right">
                                                         Actions
                                                     </th>
                                                 </tr>
@@ -2388,12 +2389,12 @@ setSelectedMember(normalized);
                                                                     member.id ||
                                                                     idx
                                                                 }
-                                                                className={`${member.is_deceased ? "bg-gray-100 opacity-60" : member.transfer_locked ? "opacity-60" : "hover:bg-slate-50"} transition`}
+                                                                className={`${member.is_deceased ? "bg-gray-50 opacity-60" : member.transfer_locked ? "opacity-60" : "hover:bg-indigo-50/40 cursor-pointer"} transition-colors`}
                                                             >
-                                                                <td className="p-5 text-slate-500 font-mono text-xs">
+                                                                <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">
                                                                     {idx + 1}
                                                                 </td>
-                                                                <td className="p-5">
+                                                                <td className="px-4 py-3.5">
                                                                     <div className="flex items-center gap-3">
                                                                         <ProfilePhoto
                                                                             user={{
@@ -2430,7 +2431,7 @@ setSelectedMember(normalized);
                                                                         </div>
                                                                     </div>
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     <div className="flex items-center gap-2">
                                                                         <Users className="w-4 h-4 text-blue-500" />
                                                                         <span>
@@ -2439,7 +2440,7 @@ setSelectedMember(normalized);
                                                                         </span>
                                                                     </div>
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     <div className="flex flex-col gap-1">
                                                                         {getFamilyCodeHistory(
                                                                             member,
@@ -2486,13 +2487,13 @@ setSelectedMember(normalized);
                                                                         )}
                                                                     </div>
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-slate-50 border border-slate-200 rounded-full text-xs font-semibold text-slate-700">
                                                                         {member.code_membre ||
                                                                             "N/A"}
                                                                     </span>
                                                                 </td>
-                                                                <td className="p-5">
+                                                                <td className="px-4 py-3.5">
                                                                     <span
                                                                         className={`px-3 py-1 rounded-full text-xs font-semibold ${
                                                                             member.is_responsable ||
@@ -2516,16 +2517,16 @@ setSelectedMember(normalized);
                                                                                 "Membre"}
                                                                     </span>
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     {member.email ||
                                                                         "N/A"}
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     {member.phone ||
                                                                         member.telephone ||
                                                                         "N/A"}
                                                                 </td>
-                                                                <td className="p-5">
+                                                                <td className="px-4 py-3.5">
                                                                     <span
                                                                         className={`px-3 py-1 rounded-full text-xs font-semibold ${
                                                                             member.status ===
@@ -2546,46 +2547,27 @@ setSelectedMember(normalized);
                                                                               : "Actif"}
                                                                     </span>
                                                                 </td>
-                                                                <td className="p-5 text-right">
-                                                                    <div className="flex items-center justify-end gap-2">
+                                                                <td className="px-4 py-3.5 text-right">
+                                                                    <div className="flex items-center justify-end gap-1.5">
                                                                         <button
                                                                             type="button"
                                                                             title="Voir les détails"
-                                                                            className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition transform hover:scale-105"
-                                                                            onClick={() => {
-                                                                                openMemberModal(
-                                                                                    member,
-                                                                                );
-                                                                            }}
+                                                                            className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 ring-1 ring-blue-200 transition-all hover:scale-110 active:scale-95"
+                                                                            onClick={() => openMemberModal(member)}
                                                                         >
-                                                                            <Eye
-                                                                                size={
-                                                                                    18
-                                                                                }
-                                                                            />
+                                                                            <Eye size={15} />
                                                                         </button>
                                                                         <button
                                                                             type="button"
                                                                             title="Modifier"
-                                                                            disabled={
-                                                                                member.transfer_locked
-                                                                            }
-                                                                            className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition transform hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                                            disabled={member.transfer_locked}
+                                                                            className="p-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 ring-1 ring-amber-200 transition-all hover:scale-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
                                                                             onClick={() => {
-                                                                                if (
-                                                                                    member.transfer_locked
-                                                                                )
-                                                                                    return;
-                                                                                openEditModal(
-                                                                                    member,
-                                                                                );
+                                                                                if (member.transfer_locked) return;
+                                                                                openEditModal(member);
                                                                             }}
                                                                         >
-                                                                            <Edit
-                                                                                size={
-                                                                                    18
-                                                                                }
-                                                                            />
+                                                                            <Edit size={15} />
                                                                         </button>
                                                                     </div>
                                                                 </td>
@@ -2667,48 +2649,59 @@ setSelectedMember(normalized);
                         })()
                     ) : activeTab === "members" ? (
                         // TABLEAU DE TOUS LES MEMBRES CRÉÉS
-                        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
+                        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100 border-t-4 border-t-purple-500">
+                            <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <UserCheck className="w-4 h-4 text-purple-600" />
+                                    <span className="text-sm font-semibold text-slate-700">Tous les membres</span>
+                                    {membersOnly.length > 0 && (
+                                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                                            {membersOnly.length}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
-                                    <thead className="bg-blue-600 text-white border-b border-slate-200">
+                                    <thead className="bg-gradient-to-r from-slate-700 to-slate-800 text-white">
                                         <tr>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 N°
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Nom
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Famille
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Code Famille
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Code Membre
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Email
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Téléphone
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Rôle
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Statut
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Date Naissance
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Date Création
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
                                                 Date Modification
                                             </th>
-                                            <th className="p-5 text-xs font-bold uppercase tracking-wider text-right">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-right">
                                                 Actions
                                             </th>
                                         </tr>
@@ -2761,14 +2754,14 @@ setSelectedMember(normalized);
                                                         return (
                                                             <tr
                                                                 key={member.id}
-                                                                className={`${member.is_deceased ? "bg-gray-100 opacity-60" : member.transfer_locked ? "opacity-60" : "hover:bg-slate-50"} transition`}
+                                                                className={`${member.is_deceased ? "bg-gray-50 opacity-60" : member.transfer_locked ? "opacity-60" : "hover:bg-indigo-50/40 cursor-pointer"} transition-colors`}
                                                             >
-                                                                <td className="p-5 text-slate-500 font-mono text-xs">
+                                                                <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">
                                                                     {startIndex +
                                                                         idx +
                                                                         1}
                                                                 </td>
-                                                                <td className="p-5">
+                                                                <td className="px-4 py-3.5">
                                                                     <div className="flex items-center gap-3">
                                                                         <ProfilePhoto
                                                                             user={{
@@ -2799,14 +2792,14 @@ setSelectedMember(normalized);
                                                                         </div>
                                                                     </div>
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     {memberFamily
                                                                         ? memberFamily.nom
                                                                         : member.famille_id
                                                                           ? `Famille #${member.famille_id}`
                                                                           : "Aucune famille"}
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     <div className="flex flex-col gap-1">
                                                                         {(getFamilyCodeHistory(
                                                                             member,
@@ -2865,22 +2858,22 @@ setSelectedMember(normalized);
                                                                             )}
                                                                     </div>
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-slate-50 border border-slate-200 rounded-full text-xs font-semibold text-slate-700">
                                                                         {member.code_membre ||
                                                                             "N/A"}
                                                                     </span>
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     {
                                                                         member.email
                                                                     }
                                                                 </td>
-                                                                <td className="p-5 text-slate-600">
+                                                                <td className="px-4 py-3.5 text-slate-600">
                                                                     {member.phone ||
                                                                         "N/A"}
                                                                 </td>
-                                                                <td className="p-5">
+                                                                <td className="px-4 py-3.5">
                                                                     <span
                                                                         className={`px-3 py-1 rounded-full text-xs font-semibold ${
                                                                             member.role ===
@@ -2902,7 +2895,7 @@ setSelectedMember(normalized);
                                                                                 "Membre"}
                                                                     </span>
                                                                 </td>
-                                                                <td className="p-5">
+                                                                <td className="px-4 py-3.5">
                                                                     <span
                                                                         className={`px-3 py-1 rounded-full text-xs font-semibold ${
                                                                             member.status ===
@@ -2924,144 +2917,78 @@ setSelectedMember(normalized);
                                                                                 "Actif"}
                                                                     </span>
                                                                 </td>
-                                                                <td className="p-5 text-slate-600 text-sm">
+                                                                <td className="px-4 py-3.5 text-slate-500 text-sm">
                                                                     {formatDateDisplay(
                                                                         member.date_naissance,
                                                                         "N/A",
                                                                     )}
                                                                 </td>
-                                                                <td className="p-5 text-slate-600 text-sm">
+                                                                <td className="px-4 py-3.5 text-slate-500 text-sm">
                                                                     {formatDateDisplay(
                                                                         member.created_at,
                                                                         "N/A",
                                                                     )}
                                                                 </td>
-                                                                <td className="p-5 text-slate-600 text-sm">
+                                                                <td className="px-4 py-3.5 text-slate-500 text-sm">
                                                                     {formatDateDisplay(
                                                                         member.updated_at ||
                                                                             member.created_at,
                                                                         "N/A",
                                                                     )}
                                                                 </td>
-                                                                <td className="p-5">
-                                                                    <div className="flex items-center justify-end gap-2">
+                                                                <td className="px-4 py-3.5">
+                                                                    <div className="flex items-center justify-end gap-1.5">
                                                                         <button
                                                                             type="button"
                                                                             title="Voir les détails"
-                                                                            className="p-2 rounded-lg transition-all"
-                                                                            style={{
-                                                                                backgroundColor:
-                                                                                    "rgba(37, 99, 235, 0.1)",
-                                                                                border: "2px solid rgba(37, 99, 235, 0.2)",
-                                                                            }}
-                                                                            onClick={() => {
-                                                                                openMemberModal(
-                                                                                    member,
-                                                                                );
-                                                                            }}
+                                                                            className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 ring-1 ring-blue-200 transition-all hover:scale-110 active:scale-95"
+                                                                            onClick={() => openMemberModal(member)}
                                                                         >
-                                                                            <Eye className="w-5 h-5 text-blue-600" />
+                                                                            <Eye className="w-4 h-4" />
                                                                         </button>
                                                                         <button
                                                                             type="button"
                                                                             title="Modifier"
-                                                                            className="p-2 rounded-lg transition-all"
-                                                                            style={{
-                                                                                backgroundColor:
-                                                                                    "rgba(37, 99, 235, 0.1)",
-                                                                                border: "2px solid rgba(37, 99, 235, 0.2)",
-                                                                            }}
-                                                                            disabled={
-                                                                                member.transfer_locked
-                                                                            }
+                                                                            disabled={member.transfer_locked}
+                                                                            className="p-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 ring-1 ring-amber-200 transition-all hover:scale-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
                                                                             onClick={() => {
-                                                                                if (
-                                                                                    member.transfer_locked
-                                                                                )
-                                                                                    return;
-                                                                                console.log(
-                                                                                    "Modifier clicked for member:",
-                                                                                    member,
-                                                                                );
-                                                                                openEditModal(
-                                                                                    member,
-                                                                                );
+                                                                                if (member.transfer_locked) return;
+                                                                                openEditModal(member);
                                                                             }}
                                                                         >
-                                                                            <Edit className="w-5 h-5 text-blue-600" />
+                                                                            <Edit className="w-4 h-4" />
                                                                         </button>
                                                                         <button
                                                                             type="button"
-                                                                            title={
-                                                                                member.status ===
-                                                                                "actif"
-                                                                                    ? "Désactiver"
-                                                                                    : "Activer"
-                                                                            }
-                                                                            className="p-2 rounded-lg transition-all"
-                                                                            style={{
-                                                                                backgroundColor:
-                                                                                    member.status ===
-                                                                                    "actif"
-                                                                                        ? "rgba(22, 163, 74, 0.1)"
-                                                                                        : "rgba(220, 38, 38, 0.1)",
-                                                                                border:
-                                                                                    member.status ===
-                                                                                    "actif"
-                                                                                        ? "2px solid rgba(22, 163, 74, 0.2)"
-                                                                                        : "2px solid rgba(220, 38, 38, 0.2)",
-                                                                            }}
-                                                                            disabled={
-                                                                                member.transfer_locked
-                                                                            }
+                                                                            title={member.status === "actif" ? "Désactiver" : "Activer"}
+                                                                            disabled={member.transfer_locked}
+                                                                            className={`p-2 rounded-lg ring-1 transition-all hover:scale-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 ${
+                                                                                member.status === "actif"
+                                                                                    ? "bg-green-50 hover:bg-green-100 text-green-600 ring-green-200"
+                                                                                    : "bg-slate-50 hover:bg-slate-100 text-slate-500 ring-slate-200"
+                                                                            }`}
                                                                             onClick={() => {
-                                                                                if (
-                                                                                    member.transfer_locked
-                                                                                )
-                                                                                    return;
-                                                                                if (
-                                                                                    member.status ===
-                                                                                    "actif"
-                                                                                ) {
-                                                                                    openDeactivateModal(
-                                                                                        member,
-                                                                                    );
+                                                                                if (member.transfer_locked) return;
+                                                                                if (member.status === "actif") {
+                                                                                    openDeactivateModal(member);
                                                                                 } else {
-                                                                                    validateMember(
-                                                                                        member.id,
-                                                                                    );
+                                                                                    validateMember(member.id);
                                                                                 }
                                                                             }}
                                                                         >
-                                                                            <Power
-                                                                                className={`w-5 h-5 ${member.status === "actif" ? "text-green-600" : "text-red-600"}`}
-                                                                            />
+                                                                            <Power className="w-4 h-4" />
                                                                         </button>
                                                                         <button
                                                                             type="button"
                                                                             title="Supprimer"
-                                                                            className="p-2 rounded-lg transition-all"
-                                                                            style={{
-                                                                                backgroundColor:
-                                                                                    "rgba(220, 38, 38, 0.1)",
-                                                                                border: "2px solid rgba(220, 38, 38, 0.2)",
-                                                                            }}
-                                                                            disabled={
-                                                                                member.transfer_locked
-                                                                            }
+                                                                            disabled={member.transfer_locked}
+                                                                            className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 ring-1 ring-red-200 transition-all hover:scale-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
                                                                             onClick={() => {
-                                                                                if (
-                                                                                    member.transfer_locked
-                                                                                )
-                                                                                    return;
-
-                                                                                handleDelete(
-                                                                                    member.id,
-                                                                                    "member",
-                                                                                );
+                                                                                if (member.transfer_locked) return;
+                                                                                handleDelete(member.id, "member", `${member.prenom || ""} ${member.nom || ""}`.trim());
                                                                             }}
                                                                         >
-                                                                            <Trash2 className="w-5 h-5 text-red-600" />
+                                                                            <Trash2 className="w-4 h-4" />
                                                                         </button>
                                                                     </div>
                                                                 </td>
@@ -5820,6 +5747,54 @@ setSelectedMember(normalized);
                     </div>
                 )}
             </div>
+
+            {/* Modale de confirmation de suppression */}
+            {deleteTarget && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div
+                        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                        onClick={() => setDeleteTarget(null)}
+                    />
+                    <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-11 h-11 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                                <Trash2 className="w-5 h-5 text-red-600" />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-slate-800 text-base">
+                                    {deleteTarget.kind === "inscription"
+                                        ? "Supprimer la demande"
+                                        : "Supprimer le membre"}
+                                </h3>
+                                {deleteTarget.name && (
+                                    <p className="text-sm text-slate-500 mt-0.5">
+                                        {deleteTarget.name}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                        <p className="text-sm text-slate-600 mb-6">
+                            Cette action est irréversible. Voulez-vous continuer ?
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setDeleteTarget(null)}
+                                className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition text-sm font-medium"
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmDeleteAction}
+                                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition text-sm font-semibold"
+                            >
+                                Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

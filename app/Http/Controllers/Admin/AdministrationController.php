@@ -417,7 +417,7 @@ class AdministrationController extends Controller
                 'email' => $f->email,
                 'adresse' => $f->adresse,
                 'quartier' => $f->quartier,
-                'ville' => $f->ville?->nom,
+                'ville' => $f->ville?->nom ?? $f->adresse,
                 'status' => $f->status ?? ($f->deleted_at ? 'supprimée' : 'active'),
                 'created_at' => $f->created_at?->format('d/m/Y'),
                 'updated_at' => $f->updated_at?->format('d/m/Y'),
@@ -607,5 +607,42 @@ class AdministrationController extends Controller
         $user->delete();
 
         return back()->with('success', 'Membre supprimé avec succès.');
+    }
+
+    public function assignPresidentConducteurs($id)
+    {
+        $user = User::findOrFail($id);
+
+        if ($user->role !== 'conducteur') {
+            return back()->with('error', 'Seul un conducteur peut être désigné président des conducteurs.');
+        }
+
+        $fonction = Fonction::firstOrCreate(
+            ['nom' => 'Président des conducteurs'],
+            ['description' => 'Préside le bureau des conducteurs']
+        );
+
+        User::where('fonction_id', $fonction->id)
+            ->where('id', '!=', $user->id)
+            ->update(['fonction_id' => null]);
+
+        $user->fonction_id = $fonction->id;
+        $user->save();
+
+        return back()->with('success', 'Président des conducteurs désigné avec succès.');
+    }
+
+    public function unassignPresidentConducteurs($id)
+    {
+        $user = User::findOrFail($id);
+
+        $fonction = Fonction::where('nom', 'Président des conducteurs')->first();
+
+        if ($fonction && $user->fonction_id === $fonction->id) {
+            $user->fonction_id = null;
+            $user->save();
+        }
+
+        return back()->with('success', 'Président des conducteurs retiré avec succès.');
     }
 }

@@ -276,7 +276,7 @@ $logoSrc = $logoDataUri ?? null;
                     @endif
                 </td>
                 <td class="church-cell">
-                    <div class="church-name">EMUCI, TEMPLE DU JUBILE DE COCODY</div>
+                    <div class="church-name"> TEMPLE DU JUBILE DE COCODY</div>
                     <div class="church-subtitle">Classe {{ $className }} {{ $documentLabel }}</div>
                 </td>
                 <td class="ref-cell">
@@ -343,7 +343,7 @@ $logoSrc = $logoDataUri ?? null;
     </div>
 
     <div class="footer">
-        EMUCI Temple du Jubile de Cocody &nbsp;|&nbsp;
+         Temple du Jubile de Cocody &nbsp;|&nbsp;
         Genere par GesParoisse &nbsp;|&nbsp;
         Ref. {{ $reference }}
     </div>

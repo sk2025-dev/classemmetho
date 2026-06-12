@@ -507,7 +507,7 @@ export default function MainLayout({ children, auth }) {
         annonces: announcements.filter(
             (a) =>
                 !isAdminAnnonce(a) &&
-                ["annonce", "annonce_liturgique", "grace", "generale"].includes(
+                ["annonce", "annonce_liturgique", "generale", "felicitations"].includes(
                     String(a?.type_acte || "").toLowerCase(),
                 ),
         ),
@@ -518,7 +518,9 @@ export default function MainLayout({ children, auth }) {
             (a) => !isAdminAnnonce(a) && String(a?.type_acte || "").toLowerCase() === "deces",
         ),
         prieres: announcements.filter(
-            (a) => !isAdminAnnonce(a) && String(a?.type_acte || "").toLowerCase() === "priere",
+            (a) =>
+                !isAdminAnnonce(a) &&
+                ["priere", "grace"].includes(String(a?.type_acte || "").toLowerCase()),
         ),
         infos: churchInfoMessages,
     };
@@ -622,7 +624,7 @@ export default function MainLayout({ children, auth }) {
                                             accent="blue"
                                         />
                                         <InfoCategory
-                                            title="🙏 Demandes de prière"
+                                            title="📢 Annonces"
                                             items={categorizedInfo.annonces.map((a) =>
                                                 truncateText(buildFlashSentence(a))
                                             )}
@@ -643,7 +645,7 @@ export default function MainLayout({ children, auth }) {
                                             accent="gray"
                                         />
                                         <InfoCategory
-                                            title="🙏 Sujets de prière"
+                                            title="🙏 Demandes de prière & actions de grâce"
                                             items={categorizedInfo.prieres.map((a) =>
                                                 truncateText(buildFlashSentence(a))
                                             )}

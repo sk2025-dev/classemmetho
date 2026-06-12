@@ -133,6 +133,7 @@ export default function Dashboard({
     role,
     surveyBadgeCount = 0,
     prayerBadgeCount = 0,
+    flashInfoBadgeCount = 0,
     auth,
     familyName = null,
     classeLabel = null,
@@ -287,6 +288,12 @@ export default function Dashboard({
                                     prayerBadgeCount > 0 && (
                                         <NotificationBadge
                                             count={prayerBadgeCount}
+                                        />
+                                    )}
+                                {item.icon === "annonce" &&
+                                    flashInfoBadgeCount > 0 && (
+                                        <NotificationBadge
+                                            count={flashInfoBadgeCount}
                                         />
                                     )}
                             </div>

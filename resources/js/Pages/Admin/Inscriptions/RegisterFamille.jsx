@@ -536,8 +536,7 @@ export default function RegisterFamille({
 
         if (!membreTemp.nom) newErrors["membre.nom"] = "Nom requis";
         if (!membreTemp.prenom) newErrors["membre.prenom"] = "Prénom requis";
-        if (!membreTemp.email) newErrors["membre.email"] = "Email requis";
-        else if (!/^\S+@\S+\.\S+$/.test(membreTemp.email))
+        if (membreTemp.email && !/^\S+@\S+\.\S+$/.test(membreTemp.email))
             newErrors["membre.email"] = "Adresse email invalide";
         if (!membreTemp.relation)
             newErrors["membre.relation"] = "Relation requise";

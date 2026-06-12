@@ -259,12 +259,7 @@ class RegisterMemberController extends Controller
                         }
                     }
 
-                    // Générer un email unique si vide
-                    $membreEmail = $membreData['email'] ?? null;
-                    if (!$membreEmail || $membreEmail === '') {
-                        $dateNaissance = str_replace('-', '', $membreData['dateNaissance'] ?? '');
-                        $membreEmail = strtolower($membreData['prenom'] . '.' . $membreData['nom'] . '.' . $dateNaissance . '@membre-' . $family->id . '.local');
-                    }
+                    $membreEmail = !empty($membreData['email']) ? $membreData['email'] : null;
 
                     $membreUser = User::create([
                         'name' => trim($membreData['prenom'] . ' ' . $membreData['nom']),

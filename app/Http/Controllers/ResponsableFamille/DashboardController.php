@@ -67,6 +67,13 @@ class DashboardController extends Controller
             ];
         }
 
+        $flashInfoBadgeCount = ActeLiturgique::where('created_by', $user->id)
+            ->where('est_annonce', true)
+            ->whereNull('family_id')
+            ->where('statut', ActeLiturgique::STATUT_PUBLIEE)
+            ->where('vu_par_demandeur', false)
+            ->count();
+
         $surveyBadgeCount = $this->sondageService
             ->getVisibleSondagesForUser($user)
             ->filter(fn (array $survey) => ($survey['statut'] ?? null) === 'Actif' && !($survey['aDejaRepondu'] ?? false))
@@ -86,6 +93,7 @@ class DashboardController extends Controller
             'familyStats' => $familyStats,
             'familyData' => $familyData,
             'validatedActesCount' => $validatedActesCount,
+            'flashInfoBadgeCount' => $flashInfoBadgeCount,
             'surveyBadgeCount' => $surveyBadgeCount,
             'prayerBadgeCount' => $prayerBadgeCount,
             'flashAnnouncements' => $this->buildFlashAnnouncements(),

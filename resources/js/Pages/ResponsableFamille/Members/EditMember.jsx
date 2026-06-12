@@ -123,7 +123,7 @@ const SacrementSection = ({
     );
 };
 
-export default function EditMember({ member, family }) {
+export default function EditMember({ member, family, villes = [] }) {
     const [fonctions, setFonctions] = useState([]);
     const [fonctionsState, setFonctionsState] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -160,6 +160,7 @@ export default function EditMember({ member, family }) {
             : member.fonction_id
               ? [member.fonction_id]
               : [],
+        ville_id: member.ville_id || "",
         relation: member.relation || "",
         photo: null,
         photoPreview: resolveMemberPhotoUrl(member),
@@ -203,6 +204,7 @@ export default function EditMember({ member, family }) {
                 : member.fonction_id
                   ? [member.fonction_id]
                   : [],
+            ville_id: member.ville_id || "",
             relation: member.relation || "",
             photo: null,
             photoPreview: resolveMemberPhotoUrl(member),
@@ -637,6 +639,26 @@ export default function EditMember({ member, family }) {
                                         })
                                     }
                                 />
+                            </FormField>
+
+                            <FormField label="Ville" icon={MapPin}>
+                                <select
+                                    className="w-full h-12 border border-gray-300 rounded-lg px-4 focus:border-blue-500 focus:shadow-md focus:shadow-blue-200 transition-all duration-300 appearance-none cursor-pointer"
+                                    value={data.ville_id}
+                                    onChange={(e) =>
+                                        setData({
+                                            ...data,
+                                            ville_id: e.target.value,
+                                        })
+                                    }
+                                >
+                                    <option value="">— Sélectionner —</option>
+                                    {villes.map((v) => (
+                                        <option key={v.id} value={v.id}>
+                                            {v.nom}
+                                        </option>
+                                    ))}
+                                </select>
                             </FormField>
                         </section>
 

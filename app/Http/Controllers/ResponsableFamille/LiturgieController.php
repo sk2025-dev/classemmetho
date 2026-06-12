@@ -53,11 +53,25 @@ class LiturgieController extends Controller
             ->latest()
             ->get();
 
+        $flashInfoBadgeCount = ActeLiturgique::where('created_by', $user->id)
+            ->where('est_annonce', true)
+            ->whereNull('family_id')
+            ->where('statut', ActeLiturgique::STATUT_PUBLIEE)
+            ->where('vu_par_demandeur', false)
+            ->count();
+
         $flashAnnonces = ActeLiturgique::where('created_by', $user->id)
             ->where('est_annonce', true)
             ->whereNull('family_id')
             ->latest()
             ->get(['id', 'reference', 'statut', 'details', 'date_publication', 'created_at']);
+
+        ActeLiturgique::where('created_by', $user->id)
+            ->where('est_annonce', true)
+            ->whereNull('family_id')
+            ->where('statut', ActeLiturgique::STATUT_PUBLIEE)
+            ->where('vu_par_demandeur', false)
+            ->update(['vu_par_demandeur' => true]);
 
         return Inertia::render('ResponsableFamille/Liturgie/Index', [
             'actes' => $actes,
@@ -66,6 +80,7 @@ class LiturgieController extends Controller
             'annonces' => $annonces,
             'annoncesParoisse' => $annoncesParoisse,
             'flashAnnonces' => $flashAnnonces,
+            'flashInfoBadgeCount' => $flashInfoBadgeCount,
         ]);
     }
 
@@ -645,13 +660,13 @@ class LiturgieController extends Controller
                 $blockedStatuses = [
                     'CEREMONIE_SOUMISE_AU_CONDUCTEUR',
                     'CEREMONIE_TRANSMISE_AU_PASTEUR',
+                    'CEREMONIE_VALIDEE_PAR_PASTEUR',
+                    'CEREMONIE_VALIDE_PAR_PASTEUR',
                 ];
-                $hasFicheEnvoyee = !empty($details['fiche_pasteur_envoyee']);
                 $acte->can_choose_date =
                     $type === 'mariage'
                     && in_array($acte->statut, ['VALIDEE', 'PUBLIEE'], true)
-                    && !in_array($ceremonyStatut, $blockedStatuses, true)
-                    && $hasFicheEnvoyee;
+                    && !in_array($ceremonyStatut, $blockedStatuses, true);
 
                 return $acte;
             });

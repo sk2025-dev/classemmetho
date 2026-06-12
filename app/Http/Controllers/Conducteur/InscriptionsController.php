@@ -937,7 +937,7 @@ class InscriptionsController extends Controller
             $member = User::create([
                 'nom' => $nom,
                 'prenom' => $prenom,
-                'email' => $validated['email'] ?? $prenom . '.' . $nom . '@' . time() . '.local',
+                'email' => !empty($validated['email']) ? $validated['email'] : null,
                 'telephone' => $telephone,
                 'family_id' => $familyId,
                 'classe_id' => $classeId,

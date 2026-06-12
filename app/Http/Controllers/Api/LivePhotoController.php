@@ -82,6 +82,8 @@ class LivePhotoController extends Controller
             'is_featured'     => false,
         ]);
 
+        $media->load('specialEvent');
+
         return response()->json([
             'success' => true,
             'message' => 'Photo sauvegardée.',

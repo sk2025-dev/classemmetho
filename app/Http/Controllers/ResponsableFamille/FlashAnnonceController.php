@@ -14,6 +14,13 @@ class FlashAnnonceController extends Controller
     {
         $user = Auth::user();
 
+        ActeLiturgique::where('created_by', $user->id)
+            ->where('est_annonce', true)
+            ->whereNull('family_id')
+            ->where('statut', ActeLiturgique::STATUT_PUBLIEE)
+            ->where('vu_par_demandeur', false)
+            ->update(['vu_par_demandeur' => true]);
+
         $annonces = ActeLiturgique::annonces()
             ->whereNull('family_id')
             ->where('created_by', $user->id)

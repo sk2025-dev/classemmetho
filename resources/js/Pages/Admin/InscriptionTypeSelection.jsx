@@ -18,15 +18,6 @@ export default function SelectionTypeInscription() {
             icon: <User size={40} />,
         },
         {
-            title: "Bureau des Conducteurs",
-            desc: "Inscrire un membre du bureau des conducteurs",
-            href: withBasePath("", "/admin/inscriptions/bureau-conducteur/create"),
-            colorClass: "text-violet-600",
-            bgIconClass: "bg-violet-50",
-            hoverBorder: "hover:border-violet-500",
-            icon: <Users size={40} />,
-        },
-        {
             title: "Conducteur",
             desc: "Inscrire un nouveau conducteur",
             href: withBasePath("", "/admin/inscriptions/conducteur/create"),
@@ -92,7 +83,7 @@ export default function SelectionTypeInscription() {
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 w-full">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full">
                             {cards.map((card, idx) =>
                                 card.isAction ? (
                                     <button

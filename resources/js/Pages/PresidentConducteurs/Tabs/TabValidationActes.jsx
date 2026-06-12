@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Head, Link, router, usePage } from "@inertiajs/react";
+import { router } from "@inertiajs/react";
 import axios from "axios";
 import { withBasePath } from "../../../Utils/urlHelper";
+import TabHistoriqueActes from "./TabHistoriqueActes";
 import {
-    ArrowLeft, CheckCircle, XCircle, Clock, FileText,
+    CheckCircle, XCircle, Clock, FileText,
     ChevronDown, ChevronUp, AlertCircle, Send, RotateCcw,
     User, BookOpen, Calendar, Hash, Bell, RefreshCw,
 } from "lucide-react";
@@ -200,7 +201,7 @@ function ActeCard({ acte, onValidate, onRefuse, isProcessing, selected, onToggle
                 {!showRefuseForm ? (
                     <div className="flex items-center gap-2 flex-wrap">
                         <a
-                            href={withBasePath("", `/bureau-conducteur/liturgie/${acte.id}/fiche-conducteur?preview=1`)}
+                            href={withBasePath("", `/president-conducteurs/liturgie/${acte.id}/fiche-conducteur?preview=1`)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium border border-gray-300 text-gray-700 bg-white rounded-lg hover:bg-gray-50 transition-colors"
@@ -304,8 +305,8 @@ function HistoriqueCard({ item }) {
     );
 }
 
-/* ─── Page principale ─────────────────────────────────── */
-export default function BureauConducteurLiturgie({
+/* ─── Onglet Validation des actes ─────────────────────── */
+export default function TabValidationActes({
     actes,
     historique = {},
     pendingCount = 0,
@@ -318,7 +319,7 @@ export default function BureauConducteurLiturgie({
     const [localHistoriquePaginator, setLocalHistoriquePaginator] = useState(historique);
     const [processing, setProcessing] = useState(false);
     const [toast, setToast] = useState(null);
-    const [activeTab, setActiveTab] = useState("pending");
+    const [activeSubTab, setActiveSubTab] = useState("pending");
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [newRequestsCount, setNewRequestsCount] = useState(0);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -398,7 +399,7 @@ export default function BureauConducteurLiturgie({
         try {
             setProcessing(true);
             await axios.post(
-                withBasePath("", `/bureau-conducteur/liturgie/${id}/transition`),
+                withBasePath("", `/president-conducteurs/liturgie/${id}/transition`),
                 { statut: "TRANSMISE_AU_PASTEUR", commentaire: "" }
             );
             setLocalActes((prev) => prev.filter((a) => a.id !== id));
@@ -414,7 +415,7 @@ export default function BureauConducteurLiturgie({
         try {
             setProcessing(true);
             await axios.post(
-                withBasePath("", `/bureau-conducteur/liturgie/${id}/transition`),
+                withBasePath("", `/president-conducteurs/liturgie/${id}/transition`),
                 { statut: "REFUSEE_PAR_BUREAU_CONDUCTEUR", commentaire: motif }
             );
             setLocalActes((prev) => prev.filter((a) => a.id !== id));
@@ -450,7 +451,7 @@ export default function BureauConducteurLiturgie({
             setProcessing(true);
             for (const id of ids) {
                 await axios.post(
-                    withBasePath("", `/bureau-conducteur/liturgie/${id}/transition`),
+                    withBasePath("", `/president-conducteurs/liturgie/${id}/transition`),
                     { statut: "TRANSMISE_AU_PASTEUR", commentaire: "" }
                 );
             }
@@ -473,7 +474,7 @@ export default function BureauConducteurLiturgie({
             setProcessing(true);
             for (const id of ids) {
                 await axios.post(
-                    withBasePath("", `/bureau-conducteur/liturgie/${id}/transition`),
+                    withBasePath("", `/president-conducteurs/liturgie/${id}/transition`),
                     { statut: "REFUSEE_PAR_BUREAU_CONDUCTEUR", commentaire: motif }
                 );
             }
@@ -487,18 +488,14 @@ export default function BureauConducteurLiturgie({
         }
     };
 
-    const tabs = [
-        { id: "pending",    label: "En attente",  count: pendingCount,                                    icon: Clock },
-        { id: "historique", label: "Historique",  count: historique?.total ?? localHistorique.length,     icon: RotateCcw },
+    const subTabs = [
+        { id: "pending",    label: "En attente",     count: pendingCount,                                icon: Clock },
+        { id: "historique", label: "Historique",     count: historique?.total ?? localHistorique.length, icon: RotateCcw },
+        { id: "suivi",      label: "Suivi des actes", count: null,                                        icon: FileText },
     ];
 
     return (
-        <div
-            className="min-h-screen"
-            style={{ background: "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)" }}
-        >
-            <Head title="Actes Liturgiques — Bureau des Conducteurs" />
-
+        <div>
             {/* Toast */}
             {toast && (
                 <div className={`fixed top-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-semibold transition-all ${
@@ -510,135 +507,109 @@ export default function BureauConducteurLiturgie({
                 </div>
             )}
 
-            <div className=" mx-auto py-8 px-4 sm:px-6 lg:px-8">
-                {/* Back + Refresh */}
-                <div className="flex items-center justify-between mb-6">
-                    <Link
-                        href={withBasePath("", "/bureau-conducteur/dashboard")}
-                        className="inline-flex items-center gap-2 text-white/80 hover:text-white px-4 py-2 rounded-full hover:bg-white/10 transition-all text-sm font-medium"
-                    >
-                        <ArrowLeft size={16} /> Retour au tableau de bord
-                    </Link>
-
-                    <button
-                        onClick={handleManualRefresh}
-                        disabled={isRefreshing}
-                        className="inline-flex items-center gap-2 text-white/70 hover:text-white px-3 py-2 rounded-full hover:bg-white/10 transition-all text-xs font-medium"
-                        title="Actualiser"
-                    >
-                        <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
-                        {isRefreshing ? "Actualisation..." : "Actualiser"}
-                    </button>
+            {/* Refresh */}
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                    <h3 className="text-xl font-extrabold text-white">
+                        Validation des actes
+                    </h3>
+                    {pendingCount > 0 && (
+                        <span className="relative inline-flex">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                            <span className="relative inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-600 text-white text-xs font-bold shadow-lg">
+                                <Bell size={11} />
+                                {pendingCount > 99 ? "99+" : pendingCount}
+                            </span>
+                        </span>
+                    )}
                 </div>
 
-                {/* Bannière de nouvelles demandes (pulsante) */}
-                {newRequestsCount > 0 && (
-                    <div className="mb-5 flex items-center gap-3 px-5 py-3 rounded-xl bg-amber-400/90 backdrop-blur shadow-lg animate-pulse">
-                        <span className="relative flex h-3 w-3 flex-shrink-0">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-600 opacity-75" />
-                            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600" />
-                        </span>
-                        <Bell size={16} className="text-amber-900 flex-shrink-0" />
-                        <p className="text-sm font-bold text-amber-900">
-                            {newRequestsCount} nouvelle{newRequestsCount > 1 ? "s" : ""} demande{newRequestsCount > 1 ? "s" : ""} reçue{newRequestsCount > 1 ? "s" : ""} depuis votre dernière consultation !
-                        </p>
-                        <button
-                            onClick={() => { setNewRequestsCount(0); setActiveTab("pending"); }}
-                            className="ml-auto text-xs font-semibold text-amber-900 bg-white/50 hover:bg-white/80 px-3 py-1 rounded-full transition-colors flex-shrink-0"
-                        >
-                            Voir les demandes ×
-                        </button>
-                    </div>
-                )}
+                <button
+                    onClick={handleManualRefresh}
+                    disabled={isRefreshing}
+                    className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-800 px-3 py-2 rounded-full hover:bg-gray-100 transition-all text-xs font-medium"
+                    title="Actualiser"
+                >
+                    <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
+                    {isRefreshing ? "Actualisation..." : "Actualiser"}
+                </button>
+            </div>
 
-                {/* Header */}
-                <div className="mb-6">
-                    <div className="flex items-center gap-3">
-                        <h1 className="text-3xl font-extrabold text-white drop-shadow-md">
-                            Actes Liturgiques
-                        </h1>
-                        {pendingCount > 0 && (
-                            <span className="relative inline-flex">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                                <span className="relative inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-600 text-white text-xs font-bold shadow-lg">
-                                    <Bell size={11} />
-                                    {pendingCount > 99 ? "99+" : pendingCount}
+            {/* Bannière de nouvelles demandes (pulsante) */}
+            {newRequestsCount > 0 && (
+                <div className="mb-5 flex items-center gap-3 px-5 py-3 rounded-xl bg-amber-400/90 backdrop-blur shadow-lg animate-pulse">
+                    <span className="relative flex h-3 w-3 flex-shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-600 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600" />
+                    </span>
+                    <Bell size={16} className="text-amber-900 flex-shrink-0" />
+                    <p className="text-sm font-bold text-amber-900">
+                        {newRequestsCount} nouvelle{newRequestsCount > 1 ? "s" : ""} demande{newRequestsCount > 1 ? "s" : ""} reçue{newRequestsCount > 1 ? "s" : ""} depuis votre dernière consultation !
+                    </p>
+                    <button
+                        onClick={() => { setNewRequestsCount(0); setActiveSubTab("pending"); }}
+                        className="ml-auto text-xs font-semibold text-amber-900 bg-white/50 hover:bg-white/80 px-3 py-1 rounded-full transition-colors flex-shrink-0"
+                    >
+                        Voir les demandes ×
+                    </button>
+                </div>
+            )}
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+                {[
+                    { label: "En attente",  value: pendingCount,   color: "text-amber-600",  bg: "bg-amber-50",  icon: Clock,         pulse: pendingCount > 0 },
+                    { label: "Validés",     value: validatedCount, color: "text-green-600",  bg: "bg-green-50",  icon: CheckCircle,   pulse: false },
+                    { label: "Refusés",     value: refusedCount,   color: "text-red-600",    bg: "bg-red-50",    icon: XCircle,       pulse: false },
+                ].map(({ label, value, color, bg, icon: Icon, pulse }) => (
+                    <div
+                        key={label}
+                        className={`bg-white rounded-xl p-4 shadow-sm border flex items-center gap-3 relative overflow-hidden ${pulse ? "ring-2 ring-amber-400 ring-offset-1" : ""}`}
+                    >
+                        {pulse && (
+                            <span className="absolute top-2 right-2">
+                                <span className="relative flex h-2.5 w-2.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
                                 </span>
                             </span>
                         )}
-                    </div>
-                    <div className="flex items-center justify-between flex-wrap gap-2 mt-1">
-                        <p className="text-white/70 text-sm">
-                            Validation intermédiaire — Bureau des Conducteurs
-                            <span className="ml-2 text-white/40 text-xs">· Auto-actualisation toutes les 30s</span>
-                        </p>
-                        <Link
-                            href={withBasePath("", "/profile")}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-semibold transition-colors border border-white/20"
-                            title="Charger ma signature pour les fiches PDF"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
-                            </svg>
-                            Ma signature
-                        </Link>
-                    </div>
-                </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                    {[
-                        { label: "En attente",  value: pendingCount,   color: "text-amber-600",  bg: "bg-amber-50",  icon: Clock,         pulse: pendingCount > 0 },
-                        { label: "Validés",     value: validatedCount, color: "text-green-600",  bg: "bg-green-50",  icon: CheckCircle,   pulse: false },
-                        { label: "Refusés",     value: refusedCount,   color: "text-red-600",    bg: "bg-red-50",    icon: XCircle,       pulse: false },
-                    ].map(({ label, value, color, bg, icon: Icon, pulse }) => (
-                        <div
-                            key={label}
-                            className={`bg-white/95 backdrop-blur rounded-xl p-4 shadow-sm flex items-center gap-3 relative overflow-hidden ${pulse ? "ring-2 ring-amber-400 ring-offset-1" : ""}`}
-                        >
-                            {pulse && (
-                                <span className="absolute top-2 right-2">
-                                    <span className="relative flex h-2.5 w-2.5">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
-                                    </span>
-                                </span>
-                            )}
-                            <div className={`w-10 h-10 rounded-lg ${bg} ${color} flex items-center justify-center flex-shrink-0`}>
-                                <Icon size={20} />
-                            </div>
-                            <div>
-                                <p className="text-2xl font-black text-gray-900">{value}</p>
-                                <p className="text-xs text-gray-500 font-medium">{label}</p>
-                            </div>
+                        <div className={`w-10 h-10 rounded-lg ${bg} ${color} flex items-center justify-center flex-shrink-0`}>
+                            <Icon size={20} />
                         </div>
-                    ))}
-                </div>
+                        <div>
+                            <p className="text-2xl font-black text-gray-900">{value}</p>
+                            <p className="text-xs text-gray-500 font-medium">{label}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
 
-                {/* Card principale */}
-                <div className="bg-white/95 backdrop-blur rounded-xl shadow-sm overflow-hidden">
-                    {/* Tabs */}
-                    <div className="flex border-b border-gray-200">
-                        {tabs.map(({ id, label, count, icon: Icon }) => (
-                            <button
-                                key={id}
-                                onClick={() => setActiveTab(id)}
-                                className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold transition-colors ${
-                                    activeTab === id
-                                        ? "border-b-2 border-purple-700 text-purple-700"
-                                        : "text-gray-500 hover:text-gray-700"
-                                }`}
-                            >
-                                <Icon size={15} />
-                                {label}
+            {/* Card principale */}
+            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                {/* Sous-onglets */}
+                <div className="flex border-b border-gray-200">
+                    {subTabs.map(({ id, label, count, icon: Icon }) => (
+                        <button
+                            key={id}
+                            onClick={() => setActiveSubTab(id)}
+                            className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold transition-colors ${
+                                activeSubTab === id
+                                    ? "border-b-2 border-purple-700 text-purple-700"
+                                    : "text-gray-500 hover:text-gray-700"
+                            }`}
+                        >
+                            <Icon size={15} />
+                            {label}
+                            {count !== null && (
                                 <span className={`relative inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold ${
-                                    activeTab === id
+                                    activeSubTab === id
                                         ? "bg-purple-100 text-purple-700"
                                         : id === "pending" && count > 0
                                         ? "bg-red-100 text-red-700"
                                         : "bg-gray-100 text-gray-500"
                                 }`}>
-                                    {id === "pending" && count > 0 && activeTab !== "pending" && (
+                                    {id === "pending" && count > 0 && activeSubTab !== "pending" && (
                                         <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
                                             <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
@@ -646,132 +617,135 @@ export default function BureauConducteurLiturgie({
                                     )}
                                     {count}
                                 </span>
-                            </button>
-                        ))}
-                    </div>
+                            )}
+                        </button>
+                    ))}
+                </div>
 
-                    <div className="p-6">
-                        {/* Onglet En attente */}
-                        {activeTab === "pending" && (
-                            <>
-                                {localActes.length === 0 ? (
-                                    <div className="text-center py-12">
-                                        <CheckCircle size={48} className="text-green-300 mx-auto mb-3" />
-                                        <h3 className="text-lg font-semibold text-gray-700">
-                                            Aucun acte en attente
-                                        </h3>
-                                        <p className="text-sm text-gray-400 mt-1">
-                                            Tous les actes ont été traités.
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {pendingCount > 0 && (
-                                            <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">
-                                                <AlertCircle size={15} />
-                                                <span>
-                                                    <b>{pendingCount}</b> acte{pendingCount > 1 ? "s" : ""} en attente de validation
-                                                </span>
-                                            </div>
-                                        )}
-
-                                        {/* Barre de sélection groupée */}
-                                        <div className="flex items-center gap-3 flex-wrap">
-                                            <button
-                                                type="button"
-                                                onClick={toggleSelectAll}
-                                                className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold border border-purple-300 text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    readOnly
-                                                    checked={allSelected}
-                                                    className="w-3.5 h-3.5 accent-purple-600 pointer-events-none"
-                                                />
-                                                {allSelected ? "Tout désélectionner" : "Tout sélectionner"}
-                                            </button>
-
-                                            {selectedIds.size > 0 && (
-                                                <>
-                                                    <span className="text-xs font-semibold text-purple-700 bg-purple-100 px-2.5 py-1 rounded-full">
-                                                        {selectedIds.size} sélectionné{selectedIds.size > 1 ? "s" : ""}
-                                                    </span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleBulkValidate}
-                                                        disabled={processing}
-                                                        className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-purple-700 text-white rounded-lg hover:bg-purple-800 transition-colors disabled:opacity-50 shadow-sm"
-                                                    >
-                                                        <Send size={12} />
-                                                        Valider tout → Pasteur
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleBulkRefuse}
-                                                        disabled={processing}
-                                                        className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                                                    >
-                                                        <XCircle size={12} />
-                                                        Refuser tout
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setSelectedIds(new Set())}
-                                                        className="text-xs text-gray-500 hover:text-gray-700 underline"
-                                                    >
-                                                        Annuler
-                                                    </button>
-                                                </>
-                                            )}
+                <div className="p-6">
+                    {/* Sous-onglet En attente */}
+                    {activeSubTab === "pending" && (
+                        <>
+                            {localActes.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <CheckCircle size={48} className="text-green-300 mx-auto mb-3" />
+                                    <h3 className="text-lg font-semibold text-gray-700">
+                                        Aucun acte en attente
+                                    </h3>
+                                    <p className="text-sm text-gray-400 mt-1">
+                                        Tous les actes ont été traités.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {pendingCount > 0 && (
+                                        <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">
+                                            <AlertCircle size={15} />
+                                            <span>
+                                                <b>{pendingCount}</b> acte{pendingCount > 1 ? "s" : ""} en attente de validation
+                                            </span>
                                         </div>
+                                    )}
 
-                                        {localActes.map((acte) => (
-                                            <ActeCard
-                                                key={acte.id}
-                                                acte={acte}
-                                                onValidate={handleValidate}
-                                                onRefuse={handleRefuse}
-                                                isProcessing={processing}
-                                                selected={selectedIds.has(acte.id)}
-                                                onToggleSelect={toggleSelect}
+                                    {/* Barre de sélection groupée */}
+                                    <div className="flex items-center gap-3 flex-wrap">
+                                        <button
+                                            type="button"
+                                            onClick={toggleSelectAll}
+                                            className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold border border-purple-300 text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                readOnly
+                                                checked={allSelected}
+                                                className="w-3.5 h-3.5 accent-purple-600 pointer-events-none"
                                             />
-                                        ))}
-                                        <Pagination
-                                            paginator={localPaginator}
-                                            onPage={handlePageChange}
-                                        />
-                                    </div>
-                                )}
-                            </>
-                        )}
+                                            {allSelected ? "Tout désélectionner" : "Tout sélectionner"}
+                                        </button>
 
-                        {/* Onglet Historique */}
-                        {activeTab === "historique" && (
-                            <>
-                                {localHistorique.length === 0 ? (
-                                    <div className="text-center py-12">
-                                        <RotateCcw size={48} className="text-gray-200 mx-auto mb-3" />
-                                        <h3 className="text-lg font-semibold text-gray-700">
-                                            Aucun historique
-                                        </h3>
-                                        <p className="text-sm text-gray-400 mt-1">
-                                            Les actes traités apparaîtront ici.
-                                        </p>
+                                        {selectedIds.size > 0 && (
+                                            <>
+                                                <span className="text-xs font-semibold text-purple-700 bg-purple-100 px-2.5 py-1 rounded-full">
+                                                    {selectedIds.size} sélectionné{selectedIds.size > 1 ? "s" : ""}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleBulkValidate}
+                                                    disabled={processing}
+                                                    className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-purple-700 text-white rounded-lg hover:bg-purple-800 transition-colors disabled:opacity-50 shadow-sm"
+                                                >
+                                                    <Send size={12} />
+                                                    Valider tout → Pasteur
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleBulkRefuse}
+                                                    disabled={processing}
+                                                    className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                                                >
+                                                    <XCircle size={12} />
+                                                    Refuser tout
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedIds(new Set())}
+                                                    className="text-xs text-gray-500 hover:text-gray-700 underline"
+                                                >
+                                                    Annuler
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        {localHistorique.map((item, idx) => (
-                                            <HistoriqueCard key={`${item.id}-${idx}`} item={item} />
-                                        ))}
-                                        <Pagination
-                                            paginator={localHistoriquePaginator}
-                                            onPage={handleHistoriquePageChange}
+
+                                    {localActes.map((acte) => (
+                                        <ActeCard
+                                            key={acte.id}
+                                            acte={acte}
+                                            onValidate={handleValidate}
+                                            onRefuse={handleRefuse}
+                                            isProcessing={processing}
+                                            selected={selectedIds.has(acte.id)}
+                                            onToggleSelect={toggleSelect}
                                         />
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
+                                    ))}
+                                    <Pagination
+                                        paginator={localPaginator}
+                                        onPage={handlePageChange}
+                                    />
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    {/* Sous-onglet Historique */}
+                    {activeSubTab === "historique" && (
+                        <>
+                            {localHistorique.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <RotateCcw size={48} className="text-gray-200 mx-auto mb-3" />
+                                    <h3 className="text-lg font-semibold text-gray-700">
+                                        Aucun historique
+                                    </h3>
+                                    <p className="text-sm text-gray-400 mt-1">
+                                        Les actes traités apparaîtront ici.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {localHistorique.map((item, idx) => (
+                                        <HistoriqueCard key={`${item.id}-${idx}`} item={item} />
+                                    ))}
+                                    <Pagination
+                                        paginator={localHistoriquePaginator}
+                                        onPage={handleHistoriquePageChange}
+                                    />
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    {/* Sous-onglet Suivi des actes */}
+                    {activeSubTab === "suivi" && <TabHistoriqueActes />}
                 </div>
             </div>
         </div>

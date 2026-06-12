@@ -79,6 +79,7 @@ export default function Inscriptions({
 }) {
     // États principaux
     const [searchTerm, setSearchTerm] = useState("");
+    const [memberToDelete, setMemberToDelete] = useState(null);
 
     // Filtrage pour la liste principale (Tableau)
     const filteredMembers = members.filter(
@@ -129,7 +130,43 @@ export default function Inscriptions({
         document.body.removeChild(link);
     };
 
+    const confirmDelete = () => {
+        if (!memberToDelete) return;
+        router.delete(withBasePath("", `/responsable-famille/members/${memberToDelete.id}`));
+        setMemberToDelete(null);
+    };
+
     return (
+        <>
+        {memberToDelete && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 border border-rose-100">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-rose-100 rounded-full">
+                            <Trash2 className="w-5 h-5 text-rose-600" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-800">Supprimer le membre</h3>
+                    </div>
+                    <p className="text-gray-600 mb-6 text-sm">
+                        Voulez-vous vraiment supprimer <span className="font-semibold text-gray-900">{memberToDelete.prenom} {memberToDelete.nom}</span> de la famille ? Cette action est irréversible.
+                    </p>
+                    <div className="flex gap-3 justify-end">
+                        <button
+                            onClick={() => setMemberToDelete(null)}
+                            className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors text-sm"
+                        >
+                            Annuler
+                        </button>
+                        <button
+                            onClick={confirmDelete}
+                            className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-medium transition-colors text-sm flex items-center gap-2"
+                        >
+                            <Trash2 className="w-4 h-4" /> Supprimer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
         <div
             className="min-h-screen"
             style={{
@@ -419,20 +456,8 @@ export default function Inscriptions({
                                                     {!member.is_responsable && (
                                                         <button
                                                             onClick={() => {
-                                                                if (member.transfer_locked) {
-                                                                    return;
-                                                                }
-                                                                if (
-                                                                    confirm(
-                                                                        "Êtes-vous sûr de vouloir supprimer ce membre?",
-                                                                    )
-                                                                ) {
-                                                                    router.delete(
-                                                                        withBasePath(
-                                                                            "",
-                                                                            `/members/${member.id}`,
-                                                                        ),
-                                                                    );
+                                                                if (!member.transfer_locked) {
+                                                                    setMemberToDelete(member);
                                                                 }
                                                             }}
                                                             disabled={member.transfer_locked}
@@ -473,5 +498,6 @@ export default function Inscriptions({
                 </div>
             </div>
         </div>
+        </>
     );
 }

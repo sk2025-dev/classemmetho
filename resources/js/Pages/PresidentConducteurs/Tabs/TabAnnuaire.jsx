@@ -1,6 +1,5 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Head, Link, router } from "@inertiajs/react";
-import { withBasePath } from "../../../Utils/urlHelper";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { router } from "@inertiajs/react";
 
 // ==================== STYLES GLOBAUX ====================
 const GLOBAL_STYLES = `
@@ -19,7 +18,7 @@ const GLOBAL_STYLES = `
     .animate-scale-in { animation: scaleIn 0.2s ease forwards; }
     .animate-scale-out { animation: scaleOut 0.2s ease forwards; }
     .glass-panel { background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--glass-border); box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
-    
+
     /* Boutons */
     .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.5rem 1rem; border-radius: 0.75rem; font-weight: 600; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; gap: 0.5rem; }
     .btn-primary { background-color: var(--primary); color: white; }
@@ -44,19 +43,19 @@ const GLOBAL_STYLES = `
     .btn-pdf:hover { background-color: #b45309; }
 
     /* Barre de filtres */
-    .filters-bar { 
-        border-radius: 1rem; 
-        padding: 1.5rem; 
-        margin-bottom: 1.5rem; 
-        display: flex; 
-        flex-direction: column; 
-        gap: 1rem; 
+    .filters-bar {
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
     }
 
     /* Première ligne : filtres avec défilement */
-    .filter-group { 
-        display: flex; 
-        gap: 0.5rem; 
+    .filter-group {
+        display: flex;
+        gap: 0.5rem;
         align-items: center;
         flex-wrap: nowrap;
         overflow-x: auto;
@@ -71,38 +70,38 @@ const GLOBAL_STYLES = `
         border-radius: 4px;
     }
 
-    .input-control { 
-        padding: 0.625rem 1rem; 
-        border-radius: 0.75rem; 
-        border: 1px solid #e5e7eb; 
-        background-color: rgba(255, 255, 255, 0.8); 
-        font-size: 0.875rem; 
-        color: #111827; 
-        transition: ring 0.2s; 
+    .input-control {
+        padding: 0.625rem 1rem;
+        border-radius: 0.75rem;
+        border: 1px solid #e5e7eb;
+        background-color: rgba(255, 255, 255, 0.8);
+        font-size: 0.875rem;
+        color: #111827;
+        transition: ring 0.2s;
         white-space: nowrap;
     }
-    .input-control:focus { 
-        border-color: var(--primary); 
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); 
-        outline: none; 
+    .input-control:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        outline: none;
     }
-    .input-search-wrapper { 
-        position: relative; 
-        flex: 1; 
-        min-width: 200px; 
+    .input-search-wrapper {
+        position: relative;
+        flex: 1;
+        min-width: 200px;
     }
-    .input-search-icon { 
-        position: absolute; 
-        left: 0.75rem; 
-        top: 50%; 
-        transform: translateY(-50%); 
-        color: #9ca3af; 
-        width: 1.25rem; 
-        height: 1.25rem; 
+    .input-search-icon {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+        width: 1.25rem;
+        height: 1.25rem;
     }
-    .input-search { 
-        padding-left: 2.5rem; 
-        width: 100%; 
+    .input-search {
+        padding-left: 2.5rem;
+        width: 100%;
     }
 
     /* Deuxième ligne : navigation et actions */
@@ -116,22 +115,22 @@ const GLOBAL_STYLES = `
         border-top: 1px solid rgba(255, 255, 255, 0.5);
         padding-top: 1rem;
     }
-    .filter-nav { 
-        display: flex; 
-        gap: 0.5rem; 
-        flex-wrap: wrap; 
+    .filter-nav {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
     }
-    .filter-nav-btn { 
-        background: rgba(255,255,255,0.5); 
-        border: 1px solid rgba(255,255,255,0.5); 
-        padding: 0.5rem 1rem; 
-        border-radius: 2rem; 
-        font-weight: 600; 
-        font-size: 0.875rem; 
-        color: #1f2937; 
-        cursor: pointer; 
-        transition: all 0.2s; 
-        backdrop-filter: blur(4px); 
+    .filter-nav-btn {
+        background: rgba(255,255,255,0.5);
+        border: 1px solid rgba(255,255,255,0.5);
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: #1f2937;
+        cursor: pointer;
+        transition: all 0.2s;
+        backdrop-filter: blur(4px);
         white-space: nowrap;
     }
     .filter-nav-btn:hover { background: white; border-color: var(--primary); }
@@ -146,7 +145,7 @@ const GLOBAL_STYLES = `
 
     /* Table Styles */
     .table-container { background: var(--glass-bg); border-radius: 1rem; box-shadow: var(--shadow-lg); overflow: hidden; border: 1px solid var(--glass-border); display: flex; flex-direction: column; flex: 1; min-height: 500px; position: relative; }
-    .table-scroll { overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch; } 
+    .table-scroll { overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch; }
     table { width: 100%; min-width: 2800px; border-collapse: collapse; text-align: left; }
     thead { background: #f59e0b; color: white; position: sticky; top: 0; z-index: 10; }
     th { padding: 0.75rem; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
@@ -405,18 +404,18 @@ const GLOBAL_STYLES = `
 
     /* Vue grille - style Facebook/album avec bannière semi-transparente */
     .grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; padding: 1rem; }
-    .grid-card { 
-        background: white; 
-        border-radius: 1rem; 
-        overflow: hidden; 
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
-        transition: transform 0.2s, box-shadow 0.2s; 
-        border: 1px solid #f3f4f6; 
+    .grid-card {
+        background: white;
+        border-radius: 1rem;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid #f3f4f6;
         display: flex;
         flex-direction: column;
     }
     .grid-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
-    
+
     /* Bannière semi-transparente */
     .grid-cover {
         height: 100px;
@@ -424,7 +423,7 @@ const GLOBAL_STYLES = `
         position: relative;
         z-index: 1;
     }
-    
+
     /* Conteneur de la photo de profil avec z-index supérieur */
     .grid-profile-container {
         display: flex;
@@ -534,7 +533,7 @@ const normalizeMember = (member) => {
         member?.famille || member?.family?.nom || member?.family_name || member?.family_code, "-"
     );
 
-    // Sacrements : extraits de la relation imbriquée member.sacrements
+    // Sacrements : extraits de la relation imbriquée member.sacrements avec fallback sur champs plats
     const s = member?.sacrements || {};
     const baptise           = s.baptise           ?? member?.baptise           ?? false;
     const dateBapteme       = s.bapteme_date       || member?.dateBapteme       || s.date_bapteme       || null;
@@ -553,7 +552,6 @@ const normalizeMember = (member) => {
 
     return {
         ...member,
-        // Identité
         prenoms,
         classeMethodiste: classeName,
         famille:     familleName,
@@ -575,7 +573,7 @@ const normalizeMember = (member) => {
         statut_marital: member?.statut_marital || null,
         adresse:   toText(member?.adresse   || member?.family?.adresse   || member?.address, "-"),
         quartier:  toText(member?.quartier  || member?.family?.quartier, "-"),
-        // Sacrements (extraits proprement)
+        // Sacrements extraits proprement
         baptise, dateBapteme, lieuBapteme,
         premiereCommunion, dateCommunion, lieuCommunion,
         marieReligieusement, dateMarReligieux, lieuMarReligieux,
@@ -647,9 +645,7 @@ const MemberDetailsModal = ({
         )}`;
     };
 
-    const initial = (member?.prenoms || member?.nom || "?")
-        .charAt(0)
-        .toUpperCase();
+    const initial = (member?.prenoms || member?.nom || "?").charAt(0).toUpperCase();
     const fallbackAvatar = getFallbackAvatar(initial);
     const photoSrc = member?.photo || fallbackAvatar;
 
@@ -665,17 +661,11 @@ const MemberDetailsModal = ({
                         <img
                             src={photoSrc}
                             alt={`${member.prenoms} ${member.nom}`}
-                            onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = fallbackAvatar;
-                            }}
+                            onError={(e) => { e.target.onerror = null; e.target.src = fallbackAvatar; }}
                         />
                     </div>
                     <div className="member-identity-info">
-                        <p>
-                            <strong>Nom & Prénoms :</strong> {member.prenoms}{" "}
-                            {member.nom}
-                        </p>
+                        <p><strong>Nom & Prénoms :</strong> {member.prenoms} {member.nom}</p>
                         <p>
                             <strong>Genre :</strong>{" "}
                             {member.sexe === "M" ? "Masculin" : "Féminin"}
@@ -687,13 +677,8 @@ const MemberDetailsModal = ({
                                 : "-"}
                         </p>
                         {member.lieu_naissance && (
-                            <p>
-                                <strong>Lieu de naissance :</strong>{" "}
-                                {member.lieu_naissance}
-                            </p>
+                            <p><strong>Lieu de naissance :</strong> {member.lieu_naissance}</p>
                         )}
-
-                        {/* ── Identifiants ── */}
                         <p>
                             <strong>Code membre :</strong>{" "}
                             <span style={{ fontFamily: "monospace", background: "#f1f5f9", padding: "1px 6px", borderRadius: 4 }}>
@@ -706,46 +691,24 @@ const MemberDetailsModal = ({
                                 {member.codeFamille || member?.family?.code_famille || "-"}
                             </span>
                         </p>
-
-                        {/* ── Famille ── */}
-                        <p>
-                            <strong>Famille :</strong> {member.famille || "-"}
-                        </p>
+                        <p><strong>Famille :</strong> {member.famille || "-"}</p>
                         <p>
                             <strong>Relation familiale :</strong>{" "}
                             <span style={{ color: "#7c3aed", fontWeight: 600 }}>
                                 {member.relation || "-"}
                             </span>
                         </p>
-
-                        {/* ── Classe & Rôle ── */}
-                        <p>
-                            <strong>Classe méthodiste :</strong>{" "}
-                            {member.classeMethodiste || "-"}
-                        </p>
-                        <p>
-                            <strong>Fonction :</strong> {member.fonction || "-"}
-                        </p>
-                        <p>
-                            <strong>Profession :</strong>{" "}
-                            {member.profession || "-"}
-                        </p>
+                        <p><strong>Classe méthodiste :</strong> {member.classeMethodiste || "-"}</p>
+                        <p><strong>Fonction :</strong> {member.fonction || "-"}</p>
+                        <p><strong>Profession :</strong> {member.profession || "-"}</p>
                         {member.niveau_etude && (
-                            <p>
-                                <strong>Niveau d'étude :</strong> {member.niveau_etude}
-                            </p>
+                            <p><strong>Niveau d'étude :</strong> {member.niveau_etude}</p>
                         )}
-
-                        {/* ── Divers ── */}
                         {member.numero_cni && (
-                            <p>
-                                <strong>N° CNI :</strong> {member.numero_cni}
-                            </p>
+                            <p><strong>N° CNI :</strong> {member.numero_cni}</p>
                         )}
                         {member.hors_communaute && (
-                            <p>
-                                <strong>Hors communauté :</strong> Oui
-                            </p>
+                            <p><strong>Hors communauté :</strong> Oui</p>
                         )}
                         {member.retrait && (
                             <p>
@@ -761,7 +724,6 @@ const MemberDetailsModal = ({
             <div className="detail-section">
                 <h3>🕊️ Informations spirituelles</h3>
                 <div className="spiritual-info">
-                    {/* Baptême */}
                     <p>
                         <strong>Baptême :</strong>{" "}
                         <span style={{ color: member.baptise ? "#16a34a" : "#dc2626", fontWeight: 600 }}>
@@ -779,7 +741,6 @@ const MemberDetailsModal = ({
                         </p>
                     )}
 
-                    {/* 1ère Communion */}
                     <p>
                         <strong>1ère Communion :</strong>{" "}
                         <span style={{ color: member.premiereCommunion ? "#16a34a" : "#dc2626", fontWeight: 600 }}>
@@ -797,7 +758,6 @@ const MemberDetailsModal = ({
                         </p>
                     )}
 
-                    {/* Mariage religieux */}
                     <p>
                         <strong>Mariage religieux :</strong>{" "}
                         <span style={{ color: member.marieReligieusement ? "#16a34a" : "#dc2626", fontWeight: 600 }}>
@@ -924,16 +884,18 @@ const MemberDetailsModal = ({
 };
 
 // ==================== COMPOSANT PRINCIPAL ====================
-const Annuaire = ({
+export default function TabAnnuaire({
     members = null,
     families = null,
     classes = null,
     view = "all",
     cotisations = {},
-    user = { role: "user" },
+    annuaireUser = { role: "user" },
     filters = {},
     filterOptions = { classes: [], familles: [], professions: [], roles: [] }, // <-- professions remplace statuts
-}) => {
+}) {
+    const user = annuaireUser;
+
     const toPaginated = (source, defaultPerPage = 10) => {
         if (!source)
             return {
@@ -1252,7 +1214,7 @@ const Annuaire = ({
             ),
         ].join("\n");
 
-        const blob = new Blob(["\uFEFF" + csvContent], {
+        const blob = new Blob(["﻿" + csvContent], {
             type: "text/csv;charset=utf-8;",
         });
         const link = document.createElement("a");
@@ -2048,9 +2010,8 @@ const Annuaire = ({
     };
 
     return (
-        <>
-            <Head title="Annuaire des membres" />
-            <style>{GLOBAL_STYLES}</style>
+        <div className="space-y-4">
+            <style dangerouslySetInnerHTML={{ __html: GLOBAL_STYLES }} />
 
             {isModalOpen && (
                 <div
@@ -2120,249 +2081,209 @@ const Annuaire = ({
                 </div>
             )}
 
-            <div
-                className="min-h-screen py-8 px-4 animate-fade-in-up"
-                style={{
-                    background:
-                        "linear-gradient(135deg, #6B46C1 0%, #1E40AF 50%, #B6C01A 100%)",
-                }}
-            >
-                <div className="w-full">
-                    <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4 w-full">
-                        <div className="w-full md:w-auto flex-shrink-0">
-                            <Link
-                                href={withBasePath("", "/bureau-conducteur/dashboard")}
-                                className="btn btn-secondary gap-2 w-full md:w-auto justify-center"
-                            >
-                                <svg
-                                    className="w-5 h-5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                                    />
-                                </svg>
-                                Retour
-                            </Link>
-                        </div>
-                        <h1 className="text-xl md:text-2xl font-bold text-white text-center flex-1 order-first md:order-none">
-                            Annuaire des membres
-                        </h1>
-                        <div className="w-full md:w-auto flex-shrink-0"></div>
+            <div className="glass-panel filters-bar">
+                <div className="filter-group">
+                    <div className="input-search-wrapper">
+                        <svg
+                            className="input-search-icon"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                            />
+                        </svg>
+                        <input
+                            type="text"
+                            placeholder="Rechercher (nom, prénom, téléphone, profession, code membre, code famille)..."
+                            className="input-control input-search"
+                            value={searchInput}
+                            onChange={(e) =>
+                                setSearchInput(e.target.value)
+                            }
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    submitSearch();
+                                }
+                            }}
+                        />
                     </div>
 
-                    <div className="glass-panel filters-bar">
-                        <div className="filter-group">
-                            <div className="input-search-wrapper">
-                                <svg
-                                    className="input-search-icon"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
+                    <select
+                        value={classeFilter}
+                        onChange={(e) =>
+                            setClasseFilter(e.target.value)
+                        }
+                        className="input-control"
+                        style={{ minWidth: "140px" }}
+                    >
+                        <option value="">Toutes classes</option>
+                        {filterOptions.classes.map((c, idx) => (
+                            <option
+                                key={`classe-${c.id}-${idx}`}
+                                value={c.id}
+                            >
+                                {c.nom}
+                            </option>
+                        ))}
+                    </select>
+
+                    <select
+                        value={familleFilter}
+                        onChange={(e) =>
+                            setFamilleFilter(e.target.value)
+                        }
+                        className="input-control"
+                        style={{ minWidth: "140px" }}
+                    >
+                        <option value="">Toutes familles</option>
+                        {filterOptions.familles.map((f, idx) => (
+                            <option
+                                key={`famille-${f.id}-${idx}`}
+                                value={f.id}
+                            >
+                                {f.nom}
+                            </option>
+                        ))}
+                    </select>
+
+                    <select
+                        value={professionFilter}
+                        onChange={(e) =>
+                            setProfessionFilter(e.target.value)
+                        }
+                        className="input-control"
+                        style={{ minWidth: "140px" }}
+                    >
+                        <option value="">Toutes professions</option>
+                        {filterOptions.professions.map((p, idx) => (
+                            <option
+                                key={`profession-${p.value}-${idx}`}
+                                value={p.value}
+                            >
+                                {p.label}
+                            </option>
+                        ))}
+                    </select>
+
+                    <select
+                        value={roleFilter}
+                        onChange={(e) => setRoleFilter(e.target.value)}
+                        className="input-control"
+                        style={{ minWidth: "140px" }}
+                    >
+                        <option value="">Tous rôles</option>
+                        {filterOptions.roles.map((r, idx) => (
+                            <option
+                                key={`role-${r.value}-${idx}`}
+                                value={r.value}
+                            >
+                                {r.label}
+                            </option>
+                        ))}
+                    </select>
+
+                    <button
+                        onClick={resetFilters}
+                        className="btn btn-success"
+                    >
+                        <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                            />
+                        </svg>
+                        Réinitialiser
+                    </button>
+
+                    <button
+                        onClick={submitSearch}
+                        className="btn btn-primary"
+                    >
+                        <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                            />
+                        </svg>
+                        Rechercher
+                    </button>
+                </div>
+
+                <div className="filter-second-row">
+                    <div className="filter-nav">
+                        {["all", "families", "classes"].map(
+                            (viewKey) => (
+                                <button
+                                    key={viewKey}
+                                    className={`filter-nav-btn ${currentView === viewKey ? "active" : ""}`}
+                                    onClick={() => switchView(viewKey)}
                                 >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                    />
-                                </svg>
-                                <input
-                                    type="text"
-                                    placeholder="Rechercher (nom, prénom, téléphone, profession, code membre, code famille)..."
-                                    className="input-control input-search"
-                                    value={searchInput}
-                                    onChange={(e) =>
-                                        setSearchInput(e.target.value)
-                                    }
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                            e.preventDefault();
-                                            submitSearch();
-                                        }
-                                    }}
-                                />
-                            </div>
+                                    {viewKey === "all"
+                                        ? "Tous"
+                                        : viewKey === "families"
+                                          ? "Familles"
+                                          : "Classes"}
+                                </button>
+                            ),
+                        )}
+                    </div>
 
-                            <select
-                                value={classeFilter}
-                                onChange={(e) =>
-                                    setClasseFilter(e.target.value)
-                                }
-                                className="input-control"
-                                style={{ minWidth: "140px" }}
-                            >
-                                <option value="">Toutes classes</option>
-                                {filterOptions.classes.map((c, idx) => (
-                                    <option
-                                        key={`classe-${c.id}-${idx}`}
-                                        value={c.id}
-                                    >
-                                        {c.nom}
-                                    </option>
-                                ))}
-                            </select>
-
-                            <select
-                                value={familleFilter}
-                                onChange={(e) =>
-                                    setFamilleFilter(e.target.value)
-                                }
-                                className="input-control"
-                                style={{ minWidth: "140px" }}
-                            >
-                                <option value="">Toutes familles</option>
-                                {filterOptions.familles.map((f, idx) => (
-                                    <option
-                                        key={`famille-${f.id}-${idx}`}
-                                        value={f.id}
-                                    >
-                                        {f.nom}
-                                    </option>
-                                ))}
-                            </select>
-
-                            <select
-                                value={professionFilter}
-                                onChange={(e) =>
-                                    setProfessionFilter(e.target.value)
-                                }
-                                className="input-control"
-                                style={{ minWidth: "140px" }}
-                            >
-                                <option value="">Toutes professions</option>
-                                {filterOptions.professions.map((p, idx) => (
-                                    <option
-                                        key={`profession-${p.value}-${idx}`}
-                                        value={p.value}
-                                    >
-                                        {p.label}
-                                    </option>
-                                ))}
-                            </select>
-
-                            <select
-                                value={roleFilter}
-                                onChange={(e) => setRoleFilter(e.target.value)}
-                                className="input-control"
-                                style={{ minWidth: "140px" }}
-                            >
-                                <option value="">Tous rôles</option>
-                                {filterOptions.roles.map((r, idx) => (
-                                    <option
-                                        key={`role-${r.value}-${idx}`}
-                                        value={r.value}
-                                    >
-                                        {r.label}
-                                    </option>
-                                ))}
-                            </select>
-
+                    {currentView === "all" && (
+                        <div className="filter-actions">
                             <button
-                                onClick={resetFilters}
-                                className="btn btn-success"
+                                onClick={() =>
+                                    setViewMode(
+                                        viewMode === "table"
+                                            ? "grid"
+                                            : "table",
+                                    )
+                                }
+                                className="btn btn-secondary"
                             >
-                                <svg
-                                    className="w-4 h-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
-                                Réinitialiser
+                                {viewMode === "table"
+                                    ? "Vue grille"
+                                    : "Vue liste"}
                             </button>
-
                             <button
-                                onClick={submitSearch}
-                                className="btn btn-primary"
+                                onClick={exportToExcel}
+                                className="btn btn-excel"
                             >
-                                <svg
-                                    className="w-4 h-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                    />
-                                </svg>
-                                Rechercher
+                                Excel
+                            </button>
+                            <button
+                                onClick={exportToPDF}
+                                className="btn btn-pdf"
+                            >
+                                PDF
                             </button>
                         </div>
-
-                        <div className="filter-second-row">
-                            <div className="filter-nav">
-                                {["all", "families", "classes"].map(
-                                    (viewKey) => (
-                                        <button
-                                            key={viewKey}
-                                            className={`filter-nav-btn ${currentView === viewKey ? "active" : ""}`}
-                                            onClick={() => switchView(viewKey)}
-                                        >
-                                            {viewKey === "all"
-                                                ? "Tous"
-                                                : viewKey === "families"
-                                                  ? "Familles"
-                                                  : "Classes"}
-                                        </button>
-                                    ),
-                                )}
-                            </div>
-
-                            {currentView === "all" && (
-                                <div className="filter-actions">
-                                    <button
-                                        onClick={() =>
-                                            setViewMode(
-                                                viewMode === "table"
-                                                    ? "grid"
-                                                    : "table",
-                                            )
-                                        }
-                                        className="btn btn-secondary"
-                                    >
-                                        {viewMode === "table"
-                                            ? "Vue grille"
-                                            : "Vue liste"}
-                                    </button>
-                                    <button
-                                        onClick={exportToExcel}
-                                        className="btn btn-excel"
-                                    >
-                                        Excel
-                                    </button>
-                                    <button
-                                        onClick={exportToPDF}
-                                        className="btn btn-pdf"
-                                    >
-                                        PDF
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="table-container mt-6">
-                        {renderActiveView()}
-                    </div>
+                    )}
                 </div>
             </div>
-        </>
-    );
-};
 
-export default Annuaire;
+            <div className="table-container">
+                {renderActiveView()}
+            </div>
+        </div>
+    );
+}

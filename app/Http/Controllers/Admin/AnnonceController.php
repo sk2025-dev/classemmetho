@@ -99,6 +99,7 @@ class AnnonceController extends Controller
             'statut'           => ActeLiturgique::STATUT_PUBLIEE,
             'date_publication' => now(),
             'publiee_par'      => $user->id,
+            'vu_par_demandeur' => false,
         ]);
 
         return response()->json([

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActeLiturgique;
 use App\Models\Priere;
 use App\Models\PriereView;
 use App\Models\Sondage;
@@ -35,6 +36,10 @@ class DashboardController extends Controller
                         ->where('user_id', $user->id)
                         ->select('priere_id'),
                 )
+                ->count(),
+            'flashInfoBadgeCount' => ActeLiturgique::annonces()
+                ->whereNull('family_id')
+                ->where('statut', ActeLiturgique::STATUT_Soumise)
                 ->count(),
             'familyName' => $user->family?->nom,
             'classeLabel' => $user->classe?->nom,

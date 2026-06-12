@@ -39,6 +39,7 @@ class DashboardController extends Controller
                 'role' => $user->role,
                 'pendingInscriptions' => 0,
                 'pendingLiturgieCount' => 0,
+                'pendingBureauConducteursCount' => $this->pendingBureauConducteursCount($user),
                 'surveyBadgeCount' => 0,
                 'prayerBadgeCount' => 0,
                 'flashAnnouncements' => $this->buildFlashAnnouncements(),
@@ -149,6 +150,7 @@ class DashboardController extends Controller
             'role' => $user->role,
             'pendingInscriptions' => $pendingCount,
             'pendingLiturgieCount' => $pendingLiturgieCount,
+            'pendingBureauConducteursCount' => $this->pendingBureauConducteursCount($user),
             'surveyBadgeCount' => $surveyBadgeCount,
             'prayerBadgeCount' => $prayerBadgeCount,
             'flashAnnouncements' => $this->buildFlashAnnouncements(),
@@ -170,6 +172,17 @@ class DashboardController extends Controller
                 })
                 ->count(),
         ]);
+    }
+
+    private function pendingBureauConducteursCount(User $user): int
+    {
+        $fonction = strtolower(trim((string) ($user->fonction?->nom ?? '')));
+
+        if ($fonction !== 'président des conducteurs') {
+            return 0;
+        }
+
+        return ActeLiturgique::where('statut', ActeLiturgique::STATUT_TRANSMISE_AU_BUREAU_CONDUCTEUR)->count();
     }
 
     private function buildFlashAnnouncements()

@@ -66,7 +66,12 @@ class LiturgieController extends Controller
                         ->orWhereNull('est_annonce');
                 })->whereNotIn('type_acte', $annonceTypes);
             })
-            ->where('acteur_id', $user->id)
+            ->where(function ($q) use ($user) {
+                $q->where('acteur_id', $user->id)
+                    ->orWhereHas('acte', function ($sub) use ($user) {
+                        $sub->where('pasteur_id', $user->id);
+                    });
+            })
             ->whereIn('statut_nouveau', ['VALIDEE', 'REFUSEE_PAR_PASTEUR', 'CELEBRE', 'TERMINE'])
             ->latest()
             ->get()

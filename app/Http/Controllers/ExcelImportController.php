@@ -165,7 +165,7 @@ class ExcelImportController extends Controller
                 foreach ($cellIterator as $cell) {
                     $value = $this->getCellValue($cell, $evaluator);
                     if ($value !== null && $value !== '') {
-                        $headers[] = strtolower(trim((string)$value));
+                        $headers[] = str_replace([' ', '-', '.'], '_', strtolower(trim((string)$value)));
                     }
                 }
             }
@@ -394,6 +394,12 @@ class ExcelImportController extends Controller
             'classes'            => 'classe',
             'classe_methodiste'  => 'classe',
             'classe_methodique'  => 'classe',
+            // Ville / commune
+            'commune'            => 'ville',
+            'localite'           => 'ville',
+            'localité'           => 'ville',
+            'city'               => 'ville',
+            'town'               => 'ville',
         ];
 
         $normalized = [];
@@ -500,7 +506,11 @@ class ExcelImportController extends Controller
             'situation_m'              => 'statut_marital',
             'situation_maritale'       => 'statut_marital',
             'statut_marital'           => 'statut_marital',
+            'statut_matrimonial'       => 'statut_marital',
+            'statut_matrimoniale'      => 'statut_marital',
             'situation_matrimoniale'   => 'statut_marital',
+            'situation_matrimonial'    => 'statut_marital',
+            'matrimonial'              => 'statut_marital',
 
             // Rôle
             'type'                   => 'role',
@@ -754,6 +764,16 @@ class ExcelImportController extends Controller
                 }
             }
             $data[$dbCol] = $val;
+            $hasData = true;
+        }
+
+        // Convertir statut_marital en flags booléens pour user_sacrements
+        if (!empty($row['statut_marital'])) {
+            $statut = strtolower(trim($this->stripAccents((string)$row['statut_marital'])));
+            $data['est_marie']    = str_contains($statut, 'mari');
+            $data['est_veuf']     = str_contains($statut, 'veuf') || str_contains($statut, 'veuve');
+            $data['est_divorce']  = str_contains($statut, 'divorc');
+            $data['dot_effectue'] = str_contains($statut, 'dot');
             $hasData = true;
         }
 

@@ -19,6 +19,7 @@ class ActeLiturgique extends Model
         'reference',
         'type_acte',
         'statut',
+        'vu_par_demandeur',
         'membre_id',
         'classe_id',
         'conducteur_id',
@@ -37,6 +38,7 @@ class ActeLiturgique extends Model
         'family_id',
         'publiee_par',
         'est_annonce',
+        'target_role',
     ];
 
     protected $casts = [
@@ -45,6 +47,7 @@ class ActeLiturgique extends Model
         'date_expiration' => 'datetime',
         'details' => 'array',
         'est_principale' => 'boolean',
+        'vu_par_demandeur' => 'boolean',
     ];
 
     // Constantes pour les types d'actes
@@ -67,6 +70,19 @@ class ActeLiturgique extends Model
         self::TYPE_GRACE,
         self::TYPE_GENERALE,
         self::TYPE_FELICITATIONS,
+    ];
+
+    // Cibles possibles pour un flash info
+    public const TARGET_ALL = 'all';
+    public const TARGET_CONDUCTEUR = 'conducteur';
+    public const TARGET_RESPONSABLE_FAMILLE = 'responsable_famille';
+    public const TARGET_PASTEUR = 'pasteur';
+
+    public const TARGET_ROLES = [
+        self::TARGET_ALL,
+        self::TARGET_CONDUCTEUR,
+        self::TARGET_RESPONSABLE_FAMILLE,
+        self::TARGET_PASTEUR,
     ];
 
     // Constantes pour les statuts

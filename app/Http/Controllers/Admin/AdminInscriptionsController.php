@@ -106,20 +106,6 @@ class AdminInscriptionsController extends Controller
         return Inertia::render('Admin/Inscriptions/RegisterPasteur');
     }
 
-    public function createBureauConducteurForm()
-    {
-        return Inertia::render('Admin/Inscriptions/RegisterPasteur', [
-            'targetRole' => 'bureau_conducteur',
-            'roleLabel'  => 'Bureau des Conducteurs',
-        ]);
-    }
-
-    public function storeBureauConducteur(Request $request)
-    {
-        // Identique à storePastor mais avec rôle bureau_conducteur
-        return $this->storePastor($request, 'bureau_conducteur');
-    }
-
     /**
      * Créer directement une famille avec tous les utilisateurs
      * Admin crée = pas d'approbation requise
@@ -295,7 +281,7 @@ class AdminInscriptionsController extends Controller
                     $membre = User::create([
                         'nom' => strtoupper($membreData['nom']),
                         'prenom' => ucfirst($membreData['prenom']),
-                        'email' => $membreData['email'],
+                        'email' => $membreData['email'] ?? null,
                         'password' => Hash::make($membreTempPassword),
                         'identifier' => $membreIdentifier,
                         'telephone' => $membreData['telephone'] ?? null,
@@ -560,7 +546,7 @@ class AdminInscriptionsController extends Controller
                     $membre = User::create([
                         'nom' => strtoupper($membreData['nom']),
                         'prenom' => ucfirst($membreData['prenom']),
-                        'email' => $membreData['email'],
+                        'email' => $membreData['email'] ?? null,
                         'password' => Hash::make($membreTempPassword),
                         'identifier' => $membreIdentifier,
                         'telephone' => $membreData['telephone'] ?? null,
@@ -825,7 +811,7 @@ class AdminInscriptionsController extends Controller
                 $membre = User::create([
                     'nom' => strtoupper($membreData['nom']),
                     'prenom' => ucfirst($membreData['prenom']),
-                    'email' => $membreData['email'],
+                    'email' => $membreData['email'] ?? null,
                     'password' => Hash::make($membreTempPassword),
                     'identifier' => $membreIdentifier,
                     'telephone' => $membreData['telephone'] ?? null,

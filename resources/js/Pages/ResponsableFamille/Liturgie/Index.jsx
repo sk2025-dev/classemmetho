@@ -92,14 +92,14 @@ const normalizeActe = (acte) => {
     const blockedCeremonyStatuts = [
         "CEREMONIE_SOUMISE_AU_CONDUCTEUR",
         "CEREMONIE_TRANSMISE_AU_PASTEUR",
+        "CEREMONIE_VALIDEE_PAR_PASTEUR",
+        "CEREMONIE_VALIDE_PAR_PASTEUR",
     ];
-    const hasFicheEnvoyee = Boolean(details.fiche_pasteur_envoyee);
 
     const canChooseDate =
         type === "mariage" &&
         validStatuts.includes(statut) &&
-        !blockedCeremonyStatuts.includes(ceremonyStatut) &&
-        hasFicheEnvoyee;
+        !blockedCeremonyStatuts.includes(ceremonyStatut);
 
     return {
         ...acte,
@@ -119,6 +119,7 @@ export default function Index({
     conducteurs = {},
     annonces: rawAnnonces = [],
     flashAnnonces = [],
+    flashInfoBadgeCount = 0,
 }) {
     /* ── acte array défensif ── */
     const [localActes, setLocalActes] = useState(() => normalizeActes(actes));
@@ -265,6 +266,10 @@ export default function Index({
         ),
     ).length;
     const familyName = guessFamilyName(familyMembers);
+    const isMarriage =
+        String(selectedActe?.type_acte || "")
+            .trim()
+            .toLowerCase() === "mariage";
     const detailRows = useMemo(
         () => formatDetails(selectedActe?.details),
         [selectedActe],
@@ -718,6 +723,11 @@ export default function Index({
                             {localFlashAnnonces.filter(a => a.statut === 'SOUMISE').length > 0 && (
                                 <span className="tbadge tbadge-terra">
                                     {localFlashAnnonces.filter(a => a.statut === 'SOUMISE').length}
+                                </span>
+                            )}
+                            {flashInfoBadgeCount > 0 && (
+                                <span className="tbadge tbadge-sage">
+                                    {flashInfoBadgeCount}
                                 </span>
                             )}
                         </button>

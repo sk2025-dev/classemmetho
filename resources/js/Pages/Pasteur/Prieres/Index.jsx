@@ -267,9 +267,6 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
             ...current,
             [request.id]: !isExpanded,
         }));
-        if (!isExpanded && ["Nouvelle", "Vu"].includes(request.status)) {
-            updateRequestStatus(request.id, "En priere");
-        }
     };
 
     const tabs = useMemo(
@@ -552,18 +549,40 @@ export default function PasteurPrieresIndex({ prayerRequests = [] }) {
                                                                                 request.message
                                                                             }
                                                                         </p>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() =>
-                                                                                handleToggleDetails(
-                                                                                    request,
-                                                                                )
-                                                                            }
-                                                                            className="mt-3 inline-flex items-center rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700"
-                                                                        >
-                                                                            Voir
-                                                                            moins
-                                                                        </button>
+                                                                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() =>
+                                                                                    handleToggleDetails(
+                                                                                        request,
+                                                                                    )
+                                                                                }
+                                                                                className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700"
+                                                                            >
+                                                                                Voir
+                                                                                moins
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                disabled={
+                                                                                    request.status === "En priere" ||
+                                                                                    ["Exaucement", "Exaucement partage", "Non exaucee"].includes(request.status)
+                                                                                }
+                                                                                onClick={() => updateRequestStatus(request.id, "En priere")}
+                                                                                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                                                                                    request.status === "En priere" ||
+                                                                                    ["Exaucement", "Exaucement partage", "Non exaucee"].includes(request.status)
+                                                                                        ? "cursor-not-allowed bg-emerald-100 text-emerald-700"
+                                                                                        : "bg-emerald-600 text-white hover:bg-emerald-700"
+                                                                                }`}
+                                                                            >
+                                                                                <HeartHandshake className="h-3.5 w-3.5" />
+                                                                                {request.status === "En priere" ||
+                                                                                ["Exaucement", "Exaucement partage", "Non exaucee"].includes(request.status)
+                                                                                    ? "Marquee comme en priere"
+                                                                                    : "Marquer comme en priere"}
+                                                                            </button>
+                                                                        </div>
                                                                     </div>
                                                                 ) : (
                                                                     <div className="flex flex-wrap items-center gap-2">

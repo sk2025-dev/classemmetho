@@ -21,7 +21,6 @@ export default function ProfilePhotoDisplay({ user, size = 'md', className = '' 
 
     const sizeClass = sizeMap[size] || sizeMap.md;
 
-    // Extraire les initiales du nom
     const getInitials = () => {
         const name = user.name || user.prenom || 'U';
         const parts = name.trim().split(' ');
@@ -31,36 +30,21 @@ export default function ProfilePhotoDisplay({ user, size = 'md', className = '' 
         return name.substring(0, 2).toUpperCase();
     };
 
-    // Si une photo existe et n'a pas d'erreur, l'afficher
     if (user.profile_photo_url && !photoError) {
         return (
-            <div className={`${sizeClass} rounded-full overflow-hidden border-2 border-white shadow-md ${className}`}>
+            <div className={`${sizeClass} rounded-full overflow-hidden border-2 border-white shadow-md shrink-0 ${className}`}>
                 <img
                     src={user.profile_photo_url}
                     alt={user.name || 'Profile'}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover rounded-full"
                     onError={() => setPhotoError(true)}
                 />
             </div>
         );
     }
 
-    // Sinon afficher les initiales
     return (
-        <div className={`${sizeClass} rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-md ${className}`}>
-            {getInitials()}
-        </div>
-    );
-}
-                    {getInitials()}
-                </div>
-            </div>
-        );
-    }
-
-    // Sinon afficher les initiales
-    return (
-        <div className={`${sizeClass} rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-md ${className}`}>
+        <div className={`${sizeClass} rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-md shrink-0 ${className}`}>
             {getInitials()}
         </div>
     );

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\BureauConducteur\Sondage;
+namespace App\Http\Controllers\PresidentConducteurs\Sondage;
 
 use App\Http\Controllers\Controller;
 use App\Models\Sondage;
@@ -9,39 +9,35 @@ use App\Services\SondageService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class SondageController extends Controller
 {
     public function __construct(
         private readonly SondageService $sondageService,
-    ) {}
-
-    public function index(): Response
-    {
-        return Inertia::render('BureauConducteur/Sondages/Index', [
-            'sondages' => $this->sondageService->getAllSondages(),
-            'seenSurveyIds' => SondageView::query()
-                ->where('user_id', Auth::id())
-                ->pluck('sondage_id')
-                ->all(),
-        ]);
+    ) {
     }
 
-    public function show(int $id): Response
+    /**
+     * Détails analytiques d'un sondage (consommé en JSON par l'onglet Sondages embarqué).
+     */
+    public function details(int $id)
     {
         SondageView::updateOrCreate(
-            ['user_id' => Auth::id(), 'sondage_id' => $id],
-            ['viewed_at' => now()],
+            [
+                'user_id' => Auth::id(),
+                'sondage_id' => $id,
+            ],
+            [
+                'viewed_at' => now(),
+            ],
         );
 
         [$survey, $participantCount] = $this->resolveSurveyAnalyticsContext($id);
 
-        return Inertia::render('BureauConducteur/Sondages/Show', array_merge(
+        return response()->json(array_merge(
             $this->sondageService->buildSurveyAnalyticsPayload($survey, $participantCount),
             [
-                'exportUrl' => route('bureau_conducteur.sondages.export', $survey->id),
+                'exportUrl' => route('president_conducteurs.sondages.export', $survey->id),
             ],
         ));
     }

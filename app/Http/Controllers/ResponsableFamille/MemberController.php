@@ -7,6 +7,7 @@ use App\Helpers\PhotoHelper;
 use App\Models\Family;
 use App\Models\User;
 use App\Models\Fonction;
+use App\Models\Ville;
 use App\Services\TransferWorkflowService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -232,6 +233,9 @@ class MemberController extends Controller
         $fonctions = Fonction::select('id', 'nom', 'description')
             ->orderBy('nom')
             ->get();
+        $villes = Ville::select('id', 'nom')
+            ->orderBy('nom')
+            ->get();
         $member->profile_photo_url = $member->profile_photo_url
             ?: PhotoHelper::getPhotoUrl($member->photo_path, $member->prenom, $member->nom);
         $member->setAttribute(
@@ -243,6 +247,7 @@ class MemberController extends Controller
             'member' => $member,
             'family' => $member->family,
             'fonctions' => $fonctions,
+            'villes' => $villes,
         ]);
     }
 
@@ -280,6 +285,7 @@ class MemberController extends Controller
                 'fonction_id' => 'nullable|exists:fonctions,id',
                 'fonction_ids' => 'nullable|array|max:10',
                 'fonction_ids.*' => 'integer|exists:fonctions,id',
+                'ville_id' => 'nullable|exists:villes,id',
                 'relation' => 'nullable|string|max:255',
                 'photo' => 'nullable',
                 'baptise' => 'nullable|in:0,1',
@@ -332,6 +338,7 @@ class MemberController extends Controller
             'profession' => $validated['profession'] ?? $member->profession,
             'niveau_etude' => $validated['niveau_etude'] ?? $member->niveau_etude,
             'fonction_id' => $resolvedFonctionIds[0] ?? $member->fonction_id,
+            'ville_id' => $validated['ville_id'] ?? $member->ville_id,
             'relation' => $validated['relation'] ?? $member->relation,
             'photo_path' => $validated['photo_path'] ?? $member->photo_path,
             'profile_photo_url' => isset($validated['photo_path'])
@@ -466,5 +473,25 @@ class MemberController extends Controller
             ->values()
             ->take(10)
             ->all();
+    }
+
+    public function destroy($id)
+    {
+        $auth = Auth::user();
+        $member = User::findOrFail($id);
+
+        if ($member->family_id !== $auth->family_id) {
+            abort(403, 'Accès non autorisé');
+        }
+
+        if ($member->is_family_responsible || $member->id === $auth->id) {
+            abort(403, 'Impossible de supprimer le responsable de famille');
+        }
+
+        $member->delete();
+
+        return redirect()
+            ->route('responsable_famille.inscriptions')
+            ->with('success', 'Membre supprimé avec succès');
     }
 }

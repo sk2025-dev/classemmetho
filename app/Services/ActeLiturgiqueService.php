@@ -117,21 +117,34 @@ class ActeLiturgiqueService
         $currentStatus = $acte->statut;
         $role = $actor->role;
 
-        if (!$this->canTransition($currentStatus, $newStatus, $role)) {
+        // Le conducteur désigné président des conducteurs agit comme bureau_conducteur
+        // lorsqu'il valide/refuse une demande transmise au Bureau.
+        $actingAsBureau = false;
+        if ($role === 'conducteur'
+            && $currentStatus === 'TRANSMISE_AU_BUREAU_CONDUCTEUR'
+            && in_array($newStatus, ['TRANSMISE_AU_PASTEUR', 'REFUSEE_PAR_BUREAU_CONDUCTEUR'], true)
+        ) {
+            $fonctionNom = strtolower(trim((string) ($actor->fonction?->nom ?? '')));
+            $actingAsBureau = in_array($fonctionNom, ['président des conducteurs', 'president des conducteurs'], true);
+        }
+
+        $effectiveRole = $actingAsBureau ? 'bureau_conducteur' : $role;
+
+        if (!$this->canTransition($currentStatus, $newStatus, $effectiveRole)) {
             throw new InvalidArgumentException("Transition interdite: {$currentStatus} -> {$newStatus} ({$role})");
         }
 
-        $acte = DB::transaction(function () use ($acte, $newStatus, $actor, $commentaire, $currentStatus, $extraDetails) {
+        $acte = DB::transaction(function () use ($acte, $newStatus, $actor, $commentaire, $currentStatus, $extraDetails, $actingAsBureau) {
             $update = ['statut' => $newStatus];
 
-            if ($actor->role === 'conducteur') {
+            if ($actor->role === 'conducteur' && !$actingAsBureau) {
                 $update['conducteur_id'] = $actor->id;
                 if ($commentaire !== null && trim((string) $commentaire) !== '') {
                     $update['note_conducteur'] = $commentaire;
                 }
             }
 
-            if ($actor->role === 'bureau_conducteur') {
+            if ($actor->role === 'bureau_conducteur' || $actingAsBureau) {
                 $update['bureau_conducteur_id'] = $actor->id;
                 if ($commentaire !== null && trim((string) $commentaire) !== '') {
                     $update['note_admin'] = $commentaire;
@@ -159,24 +172,29 @@ class ActeLiturgiqueService
                     }
                 }
 
-                if ($newStatus === 'VALIDEE' && strtolower((string) $acte->type_acte) === 'mariage') {
+                if ($newStatus === 'VALIDEE' && strtolower((string) $acte->type_acte) === 'mariage' && is_array($extraDetails)) {
                     $details = (array) ($acte->details ?? []);
-                    if (is_array($extraDetails) && !empty($extraDetails['date_souhaitee'])) {
+                    $hasExtra = false;
+                    if (!empty($extraDetails['date_souhaitee'])) {
                         $details['date_souhaitee'] = $extraDetails['date_souhaitee'];
                         $update['date_souhaitee'] = $extraDetails['date_souhaitee'];
+                        $hasExtra = true;
                     }
-                    if (is_array($extraDetails) && !empty($extraDetails['ceremonie_creneau'])) {
+                    if (!empty($extraDetails['ceremonie_creneau'])) {
                         $details['ceremonie_creneau'] = $extraDetails['ceremonie_creneau'];
+                        $hasExtra = true;
                     }
-                    if (is_array($extraDetails) && !empty($extraDetails['lieu_ceremonie'])) {
+                    if (!empty($extraDetails['lieu_ceremonie'])) {
                         $details['lieu_ceremonie'] = $extraDetails['lieu_ceremonie'];
+                        $hasExtra = true;
                     }
-                    if (is_array($extraDetails) && !empty($extraDetails['temoins'])) {
+                    if (!empty($extraDetails['temoins'])) {
                         $details['temoins'] = $extraDetails['temoins'];
+                        $hasExtra = true;
                     }
-                    $details['ceremonie_statut'] = 'CEREMONIE_VALIDE_PAR_PASTEUR';
-                    $details['ceremonie_validee_pasteur_at'] = now()->toISOString();
-                    $update['details'] = $details;
+                    if ($hasExtra) {
+                        $update['details'] = $details;
+                    }
                 }
             }
 
@@ -235,8 +253,8 @@ class ActeLiturgiqueService
             }
         }
 
-        // pasteur notifié quand bureau_conducteur transmet
-        if ($actor->role === 'bureau_conducteur' && $newStatus === 'TRANSMISE_AU_PASTEUR') {
+        // pasteur notifié quand bureau_conducteur (ou président des conducteurs) transmet
+        if (($actor->role === 'bureau_conducteur' || $actingAsBureau) && $newStatus === 'TRANSMISE_AU_PASTEUR') {
             $pasteurs = User::query()
                 ->where('role', 'pasteur')
                 ->whereNotNull('email')

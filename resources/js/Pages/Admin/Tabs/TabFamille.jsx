@@ -268,11 +268,6 @@ const TabFamille = ({ familles = [], membersByFamilyCode = {} }) => {
                                     icon: "📞",
                                 },
                                 {
-                                    label: "Commune",
-                                    value: selectedFamily.ville || "—",
-                                    icon: "📍",
-                                },
-                                {
                                     label: "Adresse",
                                     value: selectedFamily.adresse,
                                     icon: "🏠",
@@ -436,7 +431,6 @@ const TabFamille = ({ familles = [], membersByFamilyCode = {} }) => {
                                     "Responsable",
                                     "Classe",
                                     "Téléphone",
-                                    "Commune",
                                     "Membres",
                                     "Actions",
                                 ].map((h) => (
@@ -532,9 +526,6 @@ const TabFamille = ({ familles = [], membersByFamilyCode = {} }) => {
                                                             {fam.telephone2}
                                                         </div>
                                                     )}
-                                            </td>
-                                            <td className="px-4 py-3 text-gray-600">
-                                                {fam.ville || "—"}
                                             </td>
                                             <td className="px-4 py-3">
                                                 <span

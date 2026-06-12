@@ -48,6 +48,14 @@ class CheckRole
             return $next($request);
         }
 
+        // Le conducteur désigné président des conducteurs accède aussi au module Bureau des Conducteurs.
+        if (in_array('bureau_conducteur', $roles, true) && $userRole === 'conducteur') {
+            $fonctionNom = strtolower(trim((string) ($user->fonction?->nom ?? '')));
+            if ($fonctionNom === 'président des conducteurs' || $fonctionNom === 'president des conducteurs') {
+                return $next($request);
+            }
+        }
+
         abort(403, 'Accès non autorisé pour ce rôle.');
     }
 }

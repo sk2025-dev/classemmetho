@@ -69,6 +69,13 @@ const Icon = ({ name, className }) => {
                 d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
             />
         ),
+        bureau: (
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"
+            />
+        ),
     };
     return (
         <svg
@@ -106,6 +113,7 @@ export default function Dashboard({
     pendingInscriptions = 0,
     pendingTransfers = 0,
     pendingLiturgieCount = 0,
+    pendingBureauConducteursCount = 0,
     surveyBadgeCount = 0,
     prayerBadgeCount = 0,
     auth,
@@ -178,6 +186,22 @@ export default function Dashboard({
             bg: "bg-teal-100",
         },
     ];
+
+    const isPresidentConducteurs =
+        String(auth?.user?.fonction?.nom || "")
+            .trim()
+            .toLowerCase() === "président des conducteurs";
+
+    if (isPresidentConducteurs) {
+        menuItems.push({
+            title: "Bureau des Conducteurs",
+            desc: "Espace du président des conducteurs",
+            icon: "bureau",
+            href: "/president-conducteurs/dashboard",
+            color: "text-orange-600",
+            bg: "bg-orange-100",
+        });
+    }
 
     const handleLogout = (e) => {
         e.preventDefault();
@@ -257,6 +281,12 @@ export default function Dashboard({
                                     pendingLiturgieCount > 0 && (
                                         <span className="absolute top-4 right-4 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold">
                                             {pendingLiturgieCount}
+                                        </span>
+                                    )}
+                                {item.icon === "bureau" &&
+                                    pendingBureauConducteursCount > 0 && (
+                                        <span className="absolute top-4 right-4 inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold shadow animate-pulse">
+                                            {pendingBureauConducteursCount > 99 ? "99+" : pendingBureauConducteursCount}
                                         </span>
                                     )}
                                 {item.icon === "sondage" &&

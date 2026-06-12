@@ -48,19 +48,19 @@ export default function ProfilePhoto({
 
     return (
         <div
-            className={`${sizeClass} ${roundedClass} overflow-hidden bg-gray-200 flex items-center justify-center ${className}`}
+            className={`${sizeClass} ${roundedClass} overflow-hidden bg-gray-200 flex items-center justify-center shrink-0 ${className}`}
             title={alt}
         >
             {hasValidPhotoUrl && !imageError ? (
                 <img
                     src={photoUrl}
                     alt={alt}
-                    className="w-full h-full object-cover"
+                    className={`w-full h-full object-cover ${roundedClass}`}
                     onError={() => setImageError(true)}
                     loading="lazy"
                 />
             ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-purple-500 text-white font-bold">
+                <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-purple-500 text-white font-bold ${roundedClass}`}>
                     {getInitials(user)}
                 </div>
             )}
