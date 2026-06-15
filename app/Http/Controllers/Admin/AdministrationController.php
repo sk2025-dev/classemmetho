@@ -400,15 +400,33 @@ class AdministrationController extends Controller
         // ÉTAPE 9: CRÉER LES FAMILLES FORMATÉES
         // ═══════════════════════════════════════════════════════════════
 
-        $famillesFormatted = Family::with(['responsable', 'ville', 'classe'])->get()->map(function ($f) use ($membersByFamily) {
+        $famillesFormatted = Family::with(['ville', 'classe'])->get()->map(function ($f) use ($membersByFamily, $membersByFamilyCode) {
+            // Le responsable et son code membre sont déduits des membres de la
+            // famille (mêmes données que celles utilisées par l'onglet
+            // Utilisateurs), pas de la colonne responsable_id de la famille,
+            // qui n'est pas toujours renseignée.
+            $famille_membres = $membersByFamilyCode[$f->code_famille] ?? [];
+            $famNomNormalise = mb_strtoupper(trim($f->nom));
+
+            $responsableMembre = collect($famille_membres)->first(fn ($m) => $m['role'] === 'responsable_famille')
+                ?? collect($famille_membres)->first(function ($m) use ($famNomNormalise) {
+                    $full1 = mb_strtoupper(trim($m['prenom'] . ' ' . $m['nom']));
+                    $full2 = mb_strtoupper(trim($m['nom'] . ' ' . $m['prenom']));
+                    return $full1 === $famNomNormalise || $full2 === $famNomNormalise;
+                })
+                ?? collect($famille_membres)->first();
+
+            $responsableNom = $responsableMembre
+                ? trim(($responsableMembre['prenom'] ?? "") . " " . ($responsableMembre['nom'] ?? ""))
+                : null;
+            $responsableCode = $responsableMembre['code_membre'] ?? null;
+
             return [
                 'id' => $f->id,
                 'nom' => $f->nom,
                 'code_famille' => $f->code_famille,
-                'responsable' => $f->responsable
-                    ? trim(($f->responsable->prenom ?? "") . " " . ($f->responsable->nom ?? ""))
-                    : null,
-                'responsable_code' => $f->responsable?->code_membre,
+                'responsable' => $responsableNom,
+                'responsable_code' => $responsableCode,
                 'classe_id' => $f->classe_id,
                 'classe_nom' => $f->classe?->nom,
                 'contact' => $f->contact,

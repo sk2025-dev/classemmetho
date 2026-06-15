@@ -52,14 +52,28 @@ class DashboardController extends Controller
             ->paginate(10, ['*'], 'actes_page');
 
         // Historique des actes traités par le bureau (paginé)
+        $historiqueSearch = trim((string) $request->string('historique_search'));
+
         $historique = ActeLiturgiqueHistorique::with([
             'acte.membre.family',
             'acte.classe',
             'acte.family',
             'acte.conducteur',
         ])
-            ->whereHas('acte', function ($q) use ($excludedTypes) {
+            ->whereHas('acte', function ($q) use ($excludedTypes, $historiqueSearch) {
                 $q->whereNotIn('type_acte', $excludedTypes);
+
+                if ($historiqueSearch !== '') {
+                    $q->where(function ($sq) use ($historiqueSearch) {
+                        $sq->where('reference', 'like', "%{$historiqueSearch}%")
+                            ->orWhereHas('membre', function ($mq) use ($historiqueSearch) {
+                                $mq->where('nom', 'like', "%{$historiqueSearch}%")
+                                    ->orWhere('prenom', 'like', "%{$historiqueSearch}%")
+                                    ->orWhereRaw("CONCAT(prenom, ' ', nom) LIKE ?", ["%{$historiqueSearch}%"])
+                                    ->orWhereRaw("CONCAT(nom, ' ', prenom) LIKE ?", ["%{$historiqueSearch}%"]);
+                            });
+                    });
+                }
             })
             ->where('acteur_id', $user->id)
             ->whereIn('statut_nouveau', [
@@ -67,7 +81,8 @@ class DashboardController extends Controller
                 ActeLiturgique::STATUT_REFUSEE_PAR_BUREAU_CONDUCTEUR,
             ])
             ->latest()
-            ->paginate(15, ['*'], 'historique_page');
+            ->paginate(10, ['*'], 'historique_page')
+            ->withQueryString();
 
         $historique->getCollection()->transform(function ($item) {
             $acte = $item->acte;

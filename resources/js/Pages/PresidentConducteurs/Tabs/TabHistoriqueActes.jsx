@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { withBasePath } from "../../../Utils/urlHelper";
 import {
-    FileText, ChevronDown, ChevronUp, Loader2, Eye,
+    FileText, Loader2, Eye, Search,
 } from "lucide-react";
 
 const HISTORIQUE_URL = withBasePath("", "/president-conducteurs/liturgie/historique");
@@ -13,6 +13,9 @@ const TYPE_OPTIONS = [
     { value: "deces", label: "Décès" },
     { value: "priere", label: "Prière d'intercession" },
     { value: "grace", label: "Action de grâce" },
+    { value: "bapteme", label: "Baptême" },
+    { value: "mariage", label: "Mariage" },
+    { value: "premiere_communion", label: "Première communion" },
 ];
 
 const STATUT_OPTIONS = [
@@ -69,10 +72,10 @@ function Pagination({ paginator, onPage }) {
 }
 
 const STEP_DEFS = [
-    { key: "soumise", label: "Soumise", role: null },
-    { key: "conducteur", label: "Validation du conducteur", role: "Conducteur de classe" },
-    { key: "bureau", label: "Bureau des Conducteurs", role: "Président des conducteurs" },
-    { key: "pasteur", label: "Validation du pasteur", role: "Pasteur" },
+    { key: "soumise", label: "Soumise", role: null, fallback: "conducteur_nom" },
+    { key: "conducteur", label: "Validation du conducteur", role: "Conducteur de classe", fallback: "conducteur_nom" },
+    { key: "bureau", label: "Bureau des Conducteurs", role: "Président des conducteurs", fallback: "bureau_conducteur_nom" },
+    { key: "pasteur", label: "Validation du pasteur", role: "Pasteur", fallback: "pasteur_nom" },
 ];
 
 const REFUSED_STEP_BY_STATUT = {
@@ -110,7 +113,7 @@ function buildSteps(acte) {
             active,
             refused: isRefused,
             date: entry?.date,
-            acteur: entry?.acteur,
+            acteur: entry?.acteur || acte[def.fallback] || null,
             motif: isRefused ? entry?.commentaire : null,
         };
     });
@@ -170,11 +173,21 @@ export default function TabHistoriqueActes() {
     const [actes, setActes] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [expandedId, setExpandedId] = useState(null);
 
     const [type, setType] = useState("");
     const [statut, setStatut] = useState("");
+    const [search, setSearch] = useState("");
+    const [searchInput, setSearchInput] = useState("");
     const [page, setPage] = useState(1);
+
+    useEffect(() => {
+        const handle = setTimeout(() => {
+            setSearch(searchInput.trim());
+            setPage(1);
+        }, 400);
+
+        return () => clearTimeout(handle);
+    }, [searchInput]);
 
     useEffect(() => {
         let cancelled = false;
@@ -182,7 +195,7 @@ export default function TabHistoriqueActes() {
         setError(null);
 
         axios
-            .get(HISTORIQUE_URL, { params: { type, statut, page } })
+            .get(HISTORIQUE_URL, { params: { type, statut, search, page } })
             .then((res) => {
                 if (!cancelled) setActes(res.data);
             })
@@ -196,13 +209,27 @@ export default function TabHistoriqueActes() {
         return () => {
             cancelled = true;
         };
-    }, [type, statut, page]);
+    }, [type, statut, search, page]);
 
     const items = actes?.data ?? [];
 
     return (
         <div className="space-y-4">
             <div className="bg-white rounded-xl shadow-sm border p-3 flex flex-wrap items-end gap-3">
+                <div className="flex flex-col gap-1">
+                    <label className="text-xs font-semibold text-gray-500">Recherche</label>
+                    <div className="relative">
+                        <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                            type="text"
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
+                            placeholder="Nom du membre, référence..."
+                            className="border rounded-md pl-7 pr-2 py-1 text-xs text-gray-700 w-56"
+                        />
+                    </div>
+                </div>
+
                 <div className="flex flex-col gap-1">
                     <label className="text-xs font-semibold text-gray-500">Type d'acte</label>
                     <select
@@ -240,7 +267,7 @@ export default function TabHistoriqueActes() {
             <div className="bg-white rounded-xl shadow-sm border p-4">
                 <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
                     <FileText size={16} />
-                    Suivi des actes (naissance, décès, prière d'intercession, action de grâce)
+                    Suivi des actes (naissance, décès, prière d'intercession, action de grâce, baptême, mariage, première communion)
                 </h4>
 
                 {!actes ? (
@@ -249,54 +276,45 @@ export default function TabHistoriqueActes() {
                     <p className="text-sm text-gray-500 text-center py-8">Aucun acte trouvé pour ces filtres.</p>
                 ) : (
                     <div className="space-y-2">
-                        {items.map((acte) => {
-                            const isOpen = expandedId === acte.id;
-                            return (
-                                <div key={acte.id} className="border rounded-lg overflow-hidden">
-                                    <button
-                                        onClick={() => setExpandedId(isOpen ? null : acte.id)}
-                                        className="w-full flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-left hover:bg-gray-50"
-                                    >
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span className="font-semibold text-gray-900 text-sm">{acte.membre || "—"}</span>
-                                            <span className="text-xs text-gray-400">{acte.reference}</span>
-                                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
-                                                {acte.type_label}
+                        {items.map((acte) => (
+                            <div key={acte.id} className="border rounded-lg overflow-hidden">
+                                <div className="w-full flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="font-semibold text-gray-900 text-sm">{acte.membre || "—"}</span>
+                                        <span className="text-xs text-gray-400">{acte.reference}</span>
+                                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
+                                            {acte.type_label}
+                                        </span>
+                                        {acte.classe && (
+                                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
+                                                {acte.classe}
                                             </span>
-                                            {acte.classe && (
-                                                <span className="text-xs text-gray-500">{acte.classe}</span>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statutBadgeClass(acte.statut)}`}>
-                                                {acte.statut_label}
-                                            </span>
-                                            {acte.fiche_url && (
-                                                isOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />
-                                            )}
-                                        </div>
-                                    </button>
-
-                                    <div className="border-t px-3 py-3 bg-gray-50">
-                                        <StatusStepper acte={acte} />
+                                        )}
                                     </div>
-
-                                    {isOpen && acte.fiche_url && (
-                                        <div className="border-t px-3 py-3">
-                                            <a
-                                                href={acte.fiche_url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#4A7C5E] text-white text-xs font-semibold hover:bg-[#3d6a4f] transition-colors"
-                                            >
-                                                <Eye size={14} />
-                                                Voir la fiche PDF
-                                            </a>
-                                        </div>
-                                    )}
+                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statutBadgeClass(acte.statut)}`}>
+                                        {acte.statut_label}
+                                    </span>
                                 </div>
-                            );
-                        })}
+
+                                <div className="border-t px-3 py-3 bg-gray-50">
+                                    <StatusStepper acte={acte} />
+                                </div>
+
+                                {acte.fiche_url && (
+                                    <div className="border-t px-3 py-3">
+                                        <a
+                                            href={acte.fiche_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#4A7C5E] text-white text-xs font-semibold hover:bg-[#3d6a4f] transition-colors"
+                                        >
+                                            <Eye size={14} />
+                                            Voir la fiche PDF
+                                        </a>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
                     </div>
                 )}
 

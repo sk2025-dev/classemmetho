@@ -3,11 +3,13 @@ import axios from "axios";
 import {
     Users,
     TrendingUp,
-    AlertTriangle,
     Calendar,
     Loader2,
-    ArrowUpDown,
     X,
+    ChevronDown,
+    ChevronUp,
+    Eye,
+    Search,
 } from "lucide-react";
 import {
     BarChart,
@@ -20,7 +22,6 @@ import {
     Tooltip,
     Legend,
     ResponsiveContainer,
-    Cell,
 } from "recharts";
 import { withBasePath } from "../../../Utils/urlHelper";
 
@@ -29,7 +30,6 @@ const STATS_URL = withBasePath("", "/president-conducteurs/presences/stats");
 const VUES = [
     { id: "classe", label: "Vue par classe" },
     { id: "activite", label: "Par activité" },
-    { id: "absences_repetees", label: "Absences répétées" },
 ];
 
 const PERIODES = [
@@ -56,6 +56,13 @@ function todayIso() {
     return new Date().toISOString().slice(0, 10);
 }
 
+function prettyDate(val) {
+    if (!val) return "—";
+    const d = new Date(val);
+    if (isNaN(d)) return "—";
+    return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+}
+
 export default function TabPresences({ classesPresence = [] }) {
     const [vue, setVue] = useState("classe");
     const [periode, setPeriode] = useState("mois");
@@ -68,11 +75,7 @@ export default function TabPresences({ classesPresence = [] }) {
 
     const [statsClasse, setStatsClasse] = useState(null);
     const [statsActivite, setStatsActivite] = useState(null);
-    const [statsAbsences, setStatsAbsences] = useState(null);
     const [statsDrill, setStatsDrill] = useState(null);
-
-    const [sortKey, setSortKey] = useState("nb_absences");
-    const [sortDir, setSortDir] = useState("desc");
 
     // Réinitialiser les sélections dépendantes lors d'un changement de vue
     useEffect(() => {
@@ -105,7 +108,6 @@ export default function TabPresences({ classesPresence = [] }) {
                 if (cancelled) return;
                 if (vue === "classe") setStatsClasse(res.data);
                 if (vue === "activite") setStatsActivite(res.data);
-                if (vue === "absences_repetees") setStatsAbsences(res.data);
             })
             .catch(() => {
                 if (!cancelled) setError("Impossible de charger les statistiques.");
@@ -155,29 +157,6 @@ export default function TabPresences({ classesPresence = [] }) {
             return row;
         });
     }, [statsClasse, periode]);
-
-    const sortedAbsences = useMemo(() => {
-        if (!statsAbsences) return [];
-        const list = [...statsAbsences.membres];
-        list.sort((a, b) => {
-            const va = a[sortKey];
-            const vb = b[sortKey];
-            if (typeof va === "string") {
-                return sortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
-            }
-            return sortDir === "asc" ? va - vb : vb - va;
-        });
-        return list;
-    }, [statsAbsences, sortKey, sortDir]);
-
-    function toggleSort(key) {
-        if (sortKey === key) {
-            setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-        } else {
-            setSortKey(key);
-            setSortDir("desc");
-        }
-    }
 
     if (!classesPresence.length) {
         return (
@@ -285,15 +264,6 @@ export default function TabPresences({ classesPresence = [] }) {
                 />
             )}
 
-            {vue === "absences_repetees" && (
-                <VueAbsences
-                    statsAbsences={statsAbsences}
-                    sortedAbsences={sortedAbsences}
-                    sortKey={sortKey}
-                    sortDir={sortDir}
-                    toggleSort={toggleSort}
-                />
-            )}
         </div>
     );
 }
@@ -302,21 +272,22 @@ function MiniCard({ classe, onClick, active }) {
     return (
         <button
             onClick={onClick}
-            className={`text-left bg-white rounded-xl shadow-sm border p-3 transition-colors hover:border-[#4A7C5E] ${
-                active ? "ring-2 ring-[#4A7C5E]" : ""
+            className={`relative overflow-hidden text-left rounded-xl p-3 border backdrop-blur-xl bg-white/15 shadow-lg transition-all hover:bg-white/25 hover:-translate-y-0.5 hover:shadow-xl ${
+                active ? "border-white/80 ring-2 ring-white/60" : "border-white/30"
             }`}
         >
-            <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-gray-900 text-sm truncate">{classe.nom}</span>
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/30 via-white/5 to-transparent" />
+            <div className="relative flex items-center justify-between mb-2">
+                <span className="font-bold text-white text-sm truncate drop-shadow-sm">{classe.nom}</span>
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${tauxBadgeClass(classe.taux_moyen)}`}>
-                    {classe.taux_moyen}%
+                    {classe.taux_moyen.toFixed(1)}%
                 </span>
             </div>
-            <div className="flex items-center gap-1 text-xs text-gray-500">
+            <div className="relative flex items-center gap-1 text-xs text-white/85">
                 <Users size={12} />
                 {classe.nb_membres} membre{classe.nb_membres > 1 ? "s" : ""}
             </div>
-            <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden mt-2">
+            <div className="relative h-1.5 rounded-full bg-white/20 overflow-hidden mt-2">
                 <div
                     className="h-full"
                     style={{ width: `${Math.min(classe.taux_moyen, 100)}%`, backgroundColor: tauxColor(classe.taux_moyen) }}
@@ -327,16 +298,24 @@ function MiniCard({ classe, onClick, active }) {
 }
 
 function VueClasse({ statsClasse, periode, lineData, drillClasse, setDrillClasse, statsDrill }) {
+    const [showAllClasses, setShowAllClasses] = useState(false);
+
     if (!statsClasse) {
         return <div className="bg-white rounded-xl shadow-sm border p-8 text-center text-sm text-gray-400">Chargement des statistiques...</div>;
     }
 
     const { classes } = statsClasse;
+    const visibleClasses = showAllClasses ? classes : classes.slice(0, 4);
+    const classesWithAbsence = classes.map((c) => ({
+        ...c,
+        taux_moyen: c.nb_occurrences > 0 ? c.taux_moyen : null,
+        taux_absence: c.nb_occurrences > 0 ? Math.round((100 - c.taux_moyen) * 10) / 10 : null,
+    }));
 
     return (
         <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {classes.map((c) => (
+                {visibleClasses.map((c) => (
                     <MiniCard
                         key={c.id}
                         classe={c}
@@ -345,6 +324,21 @@ function VueClasse({ statsClasse, periode, lineData, drillClasse, setDrillClasse
                     />
                 ))}
             </div>
+
+            {classes.length > 4 && (
+                <div className="flex justify-center">
+                    <button
+                        onClick={() => setShowAllClasses((v) => !v)}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                        {showAllClasses ? (
+                            <>Voir moins <ChevronUp size={16} /></>
+                        ) : (
+                            <>Voir plus de classes <ChevronDown size={16} /></>
+                        )}
+                    </button>
+                </div>
+            )}
 
             <div className="bg-white rounded-xl shadow-sm border p-4">
                 <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
@@ -357,7 +351,7 @@ function VueClasse({ statsClasse, periode, lineData, drillClasse, setDrillClasse
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                             <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} unit="%" />
-                            <Tooltip />
+                            <Tooltip formatter={(value) => `${value}%`} />
                             <Legend />
                             {classes.map((c, idx) => (
                                 <Line
@@ -371,16 +365,20 @@ function VueClasse({ statsClasse, periode, lineData, drillClasse, setDrillClasse
                             ))}
                         </LineChart>
                     ) : (
-                        <BarChart data={classes}>
+                        <BarChart data={classesWithAbsence}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="nom" tick={{ fontSize: 12 }} />
                             <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} unit="%" />
-                            <Tooltip />
-                            <Bar dataKey="taux_moyen" name="Taux de participation" radius={[4, 4, 0, 0]}>
-                                {classes.map((c, idx) => (
-                                    <Cell key={c.id} fill={COLORS[idx % COLORS.length]} />
-                                ))}
-                            </Bar>
+                            <Tooltip
+                                formatter={(value, name, entry) => {
+                                    const total = entry.payload.nb_membres * entry.payload.nb_occurrences;
+                                    const count = Math.round((value / 100) * total);
+                                    return [`${value}% (${count}/${total})`, name];
+                                }}
+                            />
+                            <Legend />
+                            <Bar dataKey="taux_moyen" name="Présence" fill="#4A7C5E" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="taux_absence" name="Absence" fill="#B5533C" radius={[4, 4, 0, 0]} />
                         </BarChart>
                     )}
                 </ResponsiveContainer>
@@ -393,7 +391,32 @@ function VueClasse({ statsClasse, periode, lineData, drillClasse, setDrillClasse
     );
 }
 
+const DRILL_PAGE_SIZE = 10;
+
 function DrillDown({ drillClasse, statsDrill, onClose }) {
+    const [page, setPage] = useState(1);
+    const [search, setSearch] = useState("");
+    const [selectedMembre, setSelectedMembre] = useState(null);
+
+    useEffect(() => {
+        setPage(1);
+        setSearch("");
+    }, [drillClasse?.id, statsDrill]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [search]);
+
+    const allMembres = statsDrill?.membres ?? [];
+    const membres = useMemo(() => {
+        const term = search.trim().toLowerCase();
+        if (!term) return allMembres;
+        return allMembres.filter((m) => (m.nom_complet || "").toLowerCase().includes(term));
+    }, [allMembres, search]);
+    const totalPages = Math.max(1, Math.ceil(membres.length / DRILL_PAGE_SIZE));
+    const currentPage = Math.min(page, totalPages);
+    const visibleMembres = membres.slice((currentPage - 1) * DRILL_PAGE_SIZE, currentPage * DRILL_PAGE_SIZE);
+
     return (
         <div className="bg-white rounded-xl shadow-sm border p-4">
             <div className="flex items-center justify-between mb-3">
@@ -406,55 +429,159 @@ function DrillDown({ drillClasse, statsDrill, onClose }) {
                 </button>
             </div>
 
+            {statsDrill && allMembres.length > 0 && (
+                <div className="relative mb-3">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                        type="text"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Rechercher un membre..."
+                        className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400"
+                    />
+                </div>
+            )}
+
             {!statsDrill ? (
                 <div className="text-center text-sm text-gray-400 py-6">Chargement...</div>
-            ) : statsDrill.membres.length === 0 ? (
+            ) : allMembres.length === 0 ? (
                 <p className="text-sm text-gray-500 text-center py-6">Aucun membre dans cette classe.</p>
+            ) : membres.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-6">Aucun membre ne correspond à la recherche.</p>
             ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div className="overflow-x-auto">
+                <>
+                    <div className="overflow-x-auto rounded-lg border">
                         <table className="w-full text-sm border-collapse">
                             <thead>
-                                <tr>
-                                    <th className="text-left px-3 py-2 border-b font-semibold text-gray-700">Membre</th>
-                                    <th className="px-3 py-2 border-b text-center font-semibold text-gray-700">Présences</th>
-                                    <th className="px-3 py-2 border-b text-center font-semibold text-gray-700">Absences</th>
-                                    <th className="px-3 py-2 border-b text-center font-semibold text-gray-700">Taux</th>
+                                <tr className="bg-violet-50">
+                                    <th className="text-left px-4 py-2.5 font-semibold text-violet-700 text-xs uppercase tracking-wide">Membre</th>
+                                    <th className="px-4 py-2.5 text-center font-semibold text-violet-700 text-xs uppercase tracking-wide">Présences</th>
+                                    <th className="px-4 py-2.5 text-center font-semibold text-violet-700 text-xs uppercase tracking-wide">Absences</th>
+                                    <th className="px-4 py-2.5 text-center font-semibold text-violet-700 text-xs uppercase tracking-wide">Détails</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                {statsDrill.membres.map((m) => (
-                                    <tr key={m.id} className="hover:bg-gray-50">
-                                        <td className="px-3 py-2 border-b font-medium text-gray-800">{m.nom_complet}</td>
-                                        <td className="px-3 py-2 border-b text-center text-green-600 font-semibold">{m.present}</td>
-                                        <td className="px-3 py-2 border-b text-center text-red-500 font-semibold">{m.absent}</td>
-                                        <td className="px-3 py-2 border-b text-center">
-                                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${tauxBadgeClass(m.taux)}`}>
-                                                {m.taux}%
+                            <tbody className="divide-y divide-violet-100">
+                                {visibleMembres.map((m, idx) => (
+                                    <tr key={m.id} className={idx % 2 === 0 ? "bg-white hover:bg-violet-50" : "bg-violet-50/50 hover:bg-violet-50"}>
+                                        <td className="px-4 py-2.5 font-medium text-gray-800">{m.nom_complet}</td>
+                                        <td className="px-4 py-2.5 text-center">
+                                            <span className="inline-flex items-center justify-center min-w-[1.75rem] px-1.5 py-0.5 rounded-md bg-green-50 text-green-600 font-semibold">
+                                                {m.present}
                                             </span>
+                                        </td>
+                                        <td className="px-4 py-2.5 text-center">
+                                            <span className="inline-flex items-center justify-center min-w-[1.75rem] px-1.5 py-0.5 rounded-md bg-red-50 text-red-500 font-semibold">
+                                                {m.absent}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-2.5 text-center">
+                                            <button
+                                                onClick={() => setSelectedMembre(m)}
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 text-white text-xs font-semibold hover:bg-violet-700 transition-colors"
+                                            >
+                                                <Eye size={14} />
+                                                Voir détails
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
+
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-center gap-3 mt-4">
+                            <button
+                                disabled={currentPage <= 1}
+                                onClick={() => setPage((p) => p - 1)}
+                                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                ← Précédent
+                            </button>
+                            <span className="text-xs text-gray-500 font-medium">
+                                Page {currentPage} / {totalPages}
+                            </span>
+                            <button
+                                disabled={currentPage >= totalPages}
+                                onClick={() => setPage((p) => p + 1)}
+                                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                Suivant →
+                            </button>
+                        </div>
+                    )}
+                </>
+            )}
+
+            {selectedMembre && (
+                <MembreDetailModal
+                    membre={selectedMembre}
+                    classe={statsDrill?.classe}
+                    onClose={() => setSelectedMembre(null)}
+                />
+            )}
+        </div>
+    );
+}
+
+function MembreDetailModal({ membre, classe, onClose }) {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+            <div
+                className="bg-white rounded-xl shadow-xl border w-full max-w-md max-h-[80vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="flex items-center justify-between px-4 py-3 border-b">
+                    <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                        <Users size={16} />
+                        {membre.nom_complet}
+                    </h4>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                        <X size={16} />
+                    </button>
+                </div>
+
+                <div className="px-4 py-3 space-y-3">
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                            <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wide">Classe</span>
+                            <span className="text-gray-800 font-medium">{classe?.nom || "—"}</span>
+                        </div>
+                        <div>
+                            <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wide">Conducteur</span>
+                            <span className="text-gray-800 font-medium">{classe?.conducteur_nom || "—"}</span>
+                        </div>
+                        <div>
+                            <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wide">Présences</span>
+                            <span className="text-green-600 font-semibold">{membre.present}</span>
+                        </div>
+                        <div>
+                            <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wide">Taux</span>
+                            <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full ${tauxBadgeClass(membre.taux)}`}>
+                                {membre.taux}%
+                            </span>
+                        </div>
+                    </div>
+
                     <div>
-                        <ResponsiveContainer width="100%" height={Math.max(220, statsDrill.membres.length * 28)}>
-                            <BarChart data={statsDrill.membres} layout="vertical" margin={{ left: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12 }} unit="%" />
-                                <YAxis type="category" dataKey="nom_complet" width={120} tick={{ fontSize: 11 }} />
-                                <Tooltip />
-                                <Bar dataKey="taux" name="Taux de présence" radius={[0, 4, 4, 0]}>
-                                    {statsDrill.membres.map((m) => (
-                                        <Cell key={m.id} fill={tauxColor(m.taux)} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
+                        <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                            Activités où le membre était absent ({membre.absences?.length || 0})
+                        </h5>
+                        {!membre.absences || membre.absences.length === 0 ? (
+                            <p className="text-sm text-gray-500">Aucune absence sur cette période.</p>
+                        ) : (
+                            <ul className="divide-y divide-gray-100 border rounded-lg overflow-hidden">
+                                {membre.absences.map((a, idx) => (
+                                    <li key={idx} className="flex items-center justify-between px-3 py-2 text-sm bg-red-50/40">
+                                        <span className="font-medium text-gray-800">{a.titre}</span>
+                                        <span className="text-xs text-gray-500">{prettyDate(a.date)}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
                 </div>
-            )}
+            </div>
         </div>
     );
 }
@@ -465,19 +592,22 @@ function VueActivite({ classesPresence, selectedClasseId, setSelectedClasseId, s
             <div className="bg-white rounded-xl shadow-sm border p-4">
                 <h4 className="text-sm font-bold text-gray-900 mb-3">Choisir une classe</h4>
                 <div className="flex flex-wrap gap-2">
-                    {classesPresence.map((c) => (
+                    {classesPresence.map((c, idx) => {
+                        const color = COLORS[idx % COLORS.length];
+                        const active = selectedClasseId === c.id;
+                        return (
                         <button
                             key={c.id}
                             onClick={() => setSelectedClasseId(c.id)}
-                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-                                selectedClasseId === c.id
-                                    ? "bg-[#4A7C5E] text-white shadow-sm"
-                                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                            }`}
+                            style={active
+                                ? { backgroundColor: color, color: "#fff" }
+                                : { backgroundColor: `${color}1A`, color }}
+                            className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors shadow-sm hover:opacity-80"
                         >
                             {c.nom}
                         </button>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
 
@@ -502,76 +632,19 @@ function VueActivite({ classesPresence, selectedClasseId, setSelectedClasseId, s
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="label" tick={{ fontSize: 12 }} interval={0} angle={-20} textAnchor="end" height={60} />
                             <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} unit="%" />
-                            <Tooltip />
-                            <Bar dataKey="taux" name="Taux de participation" radius={[4, 4, 0, 0]}>
-                                {statsActivite.items.map((item, idx) => (
-                                    <Cell key={idx} fill={tauxColor(item.taux)} />
-                                ))}
-                            </Bar>
+                            <Tooltip
+                                formatter={(value, name, entry) => {
+                                    const total = entry.payload.nb_membres;
+                                    const count = Math.round((value / 100) * total);
+                                    return [`${value}% (${count}/${total})`, name];
+                                }}
+                            />
+                            <Legend />
+                            <Bar dataKey="taux" name="Présence" fill="#4A7C5E" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="taux_absence" name="Absence" fill="#B5533C" radius={[4, 4, 0, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
-            )}
-        </div>
-    );
-}
-
-function VueAbsences({ statsAbsences, sortedAbsences, sortKey, sortDir, toggleSort }) {
-    if (!statsAbsences) {
-        return <div className="bg-white rounded-xl shadow-sm border p-8 text-center text-sm text-gray-400">Chargement...</div>;
-    }
-
-    const columns = [
-        { key: "nom_complet", label: "Membre" },
-        { key: "classe", label: "Classe" },
-        { key: "nb_absences", label: "Absences" },
-        { key: "nb_occurrences", label: "Activités" },
-        { key: "taux_absence", label: "Taux d'absence" },
-    ];
-
-    return (
-        <div className="bg-white rounded-xl shadow-sm border p-4 overflow-x-auto">
-            <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <AlertTriangle size={16} className="text-red-500" />
-                Membres avec {statsAbsences.threshold}+ absences sur la période
-            </h4>
-
-            {sortedAbsences.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-8">Aucune absence répétée sur cette période.</p>
-            ) : (
-                <table className="w-full text-sm border-collapse">
-                    <thead>
-                        <tr>
-                            {columns.map((col) => (
-                                <th
-                                    key={col.key}
-                                    onClick={() => toggleSort(col.key)}
-                                    className="px-3 py-2 border-b text-left font-semibold text-gray-700 cursor-pointer select-none hover:bg-gray-50"
-                                >
-                                    <span className="inline-flex items-center gap-1">
-                                        {col.label}
-                                        <ArrowUpDown size={12} className={sortKey === col.key ? "text-[#4A7C5E]" : "text-gray-300"} />
-                                    </span>
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {sortedAbsences.map((m) => (
-                            <tr key={m.membre_id} className="hover:bg-gray-50">
-                                <td className="px-3 py-2 border-b font-medium text-gray-800">{m.nom_complet}</td>
-                                <td className="px-3 py-2 border-b text-gray-600">{m.classe}</td>
-                                <td className="px-3 py-2 border-b text-red-500 font-semibold">{m.nb_absences}</td>
-                                <td className="px-3 py-2 border-b text-gray-600">{m.nb_occurrences}</td>
-                                <td className="px-3 py-2 border-b">
-                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${tauxBadgeClass(100 - m.taux_absence)}`}>
-                                        {m.taux_absence}%
-                                    </span>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
             )}
         </div>
     );

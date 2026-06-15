@@ -6,7 +6,7 @@ import TabHistoriqueActes from "./TabHistoriqueActes";
 import {
     CheckCircle, XCircle, Clock, FileText,
     ChevronDown, ChevronUp, AlertCircle, Send, RotateCcw,
-    User, BookOpen, Calendar, Hash, Bell, RefreshCw,
+    User, BookOpen, Calendar, Hash, Bell, RefreshCw, Search,
 } from "lucide-react";
 
 /* ─── Helpers ────────────────────────────────────────── */
@@ -323,6 +323,7 @@ export default function TabValidationActes({
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [newRequestsCount, setNewRequestsCount] = useState(0);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [historiqueSearch, setHistoriqueSearch] = useState("");
     const lastKnownCount = useRef(pendingCount);
     const pollingRef = useRef(null);
 
@@ -394,6 +395,26 @@ export default function TabValidationActes({
             },
         });
     };
+
+    // Recherche dans l'historique (débounce 400ms)
+    useEffect(() => {
+        const handle = setTimeout(() => {
+            router.get(window.location.pathname, { historique_search: historiqueSearch }, {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+                only: ["historique"],
+                onSuccess: (page) => {
+                    const freshHistorique = page.props.historique;
+                    setLocalHistorique(freshHistorique?.data ?? []);
+                    setLocalHistoriquePaginator(freshHistorique);
+                },
+            });
+        }, 400);
+
+        return () => clearTimeout(handle);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [historiqueSearch]);
 
     const handleValidate = async (id) => {
         try {
@@ -720,14 +741,27 @@ export default function TabValidationActes({
                     {/* Sous-onglet Historique */}
                     {activeSubTab === "historique" && (
                         <>
+                            <div className="relative mb-4 max-w-sm">
+                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <input
+                                    type="text"
+                                    value={historiqueSearch}
+                                    onChange={(e) => setHistoriqueSearch(e.target.value)}
+                                    placeholder="Rechercher par nom du membre ou référence..."
+                                    className="w-full border rounded-lg pl-8 pr-3 py-2 text-sm text-gray-700"
+                                />
+                            </div>
+
                             {localHistorique.length === 0 ? (
                                 <div className="text-center py-12">
                                     <RotateCcw size={48} className="text-gray-200 mx-auto mb-3" />
                                     <h3 className="text-lg font-semibold text-gray-700">
-                                        Aucun historique
+                                        {historiqueSearch ? "Aucun résultat" : "Aucun historique"}
                                     </h3>
                                     <p className="text-sm text-gray-400 mt-1">
-                                        Les actes traités apparaîtront ici.
+                                        {historiqueSearch
+                                            ? "Aucun acte ne correspond à cette recherche."
+                                            : "Les actes traités apparaîtront ici."}
                                     </p>
                                 </div>
                             ) : (

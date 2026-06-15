@@ -144,7 +144,7 @@ class ActeLiturgique extends Model
 
     public function bureauConducteur(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'bureau_conducteur_id');
+        return $this->belongsTo(User::class, 'bureau_conducteur_id')->withTrashed();
     }
 
     public function pasteur(): BelongsTo

@@ -39,34 +39,47 @@ function ActiviteMiniCard({ activite, rank, onDetails }) {
     const color = rankColor(rank - 1);
 
     return (
-        <div className="text-left bg-white rounded-xl shadow-sm border p-3">
-            <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-gray-900 text-sm truncate">
-                    {rank}. {activite.titre}
-                </span>
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${tauxBadgeClass(activite.taux_moyen)}`}>
-                    {activite.taux_moyen}%
-                </span>
+        <div className="text-left bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all">
+            <div className="h-1" style={{ backgroundColor: color }} />
+            <div className="p-3.5">
+                <div className="flex items-start justify-between gap-2 mb-2.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <span
+                            className="flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold text-white shrink-0"
+                            style={{ backgroundColor: color }}
+                        >
+                            {rank}
+                        </span>
+                        <span className="font-bold text-gray-900 text-sm truncate">{activite.titre}</span>
+                    </div>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${tauxBadgeClass(activite.taux_moyen)}`}>
+                        {activite.taux_moyen.toFixed(1)}%
+                    </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <Users size={12} />
+                    <span>
+                        {activite.nb_presences} présence{activite.nb_presences > 1 ? "s" : ""}
+                    </span>
+                </div>
+
+                <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden mt-2.5">
+                    <div
+                        className="h-full rounded-full transition-all"
+                        style={{ width: `${Math.min(activite.taux_moyen, 100)}%`, backgroundColor: color }}
+                    />
+                </div>
+
+                <button
+                    onClick={() => onDetails(activite)}
+                    className="mt-3 inline-flex items-center justify-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-white transition-opacity hover:opacity-90"
+                    style={{ backgroundColor: color }}
+                >
+                    <Eye size={12} />
+                    Voir détails
+                </button>
             </div>
-            <div className="flex items-center gap-1 text-xs text-gray-500">
-                <Users size={12} />
-                {activite.nb_presences} présence{activite.nb_presences > 1 ? "s" : ""}
-                {" • "}
-                {activite.nb_occurrences} occurrence{activite.nb_occurrences > 1 ? "s" : ""}
-            </div>
-            <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden mt-2">
-                <div
-                    className="h-full"
-                    style={{ width: `${Math.min(activite.taux_moyen, 100)}%`, backgroundColor: color }}
-                />
-            </div>
-            <button
-                onClick={() => onDetails(activite)}
-                className="mt-3 w-full inline-flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-            >
-                <Eye size={13} />
-                Voir détails
-            </button>
         </div>
     );
 }
@@ -98,7 +111,7 @@ function ActiviteDetailModal({ activite, onClose }) {
                         <Users size={15} className="text-gray-400" />
                         <span className="font-semibold text-gray-500">Participants :</span>
                         <span>
-                            {activite.nb_participants_ref} / {activite.nb_membres_ref} ({activite.taux_ref}%)
+                            {activite.nb_participants_ref} / {activite.nb_membres_ref} ({activite.taux_moyen.toFixed(1)}%)
                         </span>
                     </div>
 
@@ -148,7 +161,7 @@ function SyntheseActivites() {
         };
     }, [periode]);
 
-    const activites = data?.activites ?? [];
+    const activites = (data?.activites ?? []).slice(0, 4);
 
     return (
         <div className="space-y-4">

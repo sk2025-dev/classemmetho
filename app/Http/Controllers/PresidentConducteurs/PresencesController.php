@@ -103,11 +103,15 @@ class PresencesController extends Controller
 
         $items = $occurrences->map(function (array $occ) use ($nbMembres) {
             $present = collect($occ['presences'])->filter(fn ($s) => $s === 'present')->count();
+            $taux = $nbMembres > 0 ? (int) round($present / $nbMembres * 100) : 0;
 
             return [
                 'label' => $occ['titre'] . ' (' . Carbon::parse($occ['date'])->format('d/m') . ')',
                 'date' => $occ['date'],
-                'taux' => $nbMembres > 0 ? (int) round($present / $nbMembres * 100) : 0,
+                'taux' => $taux,
+                'taux_absence' => 100 - $taux,
+                'nb_present' => $present,
+                'nb_membres' => $nbMembres,
             ];
         })->values();
 
@@ -192,14 +196,13 @@ class PresencesController extends Controller
                 'titre' => $group->first()['titre'],
                 'nb_occurrences' => $group->count(),
                 'nb_presences' => $totalPresent,
-                'taux_moyen' => $totalPossible > 0 ? (int) round($totalPresent / $totalPossible * 100) : 0,
+                'taux_moyen' => $totalPossibleRef > 0 ? round($totalPresentRef / $totalPossibleRef * 100, 1) : 0,
                 'classe' => $classeNom,
                 'conducteur' => $conducteur,
                 'dates' => collect($dates)->unique()->sort()->values()
                     ->map(fn (string $d) => Carbon::parse($d)->format('d/m/Y'))->all(),
                 'nb_participants_ref' => $totalPresentRef,
                 'nb_membres_ref' => $nbMembresRef,
-                'taux_ref' => $totalPossibleRef > 0 ? (int) round($totalPresentRef / $totalPossibleRef * 100) : 0,
             ];
         })->sortByDesc('nb_presences')->values();
 
@@ -264,7 +267,7 @@ class PresencesController extends Controller
 
     private function statsMembres(int $classeId, Carbon $start, Carbon $end): array
     {
-        $classe = Classe::query()->findOrFail($classeId, ['id', 'nom']);
+        $classe = Classe::query()->with('conducteurs')->findOrFail($classeId, ['id', 'nom']);
 
         $membres = User::query()
             ->where('classe_id', $classe->id)
@@ -279,12 +282,17 @@ class PresencesController extends Controller
         $rows = $membres->map(function (User $membre) use ($occurrences, $totalOccurrences) {
             $present = 0;
             $absent = 0;
+            $absences = [];
 
             foreach ($occurrences as $occ) {
                 if (($occ['presences'][$membre->id] ?? null) === 'present') {
                     $present++;
                 } else {
                     $absent++;
+                    $absences[] = [
+                        'titre' => $occ['titre'],
+                        'date' => $occ['date'],
+                    ];
                 }
             }
 
@@ -294,11 +302,16 @@ class PresencesController extends Controller
                 'present' => $present,
                 'absent' => $absent,
                 'taux' => $totalOccurrences > 0 ? (int) round($present / $totalOccurrences * 100) : 0,
+                'absences' => $absences,
             ];
         })->sortByDesc('taux')->values();
 
         return [
-            'classe' => ['id' => $classe->id, 'nom' => $classe->nom],
+            'classe' => [
+                'id' => $classe->id,
+                'nom' => $classe->nom,
+                'conducteur_nom' => $classe->conducteurs->pluck('name')->implode(', ') ?: null,
+            ],
             'debut' => $start->format('Y-m-d'),
             'fin' => $end->format('Y-m-d'),
             'occurrences' => $occurrences->map(fn (array $o) => [
@@ -370,7 +383,7 @@ class PresencesController extends Controller
         })->sortBy('date')->values();
     }
 
-    private function computeTauxMoyen(Collection $occurrences, int $nbMembres): int
+    private function computeTauxMoyen(Collection $occurrences, int $nbMembres): float
     {
         if ($occurrences->isEmpty() || $nbMembres === 0) {
             return 0;
@@ -384,7 +397,7 @@ class PresencesController extends Controller
             $totalPossible += $nbMembres;
         }
 
-        return $totalPossible > 0 ? (int) round($totalPresent / $totalPossible * 100) : 0;
+        return $totalPossible > 0 ? round($totalPresent / $totalPossible * 100, 1) : 0;
     }
 
     private function computeSerieMensuelle(Collection $memberIds, int $nbMembres, Carbon $start, Carbon $end): array
@@ -397,10 +410,14 @@ class PresencesController extends Controller
             $monthStart = $cursor->copy()->startOfMonth();
             $monthEnd = $cursor->copy()->endOfMonth();
             $occurrences = $this->getOccurrences($memberIds, $monthStart, $monthEnd);
+            $taux = $occurrences->isNotEmpty() ? $this->computeTauxMoyen($occurrences, $nbMembres) : null;
 
             $serie[] = [
                 'label' => $cursor->locale('fr')->translatedFormat('M'),
-                'taux' => $this->computeTauxMoyen($occurrences, $nbMembres),
+                'taux' => $taux,
+                'taux_absence' => $taux !== null ? round(100 - $taux, 1) : null,
+                'nb_occurrences' => $occurrences->count(),
+                'nb_membres' => $nbMembres,
             ];
 
             $cursor->addMonth();

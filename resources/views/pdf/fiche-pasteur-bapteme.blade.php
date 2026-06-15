@@ -60,6 +60,7 @@ $rows = $actesCollection->map(function ($currentActe, $index) {
 });
 
 $logoSrc = $logoDataUri ?? null;
+$methoSrc = $methoDataUri ?? null;
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
@@ -135,13 +136,16 @@ $logoSrc = $logoDataUri ?? null;
         }
 
         .ref-cell {
-            text-align: right;
-            vertical-align: top;
-            padding-top: 2px;
-            font-size: 9px;
-            color: #9ca3af;
-            white-space: nowrap;
-            width: 140px;
+            text-align: center;
+            vertical-align: middle;
+            width: 80px;
+        }
+
+        .ref-cell img {
+            width: 65px;
+            height: 65px;
+            object-fit: contain;
+            margin-top: 4px;
         }
 
         .divider-wrapper {
@@ -246,8 +250,11 @@ $logoSrc = $logoDataUri ?? null;
                     <div class="church-subtitle">Classe {{ $className }} — {{ $documentLabel }}</div>
                 </td>
                 <td class="ref-cell">
-                    <div>Ref. {{ $reference }}</div>
-                    <div>{{ Carbon::parse($generatedAt)->format('d/m/Y H:i') }}</div>
+                    @if(!empty($methoSrc))
+                    <img src="{{ $methoSrc }}" alt="Logo jubilé">
+                    @elseif(file_exists(public_path('images/metho.jpg')))
+                    <img src="{{ public_path('images/metho.jpg') }}" alt="Logo jubilé">
+                    @endif
                 </td>
             </tr>
         </table>

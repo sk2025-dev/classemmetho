@@ -4,6 +4,8 @@ import Select2Single from "../../../Components/Select2Single";
 import {
     ArrowLeft,
     CheckCircle2,
+    ChevronLeft,
+    ChevronRight,
     ChevronUp,
     CornerDownRight,
     FileHeart,
@@ -327,6 +329,26 @@ export default function ConducteurPrieresIndex({
 
         return scopedRequests;
     }, [activeTab, scopedRequests]);
+
+    const REQUESTS_PER_PAGE = 5;
+    const [currentPage, setCurrentPage] = useState(1);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab, scopeTab]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredRequests.length / REQUESTS_PER_PAGE));
+
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages);
+        }
+    }, [currentPage, totalPages]);
+
+    const paginatedRequests = useMemo(() => {
+        const start = (currentPage - 1) * REQUESTS_PER_PAGE;
+        return filteredRequests.slice(start, start + REQUESTS_PER_PAGE);
+    }, [filteredRequests, currentPage]);
 
     const activeTabContent = useMemo(() => {
         if (activeTab === "in_prayer") {
@@ -663,7 +685,7 @@ export default function ConducteurPrieresIndex({
                                 </div>
                             ) : (
                                 <div className="grid gap-4">
-                                    {filteredRequests.map((request) => (
+                                    {paginatedRequests.map((request) => (
                                         <article
                                             key={request.id}
                                             className="rounded-[20px] border border-slate-200/90 bg-white shadow-[0_12px_24px_rgba(15,23,42,0.06)]"
@@ -853,6 +875,42 @@ export default function ConducteurPrieresIndex({
                                     ))}
                                 </div>
                             )}
+
+                            {filteredRequests.length > REQUESTS_PER_PAGE ? (
+                                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
+                                    <p className="text-xs font-medium text-slate-500">
+                                        Page {currentPage} sur {totalPages} ({filteredRequests.length} demande{filteredRequests.length > 1 ? "s" : ""})
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                                            disabled={currentPage === 1}
+                                            className={`inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
+                                                currentPage === 1
+                                                    ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                                                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                                            }`}
+                                        >
+                                            <ChevronLeft className="h-3.5 w-3.5" />
+                                            Precedent
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                                            disabled={currentPage === totalPages}
+                                            className={`inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
+                                                currentPage === totalPages
+                                                    ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                                                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                                            }`}
+                                        >
+                                            Suivant
+                                            <ChevronRight className="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : null}
                         </div>
                     </section>
                 </div>

@@ -25,6 +25,14 @@ $nomBureauConducteur = $bureauConducteur
 ? trim(($bureauConducteur->prenom ?? '') . ' ' . ($bureauConducteur->nom ?? ''))
 : '';
 
+$sigFontSize = function (string $name): string {
+$len = mb_strlen($name);
+if ($len > 28) return '6.5px';
+if ($len > 22) return '8px';
+if ($len > 16) return '9px';
+return '10px';
+};
+
 $normalise = function (?string $value): string {
 if (!is_string($value) || $value === '') {
 return '';
@@ -335,17 +343,12 @@ $signatureBureauConducteurDataUri = $signatureBureauConducteurDataUri ?? $toSign
         }
 
         .sig-stack {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            width: 100%;
         }
 
         .sig-space {
             height: 56px;
             width: 100%;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
             overflow: hidden;
             margin-top: 16px;
             margin-bottom: 12px;
@@ -364,8 +367,10 @@ $signatureBureauConducteurDataUri = $signatureBureauConducteurDataUri ?? $toSign
             font-family: DejaVu Sans, Arial, sans-serif;
             font-weight: 700;
             font-size: 9.6px;
+            line-height: 1.3;
             text-transform: uppercase;
             letter-spacing: .8px;
+            height: 26px;
             margin-bottom: 6px;
         }
 
@@ -376,6 +381,7 @@ $signatureBureauConducteurDataUri = $signatureBureauConducteurDataUri ?? $toSign
             font-weight: 800;
             text-transform: uppercase;
             min-height: 14px;
+            white-space: nowrap;
         }
     </style>
 </head>
@@ -471,7 +477,7 @@ $signatureBureauConducteurDataUri = $signatureBureauConducteurDataUri ?? $toSign
                                 <img src="{{ $signatureConducteurDataUri }}" alt="Signature conducteur" class="sig-image">
                                 @endif
                             </div>
-                            <div class="sig-name">{{ $nomConducteur }}</div>
+                            <div class="sig-name" style="font-size: {{ $sigFontSize($nomConducteur) }};">{{ $nomConducteur }}</div>
                         </div>
                     </td>
                     <td>
@@ -482,7 +488,7 @@ $signatureBureauConducteurDataUri = $signatureBureauConducteurDataUri ?? $toSign
                                 <img src="{{ $signatureBureauConducteurDataUri }}" alt="Signature Bureau" class="sig-image">
                                 @endif
                             </div>
-                            <div class="sig-name">{{ $nomBureauConducteur }}</div>
+                            <div class="sig-name" style="font-size: {{ $sigFontSize($nomBureauConducteur) }};">{{ $nomBureauConducteur }}</div>
                         </div>
                     </td>
                     <td>
@@ -493,7 +499,7 @@ $signatureBureauConducteurDataUri = $signatureBureauConducteurDataUri ?? $toSign
                                 <img src="{{ $signaturePasteurDataUri }}" alt="Signature pasteur" class="sig-image">
                                 @endif
                             </div>
-                            <div class="sig-name">{{ $nomPasteur }}</div>
+                            <div class="sig-name" style="font-size: {{ $sigFontSize($nomPasteur) }};">{{ $nomPasteur }}</div>
                         </div>
                     </td>
                 </tr>

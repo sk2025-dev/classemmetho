@@ -20,8 +20,9 @@ class LiturgieController extends Controller
 
     /**
      * Suivi des actes (naissance, décès, prière d'intercession, action de
-     * grâce) : chronologie des validations (conducteur, président des
-     * conducteurs, pasteur) et accès aux fiches PDF.
+     * grâce, baptême, mariage, première communion) : chronologie des
+     * validations (conducteur, président des conducteurs, pasteur) et accès
+     * aux fiches PDF.
      */
     public function historique(Request $request)
     {
@@ -30,10 +31,18 @@ class LiturgieController extends Controller
             ActeLiturgique::TYPE_DECES,
             ActeLiturgique::TYPE_PRIERE,
             ActeLiturgique::TYPE_GRACE,
+            ActeLiturgique::TYPE_BAPTEME,
+            ActeLiturgique::TYPE_MARIAGE,
+            ActeLiturgique::TYPE_PREMIERE_COMMUNION,
         ];
 
         $query = ActeLiturgique::with([
-            'membre.family', 'classe', 'conducteur', 'bureauConducteur', 'pasteur', 'historiques.acteur',
+            'membre.family',
+            'classe',
+            'conducteur' => fn ($q) => $q->withTrashed(),
+            'bureauConducteur' => fn ($q) => $q->withTrashed(),
+            'pasteur' => fn ($q) => $q->withTrashed(),
+            'historiques.acteur' => fn ($q) => $q->withTrashed(),
         ])
             ->whereIn('type_acte', $types)
             ->whereNot('statut', ActeLiturgique::STATUT_Soumise);
@@ -50,7 +59,20 @@ class LiturgieController extends Controller
             $query->where('classe_id', (int) $request->integer('classe_id'));
         }
 
-        $actes = $query->latest()->paginate(10, ['*'], 'historique_page');
+        if ($request->filled('search')) {
+            $search = trim($request->string('search')->toString());
+            $query->where(function ($q) use ($search) {
+                $q->where('reference', 'like', "%{$search}%")
+                    ->orWhereHas('membre', function ($mq) use ($search) {
+                        $mq->where('nom', 'like', "%{$search}%")
+                            ->orWhere('prenom', 'like', "%{$search}%")
+                            ->orWhereRaw("CONCAT(prenom, ' ', nom) LIKE ?", ["%{$search}%"])
+                            ->orWhereRaw("CONCAT(nom, ' ', prenom) LIKE ?", ["%{$search}%"]);
+                    });
+            });
+        }
+
+        $actes = $query->latest()->paginate(10, ['*'], 'page');
 
         $stepRoles = [
             ActeLiturgique::STATUT_EN_ATTENTE_CONDUCTEUR => 'Conducteur de classe',
@@ -90,7 +112,13 @@ class LiturgieController extends Controller
                 ->values();
 
             $ficheUrl = null;
-            if (in_array($acte->type_acte, [ActeLiturgique::TYPE_NAISSANCE, ActeLiturgique::TYPE_DECES], true)
+            if (in_array($acte->type_acte, [
+                ActeLiturgique::TYPE_NAISSANCE,
+                ActeLiturgique::TYPE_DECES,
+                ActeLiturgique::TYPE_BAPTEME,
+                ActeLiturgique::TYPE_MARIAGE,
+                ActeLiturgique::TYPE_PREMIERE_COMMUNION,
+            ], true)
                 && in_array($acte->statut, $ficheAccessibleStatuts, true)
             ) {
                 $ficheUrl = route('president_conducteurs.liturgie.fiche_conducteur', $acte->id) . '?preview=1';
@@ -112,6 +140,9 @@ class LiturgieController extends Controller
                 'created_at'     => optional($acte->created_at)->toISOString(),
                 'chronologie'    => $chronologie,
                 'fiche_url'      => $ficheUrl,
+                'conducteur_nom' => $acte->conducteur?->name,
+                'bureau_conducteur_nom' => $acte->bureauConducteur?->name,
+                'pasteur_nom'    => $acte->pasteur?->name,
             ];
         });
 
@@ -214,6 +245,7 @@ class LiturgieController extends Controller
             'pdf.fiche-pasteur_mariage', 'pdf.fiche-pasteur-bapteme' => [
                 'actes'         => collect([$acte]),
                 'logoDataUri'   => $logoDataUri,
+                'methoDataUri'  => $methoDataUri,
                 'documentLabel' => $view === 'pdf.fiche-pasteur_mariage' ? 'Fiche finale du mariage' : 'Fiche finale du baptême',
                 'generatedAt'   => $acte->updated_at ?? now(),
             ],

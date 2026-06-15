@@ -63,7 +63,7 @@ class Family extends Model
      */
     public function responsable()
     {
-        return $this->belongsTo(User::class, 'responsable_id');
+        return $this->belongsTo(User::class, 'responsable_id')->withTrashed();
     }
 
     public function transferOriginFamily()

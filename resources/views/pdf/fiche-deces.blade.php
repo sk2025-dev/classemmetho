@@ -18,7 +18,7 @@ $dateDeces = !empty($details['date_deces'])
     })()
     : '—';
 
-$lieuDeces = trim((string) ($details['lieu_deces'] ?? $details['lieu'] ?? '—'));
+$lieuDeces = trim((string) ($details['lieu_deces'] ?? $details['lieu'] ?? ''));
 
 $dateCulte = !empty($acte->date_souhaitee)
     ? (function () use ($acte) {
@@ -452,7 +452,7 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
                 annonce, avec une profonde tristesse, &agrave; l'ensemble de la communaut&eacute; chr&eacute;tienne,
                 le rappel &agrave; Dieu de leur bien-aim&eacute;(e),
                 <span class="deceased-name">{{ $nomDefunt }}</span>,
-                survenu le <strong>{{ $dateDeces }}</strong> &agrave; <strong>{{ $lieuDeces }}</strong>.
+                survenu le <strong>{{ $dateDeces }}</strong>@if($lieuDeces !== '') &agrave; <strong>{{ $lieuDeces }}</strong>@endif.
             </p>
             <p class="notice-paragraph">
                 En cette douloureuse &eacute;preuve, la famille sollicite vos pri&egrave;res et votre soutien spirituel.
@@ -509,11 +509,6 @@ $logoMethoSrc = $methoDataUri ?? $toPublicImageDataUri(public_path('images/metho
                 </td>
             </tr>
         </table>
-
-        <!-- Footer for traceability -->
-        <div class="footer">
-            EMUCI - Temple du JUBILE de Cocody | Avis de deces | Ref. {{ $reference }} | Emis le {{ $dateEmission }}
-        </div>
     </div>
 </body>
 
