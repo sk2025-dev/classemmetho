@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { X, Upload, AlertCircle, CheckCircle, Loader } from "lucide-react";
 import axios from "axios";
+import { withBasePath } from "../../../Utils/urlHelper";
 
 export default function ExcelImportForm({ onClose }) {
     const [file, setFile] = useState(null);
@@ -73,7 +74,7 @@ export default function ExcelImportForm({ onClose }) {
 
         try {
             const response = await axios.post(
-                "/admin/inscriptions/import-excel",
+                withBasePath("", "/admin/inscriptions/import-excel"),
                 formData,
                 {
                     onUploadProgress: (progressEvent) => {
