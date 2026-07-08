@@ -97,13 +97,13 @@ class TresorerieController extends Controller
                 $modeLabels = [
                     'WAVE'         => 'Wave',
                     'ORANGE'       => 'Orange Money',
-                    'DJAMO'        => 'Djamo',
+                    'MOOV_CI'      => 'Moov CI',
                     'MOBILE_MONEY' => 'Mobile Money',
                     'ESPECES'      => 'Espèces',
                     'VIREMENT'     => 'Virement bancaire',
                     'CARTE'        => 'Carte bancaire',
                 ];
-                $isOnline = in_array($don->mode_paiement, ['WAVE', 'ORANGE', 'DJAMO', 'MOBILE_MONEY', 'CARTE'], true);
+                $isOnline = in_array($don->mode_paiement, ['WAVE', 'ORANGE', 'MOOV_CI', 'MOBILE_MONEY', 'CARTE'], true);
 
                 return [
                     'id'              => $don->id,

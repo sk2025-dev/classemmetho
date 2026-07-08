@@ -25,7 +25,7 @@ class DonationController extends Controller
             'nom_donateur' => ['required', 'string', 'max:120'],
             'numero_donateur' => ['required', 'regex:/^\d{10}$/'],
             'montant' => ['required', 'integer', 'min:100'],
-            'mode_paiement' => ['required', 'in:MOBILE_MONEY,ESPECES,CARTE'],
+            'mode_paiement' => ['required', 'in:MOBILE_MONEY,ESPECES,CARTE,WAVE,ORANGE,MOOV_CI'],
             'motif' => ['nullable', 'string', 'max:1000'],
         ]);
 
@@ -130,7 +130,7 @@ class DonationController extends Controller
                 'reference_recu'  => $reference,
                 'nom_donateur'    => $pending['nom_donateur'] ?? null,
                 'numero_donateur' => $pending['numero_donateur'] ?? null,
-                'motif'            => $pending['motif'] ?? null,
+                'note'             => $pending['motif'] ?? null,
             ]);
 
             $receiptUrl = $invoice->getReceiptUrl() ?? '';
@@ -178,7 +178,7 @@ class DonationController extends Controller
         $modeLabels = [
             'WAVE'         => 'Wave',
             'ORANGE'       => 'Orange Money',
-            'DJAMO'        => 'Djamo',
+            'MOOV_CI'      => 'Moov CI',
             'MOBILE_MONEY' => 'Mobile Money',
             'ESPECES'      => 'Espèces',
             'VIREMENT'     => 'Virement bancaire',
@@ -208,7 +208,7 @@ class DonationController extends Controller
         return match ($mode) {
             'WAVE'   => 'wave-ci',
             'ORANGE' => 'orange-money-ci',
-            'DJAMO'  => 'djamo',
+            'MOOV_CI' => 'moov-money-ci',
             default  => null,
         };
     }

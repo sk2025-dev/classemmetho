@@ -1352,36 +1352,6 @@ export default function Index({
                                     </div>
                                 </div>
 
-                                {/* CTA rapide */}
-                                <div
-                                    className="ann-side-cta"
-                                    onClick={openAnnonce}
-                                >
-                                    <div className="ann-side-cta-icon">📢</div>
-                                    <div className="ann-side-cta-text">
-                                        <div className="ann-side-cta-title">
-                                            Nouvelle demande de prière
-                                        </div>
-                                        <div className="ann-side-cta-sub">
-                                            Partager avec la paroisse
-                                        </div>
-                                    </div>
-                                    <svg
-                                        width="14"
-                                        height="14"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        strokeWidth="2.5"
-                                        style={{ color: "#A090D8" }}
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                </div>
                             </aside>
                         </div>
                     </div>

@@ -583,7 +583,7 @@ export default function Welcome() {
                   >
                     <option value="WAVE">Wave</option>
                     <option value="ORANGE">Orange Money</option>
-                    <option value="DJAMO">Djamo</option>
+                    <option value="MOOV_CI">Moov CI</option>
                   </select>
                 </div>
               )}

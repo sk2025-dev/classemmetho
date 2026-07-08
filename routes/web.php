@@ -330,13 +330,19 @@ Route::middleware(['auth'])->group(function () {
 
             $user = Auth::user();
             $classIds = $user->getManagedClasses()->pluck('id')->toArray();
-            $columns = ['id', 'nom', 'prenom', 'classe_id', 'genre'];
+            $columns = ['id', 'nom', 'prenom', 'classe_id', 'genre', 'date_naissance', 'lieu_naissance'];
             $familyMembers = \App\Models\User::query()
                 ->whereIn('classe_id', $classIds)
                 ->select($columns)
                 ->orderBy('prenom')
                 ->orderBy('nom')
-                ->get();
+                ->get()
+                ->map(function ($member) {
+                    if (!empty($member->date_naissance)) {
+                        $member->date_naissance = $member->date_naissance->format('Y-m-d');
+                    }
+                    return $member;
+                });
 
             return Inertia::render('Conducteur/Liturgie/' . $map[$type], [
                 'backHref' => '/conducteur/liturgie/selection',

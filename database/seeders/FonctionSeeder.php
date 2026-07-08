@@ -3,15 +3,54 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class FonctionSeeder extends Seeder
 {
-    /**
-     * Les fonctions d'église proviennent de l'import Excel (getFonctionId → firstOrCreate).
-     * Ce seeder ne pré-insère rien pour éviter les doublons avec les données réelles.
-     */
     public function run(): void
     {
-        $this->command->info('FonctionSeeder : aucune fonction pré-insérée — les fonctions sont créées automatiquement lors de l\'import Excel.');
+        $fonctions = [
+            'Choriste',
+            'Conducteur',
+            'Conseiller',
+            'Instrumentiste',
+            'Maitre de Choeur',
+            'Membre',
+            'Membre COCOM',
+            'Membre groupe musicale',
+            'Moniteur',
+            'Monitrice',
+            'Pasteur Principal',
+            'Pianniste',
+            'Predicateurs',
+            'Président COMEFA',
+            'Président COMITE EGLISE',
+            'Président des Conducteurs',
+            'Président des Laïcs',
+            'Président des Prédicateurs',
+            'Protocole',
+            'Responsable FIMECO',
+            'Responsable Morev',
+            'Responsable enfants',
+            'Responsable femmes',
+            'Responsable groupe musicale',
+            'Responsable jeunesse',
+            'Secretaire',
+            'SOCIETE',
+            'Tresorier',
+            'Vice Président des Laïcs',
+        ];
+
+        $now = now();
+        $rows = array_map(fn($nom) => [
+            'nom'        => $nom,
+            'description' => null,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ], $fonctions);
+
+        DB::table('fonctions')->insertOrIgnore($rows);
+
+        $this->command->info(count($fonctions) . ' fonctions insérées (doublons ignorés).');
     }
 }

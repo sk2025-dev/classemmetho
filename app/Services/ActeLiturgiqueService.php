@@ -49,10 +49,21 @@ class ActeLiturgiqueService
 
         // duplicate prevention at service level as well in case other callers
         if (!empty($data['membre_id']) && !empty($data['type_acte'])) {
+            // Pour les types répétables (naissance, mariage), on ne bloque pas
+            // si l'acte précédent est déjà CELEBRE ou TERMINE — un parent peut
+            // présenter plusieurs enfants, un veuf peut se remarier, etc.
+            $typesRepetables = ['naissance', 'mariage'];
+            $blockingStatuts = ActeLiturgique::statutsBloquantNouvelleDemande();
+            if (in_array($data['type_acte'], $typesRepetables, true)) {
+                $blockingStatuts = array_values(array_diff($blockingStatuts, [
+                    ActeLiturgique::STATUT_CELEBRE,
+                    ActeLiturgique::STATUT_TERMINE,
+                ]));
+            }
             $exists = ActeLiturgique::query()
                 ->where('membre_id', $data['membre_id'])
                 ->where('type_acte', $data['type_acte'])
-                ->whereIn('statut', ActeLiturgique::statutsBloquantNouvelleDemande())
+                ->whereIn('statut', $blockingStatuts)
                 ->exists();
             if ($exists) {
                 throw new InvalidArgumentException('Demande deja en cours pour ce membre et ce type.');
